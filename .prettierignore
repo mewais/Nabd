@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+target
+src-tauri/target
+assets/body
+packages/B02-dataset/data
+pnpm-lock.yaml
+design_handoff_nabd_workout_tracker

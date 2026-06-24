@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/B11-persistence",
+    "crates/B12-native",
+    "crates/B13-ipc",
+]
+
+# The Tauri binary crate is defined separately (src-tauri/src + its own Cargo
+# manifest at src-tauri/app.Cargo.toml is merged in during scaffolding). The
+# three crates above are the independently-tested blocks.
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Mohammad Ewais <mohammad.a.ewais@gmail.com>"]
+license = "MIT"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+thiserror = "1"

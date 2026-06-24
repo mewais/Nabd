@@ -1,0 +1,26 @@
+# deps
+node_modules/
+.pnpm-store/
+# builds
+dist/
+build/
+out/
+target/
+src-tauri/target/
+# coverage
+coverage/
+.nyc_output/
+lcov.info
+*.lcov
+# ts
+*.tsbuildinfo
+# editor / os
+.DS_Store
+.idea/
+.vscode/
+*.log
+# tauri sidecar
+src-tauri/gen/
+# local env
+.env
+.env.local

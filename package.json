@@ -1,0 +1,45 @@
+{
+  "name": "nabd",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nabḍ — desk workout tracker & planner for remote workers",
+  "author": "Mohammad Ewais <mohammad.a.ewais@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage",
+    "test:all": "vitest run --coverage && pnpm -r --if-present test",
+    "test:rust": "cargo test --workspace --manifest-path src-tauri/Cargo.toml",
+    "cov:rust": "cargo llvm-cov --workspace --manifest-path src-tauri/Cargo.toml",
+    "lint": "eslint . && prettier --check .",
+    "lint:fix": "eslint . --fix && prettier --write .",
+    "typecheck": "tsc -b --noEmit",
+    "build": "pnpm --filter @nabd/app build",
+    "dev": "pnpm --filter @nabd/app dev",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^22.5.4",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.5.0",
+    "@typescript-eslint/parser": "^8.5.0",
+    "@vitest/coverage-v8": "^2.1.1",
+    "eslint": "^9.10.0",
+    "eslint-plugin-react": "^7.36.1",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "happy-dom": "^15.7.4",
+    "jsdom": "^25.0.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1"
+  }
+}
