@@ -14,10 +14,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "declaration": true,
-    "declarationMap": true,
     "sourceMap": true,
-    "composite": true,
     "baseUrl": ".",
     "paths": {
       "@nabd/domain": ["packages/B01-domain/src/index.ts"],

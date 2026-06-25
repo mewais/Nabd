@@ -70,7 +70,9 @@ for (const pkg of PKGS) {
     JSON.stringify(
       {
         extends: "../../tsconfig.base.json",
-        compilerOptions: { rootDir: ".", outDir: "dist", noEmit: true },
+        // composite/rootDir off: cross-package imports resolve via path mapping
+        // (pulling in sibling src), which a per-package rootDir would reject.
+        compilerOptions: { noEmit: true },
         include: ["src/**/*", `../../tests/${pkg.dir}/**/*`],
       },
       null,
@@ -78,16 +80,30 @@ for (const pkg of PKGS) {
     ),
   );
 
-  const setupLine = pkg.react
-    ? `\n  test: { environment: "${pkg.env}", globals: true, setupFiles: ["../../scripts/vitest.setup.ts"],`
-    : `\n  test: { environment: "${pkg.env}", globals: true,`;
+  // Alias every workspace package to its SOURCE entry so vitest instruments it
+  // (resolving via the node_modules symlink would mark it external -> 0% coverage).
+  const aliasEntries = PKGS.map(
+    (p) => `      "@nabd/${p.name}": r("../${p.dir}/src/index.ts"),`,
+  ).join("\n");
+  const setup = pkg.react ? `\n    setupFiles: ["../../scripts/vitest.setup.ts"],` : "";
   w(
     `${base}/vitest.config.ts`,
     `import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
 
 // Tests live OUTSIDE this package, under tests/${pkg.dir}/. Coverage is restricted
 // to this block's own src/** and enforced at 100%.
-export default defineConfig({${setupLine}
+const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
+
+export default defineConfig({
+  resolve: {
+    alias: {
+${aliasEntries}
+    },
+  },
+  test: {
+    environment: "${pkg.env}",
+    globals: true,${setup}
     include: ["../../tests/${pkg.dir}/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",
