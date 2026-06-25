@@ -18,6 +18,12 @@ fn ipc_err(e: IpcError) -> String {
 // ─── IPC commands ─────────────────────────────────────────────────────────────
 
 #[tauri::command]
+fn init(db: State<'_, DbConn>) -> Result<(), String> {
+    let conn = db.0.lock().unwrap();
+    nabd_ipc::init(&conn).map_err(ipc_err)
+}
+
+#[tauri::command]
 fn load_all(db: State<'_, DbConn>) -> Result<String, String> {
     let conn = db.0.lock().unwrap();
     nabd_ipc::load_all(&conn).map_err(ipc_err)
@@ -213,6 +219,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            init,
             load_all,
             save_singleton,
             append_set,

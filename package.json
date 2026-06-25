@@ -22,7 +22,8 @@
     "build": "pnpm --filter @nabd/app build",
     "dev": "pnpm --filter @nabd/app dev",
     "tauri": "tauri",
-    "ci": "pnpm -r --filter \"./packages/*\" test && pnpm typecheck && cargo test -p nabd-persistence -p nabd-native -p nabd-ipc --manifest-path src-tauri/Cargo.toml"
+    "ci": "pnpm -r --filter \"./packages/*\" test && pnpm typecheck && cargo test -p nabd-persistence -p nabd-native -p nabd-ipc --manifest-path src-tauri/Cargo.toml",
+    "test:integration": "vitest run -c integration-tests/vitest.config.ts"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.8",
