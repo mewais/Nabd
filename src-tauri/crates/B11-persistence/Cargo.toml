@@ -1,0 +1,18 @@
+[package]
+name = "nabd-persistence"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+rusqlite = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[[test]]
+name = "persistence_tests"
+path = "../../../tests/rust/B11-persistence/main.rs"
