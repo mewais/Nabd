@@ -50,19 +50,19 @@ case-insensitive name collision; result sorted by group then name.
 **buildDataset(rawFreeDb, seed)**: parse raw → normalizeRecord each (drop nulls)
 → mergeAndDedupe(seed, …) → validate every entry with `ExerciseSchema`.
 
-**SEED**: the handoff `exercises.js` (~85) hand-re-tagged to the new taxonomy
+**seed()**: returns the handoff `exercises.js` (~85) hand-re-tagged to the new taxonomy
 (see `design_handoff_nabd_workout_tracker/exercises.js`; old keys back→lats,
 lowerBack→lower_back, shoulders→split by name, etc.). Each must satisfy
 `ExerciseSchema`.
 
-**EXERCISES**: `buildDataset` output, also written to `data/exercises.json`
+**exercises()**: returns `buildDataset` output, also written to `data/exercises.json`
 (commit it). Provide a `tools/build-dataset.ts` runner.
 
 **Accessors** (`createLibrary`): `all` returns input; `byId`; `search` =
 case-insensitive substring on name; `byGroup`; `filterByProfile(eq)` keeps
 exercises whose `equipment ∈ eq` OR `custom`; `musclesOf` = primary∪secondary
 deduped; `withCustom` returns a new Library over `[...base, ...custom]`.
-`defaultLibrary()` = `createLibrary(EXERCISES)`.
+`defaultLibrary()` = `createLibrary(exercises())`.
 
 ## Test Cases
 - equipment map: one case per branch incl. null-drops (`foam roll`,`other`,null).
@@ -77,7 +77,7 @@ deduped; `withCustom` returns a new Library over `[...base, ...custom]`.
 - mergeAndDedupe: seed wins on id + on name collision; sorted order.
 - buildDataset on the real source: returns ≥300 entries, **all** pass
   ExerciseSchema, no duplicate ids (golden invariants).
-- SEED: every entry passes ExerciseSchema; count ≥80; specific spot-checks
+- seed(): every entry passes ExerciseSchema; count ≥80; specific spot-checks
   (e.g. `bb-bench`→group Chest, primary chest, tracking weight_reps).
 - accessors: byId hit/miss; search case-insensitive; byGroup; filterByProfile
   keeps custom + in-profile, drops out-of-profile; musclesOf dedupes; withCustom

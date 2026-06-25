@@ -71,10 +71,14 @@ export function buildDataset(_rawFreeDb: unknown, _seed: Exercise[]): Exercise[]
 }
 
 /** The handoff seed library, re-tagged into the 23-muscle taxonomy. */
-export const SEED: Exercise[] = NI();
+export function seed(): Exercise[] {
+  return NI();
+}
 
 /** The bundled, built dataset (data/exercises.json). */
-export const EXERCISES: Exercise[] = NI();
+export function exercises(): Exercise[] {
+  return NI();
+}
 
 // ----- Runtime accessors -----
 
