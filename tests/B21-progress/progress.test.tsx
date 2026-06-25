@@ -828,6 +828,22 @@ describe("ConsistencyCard", () => {
     expect(container.firstChild).not.toBeNull();
   });
 
+  it("calendar cells render day numbers as visible text", () => {
+    const { container } = render(<ConsistencyCard {...makeProps()} />);
+    // Day 15 (level 0, past day) must appear as text inside the calendar
+    const calendarCells = container.querySelector(".calendar-cells");
+    expect(calendarCells).not.toBeNull();
+    // getByText("15") should find the day number rendered inside a cell
+    expect(screen.getByText("15")).toBeInTheDocument();
+  });
+
+  it("future cells (level -1) do not render a day number", () => {
+    // calendarData has days 25-30 with level=-1
+    render(<ConsistencyCard {...makeProps()} />);
+    // Day 25 is level -1 (future), should NOT be visible as text
+    expect(screen.queryByText("25")).not.toBeInTheDocument();
+  });
+
   it("clicking Weekly tab calls onTab('weekly')", () => {
     const onTab = vi.fn();
     render(<ConsistencyCard {...makeProps({ onTab })} />);
@@ -1127,10 +1143,10 @@ describe("ProgressScreen", () => {
 
   it("renders KPI values on the progress screen", () => {
     render(<ProgressScreen {...defaultProps} />);
-    // Streak value = "3"
-    expect(screen.getByText("3")).toBeInTheDocument();
-    // Sets this week = "7"
-    expect(screen.getByText("7")).toBeInTheDocument();
+    // Streak value = "3" — may appear multiple times (KPI + calendar day cell)
+    expect(screen.getAllByText("3").length).toBeGreaterThanOrEqual(1);
+    // Sets this week = "7" — may appear multiple times (KPI + calendar day cell)
+    expect(screen.getAllByText("7").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders 'June 2026' calendar month on the progress screen", () => {

@@ -24,3 +24,4 @@ src-tauri/gen/
 # local env
 .env
 .env.local
+scripts/visual/shots/

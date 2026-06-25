@@ -6,8 +6,11 @@ import type { CSSProperties } from "react";
 import type { Coverage, MuscleKey, Slot } from "@nabd/domain";
 import { MUSCLE_NAMES } from "@nabd/domain";
 import { recommendation } from "@nabd/coverage";
-import type { MapStyle, MapView } from "@nabd/bodymap";
+import type { MapStyle } from "@nabd/bodymap";
 import { BodyMap, MuscleBar } from "@nabd/bodymap";
+
+/** Three-value UI toggle for the body-map panel. */
+export type CoverageView = "both" | "front" | "back";
 import { Button, Segmented, Card } from "@nabd/design-system";
 
 // ---------- view-model builders (pure) ----------
@@ -545,9 +548,9 @@ export function RhythmCard(p: RhythmCardProps): JSX.Element {
 
 export interface CoverageCardProps {
   coverage: Coverage;
-  mapView: MapView;
+  mapView: CoverageView;
   mapStyle: MapStyle;
-  onMapView: (v: MapView) => void;
+  onMapView: (v: CoverageView) => void;
   onMapStyle: (s: MapStyle) => void;
 }
 
@@ -557,6 +560,7 @@ export function CoverageCard(p: CoverageCardProps): JSX.Element {
   const legendRows = buildLegend(coverage);
 
   const viewOptions = [
+    { k: "both", label: "Both" },
     { k: "front", label: "Front" },
     { k: "back", label: "Back" },
   ];
@@ -566,8 +570,8 @@ export function CoverageCard(p: CoverageCardProps): JSX.Element {
     { k: "outline", label: "Outline" },
   ];
 
-  const showFront = mapView === "front";
-  const showBack = mapView === "back";
+  const showFront = mapView !== "back";
+  const showBack = mapView !== "front";
 
   return React.createElement(
     Card,
@@ -618,7 +622,7 @@ export function CoverageCard(p: CoverageCardProps): JSX.Element {
         React.createElement(Segmented, {
           options: viewOptions,
           value: mapView,
-          onChange: (v) => onMapView(v as MapView),
+          onChange: (v) => onMapView(v as CoverageView),
           small: true,
         }),
       ),
@@ -896,7 +900,7 @@ export interface TodayScreenProps {
   doneCount: number;
   total: number;
   coverage: Coverage;
-  mapView: MapView;
+  mapView: CoverageView;
   mapStyle: MapStyle;
   insightRest: string[];
   insightPush: string[];
@@ -904,7 +908,7 @@ export interface TodayScreenProps {
   onStartNext: () => void;
   onSnooze: () => void;
   onStartSlot: (slotId: string) => void;
-  onMapView: (v: MapView) => void;
+  onMapView: (v: CoverageView) => void;
   onMapStyle: (s: MapStyle) => void;
 }
 

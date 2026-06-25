@@ -39,6 +39,7 @@ import type {
   VolumeInsightProps,
   StatTilesProps,
   TodayScreenProps,
+  CoverageView,
 } from "@nabd/today";
 
 // =============================================================================
@@ -754,7 +755,7 @@ describe("RhythmCard", () => {
 describe("CoverageCard", () => {
   const defaultProps: CoverageCardProps = {
     coverage: ZERO_COV,
-    mapView: "front",
+    mapView: "front" as CoverageView,
     mapStyle: "heat",
     onMapView: () => {},
     onMapStyle: () => {},
@@ -767,11 +768,13 @@ describe("CoverageCard", () => {
 
   it("renders view Segmented control with Both/Front/Back options", () => {
     render(<CoverageCard {...defaultProps} />);
-    // Should have buttons for front and back views at minimum
+    // Should have buttons for all three view options
     const buttons = screen.getAllByRole("button");
     const labels = buttons.map((b) => b.textContent?.toLowerCase());
+    const hasBoth = labels.some((l) => l?.includes("both"));
     const hasFront = labels.some((l) => l?.includes("front"));
     const hasBack = labels.some((l) => l?.includes("back"));
+    expect(hasBoth).toBe(true);
     expect(hasFront).toBe(true);
     expect(hasBack).toBe(true);
   });
@@ -804,6 +807,42 @@ describe("CoverageCard", () => {
     expect(frontBtn).not.toBeUndefined();
     fireEvent.click(frontBtn!);
     expect(onMapView).toHaveBeenCalledWith("front");
+  });
+
+  it("clicking 'Both' in view segmented calls onMapView('both')", () => {
+    const onMapView = vi.fn();
+    render(<CoverageCard {...defaultProps} mapView="front" onMapView={onMapView} />);
+    const buttons = screen.getAllByRole("button");
+    const bothBtn = buttons.find((b) => b.textContent?.toLowerCase() === "both");
+    expect(bothBtn).not.toBeUndefined();
+    fireEvent.click(bothBtn!);
+    expect(onMapView).toHaveBeenCalledWith("both");
+  });
+
+  it("mapView='both' renders two SVG body maps (front and back)", () => {
+    const { container } = render(
+      <CoverageCard {...defaultProps} mapView="both" />,
+    );
+    const svgs = container.querySelectorAll("svg");
+    expect(svgs.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("mapView='both' renders FRONT and BACK mono labels above each map", () => {
+    render(<CoverageCard {...defaultProps} mapView="both" />);
+    expect(screen.getByText("FRONT")).toBeInTheDocument();
+    expect(screen.getByText("BACK")).toBeInTheDocument();
+  });
+
+  it("mapView='front' renders only FRONT label (no BACK label)", () => {
+    render(<CoverageCard {...defaultProps} mapView="front" />);
+    expect(screen.getByText("FRONT")).toBeInTheDocument();
+    expect(screen.queryByText("BACK")).not.toBeInTheDocument();
+  });
+
+  it("mapView='back' renders only BACK label (no FRONT label)", () => {
+    render(<CoverageCard {...defaultProps} mapView="back" />);
+    expect(screen.getByText("BACK")).toBeInTheDocument();
+    expect(screen.queryByText("FRONT")).not.toBeInTheDocument();
   });
 
   it("clicking 'Outline' in style segmented calls onMapStyle('outline')", () => {
@@ -1106,6 +1145,24 @@ describe("TodayScreen", () => {
     expect(backBtn).not.toBeUndefined();
     fireEvent.click(backBtn!);
     expect(onMapView).toHaveBeenCalledWith("back");
+  });
+
+  it("onMapView is wired to CoverageCard — clicking Both calls onMapView('both')", () => {
+    const onMapView = vi.fn();
+    render(<TodayScreen {...defaultScreenProps} onMapView={onMapView} />);
+    const buttons = screen.getAllByRole("button");
+    const bothBtn = buttons.find((b) => b.textContent?.toLowerCase() === "both");
+    expect(bothBtn).not.toBeUndefined();
+    fireEvent.click(bothBtn!);
+    expect(onMapView).toHaveBeenCalledWith("both");
+  });
+
+  it("mapView='both' in TodayScreen shows two body map SVGs", () => {
+    const { container } = render(
+      <TodayScreen {...defaultScreenProps} mapView={"both" as CoverageView} />,
+    );
+    const svgs = container.querySelectorAll("svg");
+    expect(svgs.length).toBeGreaterThanOrEqual(2);
   });
 
   it("onMapStyle is wired to CoverageCard — clicking Outline calls onMapStyle", () => {

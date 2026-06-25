@@ -54,15 +54,12 @@ export interface BodyMapProps {
 
 /** Render one side of the body as an SVG with tinted regions. */
 export function BodyMap(p: BodyMapProps): JSX.Element {
-  const { side, coverage, style = "heat", width } = p;
+  const { side, coverage, style = "heat", width = 124 } = p;
   const viewSide = side === "front" ? ViewSide.FRONT : ViewSide.BACK;
   const muscles = side === "front" ? FRONT_MUSCLES : BACK_MUSCLES;
   const viewBox = VIEWBOX[viewSide];
 
-  const svgProps: Record<string, unknown> = { viewBox };
-  if (width !== undefined) {
-    svgProps.width = width;
-  }
+  const svgProps: Record<string, unknown> = { viewBox, width };
 
   const paths = muscles.map((region) => {
     const s = regionStyle(region.id, coverage, style);
@@ -93,26 +90,104 @@ export interface MuscleBarProps {
 export function MuscleBar(p: MuscleBarProps): JSX.Element {
   const { muscle, pct, showRec } = p;
   const name = MUSCLE_NAMES[muscle];
+  const rounded = Math.round(pct);
 
-  let recTag: JSX.Element | null = null;
-  if (showRec) {
-    if (pct >= 66) {
-      recTag = createElement("span", { className: "rec-tag" }, "Rest");
-    } else if (pct <= 38) {
-      recTag = createElement("span", { className: "rec-tag" }, "Push");
-    }
+  let recLabel = "";
+  let recColor = "var(--text3)";
+  if (pct >= 66) {
+    recLabel = "Rest";
+    recColor = "var(--accent3)";
+  } else if (pct <= 38) {
+    recLabel = "Push";
+    recColor = "var(--accent)";
   }
+
+  const recTag = showRec
+    ? createElement(
+        "span",
+        {
+          className: "rec-tag",
+          style: {
+            fontSize: "10px",
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            fontFamily: "monospace",
+            width: "38px",
+            textAlign: "right",
+            flex: "none",
+            color: recColor,
+          },
+        },
+        recLabel
+      )
+    : null;
 
   return createElement(
     "div",
-    { className: "muscle-bar" },
-    createElement("span", { className: "muscle-name" }, name),
+    {
+      className: "muscle-bar",
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "5px 0",
+      },
+    },
+    createElement(
+      "span",
+      {
+        className: "muscle-name",
+        style: {
+          width: "74px",
+          flex: "none",
+          fontSize: "12.5px",
+          color: "var(--text)",
+        },
+      },
+      name
+    ),
     createElement(
       "div",
-      { className: "bar-track" },
-      createElement("div", { className: "bar-fill", style: { width: `${pct}%` } })
+      {
+        className: "bar-track",
+        style: {
+          flex: 1,
+          height: "6px",
+          borderRadius: "3px",
+          background: "var(--surface2)",
+          position: "relative",
+          overflow: "hidden",
+        },
+      },
+      createElement("div", {
+        className: "bar-fill",
+        style: {
+          position: "absolute",
+          left: 0,
+          top: 0,
+          height: "100%",
+          borderRadius: "3px",
+          background: "var(--accent)",
+          width: `${rounded}%`,
+          transition: "width .5s",
+        },
+      })
     ),
-    createElement("span", { className: "pct-text" }, `${pct}%`),
+    createElement(
+      "span",
+      {
+        className: "pct-text",
+        style: {
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: "11px",
+          color: "var(--text2)",
+          width: "32px",
+          textAlign: "right",
+          flex: "none",
+        },
+      },
+      `${rounded}%`
+    ),
     recTag
   );
 }

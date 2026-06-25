@@ -302,7 +302,7 @@ export interface BoardColVM {
 }
 
 /** Build the week-board columns. */
-export function buildBoard(_program: Program, _profile: GymProfile, _editDayId: string | null): BoardColVM[] {
+export function buildBoard(_program: Program, _profile: GymProfile, _editDayId: string | null, _library?: Library): BoardColVM[] {
   const layout = boardLayout(_program, _profile);
 
   return layout.map((col) => {
@@ -315,12 +315,19 @@ export function buildBoard(_program: Program, _profile: GymProfile, _editDayId: 
     // day
     const card = col.card!;
     const editing = _editDayId != null && card.dayId === _editDayId;
+    // Resolve exercise names for fixed-mode chips (boardLayout uses raw exId)
+    const chips: BoardChip[] = (_program.type === "fixed" && _library != null)
+      ? card.chips.map((ch) => ({
+          name: _library.byId(ch.name)?.name ?? ch.name,
+          superset: ch.superset,
+        }))
+      : card.chips;
     const result: BoardColVM = {
       kind: "day" as const,
       label: col.label,
       dayId: card.dayId,
       name: card.name,
-      chips: card.chips,
+      chips,
       more: card.more,
     };
     if (col.weekday !== undefined) {
@@ -1279,7 +1286,7 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
     cb,
   } = _p;
 
-  const columns = buildBoard(program, profile, editDayId);
+  const columns = buildBoard(program, profile, editDayId, library);
   const editor = buildEditor(program, editDayId, library);
 
   return React.createElement(

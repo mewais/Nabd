@@ -520,11 +520,6 @@ export function App({ store, client }: AppProps): JSX.Element {
     onOpenSettings: openSettings,
   });
 
-  // TodayScreen uses bodymap's MapView ("front" | "back"), not store's ("both" | "front" | "back")
-  // If mapView is "both", fall back to "front" for the body map display
-  const todayMapView: import("@nabd/bodymap").MapView =
-    mapView === "both" ? "front" : mapView;
-
   // Screen content
   let screenContent: JSX.Element;
   if (screen === "today") {
@@ -534,7 +529,8 @@ export function App({ store, client }: AppProps): JSX.Element {
       doneCount,
       total: setsTotal,
       coverage,
-      mapView: todayMapView,
+      // CoverageCard now supports the 3-value Both/Front/Back view directly.
+      mapView,
       mapStyle,
       insightRest,
       insightPush,

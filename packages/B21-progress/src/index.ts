@@ -235,6 +235,13 @@ function cellBg(level: number): string {
   return "var(--accent)"; // level 3
 }
 
+// Calendar cell text color by level (only called for non-future cells, level >= 0)
+function cellColor(level: number): string {
+  if (level === 3) return "var(--surface)";
+  if (level >= 1) return "var(--text2)";
+  return "var(--text3)"; // level 0
+}
+
 // Weekday header labels S M T W T F S
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -374,19 +381,40 @@ export function ConsistencyCard(p: ConsistencyCardProps): JSX.Element {
       ),
     );
 
-    // Calendar cells with level-based background
+    // Calendar cells with level-based background and centered day number
     const cellEls = calendar.cells.map((cell) =>
-      React.createElement("div", {
-        key: cell.day,
-        className: `calendar-cell level-${cell.level}`,
-        "data-day": cell.day,
-        "data-level": cell.level,
-        style: {
-          aspectRatio: "1",
-          borderRadius: 4,
-          background: cellBg(cell.level),
+      React.createElement(
+        "div",
+        {
+          key: cell.day,
+          className: `calendar-cell level-${cell.level}`,
+          "data-day": cell.day,
+          "data-level": cell.level,
+          style: {
+            height: 30,
+            borderRadius: 7,
+            background: cellBg(cell.level),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          },
         },
-      }),
+        cell.level !== -1
+          ? React.createElement(
+              "span",
+              {
+                style: {
+                  fontFamily: "'JetBrains Mono',monospace",
+                  fontSize: 11,
+                  color: cellColor(cell.level),
+                  lineHeight: 1,
+                  userSelect: "none",
+                },
+              },
+              String(cell.day),
+            )
+          : null,
+      ),
     );
 
     // Less → More legend

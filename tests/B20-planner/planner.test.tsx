@@ -867,7 +867,7 @@ describe("buildBoard", () => {
   const program = seedProgram(); // weekday, fixed
 
   it("weekday schedule produces 7 columns MON–SUN", () => {
-    const cols = buildBoard(program, PROFILE, null);
+    const cols = buildBoard(program, PROFILE, null, LIBRARY);
     expect(cols).toHaveLength(7);
     expect(cols[0].label).toBe("MON");
     expect(cols[1].label).toBe("TUE");
@@ -876,21 +876,21 @@ describe("buildBoard", () => {
   });
 
   it("days with exercises produce kind=day columns", () => {
-    const cols = buildBoard(program, PROFILE, null);
+    const cols = buildBoard(program, PROFILE, null, LIBRARY);
     // MON (weekday=1) = Push, WED (weekday=3) = Pull, FRI (weekday=5) = Legs
     const mon = cols[0];
     expect(mon.kind).toBe("day");
   });
 
   it("rest days produce kind=rest columns", () => {
-    const cols = buildBoard(program, PROFILE, null);
+    const cols = buildBoard(program, PROFILE, null, LIBRARY);
     // TUE (weekday=2) has no day assigned
     const tue = cols[1];
     expect(tue.kind).toBe("rest");
   });
 
   it("day column has correct dayId, name, and chips", () => {
-    const cols = buildBoard(program, PROFILE, null);
+    const cols = buildBoard(program, PROFILE, null, LIBRARY);
     const mon = cols[0];
     expect(mon.dayId).toBe("push");
     expect(mon.name).toBe("Push");
@@ -899,20 +899,20 @@ describe("buildBoard", () => {
   });
 
   it("editing flag is set for the editDayId column", () => {
-    const cols = buildBoard(program, PROFILE, "push");
+    const cols = buildBoard(program, PROFILE, "push", LIBRARY);
     const mon = cols[0];
     expect(mon.editing).toBe(true);
   });
 
   it("editing flag is false/absent for non-editDayId columns", () => {
-    const cols = buildBoard(program, PROFILE, "push");
+    const cols = buildBoard(program, PROFILE, "push", LIBRARY);
     // WED = pull — not editing
     const wed = cols[2];
     expect(wed.editing).toBeFalsy();
   });
 
   it("no editing flag when editDayId is null", () => {
-    const cols = buildBoard(program, PROFILE, null);
+    const cols = buildBoard(program, PROFILE, null, LIBRARY);
     cols.forEach((col) => {
       expect(col.editing).toBeFalsy();
     });
@@ -920,7 +920,7 @@ describe("buildBoard", () => {
 
   it("floating schedule produces N day columns + 1 add column", () => {
     const floatingProgram: Program = { ...program, schedule: "floating" };
-    const cols = buildBoard(floatingProgram, PROFILE, null);
+    const cols = buildBoard(floatingProgram, PROFILE, null, LIBRARY);
     // 3 days + 1 ADD
     expect(cols).toHaveLength(4);
     expect(cols[0].kind).toBe("day");
@@ -932,14 +932,14 @@ describe("buildBoard", () => {
 
   it("floating day labels are DAY 1, DAY 2, ...", () => {
     const floatingProgram: Program = { ...program, schedule: "floating" };
-    const cols = buildBoard(floatingProgram, PROFILE, null);
+    const cols = buildBoard(floatingProgram, PROFILE, null, LIBRARY);
     expect(cols[0].label).toBe("DAY 1");
     expect(cols[1].label).toBe("DAY 2");
     expect(cols[2].label).toBe("DAY 3");
   });
 
   it("chips list exercises from fixed program (up to 4)", () => {
-    const cols = buildBoard(program, PROFILE, null);
+    const cols = buildBoard(program, PROFILE, null, LIBRARY);
     const mon = cols[0]; // Push day with 5 exercises
     // chips shows up to 4
     expect(mon.chips!.length).toBeLessThanOrEqual(4);
@@ -947,20 +947,38 @@ describe("buildBoard", () => {
   });
 
   it("more field counts exercises beyond 4", () => {
-    const cols = buildBoard(program, PROFILE, null);
+    const cols = buildBoard(program, PROFILE, null, LIBRARY);
     const mon = cols[0]; // Push day has 5 exercises: 4 chips + 1 more
     expect(mon.more).toBe(1);
   });
 
-  it("superset chips have superset:true flag", () => {
+  it("fixed-mode chips display exercise NAME not raw exId", () => {
+    const cols = buildBoard(program, PROFILE, null, LIBRARY);
+    const mon = cols[0]; // Push day: first exercise is bb-bench
+    // chip.name must be the human-readable name, not the raw id
+    expect(mon.chips![0].name).toBe("Barbell Bench Press");
+    expect(mon.chips![1].name).toBe("Incline Dumbbell Press");
+    // must not be raw ids
+    expect(mon.chips![0].name).not.toBe("bb-bench");
+    expect(mon.chips![1].name).not.toBe("incline-db-press");
+  });
+
+  it("fixed-mode chips without library fall back to raw exId", () => {
+    // When no library is provided, chip.name stays as the raw exId from boardLayout
     const cols = buildBoard(program, PROFILE, null);
+    const mon = cols[0];
+    expect(mon.chips![0].name).toBe("bb-bench");
+  });
+
+  it("superset chips have superset:true flag", () => {
+    const cols = buildBoard(program, PROFILE, null, LIBRARY);
     const mon = cols[0]; // Push day: db-fly and lat-raise have supersetId
     // chips[2] = db-fly (has supersetId=ssA)
     const supersetChip = mon.chips!.find((c) => c.superset === true);
     expect(supersetChip).toBeDefined();
   });
 
-  it("cycled program produces slots as chips", () => {
+  it("cycled program produces slots as chips (group names, no library needed)", () => {
     const cycledProgram: Program = {
       name: "Test",
       type: "cycled",
@@ -978,14 +996,14 @@ describe("buildBoard", () => {
         },
       ],
     };
-    const cols = buildBoard(cycledProgram, PROFILE, null);
+    const cols = buildBoard(cycledProgram, PROFILE, null, LIBRARY);
     expect(cols[0].chips).toHaveLength(2);
     expect(cols[0].chips![0].name).toBe("Chest");
     expect(cols[0].chips![1].name).toBe("Back");
   });
 
   it("weekday is set on day/rest columns in weekday schedule", () => {
-    const cols = buildBoard(program, PROFILE, null);
+    const cols = buildBoard(program, PROFILE, null, LIBRARY);
     expect(cols[0].weekday).toBe(1); // MON
     expect(cols[1].weekday).toBe(2); // TUE
     expect(cols[6].weekday).toBe(0); // SUN
@@ -1385,12 +1403,12 @@ describe("WeekBoard", () => {
   const program = seedProgram();
 
   function makeColumns(): BoardColVM[] {
-    return buildBoard(program, PROFILE, null);
+    return buildBoard(program, PROFILE, null, LIBRARY);
   }
 
   function makeFloatingColumns(): BoardColVM[] {
     const fp: Program = { ...program, schedule: "floating" };
-    return buildBoard(fp, PROFILE, null);
+    return buildBoard(fp, PROFILE, null, LIBRARY);
   }
 
   it("renders all columns", () => {
@@ -1444,7 +1462,7 @@ describe("WeekBoard", () => {
   it("editing card is visually marked (has editing indicator)", () => {
     const cb = makeCb();
     const program2 = seedProgram();
-    const columns = buildBoard(program2, PROFILE, "push");
+    const columns = buildBoard(program2, PROFILE, "push", LIBRARY);
     render(React.createElement(WeekBoard, { columns, cb }));
 
     // The editing day column should be marked — find a data-editing or similar attribute
@@ -2098,13 +2116,13 @@ describe("buildBoard — additional edge cases", () => {
       schedule: "floating",
       days: [],
     };
-    const cols = buildBoard(emptyProgram, PROFILE, null);
+    const cols = buildBoard(emptyProgram, PROFILE, null, LIBRARY);
     expect(cols).toHaveLength(1);
     expect(cols[0].kind).toBe("add");
   });
 
   it("weekday program maps SUN to weekday=0", () => {
-    const cols = buildBoard(seedProgram(), PROFILE, null);
+    const cols = buildBoard(seedProgram(), PROFILE, null, LIBRARY);
     const sun = cols.find((c) => c.label === "SUN");
     expect(sun).toBeDefined();
     expect(sun?.weekday).toBe(0);
@@ -2112,10 +2130,33 @@ describe("buildBoard — additional edge cases", () => {
 
   it("floating columns have no weekday property", () => {
     const fp: Program = { ...seedProgram(), schedule: "floating" };
-    const cols = buildBoard(fp, PROFILE, null);
+    const cols = buildBoard(fp, PROFILE, null, LIBRARY);
     const dayCols = cols.filter((c) => c.kind === "day");
     dayCols.forEach((col) => {
       expect(col.weekday).toBeUndefined();
     });
+  });
+
+  it("fixed-mode chip falls back to raw exId when exercise not found in library", () => {
+    // A program with an unknown exId not present in LIBRARY
+    const unknownProgram: Program = {
+      name: "Unknown",
+      type: "fixed",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Day 1",
+          weekday: null,
+          exercises: [
+            { id: "e1", exId: "unknown-exercise-xyz", repMode: "range", intensity: "none", rest: 120, sets: [{ type: "working", a: 8, b: 12 }] },
+          ],
+          slots: [],
+        },
+      ],
+    };
+    const cols = buildBoard(unknownProgram, PROFILE, null, LIBRARY);
+    // Library has no "unknown-exercise-xyz" → fallback to raw exId
+    expect(cols[0].chips![0].name).toBe("unknown-exercise-xyz");
   });
 });
