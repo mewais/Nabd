@@ -28,12 +28,19 @@ the planner markup ~L208-462. Tests assert behavior/DOM/values, not pixels.
   then map to BoardColVM (kind day/rest/add, label, chips, more, editing = dayId===editDayId).
 
 ## Components (use design-system Segmented/Button/Stepper/MiniStepper/Card/Pill/Badge/Icon + bodymap)
-- `SetTable`: header row (SET · repHeader · intHeader? · ✕) + a row per SetRowVM: a type
-  badge button → cb.onEdit(dayId,ref,"cycleSetType",i); rep A MiniStepper → onEdit(...,
-  "stepRep",i,0,±1) (which='a' encoded as 0) — USE the op/arg convention the tests expect
-  (read tests); range B stepper when hasB; intensity stepper when showInt → "stepVal";
-  remove → "removeSet". Footer: + Add set ("addSet"), + Warmup ("addWarmup"), ⛓ Superset
-  (cb.onToggleSuperset) for fixed ex; notes input → cb.onNotes.
+- `SetTable` — `cb.onEdit(dayId, ref, op, ...args)` MUST match the store's planEdit
+  convention exactly (wired directly in B23):
+  - type badge button → `onEdit(dayId,ref,"cycleSetType", i)`
+  - rep **a** steppers → `onEdit(dayId,ref,"stepRep", i, 1, +1|-1)`  (which **1 = a**)
+  - rep **b** steppers (range, when hasB) → `onEdit(dayId,ref,"stepRep", i, 0, +1|-1)`  (which **0 = b**)
+  - intensity stepper (when showInt) → `onEdit(dayId,ref,"stepVal", i, +1|-1)`
+  - remove set → `onEdit(dayId,ref,"removeSet", i)`
+  - rep-mode Segmented → `onEdit(dayId,ref,"setRepMode", idx)` (idx 0=range,1=fixed,2=time)
+  - load/intensity Segmented → `onEdit(dayId,ref,"setIntensity", idx)` (0=none,1=rpe,2=pct)
+  - rest steppers → `onEdit(dayId,ref,"setRest", +1|-1)`
+  - + Add set → `onEdit(dayId,ref,"addSet")`; + Warmup → `onEdit(dayId,ref,"addWarmup")`
+  - ⛓ Superset (fixed ex only) → `cb.onToggleSuperset(dayId, rowId)`
+  - notes input → `cb.onNotes(dayId, ref, value)`
 - `ProgramHeader`: program name; Fixed|Cycled Segmented → onSetType; Weekdays|Floating →
   onSetSchedule; profile button → onToggleProfileMenu; menu lists profiles → onSetProfile.
 - `WeekBoard`: render columns; day card click → onSelectDay; rest "+ Add day" → onAddDay(wd);
