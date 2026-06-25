@@ -86,19 +86,26 @@ for (const pkg of PKGS) {
     (p) => `      "@nabd/${p.name}": r("../${p.dir}/src/index.ts"),`,
   ).join("\n");
   const setup = pkg.react ? `\n    setupFiles: ["../../scripts/vitest.setup.ts"],` : "";
+  const reactImport = pkg.react ? `import react from "@vitejs/plugin-react";\n` : "";
+  const reactPlugin = pkg.react ? `\n  plugins: [react()],` : "";
+  // React packages: resolve react/react-dom to the root install so out-of-package
+  // tests can import them (peer deps aren't hoisted into the test dir).
+  const reactAlias = pkg.react
+    ? `\n      react: r("../../node_modules/react"),\n      "react-dom": r("../../node_modules/react-dom"),`
+    : "";
   w(
     `${base}/vitest.config.ts`,
     `import { defineConfig } from "vitest/config";
-import { fileURLToPath } from "node:url";
+${reactImport}import { fileURLToPath } from "node:url";
 
 // Tests live OUTSIDE this package, under tests/${pkg.dir}/. Coverage is restricted
 // to this block's own src/** and enforced at 100%.
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
-export default defineConfig({
+export default defineConfig({${reactPlugin}
   resolve: {
     alias: {
-${aliasEntries}
+${aliasEntries}${reactAlias}
     },
   },
   test: {

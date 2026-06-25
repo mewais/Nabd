@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 
 // Tests live OUTSIDE this package, under tests/B17-bodymap/. Coverage is restricted
@@ -6,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
 export default defineConfig({
+  plugins: [react()],
   resolve: {
     alias: {
       "@nabd/domain": r("../B01-domain/src/index.ts"),
@@ -27,6 +29,8 @@ export default defineConfig({
       "@nabd/planner": r("../B20-planner/src/index.ts"),
       "@nabd/progress": r("../B21-progress/src/index.ts"),
       "@nabd/modals": r("../B22-modals/src/index.ts"),
+      react: r("../../node_modules/react"),
+      "react-dom": r("../../node_modules/react-dom"),
     },
   },
   test: {
