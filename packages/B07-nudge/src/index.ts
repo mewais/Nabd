@@ -1,11 +1,6 @@
 // @nabd/nudge — pure idle+timer nudge engine.
-// SKELETON: signatures frozen; bodies throw until implemented.
 
 import type { Slot } from "@nabd/domain";
-
-const NI = (): never => {
-  throw new Error("not implemented");
-};
 
 export type NudgeReason = "timer" | "idle";
 
@@ -35,26 +30,49 @@ export interface TickInput {
  * idleNudge (timer wins ties), unless busy or a notif already exists or there is
  * no current slot.
  */
-export function tick(_input: TickInput): NudgeState {
-  return NI();
+export function tick({ state, currentSlot }: TickInput): NudgeState {
+  const secondsToNext = Math.max(0, state.secondsToNext - 1);
+  const idleSeconds = state.idleSeconds + 1;
+
+  let notif = state.notif;
+
+  if (!state.busy && notif === null && currentSlot !== null) {
+    if (secondsToNext === 0) {
+      notif = dueNotif("timer", currentSlot);
+    } else if (idleSeconds >= state.idleNudge) {
+      notif = dueNotif("idle", currentSlot);
+    }
+  }
+
+  return {
+    secondsToNext,
+    idleSeconds,
+    idleNudge: state.idleNudge,
+    busy: state.busy,
+    notif,
+  };
 }
 
 /** Build the due-notification for a reason + slot. */
-export function dueNotif(_reason: NudgeReason, _slot: Slot): Notif {
-  return NI();
+export function dueNotif(reason: NudgeReason, slot: Slot): Notif {
+  return {
+    slot,
+    reason,
+    label: reason === "idle" ? "You've gone quiet" : "Interval's up",
+  };
 }
 
 /** Reset the idle counter to 0. */
-export function resetIdle(_state: NudgeState): NudgeState {
-  return NI();
+export function resetIdle(state: NudgeState): NudgeState {
+  return { ...state, idleSeconds: 0 };
 }
 
 /** Snooze: clear notif, set timer to snooze length, reset idle. */
-export function snooze(_state: NudgeState, _snoozeSec: number): NudgeState {
-  return NI();
+export function snooze(state: NudgeState, snoozeSec: number): NudgeState {
+  return { ...state, notif: null, secondsToNext: snoozeSec, idleSeconds: 0 };
 }
 
 /** Reset the timer to the full interval (after a set is logged). */
-export function resetTimer(_state: NudgeState, _intervalMin: number): NudgeState {
-  return NI();
+export function resetTimer(state: NudgeState, intervalMin: number): NudgeState {
+  return { ...state, secondsToNext: intervalMin * 60, idleSeconds: 0, notif: null };
 }
