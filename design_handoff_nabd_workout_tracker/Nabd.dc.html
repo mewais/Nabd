@@ -83,8 +83,12 @@
       </div>
       <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
         <div style="display:flex;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px;">
-          <sc-for list="{{ themeSeg }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+          <sc-for list="{{ themeSeg }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
         </div>
+        <button onClick="{{ onToggleGlass }}" title="Translucent window" style="{{ glassToggleStyle }}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M3 9h18M9 21V9"></path></svg>
+          Glass
+        </button>
         <button onClick="{{ onOpenSettings }}" title="Settings" style="display:flex;align-items:center;justify-content:center;background:var(--surface2);color:var(--text);border:1px solid var(--line);border-radius:10px;width:40px;height:40px;cursor:pointer;flex:none;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </button>
@@ -872,24 +876,27 @@
           <div>
             <div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">APPEARANCE</div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-              <div><div style="font-size:14px;font-weight:600;">Window style</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px;">Translucent shows your desktop, blurred.</div></div>
+              <div><div style="font-size:14px;font-weight:600;">Theme</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px;">Sets text & contrast — your theme, not the wallpaper.</div></div>
               <div style="display:flex;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px;">
-                <sc-for list="{{ themeSeg }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+                <sc-for list="{{ themeSeg }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
               </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0 14px;">
+              <div><div style="font-size:14px;font-weight:600;">Translucent window</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px;">Frost the panels so your desktop shows through.</div></div>
+              <div onClick="{{ settingsView.onToggleGlass }}" style="{{ settingsView.glassTgl.track }}"><div style="{{ settingsView.glassTgl.knob }}"></div></div>
             </div>
             <sc-if value="{{ settingsView.isGlass }}" hint-placeholder-val="{{ true }}">
               <div style="background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:14px 15px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;">
-                  <div><div style="font-size:13px;font-weight:600;">Background opacity</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px;">Higher = more solid, less see-through.</div></div>
+                  <div><div style="font-size:13px;font-weight:600;">Background opacity</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px;">Higher = more solid. Has a floor so text stays readable.</div></div>
                   <div style="display:flex;align-items:center;gap:12px;"><button onClick="{{ settingsView.onOpDec }}" style="{{ stepBtnStyle }}">−</button><span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;width:48px;text-align:center;">{{ settingsView.opacityPct }}%</span><button onClick="{{ settingsView.onOpInc }}" style="{{ stepBtnStyle }}">+</button></div>
                 </div>
-                <div style="font-size:11px;color:var(--text3);margin:14px 0 8px;">Desktop background</div>
-                <div style="display:flex;gap:8px;">
+                <div style="font-size:11px;color:var(--text3);margin:14px 0 8px;">Preview wallpaper (on a real desktop this is your OS wallpaper)</div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
                   <sc-for list="{{ settingsView.wallpapers }}" as="w" hint-placeholder-count="4">
                     <div onClick="{{ w.onClick }}" style="{{ w.style }}" title="{{ w.label }}"></div>
                   </sc-for>
                 </div>
-                <div style="font-size:11px;color:var(--text3);margin-top:8px;">Pick what shows behind the glass. (On a real desktop this is your OS wallpaper.)</div>
               </div>
             </sc-if>
           </div>
@@ -942,12 +949,14 @@
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:820},&quot;startTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;translucent&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;startMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cycling&quot;,&quot;fixed&quot;],&quot;default&quot;:&quot;cycling&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;idleThreshold&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:30,&quot;min&quot;:10,&quot;max&quot;:120,&quot;step&quot;:5,&quot;tsType&quot;:&quot;number&quot;},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#009e12&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:820},&quot;startTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;startGlass&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;startMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cycling&quot;,&quot;fixed&quot;],&quot;default&quot;:&quot;cycling&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;idleThreshold&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:30,&quot;min&quot;:10,&quot;max&quot;:120,&quot;step&quot;:5,&quot;tsType&quot;:&quot;number&quot;},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#009e12&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
   THEMES = {
-    translucent: {'--bg':'rgba(22,24,32,0.55)','--surface':'rgba(255,255,255,0.07)','--surface2':'rgba(255,255,255,0.13)','--line':'rgba(255,255,255,0.16)','--text':'rgba(255,255,255,0.96)','--text2':'rgba(255,255,255,0.72)','--text3':'rgba(255,255,255,0.5)','--accent':'oklch(0.74 0.16 48)','--accent2':'oklch(0.76 0.13 158)','--accent3':'oklch(0.74 0.12 252)','--map-muscle':'rgba(255,255,255,0.18)'},
     light: {'--bg':'oklch(0.97 0.003 250)','--surface':'oklch(1 0 0)','--surface2':'oklch(0.955 0.004 250)','--line':'oklch(0.9 0.005 250)','--text':'oklch(0.24 0.01 255)','--text2':'oklch(0.5 0.012 255)','--text3':'oklch(0.66 0.01 255)','--accent':'oklch(0.6 0.16 45)','--accent2':'oklch(0.62 0.13 155)','--accent3':'oklch(0.58 0.12 255)','--map-muscle':'oklch(0.86 0.006 250)'},
-    dark: {'--bg':'oklch(0.21 0.014 265)','--surface':'oklch(0.25 0.016 265)','--surface2':'oklch(0.295 0.018 265)','--line':'oklch(0.36 0.018 265)','--text':'oklch(0.96 0.01 265)','--text2':'oklch(0.74 0.014 265)','--text3':'oklch(0.58 0.014 265)','--accent':'oklch(0.7 0.16 48)','--accent2':'oklch(0.72 0.13 158)','--accent3':'oklch(0.7 0.12 252)','--map-muscle':'oklch(0.42 0.02 265)'}
+    dark: {'--bg':'oklch(0.21 0.014 265)','--surface':'oklch(0.25 0.016 265)','--surface2':'oklch(0.295 0.018 265)','--line':'oklch(0.36 0.018 265)','--text':'oklch(0.96 0.01 265)','--text2':'oklch(0.74 0.014 265)','--text3':'oklch(0.58 0.014 265)','--accent':'oklch(0.7 0.16 48)','--accent2':'oklch(0.72 0.13 158)','--accent3':'oklch(0.7 0.12 252)','--map-muscle':'oklch(0.42 0.02 265)'},
+    // Glass materials: tokens guaranteed against the tint, NOT the wallpaper. --bg tint is computed from opacity in rootStyle.
+    darkGlass: {'--surface':'rgba(255,255,255,0.075)','--surface2':'rgba(255,255,255,0.135)','--line':'rgba(255,255,255,0.18)','--text':'rgba(255,255,255,0.98)','--text2':'rgba(255,255,255,0.78)','--text3':'rgba(255,255,255,0.6)','--accent':'oklch(0.72 0.17 48)','--accent2':'oklch(0.76 0.14 158)','--accent3':'oklch(0.74 0.14 252)','--map-muscle':'rgba(255,255,255,0.2)','--glow':'inset 0 1px 0 rgba(255,255,255,0.14)','--cardshadow':'0 6px 22px rgba(0,0,0,0.28)'},
+    lightGlass: {'--surface':'rgba(255,255,255,0.62)','--surface2':'rgba(24,28,40,0.06)','--line':'rgba(20,24,35,0.16)','--text':'oklch(0.2 0.012 260)','--text2':'oklch(0.38 0.014 260)','--text3':'oklch(0.5 0.014 260)','--accent':'oklch(0.53 0.18 42)','--accent2':'oklch(0.5 0.14 158)','--accent3':'oklch(0.5 0.14 255)','--map-muscle':'rgba(34,38,52,0.18)','--glow':'inset 0 1px 0 rgba(255,255,255,0.55)','--cardshadow':'0 6px 22px rgba(20,28,48,0.16)'}
   };
 
   GROUPS = [
@@ -995,10 +1004,10 @@ class Component extends DCLogic {
     this.startMin = 9*60+30;
     const mode = (props && props.startMode) || 'cycling';
     this.state = {
-      screen:'today', theme:(props && props.startTheme) || 'translucent', mode, dayIndex:3,
+      screen:'today', theme:(props && props.startTheme) || 'dark', glass:(props && props.startGlass!=null)? !!props.startGlass : true, mode, dayIndex:3,
       now:new Date(), secondsToNext: 8*60+12, idleSeconds:0, idleNudge:this.idleThreshold,
       settingsOpen:false,
-      settings:{opacity:0.55, wallpaper:'aurora', openAtStartup:true, minimizedByDefault:false},
+      settings:{opacity:0.72, wallpaper:'aurora', openAtStartup:true, minimizedByDefault:false},
       notif:null, activeSet:null, mapView:'both', mapStyle:'heat',
       interval:50, count:8, doneCount:2,
       coverage:{chest:55,shoulders:42,triceps:36,biceps:48,back:62,traps:50,forearms:24,abs:64,obliques:46,lowerBack:42,quads:70,hamstrings:38,glutes:58,calves:28},
@@ -1082,7 +1091,9 @@ class Component extends DCLogic {
   setProgTab(k){ this.setState({progTab:k}); }
   openProgChart(i){ this.setState({progExercise:i}); }
   closeProgChart(){ this.setState({progExercise:null}); }
-  setTheme(k){ this.setState({theme:k}); }
+  setTheme(k){ if(k==='translucent'){ this.setState({theme:'dark', glass:true}); return; } this.setState({theme:k}); }
+  setGlass(v){ this.setState({glass:!!v}); }
+  toggleGlass(){ this.setState(s=>({glass:!s.glass})); }
   setMapView(k){ this.setState({mapView:k}); }
   setMapStyle(k){ this.setState({mapStyle:k}); }
   setMode(m){ this.setState(s=>({mode:m, slots:this.buildSlots(m, s.dayIndex, s.interval, s.count, 0), doneCount:0})); }
@@ -1504,18 +1515,30 @@ class Component extends DCLogic {
 
   renderVals(){
     const S=this.state; const R=React.createElement;
-    const base = Object.assign({}, this.THEMES[S.theme]||this.THEMES.translucent);
+    const glassOn = !!S.glass;
+    const baseKey = glassOn ? (S.theme==='light' ? 'lightGlass' : 'darkGlass') : (S.theme||'dark');
+    const base = Object.assign({}, this.THEMES[baseKey]||this.THEMES.dark);
     if(this.props && this.props.accentColor) base['--accent']=this.props.accentColor;
-    const isGlass = S.theme==='translucent';
-    const op = (S.settings && S.settings.opacity!=null) ? S.settings.opacity : 0.55;
+    const isGlass = glassOn;
+    // opacity drives tint/scrim strength, with a legibility FLOOR (light glass needs a higher floor)
+    const floor = S.theme==='light' ? 0.6 : 0.5;
+    let op = (S.settings && S.settings.opacity!=null) ? S.settings.opacity : 0.72;
+    op = Math.max(floor, Math.min(0.92, op));
     const rootStyle = Object.assign({display:'flex',height:'100vh',width:'100%',overflow:'hidden',color:'var(--text)',fontFamily:"'Hanken Grotesk',system-ui,sans-serif",position:'relative',zIndex:1}, base);
-    if(isGlass){ rootStyle.background='rgba(22,24,32,'+op+')'; rootStyle.backdropFilter='blur(36px) saturate(1.5)'; rootStyle.WebkitBackdropFilter='blur(36px) saturate(1.5)'; }
-    else { rootStyle.background='var(--bg)'; }
+    if(isGlass){
+      const tint = S.theme==='light' ? 'rgba(244,246,251,'+op+')' : 'rgba(15,17,24,'+op+')';
+      rootStyle.background=tint;
+      rootStyle.backdropFilter='blur(34px) saturate(1.7)';
+      rootStyle.WebkitBackdropFilter='blur(34px) saturate(1.7)';
+    } else { rootStyle.background=base['--bg']; }
     const WP={
       aurora:'radial-gradient(120% 120% at 18% 8%, #1d4e6b 0%, #16324a 36%, #0d1b2e 70%, #07101f 100%), radial-gradient(80% 90% at 88% 22%, rgba(86,180,160,0.55), transparent 60%)',
       dusk:'radial-gradient(120% 120% at 80% 10%, #6a3a6e 0%, #3f2a55 42%, #221a36 78%, #140f22 100%), radial-gradient(70% 80% at 12% 86%, rgba(214,119,87,0.5), transparent 60%)',
       mesh:'radial-gradient(60% 70% at 20% 20%, #2b5e8c, transparent 60%), radial-gradient(55% 65% at 82% 18%, #6b3f86, transparent 60%), radial-gradient(70% 70% at 70% 88%, #1f7a63, transparent 60%), linear-gradient(135deg, #0e1626, #161226)',
-      slate:'linear-gradient(140deg, #20242e 0%, #161922 55%, #0e1016 100%)'
+      slate:'linear-gradient(140deg, #20242e 0%, #161922 55%, #0e1016 100%)',
+      sand:'radial-gradient(120% 120% at 15% 12%, #fbe7cf 0%, #f3d3ad 40%, #e7b98a 72%, #d99a6c 100%), radial-gradient(70% 80% at 88% 20%, rgba(255,255,255,0.6), transparent 60%)',
+      frost:'radial-gradient(120% 120% at 20% 10%, #eef3fb 0%, #d8e4f3 44%, #bfd0e8 74%, #a7bcde 100%), radial-gradient(65% 75% at 85% 85%, rgba(255,255,255,0.7), transparent 60%)',
+      mixed:'linear-gradient(120deg, #0e1626 0%, #2b3a55 38%, #c9b89a 62%, #f1e4cf 100%)'
     };
     const wp=(S.settings&&S.settings.wallpaper)||'aurora';
     const wallpaperStyle={position:'fixed',inset:0,zIndex:0, background:WP[wp]||WP.aurora, backgroundSize:'cover', display:isGlass?'block':'none'};
@@ -1666,15 +1689,19 @@ class Component extends DCLogic {
       greeting, dateStr, clockStr, timerStr, idleStr,
       liveDotStyle:'width:8px;height:8px;border-radius:50%;background:'+(notif?'var(--accent)':'var(--accent2)')+';'+(notif?'animation:nb-blink 1.1s infinite;':''),
       idleStyle:'color:'+(idleActive?'var(--accent)':'var(--text3)')+';',
-      themeSeg:this.seg([{k:'translucent',l:'Translucent'},{k:'light',l:'Light'},{k:'dark',l:'Dark'}], S.theme, k=>this.setTheme(k)),
+      themeSeg:this.seg([{k:'light',l:'Light'},{k:'dark',l:'Dark'}], S.theme, k=>this.setTheme(k)),
+      glassOn:glassOn, onToggleGlass:()=>this.toggleGlass(),
+      glassToggleStyle:'display:flex;align-items:center;gap:7px;border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;border:1px solid '+(glassOn?'var(--accent)':'var(--line)')+';background:'+(glassOn?'color-mix(in oklch, var(--accent) 18%, transparent)':'var(--surface2)')+';color:'+(glassOn?'var(--accent)':'var(--text2)')+';',
       wallpaperStyle, settingsOpen:S.settingsOpen, onOpenSettings:()=>this.openSettings(), onCloseSettings:()=>this.closeSettings(),
       settingsView:(function(self){
         const st=S.settings||{}; const onB=st.openAtStartup, minB=st.minimizedByDefault;
         const tgl=(on)=>({track:'width:44px;height:25px;border-radius:999px;cursor:pointer;position:relative;background:'+(on?'var(--accent)':'var(--surface2)')+';border:1px solid var(--line);flex:none;', knob:'position:absolute;top:2px;left:'+(on?'21px':'2px')+';width:19px;height:19px;border-radius:50%;background:#fff;transition:left .18s;box-shadow:0 1px 2px rgba(0,0,0,.25);'});
-        const wps=[['aurora','Aurora'],['dusk','Dusk'],['mesh','Mesh'],['slate','Slate']].map(w=>{ const on=wp===w[0]; return {key:w[0], label:w[1], onClick:()=>self.setWallpaper(w[0]), active:on,
-          style:'flex:1;height:50px;border-radius:10px;cursor:pointer;border:2px solid '+(on?'var(--accent)':'rgba(255,255,255,0.14)')+';background:'+(WP[w[0]]||WP.aurora)+';background-size:cover;'}; });
-        return {isGlass, opacityPct:Math.round(op*100), opacityVal:op, onOpacity:(e)=>self.setOpacity(parseFloat(e.target.value)),
-          onOpDec:()=>self.setOpacity(Math.max(0.2, Math.round((op-0.05)*100)/100)), onOpInc:()=>self.setOpacity(Math.min(0.9, Math.round((op+0.05)*100)/100)),
+        const wps=[['aurora','Aurora'],['dusk','Dusk'],['slate','Slate'],['mesh','Mesh'],['sand','Sand'],['frost','Frost'],['mixed','Mixed']].map(w=>{ const on=wp===w[0]; return {key:w[0], label:w[1], onClick:()=>self.setWallpaper(w[0]), active:on,
+          style:'width:100%;height:46px;border-radius:10px;cursor:pointer;border:2px solid '+(on?'var(--accent)':'var(--line)')+';background:'+(WP[w[0]]||WP.aurora)+';background-size:cover;'}; });
+        const floor = S.theme==='light'?0.6:0.5;
+        return {isGlass, onToggleGlass:()=>self.toggleGlass(), glassTgl:tgl(glassOn),
+          opacityPct:Math.round(op*100), opacityVal:op, onOpacity:(e)=>self.setOpacity(parseFloat(e.target.value)),
+          onOpDec:()=>self.setOpacity(Math.max(floor, Math.round((op-0.04)*100)/100)), onOpInc:()=>self.setOpacity(Math.min(0.92, Math.round((op+0.04)*100)/100)),
           wallpapers:wps,
           startupTgl:tgl(onB), onStartup:()=>self.setSetting('openAtStartup',!onB),
           minTgl:tgl(minB), onMin:()=>self.setSetting('minimizedByDefault',!minB),

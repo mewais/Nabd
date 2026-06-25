@@ -26,6 +26,16 @@ The prototype is built as a single "Design Component" HTML file driven by a smal
 (`support.js`). Treat the **rendered UI and the documented behavior below** as the source of truth, not
 the runtime mechanics.
 
+## Screens (dark theme)
+Reference captures of every screen are in `screens/` (dark theme, solid):
+- `screens/today.png` — Today: next-set hero, today's rhythm timeline, muscle coverage map, day donut.
+- `screens/plan.png` — Plan: week board, day editor with the sets table, live weekly-coverage rail.
+- `screens/progress.png` — Progress: KPI strip, consistency calendar, completion rate, time-of-day,
+  "what prompts a set."
+- `screens/log-sets.png` — Log Sets session modal (two-pane: exercise list + per-set log form).
+- `screens/settings.png` — Settings: theme + translucent toggle, startup, notifications, data.
+
+
 ## Fidelity
 **High-fidelity (hifi).** Final colors, typography, spacing, layouts, and interactions are all
 specified. Recreate the UI pixel-faithfully using the codebase's libraries. Exact token values are in
@@ -41,8 +51,8 @@ A fixed desktop window, `100vh`, no body scroll; inner content panes scroll.
   rounded square + "Nabd · نبض" / "PULSE · v0.1"), nav items (**Today**, **Plan**, **Progress**), and a
   day-progress **donut** at the bottom (conic-gradient ring showing sets done / total).
 - **Top bar**: time-aware greeting + date (left), a live status pill (`clock` · `next: timer` ·
-  `idle: timer`) with a pulsing live dot, a **theme segmented control** (Translucent / Light / Dark),
-  and a **settings gear** button (40×40, icon-only).
+  `idle: timer`) with a pulsing live dot, a **theme segmented control** (Light / Dark), a **Glass**
+  toggle button (translucency on/off), and a **settings gear** button (40×40, icon-only).
 - **Main content**: the active screen, scrollable, `padding: 26px`.
 
 ### Nav item states
@@ -139,8 +149,9 @@ Single column, ordered by importance:
 - **Notification toast** (bottom-right, fixed) — "TIME TO MOVE", reason (timer/idle), exercise, "Let's
   go" / "Snooze". Pulsing dot.
 - **Settings modal** (gear) — sections:
-  - **Appearance**: Translucent / Light / Dark; (when translucent) background-opacity stepper +
-    4 desktop-wallpaper swatches (Aurora / Dusk / Mesh / Slate).
+  - **Appearance**: Theme (Light / Dark) + a **Translucent window** toggle; (when translucent) a
+    background-opacity stepper (with a legibility floor) + 7 preview-wallpaper swatches (Aurora / Dusk /
+    Slate / Mesh / Sand / Frost / Mixed — including light and mixed-luminance ones to prove legibility).
   - **Startup**: Open at startup, Start minimized (toggles).
   - **Notifications**: Time between sets (min stepper), Idle before a nudge (sec stepper).
   - **Data**: Export data (downloads `nabd-data.json` of plan + custom exercises + settings), Import data
@@ -160,12 +171,33 @@ Single column, ordered by importance:
   secondary = ½) and re-tint the body maps + bars.
 - **Cycled rotation**: each session pulls the next exercise from each group's pool (round-robin), so
   pools of different sizes drift out of phase.
-- **Translucency**: in Translucent theme the app shell is a frosted panel
-  (`background: rgba(22,24,32,<opacity>)` + `backdrop-filter: blur(36px) saturate(1.5)`) over a fixed
-  full-bleed wallpaper layer (`z-index:0`); inner surfaces are semi-transparent whites. In a real
-  desktop app the wallpaper is the **actual OS desktop** behind a transparent window — implement with
-  native window vibrancy/acrylic (macOS `NSVisualEffectView` / Windows Acrylic / Tauri/Electron
-  vibrancy), with the opacity slider controlling tint strength.
+- **Translucency (the "two materials" model)**: translucency is a **modifier on the theme, not a third
+  theme**. There are two real themes — **Light** and **Dark** — each with a solid material and a **glass**
+  material. The **Glass toggle** swaps in the matching glass material (Dark→`darkGlass`, Light→
+  `lightGlass`). Critically, **the wallpaper never decides text color — the theme does**; the glass
+  material guarantees contrast against its own tint, so the same UI is legible over *any* desktop
+  (light, dark, or mixed/gradient).
+  How it works: the app shell paints a semi-opaque **tint/scrim** (`darkGlass` →
+  `rgba(15,17,24,<op>)`, `lightGlass` → `rgba(244,246,251,<op>)`) with
+  `backdrop-filter: blur(34px) saturate(1.7)`, over a fixed full-bleed wallpaper layer (`z-index:0`).
+  The blur destroys backdrop detail; the tint floods luminance into a known range; **text sits on the
+  tint/surfaces, never on the raw wallpaper**, so the wallpaper only ever shows through window margins
+  and the gaps between cards. The **opacity slider drives the tint alpha with a hard floor** (Light
+  glass floor 0.60, Dark glass floor 0.50, max 0.92) so it can't be dragged into illegibility — it tunes
+  scrim strength, never text color.
+  Each glass material **re-specifies** its surfaces, borders (brighter `--line` — separation comes from
+  the edge, since translucent fills barely differ), `--text3` (raised one step, because faint-gray-on-
+  faint-gray dies on glass), the **accent** (Light-glass accent darkened to `oklch(0.53 …)` so white-on-
+  accent and accent-as-text both clear contrast; Dark-glass accent brightened), and the **non-text
+  tints** that break first on glass — `--map-muscle` (the body map), donut/gridline/sparkline/bar colors.
+  Two extra tokens are provided per glass material for the "wet glass" edge: `--glow`
+  (`inset 0 1px 0 …` top inner highlight) and `--cardshadow` (heavier outer shadow — glass needs *more*
+  shadow, not less, to separate from a busy backdrop); apply them to cards/modals.
+  In a real desktop app the wallpaper is the **actual OS desktop** behind a transparent window —
+  implement with native window vibrancy/acrylic (macOS `NSVisualEffectView` light/dark materials /
+  Windows Acrylic / Tauri/Electron vibrancy), choosing the light vs dark material from the app theme and
+  letting the opacity slider control tint strength. For user-supplied wallpapers, also apply a fixed
+  contrast-floor veil so no photo can blow out the text.
 - Hover states on rows/cards: subtle `background: var(--surface2)`. Transitions ~.14–.5s ease.
 - Animations: toast slide-up, modal fade-up, blink on live dot, bar/width transitions on coverage.
 
@@ -191,22 +223,43 @@ JSON snapshot of these.
 **Themes** (CSS custom properties; oklch + rgba). Accent default is a warm orange; the prototype's
 tweak panel also allows a custom accent.
 
-| Token | Translucent | Light | Dark |
-|---|---|---|---|
-| `--bg` | `rgba(22,24,32, <opacity 0.2–0.9, default .55>)` + frost | `oklch(0.97 0.003 250)` | `oklch(0.21 0.014 265)` |
-| `--surface` | `rgba(255,255,255,0.07)` | `#fff` (`oklch(1 0 0)`) | `oklch(0.25 0.016 265)` |
-| `--surface2` | `rgba(255,255,255,0.13)` | `oklch(0.955 0.004 250)` | `oklch(0.295 0.018 265)` |
-| `--line` | `rgba(255,255,255,0.16)` | `oklch(0.9 0.005 250)` | `oklch(0.36 0.018 265)` |
-| `--text` | `rgba(255,255,255,0.96)` | `oklch(0.24 0.01 255)` | `oklch(0.96 0.01 265)` |
-| `--text2` | `rgba(255,255,255,0.72)` | `oklch(0.5 0.012 255)` | `oklch(0.74 0.014 265)` |
-| `--text3` | `rgba(255,255,255,0.5)` | `oklch(0.66 0.01 255)` | `oklch(0.58 0.014 265)` |
-| `--accent` | `oklch(0.74 0.16 48)` | `oklch(0.6 0.16 45)` | `oklch(0.7 0.16 48)` |
-| `--accent2` (green) | `oklch(0.76 0.13 158)` | `oklch(0.62 0.13 155)` | `oklch(0.72 0.13 158)` |
-| `--accent3` (blue) | `oklch(0.74 0.12 252)` | `oklch(0.58 0.12 255)` | `oklch(0.7 0.12 252)` |
-| `--map-muscle` | `rgba(255,255,255,0.18)` | `oklch(0.86 0.006 250)` | `oklch(0.42 0.02 265)` |
+Solid themes:
 
-Translucent frost: `backdrop-filter: blur(36px) saturate(1.5)`. Wallpapers: Aurora (teal/blue radial),
-Dusk (purple/orange radial), Mesh (multi-radial), Slate (linear).
+| Token | Light | Dark |
+|---|---|---|
+| `--bg` | `oklch(0.97 0.003 250)` | `oklch(0.21 0.014 265)` |
+| `--surface` | `#fff` (`oklch(1 0 0)`) | `oklch(0.25 0.016 265)` |
+| `--surface2` | `oklch(0.955 0.004 250)` | `oklch(0.295 0.018 265)` |
+| `--line` | `oklch(0.9 0.005 250)` | `oklch(0.36 0.018 265)` |
+| `--text` | `oklch(0.24 0.01 255)` | `oklch(0.96 0.01 265)` |
+| `--text2` | `oklch(0.5 0.012 255)` | `oklch(0.74 0.014 265)` |
+| `--text3` | `oklch(0.66 0.01 255)` | `oklch(0.58 0.014 265)` |
+| `--accent` | `oklch(0.6 0.16 45)` | `oklch(0.7 0.16 48)` |
+| `--accent2` (green) | `oklch(0.62 0.13 155)` | `oklch(0.72 0.13 158)` |
+| `--accent3` (blue) | `oklch(0.58 0.12 255)` | `oklch(0.7 0.12 252)` |
+| `--map-muscle` | `oklch(0.86 0.006 250)` | `oklch(0.42 0.02 265)` |
+
+Glass materials (`--bg` is the computed tint above; everything else re-specified for legibility on glass):
+
+| Token | lightGlass | darkGlass |
+|---|---|---|
+| tint (`--bg`) | `rgba(244,246,251,<op 0.60–0.92>)` | `rgba(15,17,24,<op 0.50–0.92>)` |
+| `--surface` | `rgba(255,255,255,0.62)` | `rgba(255,255,255,0.075)` |
+| `--surface2` | `rgba(24,28,40,0.06)` | `rgba(255,255,255,0.135)` |
+| `--line` | `rgba(20,24,35,0.16)` | `rgba(255,255,255,0.18)` |
+| `--text` | `oklch(0.2 0.012 260)` | `rgba(255,255,255,0.98)` |
+| `--text2` | `oklch(0.38 0.014 260)` | `rgba(255,255,255,0.78)` |
+| `--text3` | `oklch(0.5 0.014 260)` | `rgba(255,255,255,0.6)` |
+| `--accent` | `oklch(0.53 0.18 42)` | `oklch(0.72 0.17 48)` |
+| `--accent2` (green) | `oklch(0.5 0.14 158)` | `oklch(0.76 0.14 158)` |
+| `--accent3` (blue) | `oklch(0.5 0.14 255)` | `oklch(0.74 0.14 252)` |
+| `--map-muscle` | `rgba(34,38,52,0.18)` | `rgba(255,255,255,0.2)` |
+| `--glow` (inner highlight) | `inset 0 1px 0 rgba(255,255,255,0.55)` | `inset 0 1px 0 rgba(255,255,255,0.14)` |
+| `--cardshadow` | `0 6px 22px rgba(20,28,48,0.16)` | `0 6px 22px rgba(0,0,0,0.28)` |
+
+Glass frost: `backdrop-filter: blur(34px) saturate(1.7)`. Preview wallpapers: Aurora (teal/blue radial),
+Dusk (purple/orange radial), Slate (dark linear), Mesh (multi-radial), Sand (warm light radial), Frost
+(cool light radial), Mixed (dark→light diagonal — the worst-case legibility test).
 
 **Radii**: cards/panels 16–18px; inner cards 11–14px; buttons/inputs 8–12px; pills/donut 999px; badges
 5–8px. **Sidebar** 250px. **Set-type badge** 26×26 radius 7.
