@@ -83,8 +83,9 @@ describe("appdata.ts", () => {
       app: "Nabd",
       version: 1,
       settings: {
-        theme: "translucent",
-        opacity: 0.55,
+        theme: "dark",
+        glass: false,
+        opacity: 0.7,
         wallpaper: "aurora",
         openAtStartup: true,
         minimizedByDefault: false,
@@ -93,5 +94,32 @@ describe("appdata.ts", () => {
       },
     });
     expect(result.success).toBe(true);
+  });
+
+  it("theme translucent is rejected in appdata", () => {
+    const result = AppDataSchema.safeParse({
+      app: "Nabd",
+      version: 1,
+      theme: "translucent",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("theme light is accepted in appdata", () => {
+    const result = AppDataSchema.safeParse({
+      app: "Nabd",
+      version: 1,
+      theme: "light",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("settings.theme translucent is rejected", () => {
+    const result = AppDataSchema.safeParse({
+      app: "Nabd",
+      version: 1,
+      settings: { theme: "translucent" },
+    });
+    expect(result.success).toBe(false);
   });
 });

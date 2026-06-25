@@ -351,8 +351,8 @@ describe("hydrate() with null snapshot → seed defaults", () => {
     expect(get(store).settings).toEqual(DEFAULT_SETTINGS);
   });
 
-  it("uses 'translucent' as default theme", () => {
-    expect(get(store).theme).toBe("translucent");
+  it("uses 'dark' as default theme", () => {
+    expect(get(store).theme).toBe("dark");
   });
 
   it("history is empty", () => {
@@ -476,6 +476,52 @@ describe("setTheme — updates + persists", () => {
   it("persists theme 'dark' via saveSingleton", () => {
     get(store).setTheme("dark");
     expect(client.saveSingleton).toHaveBeenCalledWith("theme", "dark");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// toggleGlass — flips settings.glass + persists
+// ---------------------------------------------------------------------------
+
+describe("toggleGlass — flips glass + persists", () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    client = makeFakeClient();
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    vi.clearAllMocks();
+  });
+
+  it("flips settings.glass from false to true", () => {
+    expect(get(store).settings.glass).toBe(false);
+    get(store).toggleGlass();
+    expect(get(store).settings.glass).toBe(true);
+  });
+
+  it("flips settings.glass from true back to false", () => {
+    get(store).toggleGlass();
+    get(store).toggleGlass();
+    expect(get(store).settings.glass).toBe(false);
+  });
+
+  it("persists settings via saveSingleton('settings', {glass:true})", () => {
+    get(store).toggleGlass();
+    expect(client.saveSingleton).toHaveBeenCalledWith(
+      "settings",
+      expect.objectContaining({ glass: true }),
+    );
+  });
+
+  it("persists settings via saveSingleton('settings', {glass:false}) on second toggle", () => {
+    get(store).toggleGlass();
+    vi.clearAllMocks();
+    get(store).toggleGlass();
+    expect(client.saveSingleton).toHaveBeenCalledWith(
+      "settings",
+      expect.objectContaining({ glass: false }),
+    );
   });
 });
 

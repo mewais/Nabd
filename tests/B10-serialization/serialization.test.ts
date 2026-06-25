@@ -57,7 +57,8 @@ const MINIMAL_EXERCISE: Exercise = {
 };
 
 const MINIMAL_SETTINGS: Settings = {
-  theme: "translucent",
+  theme: "dark",
+  glass: false,
   opacity: 0.55,
   wallpaper: "aurora",
   openAtStartup: true,
@@ -89,7 +90,7 @@ function makeInput(overrides: Partial<SnapshotInput> = {}): SnapshotInput {
     program: MINIMAL_PROGRAM,
     customExercises: [MINIMAL_EXERCISE],
     settings: MINIMAL_SETTINGS,
-    theme: "translucent" as Theme,
+    theme: "dark" as Theme,
     history: MINIMAL_HISTORY,
     rotationState: MINIMAL_ROTATION,
     exportedAt: "2024-01-15T10:00:00.000Z",
@@ -135,7 +136,7 @@ describe("serialize", () => {
 
   it("preserves theme from input", () => {
     const result = serialize(makeInput());
-    expect(result.theme).toBe("translucent");
+    expect(result.theme).toBe("dark");
   });
 
   it("preserves history from input", () => {

@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { SettingsSchema, DEFAULT_SETTINGS, DEFAULTS, ThemeSchema, WallpaperSchema } from "@nabd/domain";
+import {
+  SettingsSchema,
+  DEFAULT_SETTINGS,
+  DEFAULTS,
+  ThemeSchema,
+  WallpaperSchema,
+  GLASS_OPACITY,
+  materialKey,
+} from "@nabd/domain";
 
 describe("settings.ts", () => {
   it("DEFAULT_SETTINGS parses against SettingsSchema", () => {
@@ -8,8 +16,9 @@ describe("settings.ts", () => {
   });
 
   it("DEFAULT_SETTINGS has expected values", () => {
-    expect(DEFAULT_SETTINGS.theme).toBe("translucent");
-    expect(DEFAULT_SETTINGS.opacity).toBe(0.55);
+    expect(DEFAULT_SETTINGS.theme).toBe("dark");
+    expect(DEFAULT_SETTINGS.glass).toBe(false);
+    expect(DEFAULT_SETTINGS.opacity).toBe(0.7);
     expect(DEFAULT_SETTINGS.wallpaper).toBe("aurora");
     expect(DEFAULT_SETTINGS.openAtStartup).toBe(true);
     expect(DEFAULT_SETTINGS.minimizedByDefault).toBe(false);
@@ -17,12 +26,25 @@ describe("settings.ts", () => {
     expect(DEFAULT_SETTINGS.idleNudge).toBe(30);
   });
 
+  it("DEFAULT_SETTINGS.opacity is within [0.2, 0.92]", () => {
+    expect(DEFAULT_SETTINGS.opacity).toBeGreaterThanOrEqual(0.2);
+    expect(DEFAULT_SETTINGS.opacity).toBeLessThanOrEqual(0.92);
+  });
+
+  it("Settings has glass field", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, glass: true });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.glass).toBe(true);
+    }
+  });
+
   it("opacity below 0.2 is rejected", () => {
     const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 0.1 });
     expect(result.success).toBe(false);
   });
 
-  it("opacity above 0.9 is rejected", () => {
+  it("opacity above 0.92 is rejected", () => {
     const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 0.95 });
     expect(result.success).toBe(false);
   });
@@ -32,8 +54,8 @@ describe("settings.ts", () => {
     expect(result.success).toBe(true);
   });
 
-  it("opacity at boundary 0.9 is accepted", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 0.9 });
+  it("opacity at boundary 0.92 is accepted", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 0.92 });
     expect(result.success).toBe(true);
   });
 
@@ -108,10 +130,9 @@ describe("settings.ts", () => {
   });
 
   describe("ThemeSchema", () => {
-    it("accepts translucent", () =>
-      expect(ThemeSchema.safeParse("translucent").success).toBe(true));
     it("accepts light", () => expect(ThemeSchema.safeParse("light").success).toBe(true));
     it("accepts dark", () => expect(ThemeSchema.safeParse("dark").success).toBe(true));
+    it("rejects translucent", () => expect(ThemeSchema.safeParse("translucent").success).toBe(false));
     it("rejects invalid", () => expect(ThemeSchema.safeParse("midnight").success).toBe(false));
   });
 
@@ -120,6 +141,39 @@ describe("settings.ts", () => {
     it("accepts dusk", () => expect(WallpaperSchema.safeParse("dusk").success).toBe(true));
     it("accepts mesh", () => expect(WallpaperSchema.safeParse("mesh").success).toBe(true));
     it("accepts slate", () => expect(WallpaperSchema.safeParse("slate").success).toBe(true));
+    it("accepts sand", () => expect(WallpaperSchema.safeParse("sand").success).toBe(true));
+    it("accepts frost", () => expect(WallpaperSchema.safeParse("frost").success).toBe(true));
+    it("accepts mixed", () => expect(WallpaperSchema.safeParse("mixed").success).toBe(true));
     it("rejects invalid", () => expect(WallpaperSchema.safeParse("forest").success).toBe(false));
+  });
+
+  describe("GLASS_OPACITY", () => {
+    it("light has floor 0.6 and max 0.92", () => {
+      expect(GLASS_OPACITY.light.floor).toBe(0.6);
+      expect(GLASS_OPACITY.light.max).toBe(0.92);
+    });
+
+    it("dark has floor 0.5 and max 0.92", () => {
+      expect(GLASS_OPACITY.dark.floor).toBe(0.5);
+      expect(GLASS_OPACITY.dark.max).toBe(0.92);
+    });
+  });
+
+  describe("materialKey", () => {
+    it('materialKey("light", true) === "lightGlass"', () => {
+      expect(materialKey("light", true)).toBe("lightGlass");
+    });
+
+    it('materialKey("dark", true) === "darkGlass"', () => {
+      expect(materialKey("dark", true)).toBe("darkGlass");
+    });
+
+    it('materialKey("light", false) === "light"', () => {
+      expect(materialKey("light", false)).toBe("light");
+    });
+
+    it('materialKey("dark", false) === "dark"', () => {
+      expect(materialKey("dark", false)).toBe("dark");
+    });
   });
 });

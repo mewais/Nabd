@@ -13,7 +13,7 @@
 // root (packages/B16-design-system) not the test file's directory.
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { THEMES, WALLPAPERS } from "@nabd/domain";
+import { THEMES, WALLPAPERS, GLASS_FROST, materialKey, glassTint } from "@nabd/domain";
 import type { Theme, Wallpaper } from "@nabd/domain";
 
 import {
@@ -39,7 +39,7 @@ import type { IconName } from "@nabd/design-system";
 // Helpers
 // ---------------------------------------------------------------------------
 
-const THEMES_LIST: Theme[] = ["translucent", "light", "dark"];
+const THEMES_LIST: Theme[] = ["light", "dark"];
 const WALLPAPERS_LIST: Wallpaper[] = ["aurora", "dusk", "mesh", "slate"];
 
 const ALL_ICON_NAMES: IconName[] = [
@@ -63,44 +63,75 @@ const ALL_ICON_NAMES: IconName[] = [
 // ---------------------------------------------------------------------------
 
 describe("themeVars", () => {
-  test.each(THEMES_LIST)(
-    "includes every THEMES[%s] key for theme=%s",
-    (theme) => {
-      const vars = themeVars(theme, 0.55);
-      const expected = THEMES[theme];
-      for (const key of Object.keys(expected)) {
-        // Each CSS custom property must appear in the returned object
-        expect(vars).toHaveProperty(key, expected[key]);
-      }
-    },
-  );
-
-  test("translucent theme has all 11 CSS custom properties", () => {
-    const vars = themeVars("translucent", 0.55);
-    expect(Object.keys(vars).length).toBeGreaterThanOrEqual(
-      Object.keys(THEMES.translucent).length,
-    );
+  test("solid light returns THEMES.light tokens (e.g. --surface)", () => {
+    const vars = themeVars("light", false);
+    const expected = THEMES[materialKey("light", false)];
+    expect(vars).toHaveProperty("--surface", expected["--surface"]);
   });
 
-  test("light theme has all 11 CSS custom properties", () => {
-    const vars = themeVars("light", 0.55);
-    expect(Object.keys(vars).length).toBeGreaterThanOrEqual(
-      Object.keys(THEMES.light).length,
-    );
+  test("solid dark returns THEMES.dark tokens (e.g. --surface)", () => {
+    const vars = themeVars("dark", false);
+    const expected = THEMES[materialKey("dark", false)];
+    expect(vars).toHaveProperty("--surface", expected["--surface"]);
   });
 
-  test("dark theme has all 11 CSS custom properties", () => {
-    const vars = themeVars("dark", 0.55);
-    expect(Object.keys(vars).length).toBeGreaterThanOrEqual(
-      Object.keys(THEMES.dark).length,
-    );
+  test("glass light returns THEMES.lightGlass tokens", () => {
+    const vars = themeVars("light", true);
+    const expected = THEMES[materialKey("light", true)];
+    expect(vars).toHaveProperty("--surface", expected["--surface"]);
   });
 
-  test("opacity parameter is accepted (does not affect non-translucent key set)", () => {
-    const vars1 = themeVars("dark", 0.3);
-    const vars2 = themeVars("dark", 0.8);
-    // Both calls must succeed and return the same set of keys
-    expect(Object.keys(vars1)).toEqual(Object.keys(vars2));
+  test("glass dark returns THEMES.darkGlass tokens", () => {
+    const vars = themeVars("dark", true);
+    const expected = THEMES[materialKey("dark", true)];
+    expect(vars).toHaveProperty("--surface", expected["--surface"]);
+  });
+
+  test("solid vs glass dark: --surface differs", () => {
+    const solid = themeVars("dark", false);
+    const glass = themeVars("dark", true);
+    expect(solid["--surface"]).not.toBe(glass["--surface"]);
+  });
+
+  test("solid vs glass light: --surface differs", () => {
+    const solid = themeVars("light", false);
+    const glass = themeVars("light", true);
+    expect(solid["--surface"]).not.toBe(glass["--surface"]);
+  });
+
+  test("glass dark has --glow token (not 'none')", () => {
+    const vars = themeVars("dark", true);
+    // darkGlass --glow is an inset shadow (not 'none')
+    expect(vars["--glow"]).not.toBe("none");
+  });
+
+  test("glass light has --glow token (not 'none')", () => {
+    const vars = themeVars("light", true);
+    // lightGlass --glow is an inset shadow (not 'none')
+    expect(vars["--glow"]).not.toBe("none");
+  });
+
+  test("solid dark has --glow = 'none' (no glow for solid)", () => {
+    const vars = themeVars("dark", false);
+    expect(vars["--glow"]).toBe("none");
+  });
+
+  test("solid light has --glow = 'none' (no glow for solid)", () => {
+    const vars = themeVars("light", false);
+    expect(vars["--glow"]).toBe("none");
+  });
+
+  test("glass dark has --cardshadow matching THEMES.darkGlass", () => {
+    const vars = themeVars("dark", true);
+    expect(vars["--cardshadow"]).toBe(THEMES.darkGlass["--cardshadow"]);
+  });
+
+  test("all four materials return all 13 CSS custom properties", () => {
+    const minKeys = 13;
+    expect(Object.keys(themeVars("light", false)).length).toBeGreaterThanOrEqual(minKeys);
+    expect(Object.keys(themeVars("dark", false)).length).toBeGreaterThanOrEqual(minKeys);
+    expect(Object.keys(themeVars("light", true)).length).toBeGreaterThanOrEqual(minKeys);
+    expect(Object.keys(themeVars("dark", true)).length).toBeGreaterThanOrEqual(minKeys);
   });
 });
 
@@ -109,64 +140,79 @@ describe("themeVars", () => {
 // ---------------------------------------------------------------------------
 
 describe("rootBackgroundStyle", () => {
-  test("translucent → rgba background with supplied opacity", () => {
-    const style = rootBackgroundStyle("translucent", 0.7);
-    expect(style).toHaveProperty("background", "rgba(22,24,32,0.7)");
-  });
-
-  test("translucent → backdropFilter contains blur(36px) saturate(1.5)", () => {
-    const style = rootBackgroundStyle("translucent", 0.55);
-    expect(style).toHaveProperty("backdropFilter", "blur(36px) saturate(1.5)");
-  });
-
-  test("translucent → WebkitBackdropFilter equals backdropFilter", () => {
-    const style = rootBackgroundStyle("translucent", 0.55);
-    expect(style).toHaveProperty(
-      "WebkitBackdropFilter",
-      "blur(36px) saturate(1.5)",
-    );
-  });
-
-  test("translucent → opacity 0.2 boundary produces rgba(22,24,32,0.2)", () => {
-    const style = rootBackgroundStyle("translucent", 0.2);
-    expect(style).toHaveProperty("background", "rgba(22,24,32,0.2)");
-  });
-
-  test("translucent → opacity 0.9 boundary produces rgba(22,24,32,0.9)", () => {
-    const style = rootBackgroundStyle("translucent", 0.9);
-    expect(style).toHaveProperty("background", "rgba(22,24,32,0.9)");
-  });
-
-  test("light → background is var(--bg)", () => {
-    const style = rootBackgroundStyle("light", 0.55);
+  test("glass:false, light → background is var(--bg)", () => {
+    const style = rootBackgroundStyle("light", false, 0.55);
     expect(style).toHaveProperty("background", "var(--bg)");
   });
 
-  test("light → no backdropFilter", () => {
-    const style = rootBackgroundStyle("light", 0.55);
-    expect(style).not.toHaveProperty("backdropFilter");
-  });
-
-  test("dark → background is var(--bg)", () => {
-    const style = rootBackgroundStyle("dark", 0.55);
+  test("glass:false, dark → background is var(--bg)", () => {
+    const style = rootBackgroundStyle("dark", false, 0.55);
     expect(style).toHaveProperty("background", "var(--bg)");
   });
 
-  test("dark → no backdropFilter", () => {
-    const style = rootBackgroundStyle("dark", 0.55);
+  test("glass:false, light → no backdropFilter", () => {
+    const style = rootBackgroundStyle("light", false, 0.55);
     expect(style).not.toHaveProperty("backdropFilter");
   });
 
-  test("translucent differs from light in background value", () => {
-    const t = rootBackgroundStyle("translucent", 0.55);
-    const l = rootBackgroundStyle("light", 0.55);
-    expect(t.background).not.toEqual(l.background);
+  test("glass:false, dark → no backdropFilter", () => {
+    const style = rootBackgroundStyle("dark", false, 0.55);
+    expect(style).not.toHaveProperty("backdropFilter");
   });
 
-  test("translucent differs from dark in background value", () => {
-    const t = rootBackgroundStyle("translucent", 0.55);
-    const d = rootBackgroundStyle("dark", 0.55);
-    expect(t.background).not.toEqual(d.background);
+  test("glass:true, dark → background contains rgba(15,17,24,", () => {
+    const style = rootBackgroundStyle("dark", true, 0.7);
+    expect(style.background as string).toContain("rgba(15,17,24,");
+  });
+
+  test("glass:true, light → background contains rgba(244,246,251,", () => {
+    const style = rootBackgroundStyle("light", true, 0.7);
+    expect(style.background as string).toContain("rgba(244,246,251,");
+  });
+
+  test("glass:true, dark → backdropFilter is GLASS_FROST", () => {
+    const style = rootBackgroundStyle("dark", true, 0.7);
+    expect(style).toHaveProperty("backdropFilter", GLASS_FROST);
+  });
+
+  test("glass:true, dark → WebkitBackdropFilter equals GLASS_FROST", () => {
+    const style = rootBackgroundStyle("dark", true, 0.7);
+    expect(style).toHaveProperty("WebkitBackdropFilter", GLASS_FROST);
+  });
+
+  test("glass:true, light → backdropFilter is GLASS_FROST", () => {
+    const style = rootBackgroundStyle("light", true, 0.7);
+    expect(style).toHaveProperty("backdropFilter", GLASS_FROST);
+  });
+
+  test("floor clamp: dark glass opacity 0.3 clamps to floor (0.5) → rgba(15,17,24,0.5)", () => {
+    const style = rootBackgroundStyle("dark", true, 0.3);
+    // dark floor is 0.5, so opacity 0.3 is clamped to 0.5
+    expect(style.background as string).toBe(glassTint("dark", 0.3));
+    expect(style.background as string).toContain("rgba(15,17,24,0.5)");
+  });
+
+  test("floor clamp: light glass opacity 0.3 clamps to floor (0.6) → rgba(244,246,251,0.6)", () => {
+    const style = rootBackgroundStyle("light", true, 0.3);
+    // light floor is 0.6, so opacity 0.3 is clamped to 0.6
+    expect(style.background as string).toBe(glassTint("light", 0.3));
+    expect(style.background as string).toContain("rgba(244,246,251,0.6)");
+  });
+
+  test("glass:true, dark, opacity 0.7 → produces rgba(15,17,24,0.7)", () => {
+    const style = rootBackgroundStyle("dark", true, 0.7);
+    expect(style.background as string).toBe("rgba(15,17,24,0.7)");
+  });
+
+  test("glass:true, light, opacity 0.8 → produces rgba(244,246,251,0.8)", () => {
+    const style = rootBackgroundStyle("light", true, 0.8);
+    expect(style.background as string).toBe("rgba(244,246,251,0.8)");
+  });
+
+  test("solid differs from glass in background value", () => {
+    const solid = rootBackgroundStyle("dark", false, 0.55);
+    const glass = rootBackgroundStyle("dark", true, 0.7);
+    expect(solid.background).not.toEqual(glass.background);
   });
 });
 
@@ -175,60 +221,70 @@ describe("rootBackgroundStyle", () => {
 // ---------------------------------------------------------------------------
 
 describe("wallpaperStyle", () => {
-  test("translucent → display block", () => {
-    const style = wallpaperStyle("translucent", "aurora");
+  test("glass:true → display block", () => {
+    const style = wallpaperStyle("dark", true, "aurora");
     expect(style).toHaveProperty("display", "block");
   });
 
-  test("translucent + aurora → background matches WALLPAPERS.aurora", () => {
-    const style = wallpaperStyle("translucent", "aurora");
+  test("glass:false → display none", () => {
+    const style = wallpaperStyle("dark", false, "aurora");
+    expect(style).toHaveProperty("display", "none");
+  });
+
+  test("glass:true + aurora → background matches WALLPAPERS.aurora", () => {
+    const style = wallpaperStyle("dark", true, "aurora");
     expect(style).toHaveProperty("background", WALLPAPERS.aurora);
   });
 
-  test("translucent + dusk → background matches WALLPAPERS.dusk", () => {
-    const style = wallpaperStyle("translucent", "dusk");
+  test("glass:true + dusk → background matches WALLPAPERS.dusk", () => {
+    const style = wallpaperStyle("dark", true, "dusk");
     expect(style).toHaveProperty("background", WALLPAPERS.dusk);
   });
 
-  test("translucent + mesh → background matches WALLPAPERS.mesh", () => {
-    const style = wallpaperStyle("translucent", "mesh");
+  test("glass:true + mesh → background matches WALLPAPERS.mesh", () => {
+    const style = wallpaperStyle("dark", true, "mesh");
     expect(style).toHaveProperty("background", WALLPAPERS.mesh);
   });
 
-  test("translucent + slate → background matches WALLPAPERS.slate", () => {
-    const style = wallpaperStyle("translucent", "slate");
+  test("glass:true + slate → background matches WALLPAPERS.slate", () => {
+    const style = wallpaperStyle("dark", true, "slate");
     expect(style).toHaveProperty("background", WALLPAPERS.slate);
   });
 
-  test("translucent → position fixed", () => {
-    const style = wallpaperStyle("translucent", "aurora");
+  test("glass:true, light + aurora → background matches WALLPAPERS.aurora", () => {
+    const style = wallpaperStyle("light", true, "aurora");
+    expect(style).toHaveProperty("background", WALLPAPERS.aurora);
+  });
+
+  test("glass:true → position fixed", () => {
+    const style = wallpaperStyle("dark", true, "aurora");
     expect(style).toHaveProperty("position", "fixed");
   });
 
-  test("translucent → inset 0", () => {
-    const style = wallpaperStyle("translucent", "aurora");
+  test("glass:true → inset 0", () => {
+    const style = wallpaperStyle("dark", true, "aurora");
     expect(style).toHaveProperty("inset", 0);
   });
 
-  test("translucent → zIndex 0", () => {
-    const style = wallpaperStyle("translucent", "aurora");
+  test("glass:true → zIndex 0", () => {
+    const style = wallpaperStyle("dark", true, "aurora");
     expect(style).toHaveProperty("zIndex", 0);
   });
 
-  test("light → display none", () => {
-    const style = wallpaperStyle("light", "aurora");
+  test("light, glass:false → display none", () => {
+    const style = wallpaperStyle("light", false, "aurora");
     expect(style).toHaveProperty("display", "none");
   });
 
-  test("dark → display none", () => {
-    const style = wallpaperStyle("dark", "aurora");
+  test("dark, glass:false → display none", () => {
+    const style = wallpaperStyle("dark", false, "aurora");
     expect(style).toHaveProperty("display", "none");
   });
 
-  test("non-translucent display differs from translucent", () => {
-    const t = wallpaperStyle("translucent", "aurora");
-    const l = wallpaperStyle("light", "aurora");
-    expect(t.display).not.toEqual(l.display);
+  test("glass display differs from non-glass display", () => {
+    const glass = wallpaperStyle("dark", true, "aurora");
+    const solid = wallpaperStyle("dark", false, "aurora");
+    expect(glass.display).not.toEqual(solid.display);
   });
 });
 
@@ -239,7 +295,7 @@ describe("wallpaperStyle", () => {
 describe("ThemeProvider", () => {
   test("renders children text", () => {
     render(
-      <ThemeProvider theme="dark" opacity={0.55} wallpaper="aurora">
+      <ThemeProvider theme="dark" glass={false} opacity={0.55} wallpaper="aurora">
         <span>child-content</span>
       </ThemeProvider>,
     );
@@ -248,44 +304,54 @@ describe("ThemeProvider", () => {
 
   test("renders a wrapper div that contains children", () => {
     const { container } = render(
-      <ThemeProvider theme="light" opacity={0.55} wallpaper="slate">
+      <ThemeProvider theme="light" glass={false} opacity={0.55} wallpaper="slate">
         <p>inner</p>
       </ThemeProvider>,
     );
-    // The outermost rendered element should be a div or element wrapping children
     expect(container.firstChild).not.toBeNull();
     expect(container.querySelector("p")).toBeInTheDocument();
     expect(container.querySelector("p")).toHaveTextContent("inner");
   });
 
-  test("wrapper div has style with theme CSS vars set", () => {
+  test("wrapper div has style with theme CSS vars set (solid dark --bg)", () => {
     const { container } = render(
-      <ThemeProvider theme="dark" opacity={0.55} wallpaper="aurora">
+      <ThemeProvider theme="dark" glass={false} opacity={0.55} wallpaper="aurora">
         <span>x</span>
       </ThemeProvider>,
     );
-    // The wrapper div must have an inline style containing --bg for the dark theme
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.style.getPropertyValue("--bg")).toBe(
       THEMES.dark["--bg"],
     );
   });
 
-  test("translucent theme: wrapper has --accent from THEMES.translucent", () => {
+  test("glass dark theme: wrapper has --bg from THEMES.darkGlass", () => {
     const { container } = render(
-      <ThemeProvider theme="translucent" opacity={0.55} wallpaper="aurora">
+      <ThemeProvider theme="dark" glass={true} opacity={0.55} wallpaper="aurora">
+        <span>x</span>
+      </ThemeProvider>,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.style.getPropertyValue("--bg")).toBe(
+      THEMES.darkGlass["--bg"],
+    );
+  });
+
+  test("glass light theme: wrapper has --accent from THEMES.lightGlass", () => {
+    const { container } = render(
+      <ThemeProvider theme="light" glass={true} opacity={0.7} wallpaper="aurora">
         <span>x</span>
       </ThemeProvider>,
     );
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.style.getPropertyValue("--accent")).toBe(
-      THEMES.translucent["--accent"],
+      THEMES.lightGlass["--accent"],
     );
   });
 
-  test("light theme: wrapper has --text from THEMES.light", () => {
+  test("solid light theme: wrapper has --text from THEMES.light", () => {
     const { container } = render(
-      <ThemeProvider theme="light" opacity={0.55} wallpaper="dusk">
+      <ThemeProvider theme="light" glass={false} opacity={0.55} wallpaper="dusk">
         <span>x</span>
       </ThemeProvider>,
     );
@@ -295,24 +361,44 @@ describe("ThemeProvider", () => {
     );
   });
 
-  test("renders a wallpaper layer element inside the wrapper", () => {
+  test("glass:true renders a wallpaper layer element inside the wrapper", () => {
     const { container } = render(
-      <ThemeProvider theme="translucent" opacity={0.55} wallpaper="aurora">
+      <ThemeProvider theme="dark" glass={true} opacity={0.55} wallpaper="aurora">
         <span>content</span>
       </ThemeProvider>,
     );
     // A wallpaper layer div must be present (not the child, a separate element)
     const allDivs = container.querySelectorAll("div");
-    expect(allDivs.length).toBeGreaterThanOrEqual(1);
+    expect(allDivs.length).toBeGreaterThanOrEqual(2);
   });
 
-  test("children render inside (not swallowed by wallpaper layer)", () => {
+  test("glass:false: wallpaper layer is present but hidden (display:none)", () => {
+    const { container } = render(
+      <ThemeProvider theme="dark" glass={false} opacity={0.55} wallpaper="aurora">
+        <span>content</span>
+      </ThemeProvider>,
+    );
+    // wallpaper div exists but has display:none
+    const allDivs = container.querySelectorAll("div");
+    expect(allDivs.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("children render inside (not swallowed by wallpaper layer) — glass:true", () => {
     render(
-      <ThemeProvider theme="translucent" opacity={0.7} wallpaper="mesh">
+      <ThemeProvider theme="dark" glass={true} opacity={0.7} wallpaper="mesh">
         <button>click-me</button>
       </ThemeProvider>,
     );
     expect(screen.getByRole("button", { name: "click-me" })).toBeInTheDocument();
+  });
+
+  test("children render inside (not swallowed by wallpaper layer) — glass:false", () => {
+    render(
+      <ThemeProvider theme="light" glass={false} opacity={0.7} wallpaper="slate">
+        <button>click-me-solid</button>
+      </ThemeProvider>,
+    );
+    expect(screen.getByRole("button", { name: "click-me-solid" })).toBeInTheDocument();
   });
 });
 
