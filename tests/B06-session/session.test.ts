@@ -800,7 +800,7 @@ describe("stepReps — sec unit (step by 5)", () => {
   it("+2 delta on sec unit → reps increases by 10", () => {
     const session = makeTimeSession({ unit: "sec", reps: 30 });
     const next = stepReps(session, 2);
-    expect(next.reps).toBe(50);
+    expect(next.reps).toBe(40);
   });
 });
 
