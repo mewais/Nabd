@@ -640,6 +640,27 @@ describe("buildProgression", () => {
     expect(rows[0].pr).toContain("kg");
   });
 
+  it("pr is '86.7 kg' for BASE_HISTORY (fractional pb shows 1 decimal, no trailing .0)", () => {
+    // personalBest ≈ 86.667 → fmt → "86.7", not "86.7" from toFixed(1) which also works,
+    // but critically NOT "86.0" style for whole numbers
+    const rows = buildProgression(BASE_HISTORY, EX_NAMES);
+    expect(rows[0].pr).toBe("86.7 kg");
+  });
+
+  it("pr shows no trailing '.0' for a whole-number personal best", () => {
+    // weight=90, reps=30 → estimate1RM = 90*(1+30/30) = 180 (exact integer)
+    const wholeHistory: LoggedSet[] = [
+      {
+        id: "w1", exId: "ex-ohp", exercise: "OHP", group: "Shoulders",
+        muscles: ["front_delts"], value: 30, weight: 90,
+        ts: "2026-06-22T09:00:00Z", date: "2026-06-22", trigger: "idle",
+      },
+    ];
+    const rows = buildProgression(wholeHistory, { "ex-ohp": "OHP" });
+    // personalBest = 90*(1+30/30) = 180, fmt(180) = "180", not "180.0"
+    expect(rows[0].pr).toBe("180 kg");
+  });
+
   it("gainStr is '+6.7 kg' (86.67 - 80 ≈ 6.67)", () => {
     const rows = buildProgression(BASE_HISTORY, EX_NAMES);
     expect(rows[0].gainStr).toBe("+6.7 kg");
@@ -700,6 +721,8 @@ describe("buildProgression", () => {
     ];
     const rows = buildProgression(bwHistory, { "ex-pushup": "Push-up" });
     expect(rows[0].gainStr).toContain("rep");
+    // personalBest = max(15, 20) = 20 (integer) → pr should be "20 reps", not "20.0 reps"
+    expect(rows[0].pr).toBe("20 reps");
   });
 
   it("multiple exercises each get their own row", () => {

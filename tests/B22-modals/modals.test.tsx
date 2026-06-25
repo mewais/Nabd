@@ -1203,6 +1203,22 @@ describe("buildChartVM", () => {
     const vm = buildChartVM(CHART_EXERCISE, [...CHART_SERIES], CHART_UNIT, CHART_START);
     expect(vm.nowLabel.length).toBeGreaterThan(0);
   });
+
+  // Fractional 1RM values: verify fmt rounds to 1 decimal and drops trailing .0
+  it("formats fractional pr/current/gainAll to 1 decimal (no trailing .0)", () => {
+    // 60.133... and 71.0666... → "60.1", "71.1", gain "+10.9"
+    const vm = buildChartVM("Deadlift", [60 + 2 / 15, 71 + 1 / 15], CHART_UNIT, "Apr 2024");
+    expect(vm.pr).toBe("71.1 kg");
+    expect(vm.current).toBe("71.1 kg");
+    expect(vm.gainAll).toBe("+10.9 kg");
+  });
+
+  it("formats fractional gridY labels to 1 decimal", () => {
+    // series [60.1333, 71.0666]: max=71.0666→"71.1", mid=65.6→"65.6", min=60.1333→"60.1"
+    const vm = buildChartVM("Deadlift", [60 + 2 / 15, 71 + 1 / 15], CHART_UNIT, "Apr 2024");
+    expect(vm.gridY[0].label).toBe("71.1");
+    expect(vm.gridY[2].label).toBe("60.1");
+  });
 });
 
 // ---------------------------------------------------------------------------

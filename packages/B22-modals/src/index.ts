@@ -2013,6 +2013,16 @@ export function FullHistoryChartModal(_p: ChartModalProps): JSX.Element {
   );
 }
 
+/**
+ * Format a number for display: round to at most 1 decimal place,
+ * dropping a trailing ".0" so integers show cleanly.
+ * e.g. 71.0667 → "71.1", 88 → "88", 110.0 → "110"
+ */
+function fmt(n: number): string {
+  const rounded = Math.round(n * 10) / 10;
+  return rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(1);
+}
+
 /** Build the chart VM from a value series + labels. */
 export function buildChartVM(
   _exercise: string,
@@ -2030,13 +2040,13 @@ export function buildChartVM(
   const last = _series[_series.length - 1];
   const first = _series[0];
 
-  // Sign-prefixed gain
+  // Sign-prefixed gain (display-rounded)
   const gainVal = last - first;
   let gainStr: string;
   if (gainVal > 0) {
-    gainStr = `+${gainVal} ${_unit}`;
+    gainStr = `+${fmt(gainVal)} ${_unit}`;
   } else if (gainVal < 0) {
-    gainStr = `${gainVal} ${_unit}`;
+    gainStr = `${fmt(gainVal)} ${_unit}`;
   } else {
     gainStr = `0 ${_unit}`;
   }
@@ -2058,9 +2068,9 @@ export function buildChartVM(
   };
 
   const gridY = [
-    { y: yForValue(max), label: String(max) },
-    { y: yForValue(mid), label: String(mid) },
-    { y: yForValue(min), label: String(min) },
+    { y: yForValue(max), label: fmt(max) },
+    { y: yForValue(mid), label: fmt(mid) },
+    { y: yForValue(min), label: fmt(min) },
   ];
 
   return {
@@ -2068,8 +2078,8 @@ export function buildChartVM(
     startLabel: _startLabel,
     nowLabel: "Now",
     sessions: _series.length,
-    pr: `${max} ${_unit}`,
-    current: `${last} ${_unit}`,
+    pr: `${fmt(max)} ${_unit}`,
+    current: `${fmt(last)} ${_unit}`,
     gainAll: gainStr,
     points,
     areaPoints,

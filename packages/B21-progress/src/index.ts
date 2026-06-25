@@ -25,6 +25,17 @@ import {
 import { Segmented } from "@nabd/design-system";
 import { BodyMap } from "@nabd/bodymap";
 
+// ---------- helpers ----------
+
+/**
+ * Format a number cleanly: at most 1 decimal place, dropping trailing ".0".
+ * Examples: fmt(88) → "88", fmt(85.3) → "85.3", fmt(86.666…) → "86.7".
+ */
+function fmt(n: number): string {
+  const s = n.toFixed(1);
+  return s.endsWith(".0") ? s.slice(0, -2) : s;
+}
+
 // ---------- view-model builders (pure) ----------
 
 export interface Kpi {
@@ -208,7 +219,7 @@ export function buildProgression(
     const g = gain(series);
     const gainStr = formatGain(g, unit);
 
-    const pr = `${pb.toFixed(1)} ${unit}`;
+    const pr = `${fmt(pb)} ${unit}`;
     const points = trendPoints(series, 120, 34, 5);
 
     rows.push({
