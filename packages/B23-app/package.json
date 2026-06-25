@@ -1,0 +1,37 @@
+{
+  "name": "@nabd/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@nabd/domain": "workspace:*",
+    "@nabd/dataset": "workspace:*",
+    "@nabd/store": "workspace:*",
+    "@nabd/ipc-client": "workspace:*",
+    "@nabd/design-system": "workspace:*",
+    "@nabd/bodymap": "workspace:*",
+    "@nabd/shell": "workspace:*",
+    "@nabd/today": "workspace:*",
+    "@nabd/planner": "workspace:*",
+    "@nabd/progress": "workspace:*",
+    "@nabd/modals": "workspace:*",
+    "@nabd/coverage": "workspace:*",
+    "@nabd/scheduling": "workspace:*",
+    "@nabd/progression": "workspace:*",
+    "@nabd/analytics": "workspace:*",
+    "@nabd/program-editor": "workspace:*",
+    "@tauri-apps/api": "^2.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0"
+  }
+}

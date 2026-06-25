@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Nabd",
+  "version": "0.1.0",
+  "identifier": "com.mewais.nabd",
+  "build": {
+    "frontendDist": "../packages/B23-app/dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "pnpm --filter @nabd/app dev",
+    "beforeBuildCommand": "pnpm --filter @nabd/app build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Nabḍ · نبض",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 980,
+        "minHeight": 640,
+        "transparent": true,
+        "decorations": true,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "trayIcon": {
+      "id": "nabd-tray",
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.png"]
+  },
+  "plugins": {}
+}

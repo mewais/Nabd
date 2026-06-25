@@ -23,7 +23,7 @@ import { Stepper, Segmented } from "@nabd/design-system";
 export interface ModalShellProps {
   onClose: () => void;
   width?: number;
-  children: ReactNode;
+  children?: ReactNode;
 }
 export function ModalShell(_p: ModalShellProps): JSX.Element {
   const { onClose, width, children } = _p;

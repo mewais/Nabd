@@ -489,6 +489,7 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
 
     logSet: async (trigger: Trigger = "manual") => {
       const state = get();
+      if (state.activeSession === null) return;
 
       const histLookup = makeHistoryLookup(state.history);
       const result = sessionLogSet(state.activeSession, state.slots, histLookup);

@@ -1018,6 +1018,33 @@ describe("logSet — no trigger argument (defaults to 'manual')", () => {
   });
 });
 
+describe("logSet — no-op when activeSession is null (guard branch)", () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(() => {
+    client = makeFakeClient();
+    store = makeStore(makeDeps(client));
+    // Do NOT call hydrate() or startNext() — activeSession stays null
+  });
+
+  it("returns immediately without calling client.appendSet when activeSession is null", async () => {
+    expect(get(store).activeSession).toBeNull();
+    await get(store).logSet();
+    expect(client.appendSet).not.toHaveBeenCalled();
+  });
+
+  it("leaves activeSession null after logSet when no session is active", async () => {
+    await get(store).logSet();
+    expect(get(store).activeSession).toBeNull();
+  });
+
+  it("leaves history unchanged (empty) after logSet when no session is active", async () => {
+    await get(store).logSet();
+    expect(get(store).history).toEqual([]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // tick — timer fire → notif
 // ---------------------------------------------------------------------------

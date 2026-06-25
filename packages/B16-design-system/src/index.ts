@@ -41,7 +41,7 @@ export interface ThemeProviderProps {
   theme: Theme;
   opacity: number;
   wallpaper: Wallpaper;
-  children: ReactNode;
+  children?: ReactNode;
 }
 /** Applies theme CSS vars to a wrapping element + renders the wallpaper layer. */
 export function ThemeProvider(_p: ThemeProviderProps): JSX.Element {
@@ -56,7 +56,7 @@ export function ThemeProvider(_p: ThemeProviderProps): JSX.Element {
 }
 
 export interface ButtonProps {
-  children: ReactNode;
+  children?: ReactNode;
   onClick?: () => void;
   variant?: "filled" | "outline" | "ghost";
   disabled?: boolean;
