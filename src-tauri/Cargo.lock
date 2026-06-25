@@ -4279,6 +4279,7 @@ dependencies = [
  "dbus",
  "mach 0.3.2",
  "windows-sys 0.48.0",
+ "x11",
 ]
 
 [[package]]

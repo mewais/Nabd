@@ -52,7 +52,14 @@ nabd-persistence = { path = "crates/B11-persistence" }
 nabd-native = { path = "crates/B12-native" }
 nabd-ipc = { path = "crates/B13-ipc" }
 window-vibrancy = "0.6"
+
+# Idle detection: Linux uses the dbus backend (avoids the libxss build dep);
+# Windows/macOS use the crate's native backend (GetLastInputInfo / IOKit).
+[target.'cfg(unix)'.dependencies]
 user-idle = { version = "0.6", default-features = false, features = ["dbus"] }
+
+[target.'cfg(windows)'.dependencies]
+user-idle = "0.6"
 
 [features]
 # default tauri custom-protocol for production builds
