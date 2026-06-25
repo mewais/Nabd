@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from "react";
 import { useStore } from "zustand";
 import type { StoreApi } from "zustand";
 import type { NabdStore } from "@nabd/store";
+import { isTauri } from "@nabd/ipc-client";
+import type { IpcClient } from "@nabd/ipc-client";
 
 // Shell
 import {
@@ -63,9 +65,10 @@ import { fullHistorySeries } from "@nabd/progression";
 
 export interface AppProps {
   store: StoreApi<NabdStore>;
+  client: IpcClient;
 }
 
-export function App({ store }: AppProps): JSX.Element {
+export function App({ store, client }: AppProps): JSX.Element {
   // ------------------------------------------------------------------
   // Read state from store via zustand
   // ------------------------------------------------------------------
@@ -162,9 +165,16 @@ export function App({ store }: AppProps): JSX.Element {
     // Hydrate once on mount
     void hydrate();
 
-    // 1-second tick
+    // 1-second tick + OS idle poll (Tauri only)
     tickIntervalRef.current = window.setInterval(() => {
       store.getState().tick();
+      if (isTauri()) {
+        client.getIdleSeconds().then((s) => {
+          store.getState().setIdleSeconds(s);
+        }).catch(() => {
+          // Swallow errors — web/non-Tauri environments don't support this call
+        });
+      }
     }, 1000);
 
     // Idle reset listeners

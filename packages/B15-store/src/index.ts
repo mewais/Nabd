@@ -39,7 +39,7 @@ import {
   stepReps as sessionStepReps,
   stepWeight as sessionStepWeight,
 } from "@nabd/session";
-import { tick as nudgeTick, resetIdle as nudgeResetIdle, snooze as nudgeSnooze, resetTimer as nudgeResetTimer } from "@nabd/nudge";
+import { tick as nudgeTick, resetIdle as nudgeResetIdle, snooze as nudgeSnooze, resetTimer as nudgeResetTimer, dueNotif } from "@nabd/nudge";
 import { coverageFrom7dHistory, applySetDelta, emptyCoverage } from "@nabd/coverage";
 import {
   seedProgram,
@@ -127,6 +127,8 @@ export interface NabdActions {
   // clock / nudge
   tick: () => void;
   resetIdle: () => void;
+  /** Set idle seconds from an authoritative source (OS idle poll); may raise an idle nudge. */
+  setIdleSeconds: (seconds: number) => void;
   snooze: () => void;
   confirmNotif: () => void;
   // session
@@ -424,6 +426,20 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       };
       const next = nudgeResetIdle(nudgeState);
       set({ idleSeconds: next.idleSeconds });
+    },
+
+    setIdleSeconds: (seconds: number) => {
+      const state = get();
+      const cs = currentSlot(state.slots);
+      const shouldNotify =
+        seconds >= state.settings.idleNudge &&
+        state.activeSession === null &&
+        state.notif === null &&
+        cs !== null;
+      set({
+        idleSeconds: seconds,
+        ...(shouldNotify ? { notif: dueNotif("idle", cs!) } : {}),
+      });
     },
 
     snooze: () => {

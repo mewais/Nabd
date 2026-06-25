@@ -2241,3 +2241,204 @@ describe("openProgChart / closeProgChart", () => {
     expect(get(store).progExercise).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// setIdleSeconds — authoritative OS-idle update: sets idleSeconds + may raise
+// idle notif (mirrors the idle branch of tick but WITHOUT touching secondsToNext)
+// ---------------------------------------------------------------------------
+
+describe("setIdleSeconds — sets idleSeconds, below threshold: no notif", () => {
+  // FIXTURE_SETTINGS has idleNudge=25. Passing 12 is below threshold.
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    const client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    // Preconditions: no active session, no notif, slots populated (currentSlot != null)
+    expect(get(store).activeSession).toBeNull();
+    expect(get(store).notif).toBeNull();
+    expect(get(store).slots.length).toBeGreaterThan(0);
+  });
+
+  it("sets idleSeconds to the given value (12)", () => {
+    get(store).setIdleSeconds(12);
+    expect(get(store).idleSeconds).toBe(12);
+  });
+
+  it("does NOT raise a notif when seconds < idleNudge (12 < 25)", () => {
+    get(store).setIdleSeconds(12);
+    expect(get(store).notif).toBeNull();
+  });
+
+  it("does NOT touch secondsToNext", () => {
+    const stsBefore = get(store).secondsToNext;
+    get(store).setIdleSeconds(12);
+    expect(get(store).secondsToNext).toBe(stsBefore);
+  });
+});
+
+describe("setIdleSeconds — above threshold with current slot: raises idle notif", () => {
+  // FIXTURE_SETTINGS has idleNudge=25. Passing 30 (>= 25) should fire.
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    const client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    // Preconditions: no active session, no notif, currentSlot exists (push-day Wednesday)
+    expect(get(store).activeSession).toBeNull();
+    expect(get(store).notif).toBeNull();
+    expect(get(store).slots.length).toBeGreaterThan(0);
+  });
+
+  it("sets idleSeconds to the given value (30)", () => {
+    get(store).setIdleSeconds(30);
+    expect(get(store).idleSeconds).toBe(30);
+  });
+
+  it("raises a notif with reason 'idle'", () => {
+    get(store).setIdleSeconds(30);
+    expect(get(store).notif).not.toBeNull();
+    expect(get(store).notif!.reason).toBe("idle");
+  });
+
+  it("notif.slot matches the current slot", () => {
+    get(store).setIdleSeconds(30);
+    const cs = get(store).slots.find((s) => s.status === "now")!;
+    expect(get(store).notif!.slot.id).toBe(cs.id);
+  });
+
+  it("does NOT touch secondsToNext when raising the notif", () => {
+    const stsBefore = get(store).secondsToNext;
+    get(store).setIdleSeconds(30);
+    expect(get(store).secondsToNext).toBe(stsBefore);
+  });
+
+  it("fires at exactly the threshold (idleNudge=25)", () => {
+    get(store).setIdleSeconds(25);
+    expect(get(store).notif).not.toBeNull();
+    expect(get(store).notif!.reason).toBe("idle");
+  });
+});
+
+describe("setIdleSeconds — active session open (busy): no notif, but idleSeconds is still set", () => {
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    const client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    // Open a session to make busy=true
+    get(store).startNext();
+    expect(get(store).activeSession).not.toBeNull();
+  });
+
+  it("still sets idleSeconds to the given value", () => {
+    get(store).setIdleSeconds(30);
+    expect(get(store).idleSeconds).toBe(30);
+  });
+
+  it("does NOT raise a notif while a session is active", () => {
+    get(store).setIdleSeconds(30);
+    expect(get(store).notif).toBeNull();
+  });
+
+  it("does NOT touch secondsToNext", () => {
+    const stsBefore = get(store).secondsToNext;
+    get(store).setIdleSeconds(30);
+    expect(get(store).secondsToNext).toBe(stsBefore);
+  });
+});
+
+describe("setIdleSeconds — existing notif present: no new/changed notif, idleSeconds still set", () => {
+  // Raise an existing notif first (via tick at idleNudge=1), then call setIdleSeconds.
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    const snap: BootSnapshot = {
+      ...BOOT_SNAPSHOT_FULL,
+      settings: { ...FIXTURE_SETTINGS, idleNudge: 1, interval: 90 },
+    };
+    const client = makeFakeClient(snap);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    get(store).tick(); // idleSeconds=1 >= idleNudge=1 → raises idle notif
+    expect(get(store).notif).not.toBeNull();
+  });
+
+  it("still sets idleSeconds to the new value", () => {
+    get(store).setIdleSeconds(50);
+    expect(get(store).idleSeconds).toBe(50);
+  });
+
+  it("does NOT overwrite the existing notif", () => {
+    const notifBefore = get(store).notif;
+    get(store).setIdleSeconds(50);
+    expect(get(store).notif).toEqual(notifBefore);
+  });
+
+  it("does NOT touch secondsToNext", () => {
+    const stsBefore = get(store).secondsToNext;
+    get(store).setIdleSeconds(50);
+    expect(get(store).secondsToNext).toBe(stsBefore);
+  });
+});
+
+describe("setIdleSeconds — no current slot (empty slots): no notif even above threshold", () => {
+  // Use a snapshot with no matching weekday day → slots stays empty → currentSlot returns null
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    // A program with a day on Monday only; FIXED_NOW is Wednesday → no match → slots=[]
+    const mondayProgram: Program = {
+      name: "Monday Only",
+      type: "fixed",
+      schedule: "weekday",
+      days: [
+        {
+          id: "monday-day",
+          name: "Monday",
+          weekday: 1, // Monday — Wednesday (3) won't match
+          slots: [],
+          exercises: [
+            {
+              id: "ex-mon",
+              exId: "bb-bench",
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
+          ],
+        },
+      ],
+    };
+    const snap: BootSnapshot = {
+      ...BOOT_SNAPSHOT_FULL,
+      program: mondayProgram,
+    };
+    const client = makeFakeClient(snap);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    // Verify no current slot
+    expect(get(store).slots.length).toBe(0);
+    expect(get(store).notif).toBeNull();
+  });
+
+  it("still sets idleSeconds to the given value", () => {
+    get(store).setIdleSeconds(30);
+    expect(get(store).idleSeconds).toBe(30);
+  });
+
+  it("does NOT raise a notif when there is no current slot", () => {
+    get(store).setIdleSeconds(30);
+    expect(get(store).notif).toBeNull();
+  });
+
+  it("does NOT touch secondsToNext", () => {
+    const stsBefore = get(store).secondsToNext;
+    get(store).setIdleSeconds(30);
+    expect(get(store).secondsToNext).toBe(stsBefore);
+  });
+});
