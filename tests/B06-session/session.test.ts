@@ -193,11 +193,13 @@ describe("openSession", () => {
 
   it("populates suggestion from history when no prior history", () => {
     const sess = openSession(slotA, noHistory);
-    // suggest() with no history should return a Suggestion — values must be present
-    expect(sess.sugg).toBeDefined();
-    expect(typeof sess.sugg.sets).toBe("number");
-    expect(typeof sess.sugg.reps).toBe("number");
-    expect(sess.sugg.up).toBeDefined();
+    // suggest() with no history for a non-weighted, non-time track defaults to
+    // {sets:3, reps:10, weight:null, note:"", up:true} per B05-progression spec.
+    expect(sess.sugg.sets).toBe(3);
+    expect(sess.sugg.reps).toBe(10);
+    expect(sess.sugg.weight).toBeNull();
+    expect(sess.sugg.note).toBe("");
+    expect(sess.sugg.up).toBe(true);
   });
 
   it("sets reps from suggestion when there is no history", () => {
@@ -497,8 +499,18 @@ describe("logSet — last pending slot (allDone=true)", () => {
     const slots = [singleSlot];
 
     const { logged, receiptItem } = logSet(session, slots, noHistory);
-    expect(logged).toBeDefined();
-    expect(receiptItem).toBeDefined();
+    // logged record must contain concrete values for the set that was just recorded
+    expect(logged.exId).toBe("bench-press");
+    expect(logged.exercise).toBe("Bench Press");
+    expect(logged.group).toBe("Chest");
+    expect(logged.muscles).toEqual(["chest"]);
+    expect(logged.value).toBe(10);
+    expect(logged.weight).toBeNull();
+    expect(logged.trigger).toBe("manual");
+    // receipt item must describe the set correctly
+    expect(receiptItem.exercise).toBe("Bench Press");
+    expect(receiptItem.group).toBe("Chest");
+    expect(receiptItem.setStr).toBe("10 reps");
   });
 });
 
@@ -700,9 +712,13 @@ describe("switchExercise", () => {
     const slots = [{ ...slotA }, { ...slotB }];
 
     const nextSession = switchExercise(session, slots, "slot-b", noHistory);
-    // Suggestion should be defined for the new slot
-    expect(nextSession.sugg).toBeDefined();
-    expect(typeof nextSession.sugg.reps).toBe("number");
+    // Suggestion for the switched-to slot (squat, no history, non-weighted) defaults to
+    // {sets:3, reps:10, weight:null, note:"", up:true} per B05-progression spec.
+    expect(nextSession.sugg.sets).toBe(3);
+    expect(nextSession.sugg.reps).toBe(10);
+    expect(nextSession.sugg.weight).toBeNull();
+    expect(nextSession.sugg.note).toBe("");
+    expect(nextSession.sugg.up).toBe(true);
   });
 
   it("preserves multiple logged items", () => {

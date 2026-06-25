@@ -91,24 +91,20 @@ describe("settings.ts", () => {
     expect(DEFAULTS.startMin).toBe(9 * 60 + 30);
   });
 
-  it("DEFAULTS.intervalMin is present", () => {
-    expect(DEFAULTS.intervalMin).toBeDefined();
-    expect(typeof DEFAULTS.intervalMin).toBe("number");
+  it("DEFAULTS.intervalMin is 50", () => {
+    expect(DEFAULTS.intervalMin).toBe(50);
   });
 
-  it("DEFAULTS.idleNudgeSec is present", () => {
-    expect(DEFAULTS.idleNudgeSec).toBeDefined();
-    expect(typeof DEFAULTS.idleNudgeSec).toBe("number");
+  it("DEFAULTS.idleNudgeSec is 30", () => {
+    expect(DEFAULTS.idleNudgeSec).toBe(30);
   });
 
-  it("DEFAULTS.coveragePerSet is present", () => {
-    expect(DEFAULTS.coveragePerSet).toBeDefined();
-    expect(typeof DEFAULTS.coveragePerSet).toBe("number");
+  it("DEFAULTS.coveragePerSet is 4", () => {
+    expect(DEFAULTS.coveragePerSet).toBe(4);
   });
 
-  it("DEFAULTS.snoozeSec is present", () => {
-    expect(DEFAULTS.snoozeSec).toBeDefined();
-    expect(typeof DEFAULTS.snoozeSec).toBe("number");
+  it("DEFAULTS.snoozeSec is 300 (5 minutes)", () => {
+    expect(DEFAULTS.snoozeSec).toBe(300);
   });
 
   describe("ThemeSchema", () => {

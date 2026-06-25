@@ -1233,7 +1233,7 @@ describe("edge cases", () => {
     // Lookup returns undefined for unknown-exercise
     const vol = computePlanVolume(program, makeLookup([]));
     // Should not crash; volume should be empty (no muscle touched)
-    expect(vol).toBeDefined();
+    expect(Object.keys(vol)).toHaveLength(0);
   });
 
   it("planCoverage: empty volume produces all-zero coverage", () => {
