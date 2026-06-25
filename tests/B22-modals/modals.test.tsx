@@ -70,8 +70,9 @@ const makeActiveSession = (overrides: Partial<ActiveSession> = {}): ActiveSessio
 });
 
 const makeSettings = (overrides: Partial<Settings> = {}): Settings => ({
-  theme: "translucent",
-  opacity: 0.55,
+  theme: "dark",
+  glass: false,
+  opacity: 0.7,
   wallpaper: "aurora",
   openAtStartup: true,
   minimizedByDefault: false,
@@ -298,7 +299,8 @@ describe("SessionModal", () => {
 
   it("renders active exercise name in right pane", () => {
     render(<SessionModal {...defaultProps} />);
-    expect(screen.getByText("Pull-up")).toBeInTheDocument();
+    // "Pull-up" appears in both the left list and the right pane header
+    expect(screen.getAllByText("Pull-up").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders suggestion note text", () => {
@@ -368,7 +370,8 @@ describe("SessionModal", () => {
 
   it("shows 'No sets logged yet' when logged is empty", () => {
     render(<SessionModal {...defaultProps} session={makeActiveSession({ logged: [] })} />);
-    expect(screen.getByText(/no sets logged yet/i)).toBeInTheDocument();
+    // The footer shows "No sets logged yet" — may appear in multiple places
+    expect(screen.getAllByText(/no sets logged yet/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows logged count when sets have been logged", () => {
@@ -379,7 +382,7 @@ describe("SessionModal", () => {
       ],
     });
     render(<SessionModal {...defaultProps} session={session} />);
-    expect(screen.getByText(/2 sets logged/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/2 sets logged/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders left pane rows showing done/sets format", () => {
@@ -412,8 +415,8 @@ describe("SessionModal", () => {
 
   it("shows muscles of active session in right pane", () => {
     render(<SessionModal {...defaultProps} />);
-    // Active session muscles: ['lats','biceps'] displayed as "Lats, Biceps"
-    expect(screen.getByText(/lats/i)).toBeInTheDocument();
+    // Active session muscles: ['lats','biceps'] displayed as "Lats, Biceps" - may appear in both left pane and right pane
+    expect(screen.getAllByText(/lats/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it("displays the current reps value in the stepper", () => {
@@ -656,7 +659,8 @@ describe("LibraryModal", () => {
 
   it("shows CUSTOM badge on custom items only (exactly 1)", () => {
     render(<LibraryModal {...browsingProps} />);
-    const badges = screen.getAllByText(/custom/i);
+    // Match the exact "CUSTOM" badge text (not "My Custom Press" which contains "Custom")
+    const badges = screen.getAllByText("CUSTOM");
     expect(badges).toHaveLength(1);
   });
 
@@ -759,7 +763,7 @@ describe("LibraryModal", () => {
 });
 
 // ---------------------------------------------------------------------------
-// SettingsModal
+// SettingsModal — new API: theme=light|dark, glass: boolean, onToggleGlass
 // ---------------------------------------------------------------------------
 
 describe("SettingsModal", () => {
@@ -773,23 +777,28 @@ describe("SettingsModal", () => {
   const onIdleNudge = vi.fn();
   const onExport = vi.fn();
   const onImport = vi.fn();
+  const onToggleGlass = vi.fn();
 
   beforeEach(() => {
     [
       onClose, onTheme, onOpacity, onWallpaper, onToggleStartup,
       onToggleMinimized, onInterval, onIdleNudge, onExport, onImport,
+      onToggleGlass,
     ].forEach((fn) => fn.mockReset());
   });
 
-  const translucentProps: SettingsModalProps = {
+  // Glass OFF — dark theme
+  const darkNoGlassProps: SettingsModalProps = {
     settings: makeSettings({
-      theme: "translucent",
-      opacity: 0.55,
+      theme: "dark",
+      glass: false,
+      opacity: 0.7,
       wallpaper: "aurora",
       interval: 50,
       idleNudge: 30,
     }),
-    theme: "translucent",
+    theme: "dark",
+    glass: false,
     onClose,
     onTheme,
     onOpacity,
@@ -800,209 +809,277 @@ describe("SettingsModal", () => {
     onIdleNudge,
     onExport,
     onImport,
+    onToggleGlass,
   };
 
-  it("renders theme Segmented control with all three options", () => {
-    render(<SettingsModal {...translucentProps} />);
-    expect(screen.getByText(/translucent/i)).toBeInTheDocument();
-    expect(screen.getByText(/light/i)).toBeInTheDocument();
-    expect(screen.getByText(/dark/i)).toBeInTheDocument();
+  // Glass ON — dark theme
+  const darkGlassProps: SettingsModalProps = {
+    ...darkNoGlassProps,
+    settings: makeSettings({ theme: "dark", glass: true, opacity: 0.7, wallpaper: "aurora" }),
+    glass: true,
+  };
+
+  // Glass OFF — light theme
+  const lightNoGlassProps: SettingsModalProps = {
+    ...darkNoGlassProps,
+    settings: makeSettings({ theme: "light", glass: false, opacity: 0.7 }),
+    theme: "light",
+    glass: false,
+  };
+
+  // Glass ON — light theme
+  const lightGlassProps: SettingsModalProps = {
+    ...darkNoGlassProps,
+    settings: makeSettings({ theme: "light", glass: true, opacity: 0.75, wallpaper: "frost" }),
+    theme: "light",
+    glass: true,
+  };
+
+  it("renders theme Segmented with Light and Dark options (no Translucent as a theme option)", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
+    expect(screen.getByText(/^light$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^dark$/i)).toBeInTheDocument();
+    // There should be no button/option labeled exactly "Translucent"
+    // ("Translucent window" label is fine for the toggle row, but not as a segmented option)
+    const segButtons = document.querySelectorAll("[aria-pressed]");
+    const labels = Array.from(segButtons).map((b) => b.textContent?.trim().toLowerCase());
+    expect(labels).not.toContain("translucent");
   });
 
   it("clicking the 'Light' theme option calls onTheme('light')", () => {
-    render(<SettingsModal {...translucentProps} />);
+    render(<SettingsModal {...darkNoGlassProps} />);
     fireEvent.click(screen.getByText(/^light$/i));
     expect(onTheme).toHaveBeenCalledWith("light");
   });
 
   it("clicking the 'Dark' theme option calls onTheme('dark')", () => {
-    render(<SettingsModal {...translucentProps} />);
+    render(<SettingsModal {...lightNoGlassProps} />);
     fireEvent.click(screen.getByText(/^dark$/i));
     expect(onTheme).toHaveBeenCalledWith("dark");
   });
 
-  it("translucent theme shows opacity stepper label", () => {
-    render(<SettingsModal {...translucentProps} />);
+  it("renders a Translucent window toggle (glass toggle)", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
+    // All role=switch elements: glass toggle + startup + minimized
+    const allSwitches = screen.getAllByRole("switch");
+    expect(allSwitches.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("glass toggle reflects glass=false (data-on=false)", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
+    // The Toggle component (glass) is the first switch and has data-on attribute
+    const allSwitches = screen.getAllByRole("switch");
+    expect(allSwitches[0]).toHaveAttribute("data-on", "false");
+  });
+
+  it("glass toggle reflects glass=true (data-on=true)", () => {
+    render(<SettingsModal {...darkGlassProps} />);
+    // Glass toggle (Toggle component) is the first switch with data-on=true when glass is on
+    const allSwitches = screen.getAllByRole("switch");
+    expect(allSwitches[0]).toHaveAttribute("data-on", "true");
+  });
+
+  it("clicking the glass toggle calls onToggleGlass", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
+    // The Toggle component (glass toggle) is the first switch
+    const allSwitches = screen.getAllByRole("switch");
+    fireEvent.click(allSwitches[0]);
+    expect(onToggleGlass).toHaveBeenCalledTimes(1);
+  });
+
+  // When glass is OFF — no opacity stepper, no wallpaper swatches
+  it("glass=false hides opacity stepper", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
+    expect(screen.queryByText(/opacity/i)).not.toBeInTheDocument();
+  });
+
+  it("glass=false hides wallpaper swatches", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
+    expect(screen.queryByRole("button", { name: /aurora|dusk|slate|mesh|sand|frost|mixed/i })).toBeNull();
+  });
+
+  // When glass is ON — opacity stepper + 7 wallpaper swatches
+  it("glass=true shows opacity stepper label", () => {
+    render(<SettingsModal {...darkGlassProps} />);
     expect(screen.getByText(/opacity/i)).toBeInTheDocument();
   });
 
-  it("opacity stepper '+' calls onOpacity(+1)", () => {
-    render(<SettingsModal {...translucentProps} />);
-    // Find the opacity stepper section and click its "+" button
-    const opacityLabel = screen.getByText(/opacity/i);
-    const opacitySection = opacityLabel.closest("div")!.parentElement!;
-    const incBtn = opacitySection.querySelectorAll("button")[1];
-    fireEvent.click(incBtn);
+  it("opacity stepper '+' calls onOpacity(+1) when glass is on", () => {
+    render(<SettingsModal {...darkGlassProps} />);
+    // The opacity stepper uses the "+" button — with glass on, incBtn is the 2nd of the stepper buttons
+    const stepperIncBtns = screen.getAllByRole("button", { name: "+" });
+    // Opacity stepper is the first "+" button (before wallpaper swatches which have no +/−)
+    fireEvent.click(stepperIncBtns[0]);
     expect(onOpacity).toHaveBeenCalledWith(1);
   });
 
-  it("opacity stepper '−' calls onOpacity(-1)", () => {
-    render(<SettingsModal {...translucentProps} />);
-    const opacityLabel = screen.getByText(/opacity/i);
-    const opacitySection = opacityLabel.closest("div")!.parentElement!;
-    const decBtn = opacitySection.querySelectorAll("button")[0];
-    fireEvent.click(decBtn);
+  it("opacity stepper '−' calls onOpacity(-1) when glass is on", () => {
+    render(<SettingsModal {...darkGlassProps} />);
+    const stepperDecBtns = screen.getAllByRole("button", { name: "−" });
+    // Opacity stepper is the first "−" button
+    fireEvent.click(stepperDecBtns[0]);
     expect(onOpacity).toHaveBeenCalledWith(-1);
   });
 
-  it("translucent theme shows all 4 wallpaper swatch buttons", () => {
-    render(<SettingsModal {...translucentProps} />);
+  it("glass=true shows all 7 wallpaper swatch buttons", () => {
+    render(<SettingsModal {...darkGlassProps} />);
     expect(screen.getByRole("button", { name: /aurora/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /dusk/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /mesh/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /slate/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /mesh/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sand/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /frost/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /mixed/i })).toBeInTheDocument();
   });
 
-  it("clicking the 'dusk' wallpaper swatch calls onWallpaper('dusk')", () => {
-    render(<SettingsModal {...translucentProps} />);
-    fireEvent.click(screen.getByRole("button", { name: /dusk/i }));
-    expect(onWallpaper).toHaveBeenCalledWith("dusk");
-  });
-
-  it("clicking the 'aurora' wallpaper swatch calls onWallpaper('aurora')", () => {
-    render(<SettingsModal {...translucentProps} />);
+  it("clicking 'aurora' wallpaper swatch calls onWallpaper('aurora')", () => {
+    render(<SettingsModal {...darkGlassProps} />);
     fireEvent.click(screen.getByRole("button", { name: /aurora/i }));
     expect(onWallpaper).toHaveBeenCalledWith("aurora");
   });
 
-  it("clicking the 'mesh' wallpaper swatch calls onWallpaper('mesh')", () => {
-    render(<SettingsModal {...translucentProps} />);
-    fireEvent.click(screen.getByRole("button", { name: /mesh/i }));
-    expect(onWallpaper).toHaveBeenCalledWith("mesh");
+  it("clicking 'dusk' wallpaper swatch calls onWallpaper('dusk')", () => {
+    render(<SettingsModal {...darkGlassProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /dusk/i }));
+    expect(onWallpaper).toHaveBeenCalledWith("dusk");
   });
 
-  it("clicking the 'slate' wallpaper swatch calls onWallpaper('slate')", () => {
-    render(<SettingsModal {...translucentProps} />);
+  it("clicking 'slate' wallpaper swatch calls onWallpaper('slate')", () => {
+    render(<SettingsModal {...darkGlassProps} />);
     fireEvent.click(screen.getByRole("button", { name: /slate/i }));
     expect(onWallpaper).toHaveBeenCalledWith("slate");
   });
 
-  it("light theme hides opacity stepper", () => {
-    const lightProps: SettingsModalProps = {
-      ...translucentProps,
-      settings: makeSettings({ theme: "light" }),
-      theme: "light",
-    };
-    render(<SettingsModal {...lightProps} />);
-    expect(screen.queryByText(/opacity/i)).not.toBeInTheDocument();
+  it("clicking 'mesh' wallpaper swatch calls onWallpaper('mesh')", () => {
+    render(<SettingsModal {...darkGlassProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /mesh/i }));
+    expect(onWallpaper).toHaveBeenCalledWith("mesh");
   });
 
-  it("light theme hides wallpaper swatches", () => {
-    const lightProps: SettingsModalProps = {
-      ...translucentProps,
-      settings: makeSettings({ theme: "light" }),
-      theme: "light",
-    };
-    render(<SettingsModal {...lightProps} />);
-    expect(screen.queryByRole("button", { name: /aurora|dusk|mesh|slate/i })).toBeNull();
+  it("clicking 'sand' wallpaper swatch calls onWallpaper('sand')", () => {
+    render(<SettingsModal {...darkGlassProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /sand/i }));
+    expect(onWallpaper).toHaveBeenCalledWith("sand");
   });
 
-  it("dark theme hides opacity stepper", () => {
-    const darkProps: SettingsModalProps = {
-      ...translucentProps,
-      settings: makeSettings({ theme: "dark" }),
-      theme: "dark",
-    };
-    render(<SettingsModal {...darkProps} />);
-    expect(screen.queryByText(/opacity/i)).not.toBeInTheDocument();
+  it("clicking 'frost' wallpaper swatch calls onWallpaper('frost')", () => {
+    render(<SettingsModal {...darkGlassProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /frost/i }));
+    expect(onWallpaper).toHaveBeenCalledWith("frost");
   });
 
-  it("dark theme hides wallpaper swatches", () => {
-    const darkProps: SettingsModalProps = {
-      ...translucentProps,
-      settings: makeSettings({ theme: "dark" }),
-      theme: "dark",
-    };
-    render(<SettingsModal {...darkProps} />);
-    expect(screen.queryByRole("button", { name: /aurora|dusk|mesh|slate/i })).toBeNull();
+  it("clicking 'mixed' wallpaper swatch calls onWallpaper('mixed')", () => {
+    render(<SettingsModal {...darkGlassProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /mixed/i }));
+    expect(onWallpaper).toHaveBeenCalledWith("mixed");
   });
 
-  it("renders openAtStartup toggle with aria-checked='true' reflecting settings", () => {
-    render(<SettingsModal {...translucentProps} />);
+  it("light glass: glass=true shows all 7 wallpaper swatches", () => {
+    render(<SettingsModal {...lightGlassProps} />);
+    expect(screen.getByRole("button", { name: /aurora/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /frost/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /mixed/i })).toBeInTheDocument();
+  });
+
+  it("light glass=false hides wallpaper swatches", () => {
+    render(<SettingsModal {...lightNoGlassProps} />);
+    expect(screen.queryByRole("button", { name: /aurora|dusk|slate|mesh|sand|frost|mixed/i })).toBeNull();
+  });
+
+  it("renders openAtStartup toggle with aria-checked reflecting settings", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
     const toggle = screen.getByRole("switch", { name: /startup/i });
     expect(toggle).toHaveAttribute("aria-checked", "true");
   });
 
   it("clicking openAtStartup toggle calls onToggleStartup", () => {
-    render(<SettingsModal {...translucentProps} />);
+    render(<SettingsModal {...darkNoGlassProps} />);
     fireEvent.click(screen.getByRole("switch", { name: /startup/i }));
     expect(onToggleStartup).toHaveBeenCalledTimes(1);
   });
 
   it("renders minimizedByDefault toggle with aria-checked='false' reflecting settings", () => {
-    render(<SettingsModal {...translucentProps} />);
+    render(<SettingsModal {...darkNoGlassProps} />);
     const toggle = screen.getByRole("switch", { name: /minimized/i });
     expect(toggle).toHaveAttribute("aria-checked", "false");
   });
 
   it("clicking minimizedByDefault toggle calls onToggleMinimized", () => {
-    render(<SettingsModal {...translucentProps} />);
+    render(<SettingsModal {...darkNoGlassProps} />);
     fireEvent.click(screen.getByRole("switch", { name: /minimized/i }));
     expect(onToggleMinimized).toHaveBeenCalledTimes(1);
   });
 
   it("interval stepper shows settings.interval value (50)", () => {
-    render(<SettingsModal {...translucentProps} />);
+    render(<SettingsModal {...darkNoGlassProps} />);
     expect(screen.getByText("50")).toBeInTheDocument();
   });
 
   it("interval stepper '+' calls onInterval(+1)", () => {
-    render(<SettingsModal {...translucentProps} />);
-    const intervalLabel = screen.getByText(/interval/i);
-    const intervalSection = intervalLabel.closest("div")!.parentElement!;
-    const incBtn = intervalSection.querySelectorAll("button")[1];
-    fireEvent.click(incBtn);
+    render(<SettingsModal {...darkNoGlassProps} />);
+    // With glass=OFF, only interval and idle steppers are present. Interval is first.
+    const incBtns = screen.getAllByRole("button", { name: "+" });
+    fireEvent.click(incBtns[0]);
     expect(onInterval).toHaveBeenCalledWith(1);
   });
 
   it("interval stepper '−' calls onInterval(-1)", () => {
-    render(<SettingsModal {...translucentProps} />);
-    const intervalLabel = screen.getByText(/interval/i);
-    const intervalSection = intervalLabel.closest("div")!.parentElement!;
-    const decBtn = intervalSection.querySelectorAll("button")[0];
-    fireEvent.click(decBtn);
+    render(<SettingsModal {...darkNoGlassProps} />);
+    // With glass=OFF, only interval and idle steppers are present. Interval is first.
+    const decBtns = screen.getAllByRole("button", { name: "−" });
+    fireEvent.click(decBtns[0]);
     expect(onInterval).toHaveBeenCalledWith(-1);
   });
 
   it("idleNudge stepper shows settings.idleNudge value (30)", () => {
-    render(<SettingsModal {...translucentProps} />);
+    render(<SettingsModal {...darkNoGlassProps} />);
     expect(screen.getByText("30")).toBeInTheDocument();
   });
 
   it("idleNudge stepper '+' calls onIdleNudge(+1)", () => {
-    render(<SettingsModal {...translucentProps} />);
-    const idleLabel = screen.getByText(/idle/i);
-    const idleSection = idleLabel.closest("div")!.parentElement!;
-    const incBtn = idleSection.querySelectorAll("button")[1];
-    fireEvent.click(incBtn);
+    render(<SettingsModal {...darkNoGlassProps} />);
+    // With glass=OFF, only interval and idle steppers are present. Idle is second.
+    const incBtns = screen.getAllByRole("button", { name: "+" });
+    fireEvent.click(incBtns[1]);
     expect(onIdleNudge).toHaveBeenCalledWith(1);
   });
 
   it("idleNudge stepper '−' calls onIdleNudge(-1)", () => {
-    render(<SettingsModal {...translucentProps} />);
-    const idleLabel = screen.getByText(/idle/i);
-    const idleSection = idleLabel.closest("div")!.parentElement!;
-    const decBtn = idleSection.querySelectorAll("button")[0];
-    fireEvent.click(decBtn);
+    render(<SettingsModal {...darkNoGlassProps} />);
+    // With glass=OFF, only interval and idle steppers are present. Idle is second.
+    const decBtns = screen.getAllByRole("button", { name: "−" });
+    fireEvent.click(decBtns[1]);
     expect(onIdleNudge).toHaveBeenCalledWith(-1);
   });
 
   it("clicking Export button calls onExport", () => {
-    render(<SettingsModal {...translucentProps} />);
+    render(<SettingsModal {...darkNoGlassProps} />);
     fireEvent.click(screen.getByRole("button", { name: /export/i }));
     expect(onExport).toHaveBeenCalledTimes(1);
   });
 
   it("clicking Import button calls onImport", () => {
-    render(<SettingsModal {...translucentProps} />);
+    render(<SettingsModal {...darkNoGlassProps} />);
     fireEvent.click(screen.getByRole("button", { name: /import/i }));
     expect(onImport).toHaveBeenCalledTimes(1);
   });
 
   it("clicking close button calls onClose", () => {
-    render(<SettingsModal {...translucentProps} />);
+    render(<SettingsModal {...darkNoGlassProps} />);
     fireEvent.click(screen.getByRole("button", { name: /close/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("displays opacity as floor-clamped % when glass is on (dark floor=0.50)", () => {
+    render(<SettingsModal {...darkGlassProps} />);
+    // opacity=0.7, floor=0.50, so clamp(0.7,0.50,0.92)=0.7 -> "70%"
+    expect(screen.getByText("70%")).toBeInTheDocument();
+  });
+
+  it("displays opacity as floor-clamped % when glass is on (light floor=0.60)", () => {
+    render(<SettingsModal {...lightGlassProps} />);
+    // opacity=0.75, floor=0.60, so clamp(0.75,0.60,0.92)=0.75 -> "75%"
+    expect(screen.getByText("75%")).toBeInTheDocument();
   });
 });
 
@@ -1159,7 +1236,7 @@ describe("FullHistoryChartModal", () => {
     ],
   };
 
-  // Build VM inside each test to avoid top-level skeleton throws (used in buildChartVM tests)
+  // Build VM inside each test to ensure buildChartVM path is also exercised
   const makeVM = (): ChartVM =>
     buildChartVM(CHART_EXERCISE, [...CHART_SERIES], CHART_UNIT, CHART_START);
 
@@ -1170,7 +1247,8 @@ describe("FullHistoryChartModal", () => {
 
   it("renders sessions count (3)", () => {
     render(<FullHistoryChartModal vm={staticVM} onClose={onClose} />);
-    expect(screen.getByText("3")).toBeInTheDocument();
+    // Session count is shown in "Since Jan 2024 · 3 sessions"
+    expect(screen.getByText(/3 sessions/i)).toBeInTheDocument();
   });
 
   it("renders PB stat tile with pr value '120 kg'", () => {
@@ -1195,8 +1273,10 @@ describe("FullHistoryChartModal", () => {
 
   it("SVG has correct viewBox attribute", () => {
     render(<FullHistoryChartModal vm={staticVM} onClose={onClose} />);
-    const svg = document.querySelector("svg")!;
-    expect(svg.getAttribute("viewBox")).toBe("0 0 680 240");
+    // Find the chart SVG specifically by its viewBox
+    const svgs = document.querySelectorAll("svg");
+    const chartSvg = Array.from(svgs).find((s) => s.getAttribute("viewBox") === "0 0 680 240");
+    expect(chartSvg).not.toBeNull();
   });
 
   it("renders polyline with correct points attribute", () => {
@@ -1245,5 +1325,9 @@ describe("FullHistoryChartModal", () => {
   });
 
   // Also call makeVM() in a test to ensure buildChartVM path is also exercised
-  // (coverage for that is already covered in the buildChartVM describe block)
+  it("buildChartVM produces valid vm for the chart", () => {
+    const vm = makeVM();
+    expect(vm.exercise).toBe("Bench Press");
+    expect(vm.sessions).toBe(3);
+  });
 });

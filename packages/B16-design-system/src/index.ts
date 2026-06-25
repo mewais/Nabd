@@ -281,7 +281,7 @@ export function Pill(_p: PillProps): JSX.Element {
 }
 
 export interface CardProps {
-  children: ReactNode;
+  children?: ReactNode;
   style?: CSSProperties;
 }
 export function Card(_p: CardProps): JSX.Element {
