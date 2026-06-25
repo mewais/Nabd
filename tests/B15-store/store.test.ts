@@ -1706,6 +1706,32 @@ describe("planEdit — setIntensity", () => {
     get(store).planEdit(day.id, { kind: "ex", id: exId }, "setIntensity", 1);
     expect(client.saveSingleton).toHaveBeenCalledWith("program", expect.any(Object));
   });
+
+  it("index 0 sets intensity to 'none'", () => {
+    const day = get(store).program.days[0];
+    const exId = day.exercises[0].id;
+    get(store).planEdit(day.id, { kind: "ex", id: exId }, "setIntensity", 0);
+    const ex = get(store).program.days[0].exercises.find((e) => e.id === exId)!;
+    expect(ex.intensity).toBe("none");
+  });
+
+  it("index 1 sets intensity to 'rpe'", () => {
+    const day = get(store).program.days[0];
+    const exId = day.exercises[0].id;
+    get(store).planEdit(day.id, { kind: "ex", id: exId }, "setIntensity", 1);
+    const ex = get(store).program.days[0].exercises.find((e) => e.id === exId)!;
+    expect(ex.intensity).toBe("rpe");
+  });
+
+  // BUG 1: index 2 should produce "pct" (the domain Intensity value) but current
+  // code maps it to "percent" — this test FAILS against current code
+  it("index 2 sets intensity to 'pct' (domain enum value) [BUG: current code produces 'percent']", () => {
+    const day = get(store).program.days[0];
+    const exId = day.exercises[0].id;
+    get(store).planEdit(day.id, { kind: "ex", id: exId }, "setIntensity", 2);
+    const ex = get(store).program.days[0].exercises.find((e) => e.id === exId)!;
+    expect(ex.intensity).toBe("pct");
+  });
 });
 
 describe("planEdit — setRest", () => {
@@ -1835,6 +1861,36 @@ describe("planEdit — stepRep", () => {
     const aAfter = get(store).program.days[0].exercises[0].sets[0].a;
     expect(aAfter).toBe(aBefore + 1);
     expect(client.saveSingleton).toHaveBeenCalledWith("program", expect.any(Object));
+  });
+
+  // BUG 2: which=1 → 'a', which=0 → 'b'; current code hardcodes 'a', so 'b' never changes
+  it("which=1 steps 'a' upward (a increases, b unchanged)", () => {
+    const day = get(store).program.days[0];
+    const exId = day.exercises[0].id;
+    // Fixture exercise has range sets: { a: 8, b: 12 }
+    const aBefore = day.exercises[0].sets[0].a;
+    const bBefore = day.exercises[0].sets[0].b!;
+    // planEdit(..., "stepRep", setIndex=0, which=1→'a', delta=+1)
+    get(store).planEdit(day.id, { kind: "ex", id: exId }, "stepRep", 0, 1, 1);
+    const aAfter = get(store).program.days[0].exercises[0].sets[0].a;
+    const bAfter = get(store).program.days[0].exercises[0].sets[0].b!;
+    expect(aAfter).toBe(aBefore + 1);
+    expect(bAfter).toBe(bBefore); // b must NOT change when stepping 'a'
+  });
+
+  // BUG 2: which=0 → 'b'; current code hardcodes 'a' so 'b' doesn't change — this test FAILS against current code
+  it("which=0 steps 'b' upward (b increases, a unchanged) [BUG: current code hardcodes 'a']", () => {
+    const day = get(store).program.days[0];
+    const exId = day.exercises[0].id;
+    // Fixture exercise has range sets: { a: 8, b: 12 }
+    const aBefore = day.exercises[0].sets[0].a;
+    const bBefore = day.exercises[0].sets[0].b!;
+    // planEdit(..., "stepRep", setIndex=0, which=0→'b', delta=+1)
+    get(store).planEdit(day.id, { kind: "ex", id: exId }, "stepRep", 0, 0, 1);
+    const aAfter = get(store).program.days[0].exercises[0].sets[0].a;
+    const bAfter = get(store).program.days[0].exercises[0].sets[0].b!;
+    expect(bAfter).toBe(bBefore + 1); // b must increase by 1
+    expect(aAfter).toBe(aBefore);     // a must NOT change when stepping 'b'
   });
 });
 

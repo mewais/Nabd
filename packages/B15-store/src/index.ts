@@ -665,7 +665,7 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
           break;
         }
         case "setIntensity": {
-          const intensities = ["none", "rpe", "percent"] as const;
+          const intensities = ["none", "rpe", "pct"] as const;
           program = setIntensity(state.program, dayId, ref, intensities[args[0] % 3]);
           break;
         }
@@ -684,9 +684,11 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
         case "cycleSetType":
           program = cycleSetType(state.program, dayId, ref, args[0]);
           break;
-        case "stepRep":
-          program = stepRep(state.program, dayId, ref, args[0], "a", args[2]);
+        case "stepRep": {
+          const which = args[1] === 1 ? "a" : "b";
+          program = stepRep(state.program, dayId, ref, args[0], which, args[2]);
           break;
+        }
         case "stepVal":
           program = stepVal(state.program, dayId, ref, args[0], args[1]);
           break;
