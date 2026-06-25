@@ -39,6 +39,7 @@ export default defineConfig({
       exclude: ["src/**/*.d.ts"],
       thresholds: { lines: 100, functions: 100, branches: 100, statements: 100 },
       reporter: ["text", "json-summary"],
+      reportOnFailure: true,
     },
   },
 });
