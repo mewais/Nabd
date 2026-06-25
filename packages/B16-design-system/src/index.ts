@@ -47,11 +47,37 @@ export interface ThemeProviderProps {
 export function ThemeProvider(_p: ThemeProviderProps): JSX.Element {
   const vars = themeVars(_p.theme, _p.opacity);
   const wpStyle = wallpaperStyle(_p.theme, _p.wallpaper);
+  const bg = rootBackgroundStyle(_p.theme, _p.opacity);
   return React.createElement(
     "div",
-    { style: vars },
+    {
+      "data-theme": _p.theme,
+      style: {
+        ...vars,
+        height: "100vh",
+        width: "100%",
+        overflow: "hidden",
+        position: "relative",
+        color: "var(--text)",
+        fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
+      },
+    },
+    // Fixed full-bleed wallpaper layer (behind everything) for the translucent theme.
     React.createElement("div", { style: wpStyle }),
-    _p.children,
+    // The themed panel: solid bg for light/dark, frosted tint over the wallpaper for translucent.
+    React.createElement(
+      "div",
+      {
+        style: {
+          ...bg,
+          position: "relative",
+          zIndex: 1,
+          height: "100%",
+          width: "100%",
+        },
+      },
+      _p.children,
+    ),
   );
 }
 
