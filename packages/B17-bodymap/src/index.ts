@@ -1,26 +1,48 @@
 // @nabd/bodymap — anatomical body map renderer (vendored body-muscles SVG).
 // Tints each region by aggregated per-muscle coverage via MUSCLE_REGION_MAP.
-// SKELETON: signatures frozen; bodies throw until implemented.
 
+/** @jsxImportSource react */
+import { createElement } from "react";
 import type { CSSProperties } from "react";
 import type { Coverage, MuscleKey } from "@nabd/domain";
-
-const NI = (): never => {
-  throw new Error("not implemented");
-};
+import { MUSCLE_REGION_MAP, MUSCLE_NAMES } from "@nabd/domain";
+import { FRONT_MUSCLES, BACK_MUSCLES, ViewSide, VIEWBOX } from "../../../assets/body/index";
 
 export type MapStyle = "heat" | "outline";
 export type MapView = "front" | "back";
 
 /** Which tracking muscle a region id belongs to (reverse of MUSCLE_REGION_MAP),
  *  or null if the region is decorative (head, hands, …). */
-export function regionMuscle(_regionId: string): MuscleKey | null {
-  return NI();
+export function regionMuscle(regionId: string): MuscleKey | null {
+  for (const [muscle, prefixes] of Object.entries(MUSCLE_REGION_MAP) as [MuscleKey, string[]][]) {
+    for (const prefix of prefixes) {
+      if (regionId === prefix || regionId.startsWith(prefix + "-")) {
+        return muscle;
+      }
+    }
+  }
+  return null;
 }
 
 /** SVG fill/stroke style for a region given coverage + style mode. */
-export function regionStyle(_regionId: string, _coverage: Coverage, _style: MapStyle): CSSProperties {
-  return NI();
+export function regionStyle(regionId: string, coverage: Coverage, style: MapStyle): CSSProperties {
+  const muscle = regionMuscle(regionId);
+  if (muscle === null) {
+    return { fill: "var(--map-muscle)" };
+  }
+  const c = Math.min(100, Math.max(0, coverage[muscle]));
+  if (style === "heat") {
+    return {
+      fill: "var(--accent)",
+      fillOpacity: 0.34 + 0.66 * (c / 100),
+    };
+  } else {
+    return {
+      fill: "var(--map-muscle)",
+      stroke: "var(--accent)",
+      strokeOpacity: 0.2 + 0.8 * (c / 100),
+    };
+  }
 }
 
 export interface BodyMapProps {
@@ -29,9 +51,35 @@ export interface BodyMapProps {
   style?: MapStyle; // default "heat"
   width?: number;
 }
+
 /** Render one side of the body as an SVG with tinted regions. */
-export function BodyMap(_p: BodyMapProps): JSX.Element {
-  return NI();
+export function BodyMap(p: BodyMapProps): JSX.Element {
+  const { side, coverage, style = "heat", width } = p;
+  const viewSide = side === "front" ? ViewSide.FRONT : ViewSide.BACK;
+  const muscles = side === "front" ? FRONT_MUSCLES : BACK_MUSCLES;
+  const viewBox = VIEWBOX[viewSide];
+
+  const svgProps: Record<string, unknown> = { viewBox };
+  if (width !== undefined) {
+    svgProps.width = width;
+  }
+
+  const paths = muscles.map((region) => {
+    const s = regionStyle(region.id, coverage, style);
+    const muscle = regionMuscle(region.id);
+    const titleText =
+      muscle !== null
+        ? `${MUSCLE_NAMES[muscle]} · ${Math.round(Math.min(100, Math.max(0, coverage[muscle])))}%`
+        : null;
+
+    return createElement(
+      "path",
+      { key: region.id, d: region.path, style: s },
+      titleText !== null ? createElement("title", null, titleText) : null
+    );
+  });
+
+  return createElement("svg", svgProps, ...paths);
 }
 
 export interface MuscleBarProps {
@@ -40,7 +88,31 @@ export interface MuscleBarProps {
   pct: number;
   showRec?: boolean;
 }
+
 /** A labeled per-muscle coverage bar (with optional rest/push tag). */
-export function MuscleBar(_p: MuscleBarProps): JSX.Element {
-  return NI();
+export function MuscleBar(p: MuscleBarProps): JSX.Element {
+  const { muscle, pct, showRec } = p;
+  const name = MUSCLE_NAMES[muscle];
+
+  let recTag: JSX.Element | null = null;
+  if (showRec) {
+    if (pct >= 66) {
+      recTag = createElement("span", { className: "rec-tag" }, "Rest");
+    } else if (pct <= 38) {
+      recTag = createElement("span", { className: "rec-tag" }, "Push");
+    }
+  }
+
+  return createElement(
+    "div",
+    { className: "muscle-bar" },
+    createElement("span", { className: "muscle-name" }, name),
+    createElement(
+      "div",
+      { className: "bar-track" },
+      createElement("div", { className: "bar-fill", style: { width: `${pct}%` } })
+    ),
+    createElement("span", { className: "pct-text" }, `${pct}%`),
+    recTag
+  );
 }

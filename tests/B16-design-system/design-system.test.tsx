@@ -819,8 +819,10 @@ describe("Donut", () => {
   });
 
   test("renders without caption (undefined branch)", () => {
-    render(<Donut pct={100} done={5} total={5} />);
+    render(<Donut pct={40} done={2} total={5} />);
+    expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.queryByText("today")).toBeNull();
   });
 
   test("pct=0 renders 0 progress (done=0)", () => {

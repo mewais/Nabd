@@ -6,3 +6,4 @@ export { ViewSide } from "./types";
 export type { MuscleDef, MuscleId } from "./types";
 export { FRONT_MUSCLES } from "./muscles.front";
 export { BACK_MUSCLES } from "./muscles.back";
+export { VIEWBOX } from "./meta";
