@@ -254,6 +254,9 @@ importers:
       '@nabd/bodymap':
         specifier: workspace:*
         version: link:../B17-bodymap
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../B03-coverage
       '@nabd/design-system':
         specifier: workspace:*
         version: link:../B16-design-system
@@ -275,12 +278,21 @@ importers:
       '@nabd/bodymap':
         specifier: workspace:*
         version: link:../B17-bodymap
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../B03-coverage
+      '@nabd/dataset':
+        specifier: workspace:*
+        version: link:../B02-dataset
       '@nabd/design-system':
         specifier: workspace:*
         version: link:../B16-design-system
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
+      '@nabd/program-editor':
+        specifier: workspace:*
+        version: link:../B09-program-editor
       '@testing-library/react':
         specifier: ^16.0.1
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -293,15 +305,24 @@ importers:
 
   packages/B21-progress:
     dependencies:
+      '@nabd/analytics':
+        specifier: workspace:*
+        version: link:../B08-analytics
       '@nabd/bodymap':
         specifier: workspace:*
         version: link:../B17-bodymap
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../B03-coverage
       '@nabd/design-system':
         specifier: workspace:*
         version: link:../B16-design-system
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
+      '@nabd/progression':
+        specifier: workspace:*
+        version: link:../B05-progression
       '@testing-library/react':
         specifier: ^16.0.1
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -317,12 +338,21 @@ importers:
       '@nabd/bodymap':
         specifier: workspace:*
         version: link:../B17-bodymap
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../B03-coverage
+      '@nabd/dataset':
+        specifier: workspace:*
+        version: link:../B02-dataset
       '@nabd/design-system':
         specifier: workspace:*
         version: link:../B16-design-system
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
+      '@nabd/progression':
+        specifier: workspace:*
+        version: link:../B05-progression
       '@testing-library/react':
         specifier: ^16.0.1
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)

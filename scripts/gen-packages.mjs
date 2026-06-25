@@ -27,10 +27,10 @@ const PKGS = [
   { dir: "B16-design-system", name: "design-system", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*" } },
   { dir: "B17-bodymap", name: "bodymap", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*", "@nabd/coverage": "workspace:*" } },
   { dir: "B18-shell", name: "shell", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*", "@nabd/design-system": "workspace:*", "@nabd/bodymap": "workspace:*" } },
-  { dir: "B19-today", name: "today", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*", "@nabd/design-system": "workspace:*", "@nabd/bodymap": "workspace:*" } },
-  { dir: "B20-planner", name: "planner", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*", "@nabd/design-system": "workspace:*", "@nabd/bodymap": "workspace:*" } },
-  { dir: "B21-progress", name: "progress", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*", "@nabd/design-system": "workspace:*", "@nabd/bodymap": "workspace:*" } },
-  { dir: "B22-modals", name: "modals", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*", "@nabd/design-system": "workspace:*", "@nabd/bodymap": "workspace:*" } },
+  { dir: "B19-today", name: "today", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*", "@nabd/coverage": "workspace:*", "@nabd/design-system": "workspace:*", "@nabd/bodymap": "workspace:*" } },
+  { dir: "B20-planner", name: "planner", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*", "@nabd/coverage": "workspace:*", "@nabd/program-editor": "workspace:*", "@nabd/dataset": "workspace:*", "@nabd/design-system": "workspace:*", "@nabd/bodymap": "workspace:*" } },
+  { dir: "B21-progress", name: "progress", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*", "@nabd/analytics": "workspace:*", "@nabd/progression": "workspace:*", "@nabd/coverage": "workspace:*", "@nabd/design-system": "workspace:*", "@nabd/bodymap": "workspace:*" } },
+  { dir: "B22-modals", name: "modals", env: "happy-dom", react: true, deps: { "@nabd/domain": "workspace:*", "@nabd/coverage": "workspace:*", "@nabd/dataset": "workspace:*", "@nabd/progression": "workspace:*", "@nabd/design-system": "workspace:*", "@nabd/bodymap": "workspace:*" } },
 ];
 
 const w = (p, s) => writeFileSync(join(ROOT, p), s.endsWith("\n") ? s : s + "\n");
