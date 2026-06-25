@@ -102,22 +102,14 @@ export function buildCompletion(
   weekPct: string;
   days: BarVM[];
 } {
-  // weekPct: completion toward a target of (setsThisWeek + plannedPerDay).
-  // Guard: if plannedPerDay === 0, return "0%" (no plan = no completion).
-  let weekPct: string;
-  if (plannedPerDay === 0) {
-    weekPct = "0%";
-  } else {
-    const done = setsThisWeek(history, now);
-    const target = done + plannedPerDay;
-    weekPct = `${Math.round((done / target) * 100)}%`;
-  }
-
   // Day labels: single-letter day-of-week abbreviation
   const DOW_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
   // completionLast7 returns percentages for last 7 days (oldest first)
   const pcts = completionLast7(history, plannedPerDay, now);
+
+  // weekPct: rounded mean of the 7 daily completion percentages.
+  const weekPct = `${Math.round(pcts.reduce((sum, v) => sum + v, 0) / pcts.length)}%`;
 
   // Build date labels for last 7 days, oldest first (index 0 = 6 days ago)
   const todayMidnight = new Date(

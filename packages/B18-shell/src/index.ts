@@ -86,7 +86,9 @@ const NAV_ITEMS: Array<{ key: Screen; label: string; icon: "today" | "plan" | "p
 ];
 
 export function Sidebar(p: SidebarProps): JSX.Element {
-  const { screen, onNavigate, setsDone, setsTotal, pct } = p;
+  const { screen, onNavigate, setsDone, setsTotal, pct, caption } = p;
+  const navLabelSet = new Set(NAV_ITEMS.map((item) => item.label));
+  const donutCaption = navLabelSet.has(caption) ? undefined : caption;
 
   const navButtons = NAV_ITEMS.map((item) => {
     const isActive = screen === item.key;
@@ -170,6 +172,7 @@ export function Sidebar(p: SidebarProps): JSX.Element {
         pct,
         done: setsDone,
         total: setsTotal,
+        caption: donutCaption,
       }),
     ),
   );

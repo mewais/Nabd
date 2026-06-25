@@ -387,9 +387,13 @@ describe("buildWeekly", () => {
 // =============================================================================
 
 describe("buildCompletion", () => {
-  it("weekPct is '70%' for 7 sets / 10 planned", () => {
+  it("weekPct is the rounded mean of the 7 daily completion percentages", () => {
+    // plannedPerDay=3, NOW=2026-06-24 (Wed)
+    // Last 7 days (oldest first): Jun18=0, Jun19=0, Jun20=0, Jun21=0,
+    //   Jun22=round(2/3*100)=67, Jun23=round(3/3*100)=100, Jun24=round(2/3*100)=67
+    // mean = (0+0+0+0+67+100+67)/7 = 234/7 ≈ 33.43 => round = 33
     const result = buildCompletion(BASE_HISTORY, 3, NOW);
-    expect(result.weekPct).toBe("70%");
+    expect(result.weekPct).toBe("33%");
   });
 
   it("returns exactly 7 day bars", () => {
@@ -1130,9 +1134,11 @@ describe("ProgressScreen", () => {
     expect(screen.getByText("Manual")).toBeInTheDocument();
   });
 
-  it("renders weekPct completion", () => {
+  it("renders weekPct completion (mean of 7-day completion rates)", () => {
+    // buildCompletion with plannedPerDay=3 produces day values [0,0,0,0,67,100,67]
+    // mean = 234/7 ≈ 33.43 => "33%"
     render(<ProgressScreen {...defaultProps} />);
-    expect(screen.getByText("70%")).toBeInTheDocument();
+    expect(screen.getByText("33%")).toBeInTheDocument();
   });
 
   it("onTab('weekly') is called when Weekly tab clicked", () => {

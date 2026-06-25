@@ -325,6 +325,16 @@ describe("Sidebar", () => {
     expect(screen.getByText("Today")).toBeInTheDocument();
   });
 
+  it("renders the caption prop text in the document", () => {
+    render(
+      React.createElement(Sidebar, {
+        ...defaultSidebarProps,
+        caption: "55% logged",
+      }),
+    );
+    expect(screen.getByText("55% logged")).toBeInTheDocument();
+  });
+
   it("renders a heart Icon (SVG element present for brand)", () => {
     render(React.createElement(Sidebar, defaultSidebarProps));
     // Icon renders an <svg>; at least one should be in the DOM for the brand heart

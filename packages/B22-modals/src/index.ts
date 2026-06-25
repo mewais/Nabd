@@ -163,7 +163,7 @@ export function SessionModal(_p: SessionModalProps): JSX.Element {
     React.createElement("div", null, musclesDisplay),
     React.createElement("div", null, session.sugg.note),
     React.createElement(Stepper, {
-      label: "Reps",
+      label: session.unit === "sec" ? "Sec" : "Reps",
       value: session.reps,
       onDec: () => onStepReps(-1),
       onInc: () => onStepReps(1),

@@ -18,10 +18,11 @@
     "cov:rust": "cargo llvm-cov --workspace --manifest-path src-tauri/Cargo.toml",
     "lint": "eslint . && prettier --check .",
     "lint:fix": "eslint . --fix && prettier --write .",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "tsc --noEmit -p packages/B23-app/tsconfig.json",
     "build": "pnpm --filter @nabd/app build",
     "dev": "pnpm --filter @nabd/app dev",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "ci": "pnpm -r --filter \"./packages/*\" test && pnpm typecheck && cargo test -p nabd-persistence -p nabd-native -p nabd-ipc --manifest-path src-tauri/Cargo.toml"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.8",

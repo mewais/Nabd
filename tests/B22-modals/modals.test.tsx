@@ -427,6 +427,46 @@ describe("SessionModal", () => {
     // weight=20 should appear
     expect(screen.getByText("20")).toBeInTheDocument();
   });
+
+  it("rep-input label is 'Reps' for a reps-based exercise (unit='reps')", () => {
+    // defaultSession already has unit: "reps"
+    const props: SessionModalProps = {
+      ...defaultProps,
+      session: makeActiveSession({ unit: "reps", weighted: false }),
+    };
+    render(<SessionModal {...props} />);
+    // The Stepper for the count field must be labeled "Reps"
+    expect(screen.getByText("Reps")).toBeInTheDocument();
+  });
+
+  it("rep-input label is 'Sec' for a time-based exercise (unit='sec') — e.g. Plank", () => {
+    // Plank is unweighted and time-based
+    const plankSession: ActiveSession = makeActiveSession({
+      exercise: "Plank",
+      group: "Core",
+      muscles: ["abs"],
+      weighted: false,
+      unit: "sec",
+      reps: 30,
+      weight: 0,
+      sugg: { sets: 3, reps: 30, weight: null, note: "Hold 30 s", up: false },
+      last: null,
+    });
+    render(
+      <SessionModal
+        session={plankSession}
+        list={[]}
+        setOfLabel="Set 1 of 3"
+        onPick={onPick}
+        onStepReps={onStepReps}
+        onStepWeight={onStepWeight}
+        onLog={onLog}
+        onClose={onClose}
+      />,
+    );
+    // The count Stepper must show "Sec" for time-based exercises, not "Reps"
+    expect(screen.getByText("Sec")).toBeInTheDocument();
+  });
 });
 
 // ---------------------------------------------------------------------------
