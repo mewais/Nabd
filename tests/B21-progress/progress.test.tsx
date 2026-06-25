@@ -853,6 +853,38 @@ describe("ConsistencyCard", () => {
     render(<ConsistencyCard {...makeProps({ tab: "weekly" })} />);
     expect(screen.queryByText("June 2026")).not.toBeInTheDocument();
   });
+
+  it("calendar renders cells for all intensity levels including 2 and 3", () => {
+    // Build a calendar data with level-2 (3-5 sets) and level-3 (6+ sets) cells
+    // to ensure all intensity branches of the cell background logic are exercised.
+    const allLevelData = {
+      month: "June 2026",
+      cells: [
+        { day: 1, level: -1 }, // future
+        { day: 2, level: 0 },  // no sets
+        { day: 3, level: 1 },  // 1-2 sets
+        { day: 4, level: 2 },  // 3-5 sets
+        { day: 5, level: 3 },  // 6+ sets
+      ],
+    };
+    const { container } = render(
+      <ConsistencyCard
+        tab="calendar"
+        onTab={vi.fn()}
+        calendar={allLevelData}
+        weekly={weeklyBars}
+      />,
+    );
+    // All 5 cells should be rendered
+    const cells = container.querySelectorAll(".calendar-cell");
+    expect(cells).toHaveLength(5);
+    // Level attributes match
+    expect(container.querySelector(".level--1")).toBeInTheDocument();
+    expect(container.querySelector(".level-0")).toBeInTheDocument();
+    expect(container.querySelector(".level-1")).toBeInTheDocument();
+    expect(container.querySelector(".level-2")).toBeInTheDocument();
+    expect(container.querySelector(".level-3")).toBeInTheDocument();
+  });
 });
 
 // =============================================================================
