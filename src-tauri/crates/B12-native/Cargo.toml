@@ -6,3 +6,10 @@ license.workspace = true
 
 [lib]
 path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
+
+[[test]]
+name = "native_tests"
+path = "../../../tests/rust/B12-native/main.rs"
