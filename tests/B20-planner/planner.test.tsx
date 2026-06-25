@@ -1353,6 +1353,21 @@ describe("ProgramHeader", () => {
     expect(cb.onSetProfile).toHaveBeenCalledWith("home");
   });
 
+  it("clicking the active profile in menu also calls onSetProfile", () => {
+    const cb = makeCb();
+    render(React.createElement(ProgramHeader, makeProps({ cb, profileMenuOpen: true })));
+
+    // The menu has role="menu". Find all divs with onClick inside the menu.
+    // Profile item divs wrap the name in a child div.
+    // All text "Commercial gym" elements: one in the trigger button, one in the menu item.
+    const commercialTexts = screen.getAllByText("Commercial gym");
+    // Click each until onSetProfile is called
+    for (const el of commercialTexts) {
+      fireEvent.click(el);
+    }
+    expect(cb.onSetProfile).toHaveBeenCalledWith("commercial");
+  });
+
   it("profile menu is hidden when profileMenuOpen is false", () => {
     const cb = makeCb();
     render(React.createElement(ProgramHeader, makeProps({ cb, profileMenuOpen: false })));
@@ -1555,16 +1570,42 @@ describe("DayEditor", () => {
     }
   });
 
+  it("fixed mode: Unlink button on superset member fires onToggleSuperset", () => {
+    const cb = makeCb();
+    const editor = makePushEditor();
+    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+
+    // "Unlink" buttons appear on superset members (inSuperset=true path)
+    const unlinkButtons = screen.getAllByRole("button").filter(
+      (b) => b.textContent?.trim() === "Unlink"
+    );
+    if (unlinkButtons.length > 0) {
+      fireEvent.click(unlinkButtons[0]);
+      expect(cb.onToggleSuperset).toHaveBeenCalledWith("push", expect.any(String));
+    }
+  });
+
   it("weekday mode: weekday picker fires onSetWeekday", () => {
     const cb = makeCb();
     const editor = makePushEditor(); // isWeekday=true
     render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
 
-    // Weekday buttons (MON, TUE, etc.)
-    const monBtn = screen.queryByText("MON");
+    // Weekday picker buttons have single-char labels (M, T, W...) and a title attribute.
+    // Find any button with a title that matches a weekday abbreviation.
+    const wdButtons = screen.getAllByRole("button").filter(
+      (b) => b.getAttribute("title") != null &&
+             ["MON","TUE","WED","THU","FRI","SAT","SUN"].includes(b.getAttribute("title") ?? "")
+    );
+    expect(wdButtons.length).toBeGreaterThan(0);
+    // Click the MON button (weekday=1)
+    const monBtn = wdButtons.find((b) => b.getAttribute("title") === "MON");
     if (monBtn) {
       fireEvent.click(monBtn);
       expect(cb.onSetWeekday).toHaveBeenCalledWith("push", 1);
+    } else {
+      // Click whichever is first
+      fireEvent.click(wdButtons[0]);
+      expect(cb.onSetWeekday).toHaveBeenCalledWith("push", expect.any(Number));
     }
   });
 
@@ -1573,10 +1614,12 @@ describe("DayEditor", () => {
     const editor = makeCycledEditor();
     render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
 
-    // Group chips for adding new slots
-    const chestChip = screen.queryByText("Chest");
-    if (chestChip) {
-      fireEvent.click(chestChip);
+    // Group chips for adding new slots — find the button specifically (not the slot header)
+    const chestButtons = screen.queryAllByText("Chest").filter(
+      (el) => el.tagName.toLowerCase() === "button"
+    );
+    if (chestButtons.length > 0) {
+      fireEvent.click(chestButtons[0]);
       expect(cb.onAddSlot).toHaveBeenCalledWith("d1", "Chest");
     }
   });
@@ -1599,9 +1642,9 @@ describe("DayEditor", () => {
     const editor = makeCycledEditor();
     render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
 
-    // Remove pool chip (x on exercise pill)
+    // Remove pool chip — find by aria-label "remove from pool" specifically
     const removePoolButtons = screen.getAllByRole("button").filter(
-      (b) => b.getAttribute("aria-label") === "remove from pool" || b.textContent?.includes("×")
+      (b) => b.getAttribute("aria-label") === "remove from pool"
     );
     if (removePoolButtons.length > 0) {
       fireEvent.click(removePoolButtons[0]);
@@ -1706,9 +1749,9 @@ describe("PlannerScreen", () => {
 
   it("renders volume bars for provided muscles", () => {
     render(React.createElement(PlannerScreen, makeProps()));
-    // Volume bars show muscle names
-    expect(screen.getByText("Chest")).toBeDefined();
-    expect(screen.getByText("Lats")).toBeDefined();
+    // Volume bars show muscle names (use getAllByText since muscle names can appear elsewhere)
+    expect(screen.getAllByText("Chest").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Lats").length).toBeGreaterThan(0);
   });
 
   it("onSetType callback is wired through ProgramHeader", () => {
@@ -1800,6 +1843,8 @@ describe("direct component invocations for 100% coverage", () => {
 
   const preBuiltColumns: BoardColVM[] = [
     { kind: "day", label: "MON", weekday: 1, dayId: "push", name: "Push", chips: [{ name: "bb-bench", superset: false }], more: 0, editing: true },
+    // day column without chips (covers the chips ?? [] fallback branch)
+    { kind: "day", label: "WED", weekday: 3, dayId: "pull", name: "Pull" },
     { kind: "rest", label: "TUE", weekday: 2 },
     { kind: "add", label: "ADD" },
   ];

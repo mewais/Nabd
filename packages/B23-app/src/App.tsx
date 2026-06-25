@@ -118,6 +118,7 @@ export function App({ store, client }: AppProps): JSX.Element {
     openSettings,
     closeSettings,
     setSetting,
+    toggleGlass,
     setOpacity,
     setWallpaper,
     setInterval,
@@ -207,6 +208,7 @@ export function App({ store, client }: AppProps): JSX.Element {
   // ------------------------------------------------------------------
   // TopBar values
   // ------------------------------------------------------------------
+  const glass = settings.glass;
   const idleActive = idleSeconds >= 0.6 * settings.idleNudge;
 
   // ------------------------------------------------------------------
@@ -513,6 +515,8 @@ export function App({ store, client }: AppProps): JSX.Element {
     notifActive: notif !== null,
     theme,
     onTheme: setTheme,
+    glass,
+    onToggleGlass: () => store.getState().toggleGlass(),
     onOpenSettings: openSettings,
   });
 
@@ -599,8 +603,10 @@ export function App({ store, client }: AppProps): JSX.Element {
     ? React.createElement(SettingsModal, {
         settings,
         theme,
+        glass,
         onClose: closeSettings,
         onTheme: setTheme,
+        onToggleGlass: () => store.getState().toggleGlass(),
         onOpacity: setOpacity,
         onWallpaper: setWallpaper,
         onToggleStartup: () => setSetting("openAtStartup", !settings.openAtStartup),
@@ -662,6 +668,7 @@ export function App({ store, client }: AppProps): JSX.Element {
 
   return React.createElement(AppLayout, {
     theme,
+    glass,
     opacity: settings.opacity,
     wallpaper: settings.wallpaper,
     sidebar: sidebarEl,

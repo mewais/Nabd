@@ -143,6 +143,7 @@ export interface NabdActions {
   openSettings: () => void;
   closeSettings: () => void;
   setSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
+  toggleGlass: () => void;
   setOpacity: (v: number) => void;
   setWallpaper: (w: Wallpaper) => void;
   setInterval: (d: number) => void;
@@ -218,7 +219,7 @@ const DEFAULT_LIB_STATE: LibState = {
 export function initialState(_deps: StoreDeps): NabdState {
   return {
     screen: "today",
-    theme: "translucent",
+    theme: DEFAULT_SETTINGS.theme,
     settings: DEFAULT_SETTINGS,
     now: _deps.now(),
     secondsToNext: DEFAULT_SETTINGS.interval * 60,
@@ -277,7 +278,7 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
 
       const program = snapshot.program ?? seedProgram();
       const settings = snapshot.settings ?? DEFAULT_SETTINGS;
-      const theme = snapshot.theme ?? "translucent";
+      const theme = snapshot.theme ?? DEFAULT_SETTINGS.theme;
       const customExercises = snapshot.customExercises ?? [];
       const rotationState = snapshot.rotationState ?? {};
       const history = snapshot.history;
@@ -338,6 +339,13 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
     setTheme: (t: Theme) => {
       set({ theme: t });
       void client.saveSingleton("theme", t);
+    },
+
+    toggleGlass: () => {
+      const state = get();
+      const settings = { ...state.settings, glass: !state.settings.glass };
+      set({ settings });
+      void client.saveSingleton("settings", settings);
     },
 
     setOpacity: (v: number) => {

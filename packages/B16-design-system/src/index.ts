@@ -4,33 +4,34 @@
 import React from "react";
 import type { ReactNode, CSSProperties } from "react";
 import type { Theme, Wallpaper } from "@nabd/domain";
-import { THEMES, WALLPAPERS } from "@nabd/domain";
+import { THEMES, WALLPAPERS, GLASS_FROST, materialKey, glassTint } from "@nabd/domain";
 
-/** Compute the CSS custom-property style object for a theme + opacity. */
-export function themeVars(_theme: Theme, _opacity: number): CSSProperties {
-  return THEMES[_theme] as CSSProperties;
+/** CSS custom-property style object for a theme + glass flag (the active material). */
+export function themeVars(_theme: Theme, _glass: boolean): CSSProperties {
+  return THEMES[materialKey(_theme, _glass)] as CSSProperties;
 }
 
-/** Frosted/translucent root style additions for the translucent theme. */
-export function rootBackgroundStyle(_theme: Theme, _opacity: number): CSSProperties {
-  if (_theme === "translucent") {
+/** Root background: solid `var(--bg)`, or the floor-clamped glass tint + frost. */
+export function rootBackgroundStyle(_theme: Theme, _glass: boolean, _opacity: number): CSSProperties {
+  if (_glass) {
     return {
-      background: `rgba(22,24,32,${_opacity})`,
-      backdropFilter: "blur(36px) saturate(1.5)",
-      WebkitBackdropFilter: "blur(36px) saturate(1.5)",
+      background: glassTint(_theme, _opacity),
+      backdropFilter: GLASS_FROST,
+      WebkitBackdropFilter: GLASS_FROST,
     };
   }
   return { background: "var(--bg)" };
 }
 
-/** Fixed full-bleed wallpaper layer style (translucent theme only). */
-export function wallpaperStyle(_theme: Theme, _wallpaper: Wallpaper): CSSProperties {
-  if (_theme === "translucent") {
+/** Fixed full-bleed wallpaper layer (only shown under glass). */
+export function wallpaperStyle(_theme: Theme, _glass: boolean, _wallpaper: Wallpaper): CSSProperties {
+  if (_glass) {
     return {
       position: "fixed",
       inset: 0,
       zIndex: 0,
       background: WALLPAPERS[_wallpaper],
+      backgroundSize: "cover",
       display: "block",
     };
   }
@@ -39,19 +40,21 @@ export function wallpaperStyle(_theme: Theme, _wallpaper: Wallpaper): CSSPropert
 
 export interface ThemeProviderProps {
   theme: Theme;
+  glass: boolean;
   opacity: number;
   wallpaper: Wallpaper;
   children?: ReactNode;
 }
-/** Applies theme CSS vars to a wrapping element + renders the wallpaper layer. */
+/** Applies the active material's CSS vars + background/frost + wallpaper layer. */
 export function ThemeProvider(_p: ThemeProviderProps): JSX.Element {
-  const vars = themeVars(_p.theme, _p.opacity);
-  const wpStyle = wallpaperStyle(_p.theme, _p.wallpaper);
-  const bg = rootBackgroundStyle(_p.theme, _p.opacity);
+  const vars = themeVars(_p.theme, _p.glass);
+  const wpStyle = wallpaperStyle(_p.theme, _p.glass, _p.wallpaper);
+  const bg = rootBackgroundStyle(_p.theme, _p.glass, _p.opacity);
   return React.createElement(
     "div",
     {
       "data-theme": _p.theme,
+      "data-glass": _p.glass ? "on" : "off",
       style: {
         ...vars,
         height: "100vh",
@@ -62,9 +65,9 @@ export function ThemeProvider(_p: ThemeProviderProps): JSX.Element {
         fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
       },
     },
-    // Fixed full-bleed wallpaper layer (behind everything) for the translucent theme.
+    // Fixed full-bleed wallpaper layer (behind everything) — glass only.
     React.createElement("div", { style: wpStyle }),
-    // The themed panel: solid bg for light/dark, frosted tint over the wallpaper for translucent.
+    // Themed panel: solid bg for light/dark, frosted tint over the wallpaper for glass.
     React.createElement(
       "div",
       {
@@ -278,7 +281,7 @@ export function Pill(_p: PillProps): JSX.Element {
 }
 
 export interface CardProps {
-  children: ReactNode;
+  children?: ReactNode;
   style?: CSSProperties;
 }
 export function Card(_p: CardProps): JSX.Element {
