@@ -13,8 +13,23 @@ export type ExerciseLookup = (exId: string) => Exercise | undefined;
 
 /**
  * Weekly volume per muscle across a program. Primary muscle = full working-set
- * count, secondary = half. Warmup sets excluded. Cycled slots attribute the
- * working-set count to the slot's single target muscle (full amount).
+ * count, secondary = half. Warmup sets excluded.
+ *
+ * Fixed program: each exercise's working-set count adds full to each primary
+ * muscle and half to each secondary muscle.
+ *
+ * Cycled program: each slot's muscle profile is averaged across the pool.
+ * - workingCount = number of working sets in the slot.
+ * - Resolve each exId in slot.pool via lookup; collect resolved Exercise objects
+ *   (skip ids that resolve to undefined).
+ * - n = number of resolved pool exercises.
+ * - If n === 0 (empty pool or none resolve): fall back to crediting slot.muscle
+ *   the full workingCount (so a freshly-added, still-empty slot still shows its
+ *   intended target).
+ * - Else: since only ONE pool exercise rotates in per session, average the muscle
+ *   profile across the pool. For each resolved exercise, weight is 1.0 per
+ *   primary muscle and 0.5 per secondary muscle. For each muscle m, add
+ *   workingCount * (sumOfWeightsForM_acrossPool / n).
  */
 export function computePlanVolume(program: Program, lookup: ExerciseLookup): Volume {
   const vol: Volume = {};
@@ -40,7 +55,29 @@ export function computePlanVolume(program: Program, lookup: ExerciseLookup): Vol
       // cycled
       for (const slot of day.slots) {
         const workingCount = slot.sets.filter((s) => s.type === "working").length;
-        add(slot.muscle, workingCount);
+        const resolved = slot.pool
+          .map((exId) => lookup(exId))
+          .filter((ex): ex is Exercise => ex !== undefined);
+        const n = resolved.length;
+
+        if (n === 0) {
+          // Fallback: credit the slot's declared target muscle with the full count
+          add(slot.muscle, workingCount);
+        } else {
+          // Average muscle profile across the pool exercises
+          const weights = new Map<MuscleKey, number>();
+          for (const ex of resolved) {
+            for (const muscle of ex.primary) {
+              weights.set(muscle, (weights.get(muscle) ?? 0) + 1.0);
+            }
+            for (const muscle of ex.secondary) {
+              weights.set(muscle, (weights.get(muscle) ?? 0) + 0.5);
+            }
+          }
+          for (const [muscle, sumWeight] of weights) {
+            add(muscle, workingCount * (sumWeight / n));
+          }
+        }
       }
     }
   }

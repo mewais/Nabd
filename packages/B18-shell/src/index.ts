@@ -4,12 +4,7 @@
 import React from "react";
 import type { ReactNode } from "react";
 import type { Theme } from "@nabd/domain";
-import {
-  LiveDot,
-  Icon,
-  Segmented,
-  ThemeProvider,
-} from "@nabd/design-system";
+import { LiveDot, Icon, Segmented, ThemeProvider } from "@nabd/design-system";
 
 export type Screen = "today" | "planner" | "progress";
 
@@ -354,7 +349,11 @@ export function Sidebar(p: SidebarProps): JSX.Element {
     },
     brandLockup,
     // Nav buttons
-    React.createElement("nav", { style: { display: "flex", flexDirection: "column" } }, ...navButtons),
+    React.createElement(
+      "nav",
+      { style: { display: "flex", flexDirection: "column" } },
+      ...navButtons,
+    ),
     donutSection,
   );
 }
@@ -478,11 +477,7 @@ export function TopBar(p: TopBarProps): JSX.Element {
         "span",
         { style: { color: "var(--text3)" } },
         "next ",
-        React.createElement(
-          "span",
-          { style: { color: "var(--text)", fontWeight: 600 } },
-          nextStr,
-        ),
+        React.createElement("span", { style: { color: "var(--text)", fontWeight: 600 } }, nextStr),
       ),
       separator,
       // idle
@@ -500,7 +495,7 @@ export function TopBar(p: TopBarProps): JSX.Element {
     // Right: theme segmented + Glass button + settings
     React.createElement(
       "div",
-      { style: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 } },
+      { style: { marginLeft: "auto", display: "flex", alignItems: "stretch", gap: 12 } },
       // Light/Dark segmented control — shared component
       React.createElement(Segmented, {
         options: THEME_OPTIONS,
@@ -518,7 +513,8 @@ export function TopBar(p: TopBarProps): JSX.Element {
             display: "inline-flex",
             alignItems: "center",
             gap: 7,
-            padding: "6px 12px",
+            padding: "0 14px",
+            boxSizing: "border-box",
             background: glass ? "var(--accent)" : "var(--surface2)",
             color: glass ? "#fff" : "var(--text2)",
             border: "1px solid var(--line)",
@@ -561,8 +557,8 @@ export function TopBar(p: TopBarProps): JSX.Element {
             color: "var(--text)",
             border: "1px solid var(--line)",
             borderRadius: 10,
-            width: 40,
-            height: 40,
+            aspectRatio: "1 / 1",
+            boxSizing: "border-box",
             cursor: "pointer",
             flexShrink: 0,
           },

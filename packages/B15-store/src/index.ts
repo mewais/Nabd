@@ -170,6 +170,7 @@ export interface NabdActions {
   planAddSlot: (dayId: string, muscle: MuscleKey) => void;
   planRemoveSlot: (dayId: string, slotId: string) => void;
   planRemoveFromPool: (dayId: string, slotId: string, exId: string) => void;
+  planAddToPool: (dayId: string, slotId: string, exId: string) => void;
   /** Generic prescription edit dispatched to program-editor by op name. */
   planEdit: (
     dayId: string,
@@ -701,6 +702,13 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       void client.saveSingleton("program", program);
     },
 
+    planAddToPool: (dayId: string, slotId: string, exId: string) => {
+      const state = get();
+      const program = addToPool(state.program, dayId, slotId, exId);
+      set({ program });
+      void client.saveSingleton("program", program);
+    },
+
     planEdit: (
       dayId: string,
       ref: { kind: "ex" | "slot"; id: string },
@@ -798,10 +806,14 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
     libPick: (exId: string) => {
       const state = get();
       const target = state.lib.target;
-      if (target !== null && target.kind === "ex") {
+      if (target === null) return;
+      if (target.kind === "ex") {
         get().planAddExercise(target.dayId, exId);
+        set((s) => ({ lib: { ...s.lib, open: false } }));
+      } else if (target.kind === "pool") {
+        get().planAddToPool(target.dayId, target.slotId, exId);
+        // Keep the modal open — the user typically adds multiple exercises to a pool
       }
-      set((s) => ({ lib: { ...s.lib, open: false } }));
     },
 
     libCreate: () => {

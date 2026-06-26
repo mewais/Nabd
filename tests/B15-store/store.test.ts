@@ -2404,6 +2404,274 @@ describe("libCreate — creates custom exercise + persists customExercises + cal
 });
 
 // ---------------------------------------------------------------------------
+// planAddToPool — adds exercise to slot pool + persists
+// ---------------------------------------------------------------------------
+
+describe("planAddToPool — adds exercise to slot pool + persists", () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    const cycledProgram: Program = {
+      ...FIXTURE_PROGRAM,
+      type: "cycled",
+      days: [
+        {
+          ...FIXTURE_PROGRAM.days[0],
+          exercises: [],
+          slots: [
+            {
+              id: "slot-1",
+              muscle: "chest",
+              pool: ["bb-bench"],
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
+          ],
+        },
+      ],
+    };
+    const snap: BootSnapshot = { ...BOOT_SNAPSHOT_FULL, program: cycledProgram };
+    client = makeFakeClient(snap);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    vi.clearAllMocks();
+  });
+
+  it("adds the exercise id to the correct slot's pool", () => {
+    const dayId = get(store).program.days[0].id;
+    get(store).planAddToPool(dayId, "slot-1", "pullup");
+    const slot = get(store).program.days[0].slots.find((s) => s.id === "slot-1")!;
+    expect(slot.pool).toContain("pullup");
+  });
+
+  it("does not remove existing pool members", () => {
+    const dayId = get(store).program.days[0].id;
+    get(store).planAddToPool(dayId, "slot-1", "pullup");
+    const slot = get(store).program.days[0].slots.find((s) => s.id === "slot-1")!;
+    expect(slot.pool).toContain("bb-bench");
+    expect(slot.pool).toContain("pullup");
+  });
+
+  it("persists program via saveSingleton('program', ...)", () => {
+    const dayId = get(store).program.days[0].id;
+    get(store).planAddToPool(dayId, "slot-1", "pullup");
+    expect(client.saveSingleton).toHaveBeenCalledWith("program", expect.any(Object));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// libPick — pool target: adds to pool + keeps modal open
+// ---------------------------------------------------------------------------
+
+describe("libPick — pool target: adds exercise to pool + keeps lib.open=true", () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    const cycledProgram: Program = {
+      ...FIXTURE_PROGRAM,
+      type: "cycled",
+      days: [
+        {
+          ...FIXTURE_PROGRAM.days[0],
+          exercises: [],
+          slots: [
+            {
+              id: "slot-1",
+              muscle: "chest",
+              pool: [],
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
+          ],
+        },
+      ],
+    };
+    const snap: BootSnapshot = { ...BOOT_SNAPSHOT_FULL, program: cycledProgram };
+    client = makeFakeClient(snap);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    vi.clearAllMocks();
+    // Open lib targeting the pool slot
+    get(store).libOpen({ kind: "pool", dayId: "push-day", slotId: "slot-1", muscle: "chest" });
+  });
+
+  it("adds the exercise to the slot's pool", () => {
+    get(store).libPick("pullup");
+    const slot = get(store).program.days[0].slots.find((s) => s.id === "slot-1")!;
+    expect(slot.pool).toContain("pullup");
+  });
+
+  it("leaves lib.open === true (modal stays open)", () => {
+    get(store).libPick("pullup");
+    expect(get(store).lib.open).toBe(true);
+  });
+
+  it("persists program via saveSingleton('program', ...)", () => {
+    get(store).libPick("pullup");
+    expect(client.saveSingleton).toHaveBeenCalledWith("program", expect.any(Object));
+  });
+
+  it("can add multiple exercises one-by-one while modal stays open", () => {
+    get(store).libPick("pullup");
+    get(store).libPick("bb-bench");
+    expect(get(store).lib.open).toBe(true);
+    const slot = get(store).program.days[0].slots.find((s) => s.id === "slot-1")!;
+    expect(slot.pool).toContain("pullup");
+    expect(slot.pool).toContain("bb-bench");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// libPick — ex target: adds exercise to day + closes modal (regression guard)
+// ---------------------------------------------------------------------------
+
+describe("libPick — ex target: adds exercise to day + closes lib (regression guard)", () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    vi.clearAllMocks();
+    const dayId = get(store).program.days[0].id;
+    get(store).libOpen({ kind: "ex", dayId });
+  });
+
+  it("adds exercise to day.exercises", () => {
+    const dayId = get(store).program.days[0].id;
+    const exCountBefore = get(store).program.days[0].exercises.length;
+    get(store).libPick("pullup");
+    expect(get(store).program.days[0].exercises.length).toBe(exCountBefore + 1);
+    expect(get(store).program.days[0].exercises.some((e) => e.exId === "pullup")).toBe(true);
+  });
+
+  it("closes the library modal (lib.open === false)", () => {
+    get(store).libPick("pullup");
+    expect(get(store).lib.open).toBe(false);
+  });
+
+  it("persists program via saveSingleton('program', ...)", () => {
+    get(store).libPick("pullup");
+    expect(client.saveSingleton).toHaveBeenCalledWith("program", expect.any(Object));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// libPick — null target: no-op (target guard)
+// ---------------------------------------------------------------------------
+
+describe("libPick — null target: no-op", () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    vi.clearAllMocks();
+    // Open then close so lib.open=false and lib.target=null
+    get(store).libOpen({ kind: "ex", dayId: "push-day" });
+    get(store).libClose();
+    // Manually clear target
+    store.setState((s) => ({ lib: { ...s.lib, target: null } }));
+  });
+
+  it("does not mutate the program when target is null", () => {
+    const programBefore = get(store).program;
+    get(store).libPick("pullup");
+    expect(get(store).program).toEqual(programBefore);
+  });
+
+  it("does not call saveSingleton when target is null", () => {
+    get(store).libPick("pullup");
+    expect(client.saveSingleton).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// libCreate — pool target: creates custom exercise + adds to pool + modal stays open
+// ---------------------------------------------------------------------------
+
+describe("libCreate — pool target: creates custom exercise + adds to pool + lib stays open", () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    const cycledProgram: Program = {
+      ...FIXTURE_PROGRAM,
+      type: "cycled",
+      days: [
+        {
+          ...FIXTURE_PROGRAM.days[0],
+          exercises: [],
+          slots: [
+            {
+              id: "slot-chest",
+              muscle: "chest",
+              pool: [],
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
+          ],
+        },
+      ],
+    };
+    const snap: BootSnapshot = { ...BOOT_SNAPSHOT_FULL, program: cycledProgram };
+    client = makeFakeClient(snap);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    vi.clearAllMocks();
+
+    // Open lib targeting the pool slot
+    get(store).libOpen({ kind: "pool", dayId: "push-day", slotId: "slot-chest", muscle: "chest" });
+    get(store).libStartCreate();
+    get(store).libDraft("name", "Cable Fly");
+    get(store).libDraft("group", "Chest");
+    get(store).libDraft("equip", "cable");
+  });
+
+  it("adds the new custom exercise to customExercises", () => {
+    const before = get(store).customExercises.length;
+    get(store).libCreate();
+    expect(get(store).customExercises.length).toBe(before + 1);
+    expect(get(store).customExercises.some((e) => e.name === "Cable Fly")).toBe(true);
+  });
+
+  it("adds the new exercise id to the slot pool", () => {
+    get(store).libCreate();
+    const slot = get(store).program.days[0].slots.find((s) => s.id === "slot-chest")!;
+    expect(slot.pool.length).toBe(1);
+  });
+
+  it("persists customExercises", () => {
+    get(store).libCreate();
+    expect(client.saveSingleton).toHaveBeenCalledWith(
+      "customExercises",
+      expect.arrayContaining([expect.objectContaining({ name: "Cable Fly" })]),
+    );
+  });
+
+  it("persists program after adding to pool", () => {
+    get(store).libCreate();
+    expect(client.saveSingleton).toHaveBeenCalledWith("program", expect.any(Object));
+  });
+
+  it("keeps lib.open === true (modal stays open for pool target)", () => {
+    get(store).libCreate();
+    expect(get(store).lib.open).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Progress
 // ---------------------------------------------------------------------------
 

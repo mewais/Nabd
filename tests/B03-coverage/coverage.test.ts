@@ -390,8 +390,10 @@ describe("computePlanVolume — fixed", () => {
 // ---------------------------------------------------------------------------
 
 describe("computePlanVolume — cycled", () => {
-  it("credits full working-set count to the slot's single target muscle", () => {
-    // slot targets chest → chest gets 3, nothing else
+  // --- Fallback branch: pool ids that don't resolve (n===0) ---
+
+  it("fallback: empty pool (no pool ids) credits slot.muscle with full workingCount", () => {
+    // pool=[] → n=0 → fallback to slot.muscle
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -406,7 +408,7 @@ describe("computePlanVolume — cycled", () => {
             {
               id: "s1",
               muscle: "chest",
-              pool: ["bench"],
+              pool: [],
               repMode: "fixed",
               intensity: "none",
               rest: 120,
@@ -423,13 +425,13 @@ describe("computePlanVolume — cycled", () => {
 
     const vol = computePlanVolume(program, makeLookup([]));
     expect(vol["chest"]).toBe(3);
-    // No other muscle receives volume from this slot
+    // No secondary muscles credited in fallback
     expect(vol["front_delts"]).toBeUndefined();
     expect(vol["triceps"]).toBeUndefined();
   });
 
-  it("credits lats slot to lats only — no distribution to rhomboids/lower_traps/lower_back", () => {
-    // Old behaviour spread across Back group; new: only lats gets credit
+  it("fallback: pool with unresolvable ids credits slot.muscle with full workingCount", () => {
+    // pool=["bench"] but lookup returns undefined → n=0 → fallback
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -465,8 +467,7 @@ describe("computePlanVolume — cycled", () => {
     expect(vol["lower_back"]).toBeUndefined();
   });
 
-  it("credits side_delts slot to side_delts only — front_delts and rear_delts get nothing", () => {
-    // Old behaviour spread across Shoulders group; new: only side_delts gets credit
+  it("fallback: side_delts slot with unresolvable pool id credits side_delts only", () => {
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -502,7 +503,7 @@ describe("computePlanVolume — cycled", () => {
     expect(vol["rear_delts"]).toBeUndefined();
   });
 
-  it("handles multiple cycled slots on the same day targeting different muscles", () => {
+  it("fallback: multiple cycled slots on the same day targeting different muscles", () => {
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -545,12 +546,12 @@ describe("computePlanVolume — cycled", () => {
     };
 
     const vol = computePlanVolume(program, makeLookup([]));
-    // chest=3, triceps=2, nothing else
+    // chest=3, triceps=2, nothing else (fallback for both)
     expect(vol["chest"]).toBe(3);
     expect(vol["triceps"]).toBe(2);
   });
 
-  it("excludes warmup sets from cycled slots too", () => {
+  it("fallback: excludes warmup sets from cycled slots", () => {
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -582,11 +583,11 @@ describe("computePlanVolume — cycled", () => {
     };
 
     const vol = computePlanVolume(program, makeLookup([]));
-    // quads = 3 (warmup excluded)
+    // quads = 3 (warmup excluded); fallback since lookup is empty
     expect(vol["quads"]).toBe(3);
   });
 
-  it("sums cycled slots across multiple days for the same target muscle", () => {
+  it("fallback: sums cycled slots across multiple days for the same target muscle", () => {
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -637,8 +638,192 @@ describe("computePlanVolume — cycled", () => {
     };
 
     const vol = computePlanVolume(program, makeLookup([]));
-    // Day 1: chest=2; Day 2: chest=3 → total=5
+    // Day 1: chest=2 (fallback); Day 2: chest=3 (fallback) → total=5
     expect(vol["chest"]).toBe(5);
+  });
+
+  // --- Pool-resolved branch: exercises resolve, muscle profile is averaged ---
+
+  it("pool of 1 exercise with primary+secondary: credits primary full and secondary half", () => {
+    // bench: primary=[chest], secondary=[front_delts]; 3 working sets
+    // n=1 → chest: 3*(1.0/1)=3, front_delts: 3*(0.5/1)=1.5
+    const bench = makeExercise({
+      id: "bench",
+      primary: ["chest"],
+      secondary: ["front_delts"],
+    });
+
+    const program: Program = {
+      name: "Cycled",
+      type: "cycled",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Push Day",
+          weekday: null,
+          exercises: [],
+          slots: [
+            {
+              id: "s1",
+              muscle: "chest",
+              pool: ["bench"],
+              repMode: "fixed",
+              intensity: "none",
+              rest: 120,
+              sets: [
+                { type: "working", a: 8 },
+                { type: "working", a: 8 },
+                { type: "working", a: 8 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const vol = computePlanVolume(program, makeLookup([bench]));
+    expect(vol["chest"]).toBe(3);
+    expect(vol["front_delts"]).toBe(1.5);
+    expect(vol["triceps"]).toBeUndefined();
+  });
+
+  it("pool of 2 exercises averages muscle profile correctly", () => {
+    // exA: primary=[chest], secondary=[]
+    // exB: primary=[chest], secondary=[triceps]
+    // 3 working sets, n=2
+    // chest: 3 * ((1.0+1.0)/2) = 3 * 1.0 = 3
+    // triceps: 3 * ((0.5)/2) = 3 * 0.25 = 0.75
+    const exA = makeExercise({ id: "exA", primary: ["chest"], secondary: [] });
+    const exB = makeExercise({ id: "exB", primary: ["chest"], secondary: ["triceps"] });
+
+    const program: Program = {
+      name: "Cycled",
+      type: "cycled",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Push Day",
+          weekday: null,
+          exercises: [],
+          slots: [
+            {
+              id: "s1",
+              muscle: "chest",
+              pool: ["exA", "exB"],
+              repMode: "fixed",
+              intensity: "none",
+              rest: 120,
+              sets: [
+                { type: "working", a: 8 },
+                { type: "working", a: 8 },
+                { type: "working", a: 8 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const vol = computePlanVolume(program, makeLookup([exA, exB]));
+    expect(vol["chest"]).toBeCloseTo(3);
+    expect(vol["triceps"]).toBeCloseTo(0.75);
+  });
+
+  it("unresolved pool id is skipped and does not count toward n", () => {
+    // pool=["bench", "unknown"], lookup only has bench
+    // n=1 (only bench resolves)
+    // bench: primary=[chest], secondary=[front_delts]
+    // chest: 3*(1.0/1)=3, front_delts: 3*(0.5/1)=1.5
+    const bench = makeExercise({
+      id: "bench",
+      primary: ["chest"],
+      secondary: ["front_delts"],
+    });
+
+    const program: Program = {
+      name: "Cycled",
+      type: "cycled",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Push Day",
+          weekday: null,
+          exercises: [],
+          slots: [
+            {
+              id: "s1",
+              muscle: "chest",
+              pool: ["bench", "unknown"],
+              repMode: "fixed",
+              intensity: "none",
+              rest: 120,
+              sets: [
+                { type: "working", a: 8 },
+                { type: "working", a: 8 },
+                { type: "working", a: 8 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const vol = computePlanVolume(program, makeLookup([bench]));
+    // n=1, so treated as a single-exercise pool (no averaging penalty)
+    expect(vol["chest"]).toBeCloseTo(3);
+    expect(vol["front_delts"]).toBeCloseTo(1.5);
+  });
+
+  it("pool of 2 exercises with distinct primaries averages each muscle's contribution", () => {
+    // exA: primary=[chest], secondary=[]
+    // exB: primary=[lats], secondary=[]
+    // 4 working sets, n=2
+    // chest: 4*(1.0/2) = 2.0
+    // lats:  4*(1.0/2) = 2.0
+    const exA = makeExercise({ id: "exA", primary: ["chest"], secondary: [] });
+    const exB = makeExercise({
+      id: "exB",
+      group: "Back",
+      primary: ["lats"],
+      secondary: [],
+    });
+
+    const program: Program = {
+      name: "Cycled",
+      type: "cycled",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Day 1",
+          weekday: null,
+          exercises: [],
+          slots: [
+            {
+              id: "s1",
+              muscle: "chest",
+              pool: ["exA", "exB"],
+              repMode: "fixed",
+              intensity: "none",
+              rest: 120,
+              sets: [
+                { type: "working", a: 8 },
+                { type: "working", a: 8 },
+                { type: "working", a: 8 },
+                { type: "working", a: 8 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const vol = computePlanVolume(program, makeLookup([exA, exB]));
+    expect(vol["chest"]).toBeCloseTo(2.0);
+    expect(vol["lats"]).toBeCloseTo(2.0);
   });
 });
 
