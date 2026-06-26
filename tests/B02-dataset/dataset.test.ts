@@ -436,29 +436,25 @@ describe("compose() — tracking derivation", () => {
 // ---------------------------------------------------------------------------
 
 describe("compose() — unilateral tag adjustments", () => {
-  it("single-arm unilateral adds obliques to secondary if absent", () => {
+  it("unilateral variant has IDENTICAL secondary to its bilateral sibling (no auto-injection)", () => {
     const result = compose(MOVEMENTS);
-    // row is upper body (lats primary)
+    // lateral_raise: bilateral and unilateral should have the same secondaries
+    const bilat = result.find((e) => e.id === "lateral_raise__dumbbell");
+    const uni = result.find((e) => e.id === "lateral_raise__dumbbell__uni");
+    expect(bilat).toBeDefined();
+    expect(uni).toBeDefined();
+    expect(uni!.secondary).toEqual(bilat!.secondary);
+  });
+
+  it("single-arm unilateral does NOT inject obliques into secondary", () => {
+    const result = compose(MOVEMENTS);
+    // row is upper body (lats primary) — unilateral should NOT have obliques injected
     const uniRow = result.find((e) => e.id === "row__dumbbell__uni");
     expect(uniRow).toBeDefined();
-    expect(uniRow!.secondary).toContain("obliques");
+    expect(uniRow!.secondary).not.toContain("obliques");
   });
 
-  it("single-arm unilateral does NOT add obliques if already present", () => {
-    const m: Movement = {
-      id: "test_upper_uni",
-      name: "Test Upper",
-      primary: ["biceps"],
-      secondary: ["obliques"],
-      equipment: ["dumbbell"],
-      laterality: ["unilateral"],
-    };
-    const [ex] = compose([m]);
-    const obliquesCount = ex.secondary.filter((s) => s === "obliques").length;
-    expect(obliquesCount).toBe(1);
-  });
-
-  it("single-leg unilateral adds abductors and adductors to secondary", () => {
+  it("single-leg unilateral does NOT inject abductors into secondary", () => {
     const m: Movement = {
       id: "test_lower_uni",
       name: "Test Lower",
@@ -468,11 +464,11 @@ describe("compose() — unilateral tag adjustments", () => {
       laterality: ["unilateral"],
     };
     const [ex] = compose([m]);
-    expect(ex.secondary).toContain("abductors");
-    expect(ex.secondary).toContain("adductors");
+    expect(ex.secondary).not.toContain("abductors");
+    expect(ex.secondary).not.toContain("adductors");
   });
 
-  it("single-leg unilateral adds glutes to secondary if not in primary or secondary", () => {
+  it("single-leg unilateral does NOT inject glutes into secondary", () => {
     const m: Movement = {
       id: "test_lower_uni_glutes",
       name: "Test Lower Glutes",
@@ -482,22 +478,16 @@ describe("compose() — unilateral tag adjustments", () => {
       laterality: ["unilateral"],
     };
     const [ex] = compose([m]);
-    expect(ex.secondary).toContain("glutes");
+    expect(ex.secondary).not.toContain("glutes");
   });
 
-  it("single-leg unilateral does NOT add glutes if already in primary", () => {
-    const m: Movement = {
-      id: "test_lower_uni_glutes_primary",
-      name: "Test Lower Glutes Primary",
-      primary: ["glutes"],
-      secondary: [],
-      equipment: ["dumbbell"],
-      laterality: ["unilateral"],
-    };
-    const [ex] = compose([m]);
-    expect(ex.primary).toContain("glutes");
-    // glutes should NOT be in secondary since it's in primary
-    expect(ex.secondary).not.toContain("glutes");
+  it("unilateral upper-body row has same secondaries as bilateral (biceps, rear_delts)", () => {
+    const result = compose(MOVEMENTS);
+    const bilat = result.find((e) => e.id === "row__dumbbell");
+    const uni = result.find((e) => e.id === "row__dumbbell__uni");
+    expect(bilat).toBeDefined();
+    expect(uni).toBeDefined();
+    expect(uni!.secondary).toEqual(bilat!.secondary);
   });
 
   it("bilateral exercises have same secondary as movement definition", () => {
@@ -506,18 +496,18 @@ describe("compose() — unilateral tag adjustments", () => {
     expect(benchBilateral!.secondary).toEqual(expect.arrayContaining(["front_delts", "triceps"]));
   });
 
-  it("secondary tags are deduplicated after unilateral adjustment", () => {
+  it("secondary tags are deduplicated", () => {
     const m: Movement = {
       id: "test_dedup",
       name: "Test Dedup",
       primary: ["lats"],
-      secondary: ["obliques"],
+      secondary: ["biceps", "biceps"],
       equipment: ["dumbbell"],
       laterality: ["unilateral"],
     };
     const [ex] = compose([m]);
-    const obliquesCount = ex.secondary.filter((s) => s === "obliques").length;
-    expect(obliquesCount).toBe(1);
+    const bicepsCount = ex.secondary.filter((s) => s === "biceps").length;
+    expect(bicepsCount).toBe(1);
   });
 });
 
@@ -580,6 +570,23 @@ describe("Accuracy spot-checks", () => {
     const ex = all.find((e) => e.id === "lateral_raise__dumbbell");
     expect(ex).toBeDefined();
     expect(ex!.primary).toEqual(["side_delts"]);
+  });
+
+  it("Lateral Raise bilateral secondary does NOT contain obliques", () => {
+    const ex = all.find((e) => e.id === "lateral_raise__dumbbell");
+    expect(ex!.secondary).not.toContain("obliques");
+  });
+
+  it("Single-Arm Lateral Raise secondary does NOT contain obliques", () => {
+    const ex = all.find((e) => e.id === "lateral_raise__dumbbell__uni");
+    expect(ex).toBeDefined();
+    expect(ex!.secondary).not.toContain("obliques");
+  });
+
+  it("Single-Arm Lateral Raise secondary equals bilateral Lateral Raise secondary", () => {
+    const bilat = all.find((e) => e.id === "lateral_raise__dumbbell");
+    const uni = all.find((e) => e.id === "lateral_raise__dumbbell__uni");
+    expect(uni!.secondary).toEqual(bilat!.secondary);
   });
 
   // Front Raise

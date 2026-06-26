@@ -115,20 +115,8 @@ function deriveName(m: Movement, eq: Equipment, uni: boolean): string {
   return base;
 }
 
-function deriveSecondary(m: Movement, uni: boolean): MuscleKey[] {
-  const sec = [...m.secondary];
-  if (uni) {
-    if (!isLower(m.primary[0])) {
-      // Single-arm upper: add obliques
-      if (!sec.includes("obliques")) sec.push("obliques");
-    } else {
-      // Single-leg lower: add abductors, adductors, glutes stabilisers
-      if (!sec.includes("abductors")) sec.push("abductors");
-      if (!sec.includes("adductors")) sec.push("adductors");
-      if (!m.primary.includes("glutes") && !sec.includes("glutes")) sec.push("glutes");
-    }
-  }
-  return [...new Set(sec)];
+function deriveSecondary(m: Movement): MuscleKey[] {
+  return [...new Set(m.secondary)];
 }
 
 export function compose(movements: Movement[]): Exercise[] {
@@ -140,7 +128,7 @@ export function compose(movements: Movement[]): Exercise[] {
         const uni = lat === "unilateral";
         const id = `${m.id}__${eq}${uni ? "__uni" : ""}`;
         const name = deriveName(m, eq, uni);
-        const secondary = deriveSecondary(m, uni);
+        const secondary = deriveSecondary(m);
         const group: MuscleGroup = MUSCLE_PRIMARY_GROUP[m.primary[0]];
         const tracking = deriveTracking(m, eq);
         const timeBased = deriveTimeBased(tracking, m);
