@@ -7,14 +7,44 @@ import type {
   Program,
   ExercisePrescription,
   CycledSlot,
-  MuscleGroup,
+  MuscleKey,
   GymProfile,
 } from "@nabd/domain";
-import { MUSCLE_NAMES, GROUP_PRIMARY_MUSCLE, EQUIPMENT_NAMES, MUSCLE_GROUPS } from "@nabd/domain";
+import { MUSCLE_NAMES, MUSCLES, EQUIPMENT_NAMES } from "@nabd/domain";
 import type { Library } from "@nabd/dataset";
 import { boardLayout, daySummary } from "@nabd/program-editor";
 import { BodyMap } from "@nabd/bodymap";
 import { Segmented, MiniStepper, Button } from "@nabd/design-system";
+
+/**
+ * Anatomically-ordered MuscleKey list for the cycled-slot target picker.
+ * Order: shoulders → back → chest/core → arms → legs → neck
+ */
+const MUSCLES_ANATOMICAL: MuscleKey[] = [
+  "front_delts",
+  "side_delts",
+  "rear_delts",
+  "upper_traps",
+  "rhomboids",
+  "lower_traps",
+  "lats",
+  "lower_back",
+  "chest",
+  "abs",
+  "obliques",
+  "biceps",
+  "triceps",
+  "forearms",
+  "quads",
+  "hamstrings",
+  "glutes",
+  "abductors",
+  "adductors",
+  "calves",
+  "tibialis",
+  "hip_flexors",
+  "neck",
+];
 
 // ---------- view-model builders (pure) ----------
 
@@ -55,9 +85,7 @@ export function buildSetBlock(_p: ExercisePrescription | CycledSlot): SetBlockVM
   const showIntCol = intensity !== "none";
   const repHeader = repMode === "time" ? "TIME" : "REPS";
   const intHeader = intensity === "rpe" ? "RPE" : intensity === "pct" ? "%1RM" : "";
-  const gridCols = showIntCol
-    ? "30px minmax(150px,1fr) 86px 26px"
-    : "30px minmax(150px,1fr) 26px";
+  const gridCols = showIntCol ? "30px minmax(150px,1fr) 86px 26px" : "30px minmax(150px,1fr) 26px";
 
   const mins = Math.floor(rest / 60);
   const secs = rest % 60;
@@ -141,8 +169,8 @@ export interface ExerciseCardVM {
 }
 export interface CycledSlotVM {
   id: string;
-  group: MuscleGroup;
-  muscle: string;
+  muscle: MuscleKey;
+  muscleName: string;
   poolNames: { id: string; name: string }[];
   poolStr: string;
   block: SetBlockVM;
@@ -165,7 +193,11 @@ export interface EditorVM {
 }
 
 /** Build the day-editor view model. */
-export function buildEditor(_program: Program, _editDayId: string | null, _library: Library): EditorVM {
+export function buildEditor(
+  _program: Program,
+  _editDayId: string | null,
+  _library: Library,
+): EditorVM {
   const days = _program.days;
 
   if (days.length === 0) {
@@ -245,7 +277,14 @@ export function buildEditor(_program: Program, _editDayId: string | null, _libra
         const muscles = allMuscles.map((m) => MUSCLE_NAMES[m]).join(", ");
         const equip = EQUIPMENT_NAMES[libEx.equipment].toUpperCase();
         const block = buildSetBlock(ex);
-        const exCard: ExerciseCardVM = { id: ex.id, name, muscles, equip, block, supersetTag: null };
+        const exCard: ExerciseCardVM = {
+          id: ex.id,
+          name,
+          muscles,
+          equip,
+          block,
+          supersetTag: null,
+        };
         rows.push({ kind: "ex", ex: exCard });
         i++;
       }
@@ -253,8 +292,7 @@ export function buildEditor(_program: Program, _editDayId: string | null, _libra
   } else {
     // Cycled: slots
     rows = day.slots.map((slot) => {
-      const primaryMuscle = GROUP_PRIMARY_MUSCLE[slot.group];
-      const muscle = MUSCLE_NAMES[primaryMuscle];
+      const muscleName = MUSCLE_NAMES[slot.muscle];
       const poolNames = slot.pool.map((exId) => {
         const libEx = _library.byId(exId)!;
         return { id: exId, name: libEx.name };
@@ -263,8 +301,8 @@ export function buildEditor(_program: Program, _editDayId: string | null, _libra
       const block = buildSetBlock(slot);
       const slotVM: CycledSlotVM = {
         id: slot.id,
-        group: slot.group,
-        muscle,
+        muscle: slot.muscle,
+        muscleName,
         poolNames,
         poolStr,
         block,
@@ -302,7 +340,12 @@ export interface BoardColVM {
 }
 
 /** Build the week-board columns. */
-export function buildBoard(_program: Program, _profile: GymProfile, _editDayId: string | null, _library?: Library): BoardColVM[] {
+export function buildBoard(
+  _program: Program,
+  _profile: GymProfile,
+  _editDayId: string | null,
+  _library?: Library,
+): BoardColVM[] {
   const layout = boardLayout(_program, _profile);
 
   return layout.map((col) => {
@@ -316,12 +359,13 @@ export function buildBoard(_program: Program, _profile: GymProfile, _editDayId: 
     const card = col.card!;
     const editing = _editDayId != null && card.dayId === _editDayId;
     // Resolve exercise names for fixed-mode chips (boardLayout uses raw exId)
-    const chips: BoardChip[] = (_program.type === "fixed" && _library != null)
-      ? card.chips.map((ch) => ({
-          name: _library.byId(ch.name)?.name ?? ch.name,
-          superset: ch.superset,
-        }))
-      : card.chips;
+    const chips: BoardChip[] =
+      _program.type === "fixed" && _library != null
+        ? card.chips.map((ch) => ({
+            name: _library.byId(ch.name)?.name ?? ch.name,
+            superset: ch.superset,
+          }))
+        : card.chips;
     const result: BoardColVM = {
       kind: "day" as const,
       label: col.label,
@@ -356,7 +400,7 @@ export interface PlannerCallbacks {
   onAddExercise: (dayId: string) => void; // opens library
   onRemoveExercise: (dayId: string, rowId: string) => void;
   onToggleSuperset: (dayId: string, rowId: string) => void;
-  onAddSlot: (dayId: string, group: MuscleGroup) => void;
+  onAddSlot: (dayId: string, muscle: MuscleKey) => void;
   onRemoveSlot: (dayId: string, slotId: string) => void;
   onAddPool: (dayId: string, slotId: string) => void; // opens library
   onRemoveFromPool: (dayId: string, slotId: string, exId: string) => void;
@@ -391,7 +435,8 @@ const miniBtn: React.CSSProperties = {
 
 export function SetTable(_p: SetTableProps): JSX.Element {
   const { dayId, refTarget, block, cb } = _p;
-  const { rows, repMode, intensity, showIntCol, repHeader, intHeader, gridCols, restStr, notes } = block;
+  const { rows, repMode, intensity, showIntCol, repHeader, intHeader, gridCols, restStr, notes } =
+    block;
 
   const repModeOptions = [
     { k: "range", label: "Range" },
@@ -411,10 +456,54 @@ export function SetTable(_p: SetTableProps): JSX.Element {
   // Table header row
   const headerRow = React.createElement(
     "div",
-    { style: { display: "grid", gridTemplateColumns: gridCols, gap: 9, alignItems: "center", padding: "0 2px 7px", borderBottom: "1px solid var(--line)" } },
-    React.createElement("span", { style: { fontSize: 9, fontFamily: "'JetBrains Mono',monospace", color: "var(--text3)", letterSpacing: ".07em" } }, "SET"),
-    React.createElement("span", { style: { fontSize: 9, fontFamily: "'JetBrains Mono',monospace", color: "var(--text3)", letterSpacing: ".07em" } }, repHeader),
-    showIntCol ? React.createElement("span", { style: { fontSize: 9, fontFamily: "'JetBrains Mono',monospace", color: "var(--text3)", letterSpacing: ".07em" } }, intHeader) : null,
+    {
+      style: {
+        display: "grid",
+        gridTemplateColumns: gridCols,
+        gap: 9,
+        alignItems: "center",
+        padding: "0 2px 7px",
+        borderBottom: "1px solid var(--line)",
+      },
+    },
+    React.createElement(
+      "span",
+      {
+        style: {
+          fontSize: 9,
+          fontFamily: "'JetBrains Mono',monospace",
+          color: "var(--text3)",
+          letterSpacing: ".07em",
+        },
+      },
+      "SET",
+    ),
+    React.createElement(
+      "span",
+      {
+        style: {
+          fontSize: 9,
+          fontFamily: "'JetBrains Mono',monospace",
+          color: "var(--text3)",
+          letterSpacing: ".07em",
+        },
+      },
+      repHeader,
+    ),
+    showIntCol
+      ? React.createElement(
+          "span",
+          {
+            style: {
+              fontSize: 9,
+              fontFamily: "'JetBrains Mono',monospace",
+              color: "var(--text3)",
+              letterSpacing: ".07em",
+            },
+          },
+          intHeader,
+        )
+      : null,
     React.createElement("span", null),
   );
 
@@ -424,48 +513,103 @@ export function SetTable(_p: SetTableProps): JSX.Element {
     let badgeStyle: React.CSSProperties;
     if (row.badgeKind === "warm") {
       badgeStyle = {
-        width: 26, height: 26, borderRadius: 7,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700,
-        cursor: "pointer", flex: "none", border: "none",
-        background: "var(--surface2)", color: "var(--text3)",
+        width: 26,
+        height: 26,
+        borderRadius: 7,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "'JetBrains Mono',monospace",
+        fontSize: 11,
+        fontWeight: 700,
+        cursor: "pointer",
+        flex: "none",
+        border: "none",
+        background: "var(--surface2)",
+        color: "var(--text3)",
       };
     } else if (row.badgeKind === "drop") {
       badgeStyle = {
-        width: 26, height: 26, borderRadius: 7,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700,
-        cursor: "pointer", flex: "none", border: "none",
-        background: "color-mix(in oklch,var(--accent3) 16%,transparent)", color: "var(--accent3)",
+        width: 26,
+        height: 26,
+        borderRadius: 7,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "'JetBrains Mono',monospace",
+        fontSize: 11,
+        fontWeight: 700,
+        cursor: "pointer",
+        flex: "none",
+        border: "none",
+        background: "color-mix(in oklch,var(--accent3) 16%,transparent)",
+        color: "var(--accent3)",
       };
     } else {
       badgeStyle = {
-        width: 26, height: 26, borderRadius: 7,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700,
-        cursor: "pointer", flex: "none", border: "none",
-        background: "color-mix(in oklch,var(--accent) 16%,transparent)", color: "var(--accent)",
+        width: 26,
+        height: 26,
+        borderRadius: 7,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "'JetBrains Mono',monospace",
+        fontSize: 11,
+        fontWeight: 700,
+        cursor: "pointer",
+        flex: "none",
+        border: "none",
+        background: "color-mix(in oklch,var(--accent) 16%,transparent)",
+        color: "var(--accent)",
       };
     }
 
     // Intensity stepper — only when showInt AND intStr is non-empty (has a value)
-    const intStepper = row.showInt && row.intStr !== ""
-      ? React.createElement(
-          "div",
-          { style: { display: "flex", alignItems: "center", gap: 4 } },
-          React.createElement("button", { style: miniBtn, onClick: () => cb.onEdit(dayId, refTarget, "stepVal", row.index, -1) }, "−"),
-          React.createElement(
-            "span",
-            { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: "12.5px", color: "var(--text2)", minWidth: 30, textAlign: "center" as const } },
-            row.intStr,
-          ),
-          React.createElement("button", { style: miniBtn, onClick: () => cb.onEdit(dayId, refTarget, "stepVal", row.index, 1) }, "+"),
-        )
-      : (showIntCol ? React.createElement("div", null) : null);
+    const intStepper =
+      row.showInt && row.intStr !== ""
+        ? React.createElement(
+            "div",
+            { style: { display: "flex", alignItems: "center", gap: 4 } },
+            React.createElement(
+              "button",
+              {
+                style: miniBtn,
+                onClick: () => cb.onEdit(dayId, refTarget, "stepVal", row.index, -1),
+              },
+              "−",
+            ),
+            React.createElement(
+              "span",
+              {
+                style: {
+                  fontFamily: "'JetBrains Mono',monospace",
+                  fontSize: "12.5px",
+                  color: "var(--text2)",
+                  minWidth: 30,
+                  textAlign: "center" as const,
+                },
+              },
+              row.intStr,
+            ),
+            React.createElement(
+              "button",
+              {
+                style: miniBtn,
+                onClick: () => cb.onEdit(dayId, refTarget, "stepVal", row.index, 1),
+              },
+              "+",
+            ),
+          )
+        : showIntCol
+          ? React.createElement("div", null)
+          : null;
 
     return React.createElement(
       "div",
-      { key: row.index, style: { display: "grid", gridTemplateColumns: gridCols, gap: 9, alignItems: "center" } },
+      {
+        key: row.index,
+        style: { display: "grid", gridTemplateColumns: gridCols, gap: 9, alignItems: "center" },
+      },
       // Badge button
       React.createElement(
         "button",
@@ -481,28 +625,89 @@ export function SetTable(_p: SetTableProps): JSX.Element {
         "div",
         { style: { display: "flex", alignItems: "center", gap: 4 } },
         // a stepper dec
-        React.createElement("button", { style: miniBtn, onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 1, -1) }, "−"),
+        React.createElement(
+          "button",
+          {
+            style: miniBtn,
+            onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 1, -1),
+          },
+          "−",
+        ),
         React.createElement(
           "span",
-          { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 600, minWidth: 24, textAlign: "center" as const } },
+          {
+            style: {
+              fontFamily: "'JetBrains Mono',monospace",
+              fontSize: 13,
+              fontWeight: 600,
+              minWidth: 24,
+              textAlign: "center" as const,
+            },
+          },
           row.repA,
         ),
         // a stepper inc
-        React.createElement("button", { style: miniBtn, onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 1, 1) }, "+"),
+        React.createElement(
+          "button",
+          {
+            style: miniBtn,
+            onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 1, 1),
+          },
+          "+",
+        ),
         // b stepper (range mode)
-        row.hasB ? React.createElement("span", { style: { color: "var(--text3)", fontSize: 12 } }, "–") : null,
-        row.hasB ? React.createElement("button", { style: miniBtn, onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 0, -1) }, "−") : null,
+        row.hasB
+          ? React.createElement("span", { style: { color: "var(--text3)", fontSize: 12 } }, "–")
+          : null,
+        row.hasB
+          ? React.createElement(
+              "button",
+              {
+                style: miniBtn,
+                onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 0, -1),
+              },
+              "−",
+            )
+          : null,
         row.hasB
           ? React.createElement(
               "span",
-              { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 600, minWidth: 24, textAlign: "center" as const } },
+              {
+                style: {
+                  fontFamily: "'JetBrains Mono',monospace",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  minWidth: 24,
+                  textAlign: "center" as const,
+                },
+              },
               row.repB,
             )
           : null,
-        row.hasB ? React.createElement("button", { style: miniBtn, onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 0, 1) }, "+") : null,
+        row.hasB
+          ? React.createElement(
+              "button",
+              {
+                style: miniBtn,
+                onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 0, 1),
+              },
+              "+",
+            )
+          : null,
         // time: render repsStr as combined "Xs" text
         row.isTime
-          ? React.createElement("span", { style: { fontSize: 11, color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace", marginLeft: 2 } }, `${row.repA}s`)
+          ? React.createElement(
+              "span",
+              {
+                style: {
+                  fontSize: 11,
+                  color: "var(--text3)",
+                  fontFamily: "'JetBrains Mono',monospace",
+                  marginLeft: 2,
+                },
+              },
+              `${row.repA}s`,
+            )
           : null,
       ),
       // Intensity cell
@@ -511,7 +716,14 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       React.createElement(
         "button",
         {
-          style: { background: "none", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: 14, justifySelf: "end" as const },
+          style: {
+            background: "none",
+            border: "none",
+            color: "var(--text3)",
+            cursor: "pointer",
+            fontSize: 14,
+            justifySelf: "end" as const,
+          },
           onClick: () => cb.onEdit(dayId, refTarget, "removeSet", row.index),
           "aria-label": "remove",
         },
@@ -523,14 +735,28 @@ export function SetTable(_p: SetTableProps): JSX.Element {
   // Controls row: REPS mode seg + LOAD seg + REST stepper — rendered AFTER set rows
   const controlsRow = React.createElement(
     "div",
-    { style: { display: "flex", alignItems: "center", gap: 14, marginTop: 11, flexWrap: "wrap" as const } },
+    {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        marginTop: 11,
+        flexWrap: "wrap" as const,
+      },
+    },
     // REPS mode
     React.createElement(
       "div",
       { style: { display: "flex", alignItems: "center", gap: 6 } },
       React.createElement(
         "span",
-        { style: { fontSize: "9.5px", color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace" } },
+        {
+          style: {
+            fontSize: "9.5px",
+            color: "var(--text3)",
+            fontFamily: "'JetBrains Mono',monospace",
+          },
+        },
         "REPS",
       ),
       React.createElement(Segmented, {
@@ -546,7 +772,13 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       { style: { display: "flex", alignItems: "center", gap: 6 } },
       React.createElement(
         "span",
-        { style: { fontSize: "9.5px", color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace" } },
+        {
+          style: {
+            fontSize: "9.5px",
+            color: "var(--text3)",
+            fontFamily: "'JetBrains Mono',monospace",
+          },
+        },
         "LOAD",
       ),
       React.createElement(Segmented, {
@@ -562,7 +794,13 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       { style: { display: "flex", alignItems: "center", gap: 7, marginLeft: "auto" } },
       React.createElement(
         "span",
-        { style: { fontSize: "9.5px", color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace" } },
+        {
+          style: {
+            fontSize: "9.5px",
+            color: "var(--text3)",
+            fontFamily: "'JetBrains Mono',monospace",
+          },
+        },
         "REST",
       ),
       React.createElement(
@@ -572,7 +810,14 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       ),
       React.createElement(
         "span",
-        { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: "12.5px", width: 36, textAlign: "center" as const } },
+        {
+          style: {
+            fontFamily: "'JetBrains Mono',monospace",
+            fontSize: "12.5px",
+            width: 36,
+            textAlign: "center" as const,
+          },
+        },
         restStr,
       ),
       React.createElement(
@@ -593,7 +838,16 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       React.createElement(
         "button",
         {
-          style: { background: "none", border: "none", color: "var(--accent)", fontSize: "12.5px", fontWeight: 600, fontFamily: "inherit", cursor: "pointer", padding: 0 },
+          style: {
+            background: "none",
+            border: "none",
+            color: "var(--accent)",
+            fontSize: "12.5px",
+            fontWeight: 600,
+            fontFamily: "inherit",
+            cursor: "pointer",
+            padding: 0,
+          },
           onClick: () => cb.onEdit(dayId, refTarget, "addSet"),
         },
         "+ Add set",
@@ -601,7 +855,16 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       React.createElement(
         "button",
         {
-          style: { background: "none", border: "none", color: "var(--text3)", fontSize: "12.5px", fontWeight: 600, fontFamily: "inherit", cursor: "pointer", padding: 0 },
+          style: {
+            background: "none",
+            border: "none",
+            color: "var(--text3)",
+            fontSize: "12.5px",
+            fontWeight: 600,
+            fontFamily: "inherit",
+            cursor: "pointer",
+            padding: 0,
+          },
           onClick: () => cb.onEdit(dayId, refTarget, "addWarmup"),
         },
         "+ Warmup",
@@ -611,10 +874,16 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       value: notes,
       placeholder: "✎ Add a note (cues, setup, tempo…)",
       style: {
-        marginTop: 10, width: "100%",
-        background: "var(--surface2)", border: "1px solid var(--line)", borderRadius: 9,
-        padding: "9px 11px", fontSize: "12.5px", fontFamily: "inherit",
-        color: "var(--text)", outline: "none",
+        marginTop: 10,
+        width: "100%",
+        background: "var(--surface2)",
+        border: "1px solid var(--line)",
+        borderRadius: 9,
+        padding: "9px 11px",
+        fontSize: "12.5px",
+        fontFamily: "inherit",
+        color: "var(--text)",
+        outline: "none",
       },
       onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
         cb.onNotes(dayId, refTarget, e.target.value),
@@ -673,7 +942,14 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
       null,
       React.createElement(
         "div",
-        { style: { fontSize: 11, color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".06em" } },
+        {
+          style: {
+            fontSize: 11,
+            color: "var(--text3)",
+            fontFamily: "'JetBrains Mono',monospace",
+            letterSpacing: ".06em",
+          },
+        },
         "PROGRAM",
       ),
       React.createElement(
@@ -685,7 +961,16 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
     // Fixed|Cycled segmented
     React.createElement(
       "div",
-      { style: { display: "flex", background: "var(--surface2)", border: "1px solid var(--line)", borderRadius: 10, padding: 3, gap: 2 } },
+      {
+        style: {
+          display: "flex",
+          background: "var(--surface2)",
+          border: "1px solid var(--line)",
+          borderRadius: 10,
+          padding: 3,
+          gap: 2,
+        },
+      },
       React.createElement(Segmented, {
         options: typeOptions,
         value: type,
@@ -695,7 +980,16 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
     // Weekdays|Floating segmented
     React.createElement(
       "div",
-      { style: { display: "flex", background: "var(--surface2)", border: "1px solid var(--line)", borderRadius: 10, padding: 3, gap: 2 } },
+      {
+        style: {
+          display: "flex",
+          background: "var(--surface2)",
+          border: "1px solid var(--line)",
+          borderRadius: 10,
+          padding: 3,
+          gap: 2,
+        },
+      },
       React.createElement(Segmented, {
         options: scheduleOptions,
         value: schedule,
@@ -710,16 +1004,33 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
         "button",
         {
           style: {
-            display: "flex", alignItems: "center", gap: 9,
-            background: "var(--surface2)", border: "1px solid var(--line)", borderRadius: 10,
-            padding: "9px 13px", fontSize: 13, fontWeight: 600, fontFamily: "inherit",
-            color: "var(--text)", cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            background: "var(--surface2)",
+            border: "1px solid var(--line)",
+            borderRadius: 10,
+            padding: "9px 13px",
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: "inherit",
+            color: "var(--text)",
+            cursor: "pointer",
           },
           onClick: cb.onToggleProfileMenu,
         },
         React.createElement(
           "svg",
-          { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: "var(--text2)", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round" },
+          {
+            width: 15,
+            height: 15,
+            viewBox: "0 0 24 24",
+            fill: "none",
+            stroke: "var(--text2)",
+            strokeWidth: "1.8",
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+          },
           React.createElement("path", { d: "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" }),
         ),
         profileName,
@@ -731,14 +1042,29 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
             {
               role: "menu",
               style: {
-                position: "absolute" as const, top: 46, right: 0, width: 230,
-                background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12,
-                boxShadow: "0 16px 40px rgba(0,0,0,.18)", padding: 7, zIndex: 30,
+                position: "absolute" as const,
+                top: 46,
+                right: 0,
+                width: 230,
+                background: "var(--surface)",
+                border: "1px solid var(--line)",
+                borderRadius: 12,
+                boxShadow: "0 16px 40px rgba(0,0,0,.18)",
+                padding: 7,
+                zIndex: 30,
               },
             },
             React.createElement(
               "div",
-              { style: { fontSize: 10, color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".08em", padding: "6px 8px" } },
+              {
+                style: {
+                  fontSize: 10,
+                  color: "var(--text3)",
+                  fontFamily: "'JetBrains Mono',monospace",
+                  letterSpacing: ".08em",
+                  padding: "6px 8px",
+                },
+              },
               "GYM PROFILE",
             ),
             ...profiles.map((p) =>
@@ -747,8 +1073,12 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
                 {
                   key: p.id,
                   style: {
-                    display: "flex", alignItems: "center", gap: 10, padding: "8px 8px",
-                    borderRadius: 8, cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 8px",
+                    borderRadius: 8,
+                    cursor: "pointer",
                     background: p.id === activeProfileId ? "var(--surface2)" : "transparent",
                   },
                   onClick: () => cb.onSetProfile(p.id),
@@ -756,12 +1086,25 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
                 React.createElement(
                   "div",
                   { style: { flex: 1 } },
-                  React.createElement("div", { style: { fontSize: "13.5px", fontWeight: 600 } }, p.name),
+                  React.createElement(
+                    "div",
+                    { style: { fontSize: "13.5px", fontWeight: 600 } },
+                    p.name,
+                  ),
                 ),
                 p.id === activeProfileId
                   ? React.createElement(
                       "svg",
-                      { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: "var(--accent)", strokeWidth: "2.6", strokeLinecap: "round", strokeLinejoin: "round" },
+                      {
+                        width: 15,
+                        height: 15,
+                        viewBox: "0 0 24 24",
+                        fill: "none",
+                        stroke: "var(--accent)",
+                        strokeWidth: "2.6",
+                        strokeLinecap: "round",
+                        strokeLinejoin: "round",
+                      },
                       React.createElement("path", { d: "M20 6 9 17l-5-5" }),
                     )
                   : null,
@@ -794,9 +1137,17 @@ export function WeekBoard(_p: WeekBoardProps): JSX.Element {
         {
           key: i,
           style: {
-            border: "1px dashed var(--line)", borderRadius: 13, background: "none",
-            minHeight: 150, display: "flex", flexDirection: "column", alignItems: "center",
-            justifyContent: "center", gap: 6, color: "var(--text3)", cursor: "pointer",
+            border: "1px dashed var(--line)",
+            borderRadius: 13,
+            background: "none",
+            minHeight: 150,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            color: "var(--text3)",
+            cursor: "pointer",
             fontFamily: "inherit",
           },
           onClick: () => cb.onAddDay(null),
@@ -811,13 +1162,24 @@ export function WeekBoard(_p: WeekBoardProps): JSX.Element {
         {
           key: i,
           style: {
-            border: "1px solid var(--line)", borderRadius: 13, background: "var(--surface)",
-            padding: 11, minHeight: 150, display: "flex", flexDirection: "column",
+            border: "1px solid var(--line)",
+            borderRadius: 13,
+            background: "var(--surface)",
+            padding: 11,
+            minHeight: 150,
+            display: "flex",
+            flexDirection: "column",
           },
         },
         React.createElement(
           "span",
-          { style: { fontSize: "10.5px", fontFamily: "'JetBrains Mono',monospace", color: "var(--text3)" } },
+          {
+            style: {
+              fontSize: "10.5px",
+              fontFamily: "'JetBrains Mono',monospace",
+              color: "var(--text3)",
+            },
+          },
           col.label,
         ),
         React.createElement(
@@ -829,9 +1191,16 @@ export function WeekBoard(_p: WeekBoardProps): JSX.Element {
           "button",
           {
             style: {
-              marginTop: "auto", background: "none", border: "1px dashed var(--line)",
-              borderRadius: 9, color: "var(--text3)", fontSize: 12, fontWeight: 600,
-              fontFamily: "inherit", cursor: "pointer", padding: 8,
+              marginTop: "auto",
+              background: "none",
+              border: "1px dashed var(--line)",
+              borderRadius: 9,
+              color: "var(--text3)",
+              fontSize: 12,
+              fontWeight: 600,
+              fontFamily: "inherit",
+              cursor: "pointer",
+              padding: 8,
             },
             onClick: () => cb.onAddDay(col.weekday!),
           },
@@ -846,11 +1215,20 @@ export function WeekBoard(_p: WeekBoardProps): JSX.Element {
         {
           key: ci,
           style: {
-            fontSize: "11px", fontWeight: 500, padding: "4px 8px", borderRadius: 7,
-            background: ch.superset ? "color-mix(in oklch,var(--accent2) 14%,transparent)" : "var(--surface2)",
-            border: ch.superset ? "1px solid color-mix(in oklch,var(--accent2) 30%,transparent)" : "1px solid var(--line)",
+            fontSize: "11px",
+            fontWeight: 500,
+            padding: "4px 8px",
+            borderRadius: 7,
+            background: ch.superset
+              ? "color-mix(in oklch,var(--accent2) 14%,transparent)"
+              : "var(--surface2)",
+            border: ch.superset
+              ? "1px solid color-mix(in oklch,var(--accent2) 30%,transparent)"
+              : "1px solid var(--line)",
             color: ch.superset ? "var(--accent2)" : "var(--text2)",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap" as const,
             display: "block",
           },
         },
@@ -867,10 +1245,14 @@ export function WeekBoard(_p: WeekBoardProps): JSX.Element {
           border: col.editing ? "1.5px solid var(--accent)" : "1px solid var(--line)",
           borderRadius: 13,
           background: "var(--surface)",
-          padding: 11, minHeight: 150,
-          display: "flex", flexDirection: "column",
+          padding: 11,
+          minHeight: 150,
+          display: "flex",
+          flexDirection: "column",
           cursor: "pointer",
-          boxShadow: col.editing ? "0 0 0 3px color-mix(in oklch,var(--accent) 18%,transparent)" : undefined,
+          boxShadow: col.editing
+            ? "0 0 0 3px color-mix(in oklch,var(--accent) 18%,transparent)"
+            : undefined,
         },
         onClick: () => cb.onSelectDay(col.dayId!),
       },
@@ -880,11 +1262,25 @@ export function WeekBoard(_p: WeekBoardProps): JSX.Element {
         { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
         React.createElement(
           "span",
-          { style: { fontSize: "10.5px", fontFamily: "'JetBrains Mono',monospace", color: "var(--text3)" } },
+          {
+            style: {
+              fontSize: "10.5px",
+              fontFamily: "'JetBrains Mono',monospace",
+              color: "var(--text3)",
+            },
+          },
           col.label,
         ),
         col.editing
-          ? React.createElement("span", { style: { width: 7, height: 7, borderRadius: "50%", background: "var(--accent)", display: "inline-block" } })
+          ? React.createElement("span", {
+              style: {
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "var(--accent)",
+                display: "inline-block",
+              },
+            })
           : null,
       ),
       // Day name
@@ -916,7 +1312,7 @@ export function WeekBoard(_p: WeekBoardProps): JSX.Element {
 
 export interface DayEditorProps {
   editor: EditorVM;
-  groups: MuscleGroup[];
+  muscles: MuscleKey[];
   cb: PlannerCallbacks;
 }
 
@@ -925,7 +1321,7 @@ const WD_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 const WD_LABELS_LONG = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 export function DayEditor(_p: DayEditorProps): JSX.Element {
-  const { editor, groups, cb } = _p;
+  const { editor, muscles, cb } = _p;
 
   if (!editor.exists) {
     return React.createElement("div", null);
@@ -948,12 +1344,17 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
               key: wd,
               title: longLabel,
               style: {
-                width: 28, height: 28, borderRadius: 8, fontSize: 11, fontWeight: 700,
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                fontSize: 11,
+                fontWeight: 700,
                 fontFamily: "'JetBrains Mono',monospace",
                 background: active ? "var(--accent)" : "var(--surface2)",
                 color: active ? "#fff" : "var(--text3)",
                 border: active ? "none" : "1px solid var(--line)",
-                cursor: "pointer", padding: 0,
+                cursor: "pointer",
+                padding: 0,
               },
               onClick: () => cb.onSetWeekday(dayId, wd),
             },
@@ -963,7 +1364,17 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
       )
     : React.createElement(
         "span",
-        { style: { fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: "var(--text3)", border: "1px solid var(--line)", borderRadius: 7, padding: "6px 10px", letterSpacing: ".04em" } },
+        {
+          style: {
+            fontSize: 11,
+            fontFamily: "'JetBrains Mono',monospace",
+            color: "var(--text3)",
+            border: "1px solid var(--line)",
+            borderRadius: 7,
+            padding: "6px 10px",
+            letterSpacing: ".04em",
+          },
+        },
         `${dayOrderLabel} · floating`,
       );
 
@@ -986,7 +1397,15 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
         ex.supersetTag
           ? React.createElement(
               "span",
-              { style: { color: "var(--accent2)", fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, fontSize: 12, marginTop: 2 } },
+              {
+                style: {
+                  color: "var(--accent2)",
+                  fontFamily: "'JetBrains Mono',monospace",
+                  fontWeight: 700,
+                  fontSize: 12,
+                  marginTop: 2,
+                },
+              },
               ex.supersetTag,
             )
           : null,
@@ -994,17 +1413,39 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
           "div",
           { style: { flex: 1, minWidth: 0 } },
           React.createElement("div", { style: { fontSize: 15, fontWeight: 700 } }, ex.name),
-          React.createElement("div", { style: { fontSize: 11, color: "var(--text3)", marginTop: 3 } }, ex.muscles),
+          React.createElement(
+            "div",
+            { style: { fontSize: 11, color: "var(--text3)", marginTop: 3 } },
+            ex.muscles,
+          ),
         ),
         React.createElement(
           "span",
-          { style: { fontSize: "9.5px", fontFamily: "'JetBrains Mono',monospace", color: "var(--text3)", border: "1px solid var(--line)", borderRadius: 6, padding: "4px 7px", flex: "none" } },
+          {
+            style: {
+              fontSize: "9.5px",
+              fontFamily: "'JetBrains Mono',monospace",
+              color: "var(--text3)",
+              border: "1px solid var(--line)",
+              borderRadius: 6,
+              padding: "4px 7px",
+              flex: "none",
+            },
+          },
           ex.equip,
         ),
         React.createElement(
           "button",
           {
-            style: { background: "none", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: 17, flex: "none", lineHeight: 1 },
+            style: {
+              background: "none",
+              border: "none",
+              color: "var(--text3)",
+              cursor: "pointer",
+              fontSize: 17,
+              flex: "none",
+              lineHeight: 1,
+            },
             "aria-label": "remove exercise",
             onClick: () => cb.onRemoveExercise(dayId, ex.id),
           },
@@ -1026,7 +1467,16 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
             React.createElement(
               "button",
               {
-                style: { background: "none", border: "none", color: "var(--accent2)", fontSize: "12.5px", fontWeight: 600, fontFamily: "inherit", cursor: "pointer", padding: 0 },
+                style: {
+                  background: "none",
+                  border: "none",
+                  color: "var(--accent2)",
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                  padding: 0,
+                },
                 "aria-label": "toggle superset",
                 onClick: () => cb.onToggleSuperset(dayId, ex.id),
               },
@@ -1039,7 +1489,15 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
             React.createElement(
               "button",
               {
-                style: { background: "none", border: "none", color: "var(--text3)", fontSize: 12, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" },
+                style: {
+                  background: "none",
+                  border: "none",
+                  color: "var(--text3)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                },
                 "aria-label": "toggle superset",
                 onClick: () => cb.onToggleSuperset(dayId, ex.id),
               },
@@ -1058,13 +1516,24 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
         {
           key: i,
           style: {
-            border: "2px solid var(--accent2)", borderRadius: 14, padding: 11,
+            border: "2px solid var(--accent2)",
+            borderRadius: 14,
+            padding: 11,
             background: "color-mix(in oklch,var(--accent2) 6%,transparent)",
           },
         },
         React.createElement(
           "div",
-          { style: { fontSize: 10, fontWeight: 700, letterSpacing: ".12em", color: "var(--accent2)", fontFamily: "'JetBrains Mono',monospace", margin: "0 0 9px 4px" } },
+          {
+            style: {
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: ".12em",
+              color: "var(--accent2)",
+              fontFamily: "'JetBrains Mono',monospace",
+              margin: "0 0 9px 4px",
+            },
+          },
           "SUPERSET",
         ),
         React.createElement(
@@ -1081,7 +1550,10 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
       {
         key: i,
         style: {
-          background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 13, padding: 15,
+          background: "var(--surface)",
+          border: "1px solid var(--line)",
+          borderRadius: 13,
+          padding: 15,
         },
       },
       // Slot header
@@ -1091,13 +1563,28 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
         React.createElement(
           "div",
           { style: { flex: 1 } },
-          React.createElement("div", { style: { fontSize: 15, fontWeight: 700 } }, slot.group),
-          React.createElement("div", { style: { fontSize: 11, color: "var(--text3)", marginTop: 2 } }, `Targets ${slot.muscle} · cycles its pool`),
+          React.createElement(
+            "div",
+            { style: { fontSize: 15, fontWeight: 700 } },
+            MUSCLE_NAMES[slot.muscle],
+          ),
+          React.createElement(
+            "div",
+            { style: { fontSize: 11, color: "var(--text3)", marginTop: 2 } },
+            `Targets ${slot.muscleName} · cycles its pool`,
+          ),
         ),
         React.createElement(
           "button",
           {
-            style: { background: "none", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: 17, lineHeight: 1 },
+            style: {
+              background: "none",
+              border: "none",
+              color: "var(--text3)",
+              cursor: "pointer",
+              fontSize: 17,
+              lineHeight: 1,
+            },
             "aria-label": "remove slot",
             onClick: () => cb.onRemoveSlot(dayId, slot.id),
           },
@@ -1110,7 +1597,15 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
         { style: { marginTop: 12 } },
         React.createElement(
           "div",
-          { style: { fontSize: 10, color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".06em", marginBottom: 7 } },
+          {
+            style: {
+              fontSize: 10,
+              color: "var(--text3)",
+              fontFamily: "'JetBrains Mono',monospace",
+              letterSpacing: ".06em",
+              marginBottom: 7,
+            },
+          },
           `EXERCISE POOL · ${slot.poolStr}`,
         ),
         React.createElement(
@@ -1122,16 +1617,28 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
               {
                 key: pn.id,
                 style: {
-                  display: "flex", alignItems: "center", gap: 6, fontSize: 12,
-                  background: "var(--surface2)", border: "1px solid var(--line)",
-                  borderRadius: 8, padding: "6px 10px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 12,
+                  background: "var(--surface2)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 8,
+                  padding: "6px 10px",
                 },
               },
               pn.name,
               React.createElement(
                 "button",
                 {
-                  style: { background: "none", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: 13, padding: 0 },
+                  style: {
+                    background: "none",
+                    border: "none",
+                    color: "var(--text3)",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    padding: 0,
+                  },
                   "aria-label": "remove from pool",
                   onClick: () => cb.onRemoveFromPool(dayId, slot.id, pn.id),
                 },
@@ -1143,9 +1650,15 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
             "button",
             {
               style: {
-                fontSize: 12, border: "1px dashed var(--line)", borderRadius: 8,
-                padding: "6px 11px", color: "var(--accent)", background: "none",
-                cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
+                fontSize: 12,
+                border: "1px dashed var(--line)",
+                borderRadius: 8,
+                padding: "6px 11px",
+                color: "var(--accent)",
+                background: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontWeight: 600,
               },
               onClick: () => cb.onAddPool(dayId, slot.id),
             },
@@ -1159,7 +1672,15 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
         { style: { borderTop: "1px solid var(--line)", marginTop: 13, paddingTop: 13 } },
         React.createElement(
           "div",
-          { style: { fontSize: 10, color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".06em", marginBottom: 9 } },
+          {
+            style: {
+              fontSize: 10,
+              color: "var(--text3)",
+              fontFamily: "'JetBrains Mono',monospace",
+              letterSpacing: ".06em",
+              marginBottom: 9,
+            },
+          },
           "PRESCRIPTION · applies to whichever exercise rotates in",
         ),
         React.createElement(SetTable, {
@@ -1178,9 +1699,15 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
         "button",
         {
           style: {
-            padding: 13, border: "1.5px dashed var(--accent)", borderRadius: 12,
-            color: "var(--accent)", fontSize: "13.5px", fontWeight: 700,
-            background: "none", cursor: "pointer", fontFamily: "inherit",
+            padding: 13,
+            border: "1.5px dashed var(--accent)",
+            borderRadius: 12,
+            color: "var(--accent)",
+            fontSize: "13.5px",
+            fontWeight: 700,
+            background: "none",
+            cursor: "pointer",
+            fontFamily: "inherit",
           },
           onClick: () => cb.onAddExercise(dayId),
         },
@@ -1191,25 +1718,39 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
         { style: { border: "1px dashed var(--line)", borderRadius: 12, padding: 13 } },
         React.createElement(
           "div",
-          { style: { fontSize: 11, color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".06em", marginBottom: 9 } },
-          "+ ADD MUSCLE GROUP",
+          {
+            style: {
+              fontSize: 11,
+              color: "var(--text3)",
+              fontFamily: "'JetBrains Mono',monospace",
+              letterSpacing: ".06em",
+              marginBottom: 9,
+            },
+          },
+          "+ ADD MUSCLE",
         ),
         React.createElement(
           "div",
           { style: { display: "flex", gap: 7, flexWrap: "wrap" as const } },
-          ...groups.map((g) =>
+          ...muscles.map((m) =>
             React.createElement(
               "button",
               {
-                key: g,
+                key: m,
                 style: {
-                  fontSize: 12, background: "var(--surface2)", border: "1px solid var(--line)",
-                  borderRadius: 8, padding: "7px 12px", color: "var(--text2)",
-                  cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
+                  fontSize: 12,
+                  background: "var(--surface2)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 8,
+                  padding: "7px 12px",
+                  color: "var(--text2)",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontWeight: 600,
                 },
-                onClick: () => cb.onAddSlot(dayId, g),
+                onClick: () => cb.onAddSlot(dayId, m),
               },
-              g,
+              MUSCLE_NAMES[m],
             ),
           ),
         ),
@@ -1217,21 +1758,44 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
 
   return React.createElement(
     "div",
-    { style: { flex: 1, minWidth: 0, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden" } },
+    {
+      style: {
+        flex: 1,
+        minWidth: 0,
+        background: "var(--surface)",
+        border: "1px solid var(--line)",
+        borderRadius: 16,
+        overflow: "hidden",
+      },
+    },
     // Editor header
     React.createElement(
       "div",
-      { style: { padding: "16px 18px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" as const } },
+      {
+        style: {
+          padding: "16px 18px",
+          borderBottom: "1px solid var(--line)",
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          flexWrap: "wrap" as const,
+        },
+      },
       React.createElement("input", {
         value: name,
         style: {
-          fontSize: 18, fontWeight: 800, letterSpacing: "-.02em",
-          border: "none", background: "none", color: "var(--text)",
-          fontFamily: "inherit", width: 160, outline: "none",
+          fontSize: 18,
+          fontWeight: 800,
+          letterSpacing: "-.02em",
+          border: "none",
+          background: "none",
+          color: "var(--text)",
+          fontFamily: "inherit",
+          width: 160,
+          outline: "none",
           borderBottom: "1px solid transparent",
         },
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-          cb.onRenameDay(dayId, e.target.value),
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) => cb.onRenameDay(dayId, e.target.value),
       }),
       weekdayPicker,
       React.createElement("span", { style: { fontSize: 12, color: "var(--text3)" } }, summary),
@@ -1239,9 +1803,16 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
         "button",
         {
           style: {
-            marginLeft: "auto", background: "none", border: "1px solid var(--line)",
-            borderRadius: 8, color: "var(--text2)", fontSize: 12, fontWeight: 600,
-            fontFamily: "inherit", cursor: "pointer", padding: "7px 11px",
+            marginLeft: "auto",
+            background: "none",
+            border: "1px solid var(--line)",
+            borderRadius: 8,
+            color: "var(--text2)",
+            fontSize: 12,
+            fontWeight: 600,
+            fontFamily: "inherit",
+            cursor: "pointer",
+            padding: "7px 11px",
           },
           onClick: () => cb.onRemoveDay(dayId),
         },
@@ -1251,7 +1822,16 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
     // Scrollable rows area
     React.createElement(
       "div",
-      { style: { padding: "16px 18px", display: "flex", flexDirection: "column", gap: 11, maxHeight: 560, overflow: "auto" } },
+      {
+        style: {
+          padding: "16px 18px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 11,
+          maxHeight: 560,
+          overflow: "auto",
+        },
+      },
       ...renderedRows,
       addControls,
     ),
@@ -1291,7 +1871,15 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
 
   return React.createElement(
     "div",
-    { style: { maxWidth: 1320, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 } },
+    {
+      style: {
+        maxWidth: 1320,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      },
+    },
     // Program header
     React.createElement(ProgramHeader, {
       name: program.name,
@@ -1309,11 +1897,18 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
     editor.exists
       ? React.createElement(
           "div",
-          { style: { display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" as const } },
+          {
+            style: {
+              display: "flex",
+              gap: 16,
+              alignItems: "flex-start",
+              flexWrap: "wrap" as const,
+            },
+          },
           // Day editor
           React.createElement(DayEditor, {
             editor,
-            groups: MUSCLE_GROUPS as unknown as MuscleGroup[],
+            muscles: MUSCLES_ANATOMICAL,
             cb,
           }),
           // Coverage rail
@@ -1321,32 +1916,69 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
             "div",
             {
               style: {
-                width: 300, flex: "none", background: "var(--surface)",
-                border: "1px solid var(--line)", borderRadius: 16, padding: "18px 16px",
+                width: 300,
+                flex: "none",
+                background: "var(--surface)",
+                border: "1px solid var(--line)",
+                borderRadius: 16,
+                padding: "18px 16px",
               },
             },
-            React.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, "Weekly coverage"),
-            React.createElement("div", { style: { fontSize: 11, color: "var(--text3)", marginBottom: 8 } }, "Sets per muscle across the plan"),
+            React.createElement(
+              "div",
+              { style: { fontSize: 14, fontWeight: 700 } },
+              "Weekly coverage",
+            ),
+            React.createElement(
+              "div",
+              { style: { fontSize: 11, color: "var(--text3)", marginBottom: 8 } },
+              "Sets per muscle across the plan",
+            ),
             // BodyMap front + back
             React.createElement(
               "div",
-              { style: { display: "flex", justifyContent: "center", gap: 10, padding: "6px 0 10px" } },
+              {
+                style: {
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: 10,
+                  padding: "6px 0 10px",
+                },
+              },
               React.createElement(
                 "div",
-                { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 5 } },
+                {
+                  style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 5 },
+                },
                 React.createElement(
                   "div",
-                  { style: { fontSize: "9.5px", color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".08em" } },
+                  {
+                    style: {
+                      fontSize: "9.5px",
+                      color: "var(--text3)",
+                      fontFamily: "'JetBrains Mono',monospace",
+                      letterSpacing: ".08em",
+                    },
+                  },
                   "FRONT",
                 ),
                 React.createElement(BodyMap, { side: "front", coverage }),
               ),
               React.createElement(
                 "div",
-                { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 5 } },
+                {
+                  style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 5 },
+                },
                 React.createElement(
                   "div",
-                  { style: { fontSize: "9.5px", color: "var(--text3)", fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".08em" } },
+                  {
+                    style: {
+                      fontSize: "9.5px",
+                      color: "var(--text3)",
+                      fontFamily: "'JetBrains Mono',monospace",
+                      letterSpacing: ".08em",
+                    },
+                  },
                   "BACK",
                 ),
                 React.createElement(BodyMap, { side: "back", coverage }),
@@ -1359,7 +1991,10 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
               ...volumeBars.map((bar) =>
                 React.createElement(
                   "div",
-                  { key: bar.muscle, style: { display: "flex", alignItems: "center", gap: 9, padding: "4px 0" } },
+                  {
+                    key: bar.muscle,
+                    style: { display: "flex", alignItems: "center", gap: 9, padding: "4px 0" },
+                  },
                   React.createElement(
                     "span",
                     { style: { width: 64, flex: "none", fontSize: 12 } },
@@ -1367,17 +2002,38 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
                   ),
                   React.createElement(
                     "div",
-                    { style: { flex: 1, height: 6, borderRadius: 3, background: "var(--surface2)", position: "relative" as const, overflow: "hidden" } },
+                    {
+                      style: {
+                        flex: 1,
+                        height: 6,
+                        borderRadius: 3,
+                        background: "var(--surface2)",
+                        position: "relative" as const,
+                        overflow: "hidden",
+                      },
+                    },
                     React.createElement("div", {
                       style: {
-                        position: "absolute" as const, inset: 0, width: `${bar.pct}%`,
-                        background: "var(--accent)", borderRadius: 3,
+                        position: "absolute" as const,
+                        inset: 0,
+                        width: `${bar.pct}%`,
+                        background: "var(--accent)",
+                        borderRadius: 3,
                       },
                     }),
                   ),
                   React.createElement(
                     "span",
-                    { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "var(--text2)", width: 46, textAlign: "right" as const, flex: "none" } },
+                    {
+                      style: {
+                        fontFamily: "'JetBrains Mono',monospace",
+                        fontSize: 11,
+                        color: "var(--text2)",
+                        width: 46,
+                        textAlign: "right" as const,
+                        flex: "none",
+                      },
+                    },
                     `${bar.sets} sets`,
                   ),
                 ),

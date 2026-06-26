@@ -1777,13 +1777,20 @@ describe("planAddSlot — adds cycled slot + persists", () => {
   it("adds a slot to the day", () => {
     const dayId = get(store).program.days[0].id;
     const slotsBefore = get(store).program.days[0].slots.length;
-    get(store).planAddSlot(dayId, "Chest");
+    get(store).planAddSlot(dayId, "chest");
     expect(get(store).program.days[0].slots.length).toBe(slotsBefore + 1);
+  });
+
+  it("resulting slot has muscle field set to the given MuscleKey", () => {
+    const dayId = get(store).program.days[0].id;
+    get(store).planAddSlot(dayId, "chest");
+    const slot = get(store).program.days[0].slots[0];
+    expect(slot.muscle).toBe("chest");
   });
 
   it("persists program", () => {
     const dayId = get(store).program.days[0].id;
-    get(store).planAddSlot(dayId, "Chest");
+    get(store).planAddSlot(dayId, "chest");
     expect(client.saveSingleton).toHaveBeenCalledWith("program", expect.any(Object));
   });
 });
@@ -1803,7 +1810,7 @@ describe("planRemoveSlot — removes cycled slot + persists", () => {
           slots: [
             {
               id: "slot-1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bb-bench"],
               repMode: "range",
               intensity: "none",
@@ -1849,7 +1856,7 @@ describe("planRemoveFromPool — removes exercise from pool + persists", () => {
           slots: [
             {
               id: "slot-1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bb-bench", "pullup"],
               repMode: "range",
               intensity: "none",
@@ -2196,6 +2203,17 @@ describe("libOpen / libClose", () => {
     get(store).libOpen({ kind: "ex", dayId: "push-day" });
     expect(get(store).lib.open).toBe(true);
     expect(get(store).lib.target).toEqual({ kind: "ex", dayId: "push-day" });
+  });
+
+  it("libOpen with pool target sets lib.target with muscle field", () => {
+    get(store).libOpen({ kind: "pool", dayId: "push-day", slotId: "slot-1", muscle: "chest" });
+    expect(get(store).lib.open).toBe(true);
+    expect(get(store).lib.target).toEqual({
+      kind: "pool",
+      dayId: "push-day",
+      slotId: "slot-1",
+      muscle: "chest",
+    });
   });
 
   it("libClose sets lib.open=false", () => {

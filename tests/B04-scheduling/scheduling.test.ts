@@ -20,15 +20,7 @@ import {
   type ScheduleContext,
 } from "@nabd/scheduling";
 import { DEFAULTS } from "@nabd/domain";
-import type {
-  Program,
-  Day,
-  Slot,
-  Exercise,
-  RotationState,
-  DayState,
-  SetSpec,
-} from "@nabd/domain";
+import type { Program, Day, Slot, Exercise, RotationState, DayState, SetSpec } from "@nabd/domain";
 
 // ---------------------------------------------------------------------------
 // Shared fixture helpers
@@ -88,7 +80,12 @@ function makeFixedDay(
  */
 function makeCycledDay(
   id: string,
-  cycledSlots: { slotId: string; group: Day["slots"][0]["group"]; pool: string[]; sets: SetSpec[] }[],
+  cycledSlots: {
+    slotId: string;
+    muscle: Day["slots"][0]["muscle"];
+    pool: string[];
+    sets: SetSpec[];
+  }[],
   weekday: number | null,
 ): Day {
   return {
@@ -96,9 +93,9 @@ function makeCycledDay(
     name: `Day ${id}`,
     weekday,
     exercises: [],
-    slots: cycledSlots.map(({ slotId, group, pool, sets }) => ({
+    slots: cycledSlots.map(({ slotId, muscle, pool, sets }) => ({
       id: slotId,
-      group,
+      muscle,
       pool,
       repMode: "fixed",
       intensity: "none",
@@ -235,21 +232,28 @@ describe("rotationFor", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildSlots — fixed exercises", () => {
-  const exBench = makeExercise("bench-press", "Bench Press", "Chest", ["chest"], ["triceps", "front_delts"]);
-  const exRow = makeExercise("barbell-row", "Barbell Row", "Back", ["lats", "rhomboids"], ["biceps"]);
+  const exBench = makeExercise(
+    "bench-press",
+    "Bench Press",
+    "Chest",
+    ["chest"],
+    ["triceps", "front_delts"],
+  );
+  const exRow = makeExercise(
+    "barbell-row",
+    "Barbell Row",
+    "Back",
+    ["lats", "rhomboids"],
+    ["biceps"],
+  );
 
   const lookup = makeLookup(exBench, exRow);
 
   // Day with 2 exercises and a 50-min interval
-  const day = makeFixedDay(
-    "d1",
-    ["bench-press", "barbell-row"],
-    3,
-    [
-      [makeSet("warmup"), makeSet("working"), makeSet("working")], // 2 working sets
-      [makeSet("working"), makeSet("drop")], // 2 non-warmup sets
-    ],
-  );
+  const day = makeFixedDay("d1", ["bench-press", "barbell-row"], 3, [
+    [makeSet("warmup"), makeSet("working"), makeSet("working")], // 2 working sets
+    [makeSet("working"), makeSet("drop")], // 2 non-warmup sets
+  ]);
 
   it("produces one slot per exercise in order", () => {
     const slots = buildSlots(day, lookup, {}, 50);
@@ -383,7 +387,13 @@ describe("buildSlots — cycled slots", () => {
   const exSquat = makeExercise("squat", "Back Squat", "Quads", ["quads"], ["glutes", "hamstrings"]);
   const exLegPress = makeExercise("leg-press", "Leg Press", "Quads", ["quads", "hip_flexors"], []);
   const exHackSquat = makeExercise("hack-squat", "Hack Squat", "Quads", ["quads"], ["glutes"]);
-  const exRDL = makeExercise("rdl", "Romanian DL", "Hamstrings", ["hamstrings"], ["glutes", "lower_back"]);
+  const exRDL = makeExercise(
+    "rdl",
+    "Romanian DL",
+    "Hamstrings",
+    ["hamstrings"],
+    ["glutes", "lower_back"],
+  );
   const exCurl = makeExercise("curl", "Leg Curl", "Hamstrings", ["hamstrings"], []);
 
   const lookup = makeLookup(exSquat, exLegPress, exHackSquat, exRDL, exCurl);
@@ -395,13 +405,13 @@ describe("buildSlots — cycled slots", () => {
     [
       {
         slotId: "slotA",
-        group: "Quads",
+        muscle: "quads",
         pool: ["squat", "leg-press", "hack-squat"],
         sets: [makeSet("warmup"), makeSet("working"), makeSet("working"), makeSet("working")],
       },
       {
         slotId: "slotB",
-        group: "Hamstrings",
+        muscle: "hamstrings",
         pool: ["rdl", "curl"],
         sets: [makeSet("working"), makeSet("working")],
       },
@@ -416,21 +426,21 @@ describe("buildSlots — cycled slots", () => {
 
   it("resolves exercise from pool[0] at rotation pointer 0 (default)", () => {
     const slots = buildSlots(cycledDay, lookup, {}, 50);
-    expect(slots[0].exercise).toBe("Back Squat");   // pool[0]
-    expect(slots[1].exercise).toBe("Romanian DL");  // pool[0]
+    expect(slots[0].exercise).toBe("Back Squat"); // pool[0]
+    expect(slots[1].exercise).toBe("Romanian DL"); // pool[0]
   });
 
   it("resolves exercise from rotation pointer 1", () => {
     const rotation: RotationState = { slotA: 1, slotB: 1 };
     const slots = buildSlots(cycledDay, lookup, rotation, 50);
-    expect(slots[0].exercise).toBe("Leg Press");  // pool[1]
-    expect(slots[1].exercise).toBe("Leg Curl");   // pool[1]
+    expect(slots[0].exercise).toBe("Leg Press"); // pool[1]
+    expect(slots[1].exercise).toBe("Leg Curl"); // pool[1]
   });
 
-  it("group comes from the cycled slot definition", () => {
+  it("group comes from the cycled slot's muscle display name", () => {
     const slots = buildSlots(cycledDay, lookup, {}, 50);
-    expect(slots[0].group).toBe("Quads");
-    expect(slots[1].group).toBe("Hamstrings");
+    expect(slots[0].group).toBe("Quads"); // MUSCLE_NAMES["quads"]
+    expect(slots[1].group).toBe("Hamstrings"); // MUSCLE_NAMES["hamstrings"]
   });
 
   it("cycled sets = count of non-warmup sets (min 1)", () => {
@@ -464,7 +474,7 @@ describe("buildSlots — cycled slots", () => {
     const rot3: RotationState = { slotA: 3, slotB: 3 };
     const s3 = buildSlots(cycledDay, lookup, rot3, 50);
     expect(s3[0].exercise).toBe("Back Squat"); // 3 % 3 = 0
-    expect(s3[1].exercise).toBe("Leg Curl");   // 3 % 2 = 1
+    expect(s3[1].exercise).toBe("Leg Curl"); // 3 % 2 = 1
 
     // Confirm drift: the two pools are now out of sync
     expect(s3[0].exercise).not.toBe(s3[1].exercise);
@@ -474,8 +484,8 @@ describe("buildSlots — cycled slots", () => {
     const dayWithMissing = makeCycledDay(
       "d-cmiss",
       [
-        { slotId: "slotA", group: "Quads", pool: ["squat"], sets: [makeSet()] },
-        { slotId: "slotB", group: "Hamstrings", pool: ["MISSING"], sets: [makeSet()] },
+        { slotId: "slotA", muscle: "quads", pool: ["squat"], sets: [makeSet()] },
+        { slotId: "slotB", muscle: "hamstrings", pool: ["MISSING"], sets: [makeSet()] },
       ],
       null,
     );
@@ -488,8 +498,8 @@ describe("buildSlots — cycled slots", () => {
     const dayWithEmptyPool = makeCycledDay(
       "d-cempty",
       [
-        { slotId: "slotA", group: "Quads", pool: ["squat"], sets: [makeSet()] },
-        { slotId: "slotB", group: "Hamstrings", pool: [], sets: [makeSet()] },
+        { slotId: "slotA", muscle: "quads", pool: ["squat"], sets: [makeSet()] },
+        { slotId: "slotB", muscle: "hamstrings", pool: [], sets: [makeSet()] },
       ],
       null,
     );
@@ -646,8 +656,32 @@ describe("startOutOfOrder", () => {
 
   it("when no other slot is 'now', only target changes", () => {
     const slots: Slot[] = [
-      { id: "a", exId: "ex1", exercise: "E1", group: "Chest", muscles: ["chest"], min: 570, timeStr: "09:30", sets: 3, done: 0, status: "upcoming", result: "" },
-      { id: "b", exId: "ex2", exercise: "E2", group: "Chest", muscles: ["chest"], min: 620, timeStr: "10:20", sets: 3, done: 0, status: "upcoming", result: "" },
+      {
+        id: "a",
+        exId: "ex1",
+        exercise: "E1",
+        group: "Chest",
+        muscles: ["chest"],
+        min: 570,
+        timeStr: "09:30",
+        sets: 3,
+        done: 0,
+        status: "upcoming",
+        result: "",
+      },
+      {
+        id: "b",
+        exId: "ex2",
+        exercise: "E2",
+        group: "Chest",
+        muscles: ["chest"],
+        min: 620,
+        timeStr: "10:20",
+        sets: 3,
+        done: 0,
+        status: "upcoming",
+        result: "",
+      },
     ];
     const result = startOutOfOrder(slots, "b");
     expect(result.find((s) => s.id === "b")!.status).toBe("now");
@@ -677,20 +711,12 @@ describe("currentSlot", () => {
   }
 
   it("returns the first 'now' slot", () => {
-    const slots = [
-      slot("a", "done"),
-      slot("b", "now"),
-      slot("c", "upcoming"),
-    ];
+    const slots = [slot("a", "done"), slot("b", "now"), slot("c", "upcoming")];
     expect(currentSlot(slots)?.id).toBe("b");
   });
 
   it("'now' takes precedence over 'upcoming'", () => {
-    const slots = [
-      slot("a", "upcoming"),
-      slot("b", "now"),
-      slot("c", "upcoming"),
-    ];
+    const slots = [slot("a", "upcoming"), slot("b", "now"), slot("c", "upcoming")];
     expect(currentSlot(slots)?.id).toBe("b");
   });
 
@@ -719,19 +745,12 @@ describe("currentSlot", () => {
   });
 
   it("returns first 'now' when multiple 'now' exist (edge case)", () => {
-    const slots = [
-      slot("a", "now"),
-      slot("b", "now"),
-    ];
+    const slots = [slot("a", "now"), slot("b", "now")];
     expect(currentSlot(slots)?.id).toBe("a");
   });
 
   it("skipped slots do not count as upcoming for currentSlot", () => {
-    const slots = [
-      slot("a", "done"),
-      slot("b", "skipped"),
-      slot("c", "upcoming"),
-    ];
+    const slots = [slot("a", "done"), slot("b", "skipped"), slot("c", "upcoming")];
     expect(currentSlot(slots)?.id).toBe("c");
   });
 });
@@ -744,8 +763,13 @@ describe("advanceRotation", () => {
   const cycledDay = makeCycledDay(
     "d-adv",
     [
-      { slotId: "slotA", group: "Quads", pool: ["squat", "leg-press", "hack-squat"], sets: [makeSet()] },
-      { slotId: "slotB", group: "Hamstrings", pool: ["rdl", "curl"], sets: [makeSet()] },
+      {
+        slotId: "slotA",
+        muscle: "quads",
+        pool: ["squat", "leg-press", "hack-squat"],
+        sets: [makeSet()],
+      },
+      { slotId: "slotB", muscle: "hamstrings", pool: ["rdl", "curl"], sets: [makeSet()] },
     ],
     null,
   );
@@ -803,8 +827,8 @@ describe("rollover", () => {
   const cycledDay = makeCycledDay(
     "d-roll",
     [
-      { slotId: "slotA", group: "Quads", pool: ["squat"], sets: [makeSet(), makeSet()] },
-      { slotId: "slotB", group: "Hamstrings", pool: ["rdl"], sets: [makeSet()] },
+      { slotId: "slotA", muscle: "quads", pool: ["squat"], sets: [makeSet(), makeSet()] },
+      { slotId: "slotB", muscle: "hamstrings", pool: ["rdl"], sets: [makeSet()] },
     ],
     null,
   );
@@ -927,7 +951,13 @@ describe("rollover", () => {
 
 describe("Integration flow", () => {
   const exBench = makeExercise("bench", "Bench Press", "Chest", ["chest"], ["triceps"]);
-  const exOHP = makeExercise("ohp", "Overhead Press", "Shoulders", ["side_delts"], ["front_delts", "triceps"]);
+  const exOHP = makeExercise(
+    "ohp",
+    "Overhead Press",
+    "Shoulders",
+    ["side_delts"],
+    ["front_delts", "triceps"],
+  );
   const exDip = makeExercise("dip", "Dip", "Chest", ["chest", "triceps"], []);
 
   const lookup = makeLookup(exBench, exOHP, exDip);
@@ -936,8 +966,13 @@ describe("Integration flow", () => {
     const cycledDay = makeCycledDay(
       "d-int",
       [
-        { slotId: "chest-slot", group: "Chest", pool: ["bench", "dip"], sets: [makeSet(), makeSet()] },
-        { slotId: "shoulder-slot", group: "Shoulders", pool: ["ohp"], sets: [makeSet()] },
+        {
+          slotId: "chest-slot",
+          muscle: "chest",
+          pool: ["bench", "dip"],
+          sets: [makeSet(), makeSet()],
+        },
+        { slotId: "shoulder-slot", muscle: "side_delts", pool: ["ohp"], sets: [makeSet()] },
       ],
       null,
     );
@@ -966,7 +1001,7 @@ describe("Integration flow", () => {
 
     // Step 5: advance rotation
     const newRotation = advanceRotation(cycledDay, rotation);
-    expect(newRotation["chest-slot"]).toBe(1);  // rotated to "dip"
+    expect(newRotation["chest-slot"]).toBe(1); // rotated to "dip"
     expect(newRotation["shoulder-slot"]).toBe(1);
 
     // Step 6: next session uses the new rotation

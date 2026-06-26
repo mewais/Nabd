@@ -390,8 +390,8 @@ describe("computePlanVolume — fixed", () => {
 // ---------------------------------------------------------------------------
 
 describe("computePlanVolume — cycled", () => {
-  it("attributes slot working sets to GROUP_PRIMARY_MUSCLE of the slot group", () => {
-    // Chest slot → chest primary muscle
+  it("credits full working-set count to the slot's single target muscle", () => {
+    // slot targets chest → chest gets 3, nothing else
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -405,7 +405,7 @@ describe("computePlanVolume — cycled", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bench"],
               repMode: "fixed",
               intensity: "none",
@@ -422,13 +422,14 @@ describe("computePlanVolume — cycled", () => {
     };
 
     const vol = computePlanVolume(program, makeLookup([]));
-    // Chest → chest = 3
     expect(vol["chest"]).toBe(3);
+    // No other muscle receives volume from this slot
+    expect(vol["front_delts"]).toBeUndefined();
+    expect(vol["triceps"]).toBeUndefined();
   });
 
-  it("maps Back group slot to lats primary + half to rhomboids/lower_traps/lower_back", () => {
-    // Back GROUP_MUSCLES = [lats, rhomboids, lower_traps, lower_back]
-    // 2 working sets → lats=2, rhomboids=1, lower_traps=1, lower_back=1
+  it("credits lats slot to lats only — no distribution to rhomboids/lower_traps/lower_back", () => {
+    // Old behaviour spread across Back group; new: only lats gets credit
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -442,7 +443,7 @@ describe("computePlanVolume — cycled", () => {
           slots: [
             {
               id: "s1",
-              group: "Back",
+              muscle: "lats",
               pool: ["row"],
               repMode: "fixed",
               intensity: "none",
@@ -459,14 +460,13 @@ describe("computePlanVolume — cycled", () => {
 
     const vol = computePlanVolume(program, makeLookup([]));
     expect(vol["lats"]).toBe(2);
-    expect(vol["rhomboids"]).toBe(1);
-    expect(vol["lower_traps"]).toBe(1);
-    expect(vol["lower_back"]).toBe(1);
+    expect(vol["rhomboids"]).toBeUndefined();
+    expect(vol["lower_traps"]).toBeUndefined();
+    expect(vol["lower_back"]).toBeUndefined();
   });
 
-  it("distributes Shoulders slot: side_delts full, front_delts and rear_delts half", () => {
-    // Shoulders GROUP_MUSCLES = [side_delts, front_delts, rear_delts]
-    // 3 working sets → side_delts=3, front_delts=1.5, rear_delts=1.5
+  it("credits side_delts slot to side_delts only — front_delts and rear_delts get nothing", () => {
+    // Old behaviour spread across Shoulders group; new: only side_delts gets credit
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -480,7 +480,7 @@ describe("computePlanVolume — cycled", () => {
           slots: [
             {
               id: "s1",
-              group: "Shoulders",
+              muscle: "side_delts",
               pool: ["ohp"],
               repMode: "fixed",
               intensity: "none",
@@ -498,11 +498,11 @@ describe("computePlanVolume — cycled", () => {
 
     const vol = computePlanVolume(program, makeLookup([]));
     expect(vol["side_delts"]).toBe(3);
-    expect(vol["front_delts"]).toBe(1.5);
-    expect(vol["rear_delts"]).toBe(1.5);
+    expect(vol["front_delts"]).toBeUndefined();
+    expect(vol["rear_delts"]).toBeUndefined();
   });
 
-  it("handles multiple cycled slots on the same day with mixed groups", () => {
+  it("handles multiple cycled slots on the same day targeting different muscles", () => {
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -516,7 +516,7 @@ describe("computePlanVolume — cycled", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bench"],
               repMode: "fixed",
               intensity: "none",
@@ -529,7 +529,7 @@ describe("computePlanVolume — cycled", () => {
             },
             {
               id: "s2",
-              group: "Triceps",
+              muscle: "triceps",
               pool: ["pushdown"],
               repMode: "fixed",
               intensity: "none",
@@ -545,7 +545,7 @@ describe("computePlanVolume — cycled", () => {
     };
 
     const vol = computePlanVolume(program, makeLookup([]));
-    // chest=3, triceps=2
+    // chest=3, triceps=2, nothing else
     expect(vol["chest"]).toBe(3);
     expect(vol["triceps"]).toBe(2);
   });
@@ -564,7 +564,7 @@ describe("computePlanVolume — cycled", () => {
           slots: [
             {
               id: "s1",
-              group: "Quads",
+              muscle: "quads",
               pool: ["squat"],
               repMode: "fixed",
               intensity: "none",
@@ -586,7 +586,7 @@ describe("computePlanVolume — cycled", () => {
     expect(vol["quads"]).toBe(3);
   });
 
-  it("sums cycled slots across multiple days", () => {
+  it("sums cycled slots across multiple days for the same target muscle", () => {
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -600,7 +600,7 @@ describe("computePlanVolume — cycled", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bench"],
               repMode: "fixed",
               intensity: "none",
@@ -620,7 +620,7 @@ describe("computePlanVolume — cycled", () => {
           slots: [
             {
               id: "s2",
-              group: "Chest",
+              muscle: "chest",
               pool: ["fly"],
               repMode: "fixed",
               intensity: "none",

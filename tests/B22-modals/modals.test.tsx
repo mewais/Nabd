@@ -795,6 +795,32 @@ describe("LibraryModal", () => {
     const panel = backdrop.firstElementChild as HTMLElement;
     expect(panel.style.background).toBe("var(--modal-bg)");
   });
+
+  // FIX 1: scrollable list region
+  it("browsing mode: has a scrollable list region (data-library-scroll with overflowY auto) containing items", () => {
+    const { container } = render(<LibraryModal {...browsingProps} />);
+    const scrollRegion = container.querySelector("[data-library-scroll]") as HTMLElement;
+    expect(scrollRegion).not.toBeNull();
+    expect(scrollRegion.style.overflowY).toBe("auto");
+    // Items must be inside the scrollable region
+    expect(scrollRegion.querySelector("button[aria-label='add']")).not.toBeNull();
+  });
+
+  it("creating mode: has a scrollable region (data-library-scroll with overflowY auto) containing the form", () => {
+    const { container } = render(<LibraryModal {...creatingProps} />);
+    const scrollRegion = container.querySelector("[data-library-scroll]") as HTMLElement;
+    expect(scrollRegion).not.toBeNull();
+    expect(scrollRegion.style.overflowY).toBe("auto");
+    // Form inputs must be inside the scrollable region
+    expect(scrollRegion.querySelector("input[type='text']")).not.toBeNull();
+  });
+
+  it("browsing mode: search input is in fixed sub-header (not inside data-library-scroll)", () => {
+    const { container } = render(<LibraryModal {...browsingProps} />);
+    const scrollRegion = container.querySelector("[data-library-scroll]") as HTMLElement;
+    // Search input must NOT be inside the scrollable region — it belongs to the fixed header
+    expect(scrollRegion.querySelector("input[type='search']")).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1143,6 +1169,16 @@ describe("SettingsModal", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
     // With glass=off no opacity stepper renders, so '70%' must be absent
     expect(screen.queryByText("70%")).not.toBeInTheDocument();
+  });
+
+  // FIX 2: opacity ceiling raised to 1.0 — 100% must display
+  it("opacity at 1.0 displays '100%' (ceiling is now 1.0, not 0.92)", () => {
+    const fullOpacityProps: SettingsModalProps = {
+      ...darkGlassProps,
+      settings: makeSettings({ theme: "dark", glass: true, opacity: 1.0, wallpaper: "aurora" }),
+    };
+    render(<SettingsModal {...fullOpacityProps} />);
+    expect(screen.getByText("100%")).toBeInTheDocument();
   });
 
   it("modal panel uses var(--modal-bg) background (not var(--surface))", () => {

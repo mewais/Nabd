@@ -17,11 +17,7 @@ import {
 } from "@nabd/shell";
 
 // Today screen
-import {
-  TodayScreen,
-  buildHero,
-  buildRhythmRows,
-} from "@nabd/today";
+import { TodayScreen, buildHero, buildRhythmRows } from "@nabd/today";
 
 // Planner screen
 import { PlannerScreen } from "@nabd/planner";
@@ -55,7 +51,7 @@ import {
   EQUIPMENT_NAMES,
   TRACK_NAMES,
 } from "@nabd/domain";
-import type { MuscleGroup } from "@nabd/domain";
+import type { MuscleKey } from "@nabd/domain";
 
 // Library
 import { defaultLibrary } from "@nabd/dataset";
@@ -170,11 +166,14 @@ export function App({ store, client }: AppProps): JSX.Element {
     tickIntervalRef.current = window.setInterval(() => {
       store.getState().tick();
       if (isTauri()) {
-        client.getIdleSeconds().then((s) => {
-          store.getState().setIdleSeconds(s);
-        }).catch(() => {
-          // Swallow errors — web/non-Tauri environments don't support this call
-        });
+        client
+          .getIdleSeconds()
+          .then((s) => {
+            store.getState().setIdleSeconds(s);
+          })
+          .catch(() => {
+            // Swallow errors — web/non-Tauri environments don't support this call
+          });
       }
     }, 1000);
 
@@ -304,11 +303,11 @@ export function App({ store, client }: AppProps): JSX.Element {
     onAddSlot: planAddSlot,
     onRemoveSlot: planRemoveSlot,
     onAddPool: (dayId, slotId) => {
-      // Find the slot's group from the program
+      // Find the slot's target muscle from the program
       const day = program.days.find((d) => d.id === dayId);
       const slot = day?.slots.find((s) => s.id === slotId);
-      const group: MuscleGroup = slot?.group ?? "Chest";
-      libOpen({ kind: "pool", dayId, slotId, group });
+      const muscle: MuscleKey = slot?.muscle ?? "chest";
+      libOpen({ kind: "pool", dayId, slotId, muscle });
     },
     onRemoveFromPool: planRemoveFromPool,
     onEdit: (dayId, ref, op, ...args) =>
@@ -322,13 +321,19 @@ export function App({ store, client }: AppProps): JSX.Element {
   // Calculate planned per week/day from program
   const totalPlannedSets = program.days.reduce((acc, day) => {
     if (program.type === "fixed") {
-      return acc + day.exercises.reduce((a, ep) => a + ep.sets.filter((s) => s.type !== "warmup").length, 0);
+      return (
+        acc +
+        day.exercises.reduce((a, ep) => a + ep.sets.filter((s) => s.type !== "warmup").length, 0)
+      );
     }
-    return acc + day.slots.reduce((a, sl) => a + sl.sets.filter((s) => s.type !== "warmup").length, 0);
+    return (
+      acc + day.slots.reduce((a, sl) => a + sl.sets.filter((s) => s.type !== "warmup").length, 0)
+    );
   }, 0);
 
   const plannedPerWeek = totalPlannedSets;
-  const plannedPerDay = program.days.length > 0 ? Math.round(totalPlannedSets / program.days.length) : 0;
+  const plannedPerDay =
+    program.days.length > 0 ? Math.round(totalPlannedSets / program.days.length) : 0;
 
   // Exercise name lookup map for progress screen
   const exNames: Record<string, string> = {};
@@ -354,9 +359,7 @@ export function App({ store, client }: AppProps): JSX.Element {
       : profileFilteredLibrary;
   const filteredBySearch =
     lib.search !== ""
-      ? filteredByGroup.filter((ex) =>
-          ex.name.toLowerCase().includes(lib.search.toLowerCase())
-        )
+      ? filteredByGroup.filter((ex) => ex.name.toLowerCase().includes(lib.search.toLowerCase()))
       : filteredByGroup;
 
   const libraryItems: LibraryItem[] = filteredBySearch.map((ex) => ({
@@ -374,7 +377,7 @@ export function App({ store, client }: AppProps): JSX.Element {
     if (lib.target.kind === "ex") {
       libTitle = "Add Exercise";
     } else {
-      libTitle = `Add to Pool — ${lib.target.group}`;
+      libTitle = `Add to Pool — ${MUSCLE_NAMES[lib.target.muscle]}`;
     }
   }
 
@@ -426,8 +429,7 @@ export function App({ store, client }: AppProps): JSX.Element {
   // ------------------------------------------------------------------
   // Session modal props
   // ------------------------------------------------------------------
-  const sessionList =
-    activeSession !== null ? buildSessionList(slots, activeSession.slotId) : [];
+  const sessionList = activeSession !== null ? buildSessionList(slots, activeSession.slotId) : [];
   const setOfLabel =
     activeSession !== null
       ? `Set ${activeSession.logged.length + 1} of ${activeSession.sugg.sets}`
@@ -439,9 +441,7 @@ export function App({ store, client }: AppProps): JSX.Element {
   let chartVM = null;
   if (progExercise !== null) {
     // Find the exercise at the given index from progression rows
-    const exIds = Array.from(
-      new Set(history.map((h) => h.exId))
-    );
+    const exIds = Array.from(new Set(history.map((h) => h.exId)));
     const targetExId = exIds[progExercise];
     if (targetExId !== undefined) {
       const exName = exNames[targetExId] ?? targetExId;
@@ -449,9 +449,7 @@ export function App({ store, client }: AppProps): JSX.Element {
       const hasWeight = history.some((h) => h.exId === targetExId && h.weight !== null);
       const unit = hasWeight ? "kg" : "reps";
       const startDate =
-        series.length > 0
-          ? history.find((h) => h.exId === targetExId)?.date ?? ""
-          : "";
+        series.length > 0 ? (history.find((h) => h.exId === targetExId)?.date ?? "") : "";
       if (series.length > 0) {
         chartVM = buildChartVM(exName, series, unit, startDate);
       }

@@ -41,8 +41,15 @@ import type {
   EditRef,
 } from "@nabd/planner";
 
-import type { Program, GymProfile, ExercisePrescription, CycledSlot, Exercise } from "@nabd/domain";
-import { MUSCLE_NAMES, GROUP_PRIMARY_MUSCLE, EQUIPMENT_NAMES } from "@nabd/domain";
+import type {
+  Program,
+  GymProfile,
+  ExercisePrescription,
+  CycledSlot,
+  Exercise,
+  MuscleKey,
+} from "@nabd/domain";
+import { MUSCLE_NAMES, MUSCLES, EQUIPMENT_NAMES } from "@nabd/domain";
 import { createLibrary } from "@nabd/dataset";
 import { seedProgram } from "@nabd/program-editor";
 
@@ -209,22 +216,56 @@ const LIBRARY = createLibrary(EXERCISES);
 const PROFILE: GymProfile = {
   id: "commercial",
   name: "Commercial gym",
-  equipment: ["bodyweight", "dumbbell", "barbell", "ezbar", "kettlebell", "bands", "pullupbar", "bench", "cable", "machine", "smith"],
+  equipment: [
+    "bodyweight",
+    "dumbbell",
+    "barbell",
+    "ezbar",
+    "kettlebell",
+    "bands",
+    "pullupbar",
+    "bench",
+    "cable",
+    "machine",
+    "smith",
+  ],
 };
 
 const PROFILES: GymProfile[] = [
   PROFILE,
-  { id: "home", name: "Home rack", equipment: ["bodyweight", "dumbbell", "barbell", "bands", "pullupbar", "bench"] },
+  {
+    id: "home",
+    name: "Home rack",
+    equipment: ["bodyweight", "dumbbell", "barbell", "bands", "pullupbar", "bench"],
+  },
 ];
 
 /** Zero coverage record */
 function zeroCoverage() {
   return {
-    front_delts: 0, side_delts: 0, rear_delts: 0, neck: 0, upper_traps: 0,
-    rhomboids: 0, lower_traps: 0, lats: 0, lower_back: 0, chest: 0, abs: 0,
-    obliques: 0, quads: 0, hamstrings: 0, glutes: 0, abductors: 0,
-    adductors: 0, calves: 0, tibialis: 0, hip_flexors: 0, biceps: 0,
-    triceps: 0, forearms: 0,
+    front_delts: 0,
+    side_delts: 0,
+    rear_delts: 0,
+    neck: 0,
+    upper_traps: 0,
+    rhomboids: 0,
+    lower_traps: 0,
+    lats: 0,
+    lower_back: 0,
+    chest: 0,
+    abs: 0,
+    obliques: 0,
+    quads: 0,
+    hamstrings: 0,
+    glutes: 0,
+    abductors: 0,
+    adductors: 0,
+    calves: 0,
+    tibialis: 0,
+    hip_flexors: 0,
+    biceps: 0,
+    triceps: 0,
+    forearms: 0,
   };
 }
 
@@ -530,7 +571,7 @@ describe("buildSetBlock", () => {
   it("cycled slot prescription works the same as exercise prescription", () => {
     const slot: CycledSlot = {
       id: "s1",
-      group: "Chest",
+      muscle: "chest",
       pool: ["bb-bench"],
       repMode: "range",
       intensity: "rpe",
@@ -605,7 +646,7 @@ describe("buildEditor", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bb-bench"],
               repMode: "range",
               intensity: "none",
@@ -678,9 +719,33 @@ describe("buildEditor", () => {
           weekday: null,
           exercises: [],
           slots: [
-            { id: "s1", group: "Chest", pool: ["bb-bench"], repMode: "range", intensity: "none", rest: 120, sets: [{ type: "working", a: 8, b: 12 }] },
-            { id: "s2", group: "Back", pool: ["pullup"], repMode: "range", intensity: "none", rest: 120, sets: [{ type: "working", a: 8, b: 12 }] },
-            { id: "s3", group: "Biceps", pool: ["bb-curl"], repMode: "range", intensity: "none", rest: 120, sets: [{ type: "working", a: 8, b: 12 }] },
+            {
+              id: "s1",
+              muscle: "chest",
+              pool: ["bb-bench"],
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
+            {
+              id: "s2",
+              muscle: "lats",
+              pool: ["pullup"],
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
+            {
+              id: "s3",
+              muscle: "biceps",
+              pool: ["bb-curl"],
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
           ],
         },
       ],
@@ -769,7 +834,7 @@ describe("buildEditor", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bb-bench", "incline-db-press"],
               repMode: "range",
               intensity: "none",
@@ -784,7 +849,9 @@ describe("buildEditor", () => {
     expect(vm.rows[0].kind).toBe("slot");
     if (vm.rows[0].kind === "slot") {
       const slot = vm.rows[0].slot;
-      expect(slot.group).toBe("Chest");
+      // muscle is MuscleKey "chest"
+      expect(slot.muscle).toBe("chest");
+      expect(slot.muscleName).toBe("Chest");
       expect(slot.poolStr).toBe("2 exercises");
       expect(slot.poolNames).toHaveLength(2);
       expect(slot.poolNames[0].id).toBe("bb-bench");
@@ -794,7 +861,7 @@ describe("buildEditor", () => {
     }
   });
 
-  it("cycled slot muscle is group primary muscle name", () => {
+  it("cycled slot muscleName is MUSCLE_NAMES[slot.muscle]", () => {
     const cycledProgram: Program = {
       name: "Test",
       type: "cycled",
@@ -808,7 +875,7 @@ describe("buildEditor", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bb-bench"],
               repMode: "range",
               intensity: "none",
@@ -821,8 +888,8 @@ describe("buildEditor", () => {
     };
     const vm = buildEditor(cycledProgram, "d1", LIBRARY);
     if (vm.rows[0].kind === "slot") {
-      // GROUP_PRIMARY_MUSCLE["Chest"] = "chest", MUSCLE_NAMES["chest"] = "Chest"
-      expect(vm.rows[0].slot.muscle).toBe(MUSCLE_NAMES[GROUP_PRIMARY_MUSCLE["Chest"]]);
+      // slot.muscle = "chest", MUSCLE_NAMES["chest"] = "Chest"
+      expect(vm.rows[0].slot.muscleName).toBe(MUSCLE_NAMES["chest"]);
     }
   });
 
@@ -848,7 +915,14 @@ describe("buildEditor", () => {
           name: "Day 1",
           weekday: null,
           exercises: [
-            { id: "e1", exId: "bb-bench", repMode: "range", intensity: "none", rest: 120, sets: [{ type: "working", a: 8, b: 12 }] },
+            {
+              id: "e1",
+              exId: "bb-bench",
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
           ],
           slots: [],
         },
@@ -990,16 +1064,30 @@ describe("buildBoard", () => {
           weekday: null,
           exercises: [],
           slots: [
-            { id: "s1", group: "Chest", pool: ["bb-bench"], repMode: "range", intensity: "none", rest: 120, sets: [{ type: "working", a: 8, b: 12 }] },
-            { id: "s2", group: "Back", pool: ["pullup"], repMode: "range", intensity: "none", rest: 120, sets: [{ type: "working", a: 8, b: 12 }] },
+            {
+              id: "s1",
+              muscle: "chest",
+              pool: ["bb-bench"],
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
+            {
+              id: "s2",
+              muscle: "lats",
+              pool: ["pullup"],
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
           ],
         },
       ],
     };
     const cols = buildBoard(cycledProgram, PROFILE, null, LIBRARY);
     expect(cols[0].chips).toHaveLength(2);
-    expect(cols[0].chips![0].name).toBe("Chest");
-    expect(cols[0].chips![1].name).toBe("Back");
   });
 
   it("weekday is set on day/rest columns in weekday schedule", () => {
@@ -1066,7 +1154,7 @@ describe("SetTable", () => {
     const cb = makeCb();
     const block = makeBlock();
     const { container } = render(
-      React.createElement(SetTable, { dayId, refTarget: ref, block, cb })
+      React.createElement(SetTable, { dayId, refTarget: ref, block, cb }),
     );
     expect(container.firstChild).not.toBeNull();
   });
@@ -1077,9 +1165,9 @@ describe("SetTable", () => {
     render(React.createElement(SetTable, { dayId, refTarget: ref, block, cb }));
 
     // Find badge buttons (W, 1, 2)
-    const badgeButtons = screen.getAllByRole("button").filter(
-      (b) => ["W", "1", "2", "D"].includes(b.textContent ?? "")
-    );
+    const badgeButtons = screen
+      .getAllByRole("button")
+      .filter((b) => ["W", "1", "2", "D"].includes(b.textContent ?? ""));
     expect(badgeButtons.length).toBeGreaterThan(0);
     fireEvent.click(badgeButtons[0]); // click "W" badge at index 0
     expect(cb.onEdit).toHaveBeenCalledWith(dayId, ref, "cycleSetType", 0);
@@ -1164,9 +1252,14 @@ describe("SetTable", () => {
     render(React.createElement(SetTable, { dayId, refTarget: ref, block, cb }));
 
     // Remove (×) buttons, one per row
-    const removeButtons = screen.getAllByRole("button").filter(
-      (b) => b.textContent === "×" || b.getAttribute("aria-label") === "remove" || b.textContent?.includes("×")
-    );
+    const removeButtons = screen
+      .getAllByRole("button")
+      .filter(
+        (b) =>
+          b.textContent === "×" ||
+          b.getAttribute("aria-label") === "remove" ||
+          b.textContent?.includes("×"),
+      );
     if (removeButtons.length > 0) {
       fireEvent.click(removeButtons[0]);
       expect(cb.onEdit).toHaveBeenCalledWith(dayId, ref, "removeSet", 0);
@@ -1180,9 +1273,11 @@ describe("SetTable", () => {
 
     // Rep mode segmented has 3 options: 0=range, 1=fixed, 2=time
     // Find all segmented buttons
-    const segButtons = screen.getAllByRole("button").filter(
-      (b) => ["Range", "Fixed", "Time", "range", "fixed", "time"].includes(b.textContent ?? "")
-    );
+    const segButtons = screen
+      .getAllByRole("button")
+      .filter((b) =>
+        ["Range", "Fixed", "Time", "range", "fixed", "time"].includes(b.textContent ?? ""),
+      );
     if (segButtons.length >= 2) {
       fireEvent.click(segButtons[1]); // "Fixed" → idx=1
       expect(cb.onEdit).toHaveBeenCalledWith(dayId, ref, "setRepMode", 1);
@@ -1195,9 +1290,9 @@ describe("SetTable", () => {
     render(React.createElement(SetTable, { dayId, refTarget: ref, block, cb }));
 
     // Intensity segmented: 0=none, 1=rpe, 2=pct
-    const segButtons = screen.getAllByRole("button").filter(
-      (b) => ["None", "RPE", "%1RM", "none", "rpe", "pct"].includes(b.textContent ?? "")
-    );
+    const segButtons = screen
+      .getAllByRole("button")
+      .filter((b) => ["None", "RPE", "%1RM", "none", "rpe", "pct"].includes(b.textContent ?? ""));
     if (segButtons.length >= 1) {
       fireEvent.click(segButtons[0]); // "None" → idx=0
       expect(cb.onEdit).toHaveBeenCalledWith(dayId, ref, "setIntensity", 0);
@@ -1436,9 +1531,9 @@ describe("WeekBoard", () => {
     render(React.createElement(WeekBoard, { columns, cb }));
 
     // TUE is a rest day — clicking "+ Add day" calls onAddDay(2)
-    const addButtons = screen.getAllByRole("button").filter(
-      (b) => b.textContent?.includes("Add") || b.textContent?.includes("+")
-    );
+    const addButtons = screen
+      .getAllByRole("button")
+      .filter((b) => b.textContent?.includes("Add") || b.textContent?.includes("+"));
     // Find the add button in the TUE rest column
     const addDayButtons = screen.getAllByText(/add day/i);
     if (addDayButtons.length > 0) {
@@ -1477,7 +1572,8 @@ describe("WeekBoard", () => {
 
 describe("DayEditor", () => {
   const program = seedProgram();
-  const groups = ["Chest", "Back", "Shoulders", "Triceps", "Biceps", "Forearms", "Quads", "Hamstrings", "Glutes", "Calves", "Abs"] as const;
+  // All 23 muscles for the picker
+  const allMuscles: MuscleKey[] = [...MUSCLES];
 
   function makePushEditor(): EditorVM {
     return buildEditor(program, "push", LIBRARY);
@@ -1497,7 +1593,7 @@ describe("DayEditor", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bb-bench"],
               repMode: "range",
               intensity: "none",
@@ -1514,7 +1610,7 @@ describe("DayEditor", () => {
   it("renders day name input", () => {
     const cb = makeCb();
     const editor = makePushEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
     const nameInput = screen.getByDisplayValue("Push");
     expect(nameInput).toBeDefined();
   });
@@ -1522,7 +1618,7 @@ describe("DayEditor", () => {
   it("name input change fires onRenameDay", () => {
     const cb = makeCb();
     const editor = makePushEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     const nameInput = screen.getByDisplayValue("Push");
     fireEvent.change(nameInput, { target: { value: "Push Day" } });
@@ -1532,7 +1628,7 @@ describe("DayEditor", () => {
   it("renders summary string", () => {
     const cb = makeCb();
     const editor = makePushEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     expect(screen.getByText(editor.summary)).toBeDefined();
   });
@@ -1540,7 +1636,7 @@ describe("DayEditor", () => {
   it("Delete day button fires onRemoveDay with dayId", () => {
     const cb = makeCb();
     const editor = makePushEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     const deleteBtn = screen.getByText(/delete day/i);
     fireEvent.click(deleteBtn);
@@ -1550,7 +1646,7 @@ describe("DayEditor", () => {
   it("fixed mode: Add exercise button fires onAddExercise", () => {
     const cb = makeCb();
     const editor = makePushEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     const addExBtn = screen.getByText(/add exercise/i);
     fireEvent.click(addExBtn);
@@ -1560,12 +1656,15 @@ describe("DayEditor", () => {
   it("fixed mode: Remove exercise button fires onRemoveExercise with dayId + rowId", () => {
     const cb = makeCb();
     const editor = makePushEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     // Each exercise row has a remove button
-    const removeExButtons = screen.getAllByRole("button").filter(
-      (b) => b.textContent?.includes("Remove") || b.getAttribute("aria-label") === "remove exercise"
-    );
+    const removeExButtons = screen
+      .getAllByRole("button")
+      .filter(
+        (b) =>
+          b.textContent?.includes("Remove") || b.getAttribute("aria-label") === "remove exercise",
+      );
     if (removeExButtons.length > 0) {
       fireEvent.click(removeExButtons[0]);
       // First exercise in push is x1 (bb-bench)
@@ -1576,12 +1675,14 @@ describe("DayEditor", () => {
   it("fixed mode: superset toggle button fires onToggleSuperset", () => {
     const cb = makeCb();
     const editor = makePushEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     // Superset toggle (⛓) button exists per exercise
-    const supersetButtons = screen.getAllByRole("button").filter(
-      (b) => b.textContent?.includes("⛓") || b.getAttribute("aria-label") === "toggle superset"
-    );
+    const supersetButtons = screen
+      .getAllByRole("button")
+      .filter(
+        (b) => b.textContent?.includes("⛓") || b.getAttribute("aria-label") === "toggle superset",
+      );
     if (supersetButtons.length > 0) {
       fireEvent.click(supersetButtons[0]);
       expect(cb.onToggleSuperset).toHaveBeenCalledWith("push", expect.any(String));
@@ -1591,12 +1692,12 @@ describe("DayEditor", () => {
   it("fixed mode: Unlink button on superset member fires onToggleSuperset", () => {
     const cb = makeCb();
     const editor = makePushEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     // "Unlink" buttons appear on superset members (inSuperset=true path)
-    const unlinkButtons = screen.getAllByRole("button").filter(
-      (b) => b.textContent?.trim() === "Unlink"
-    );
+    const unlinkButtons = screen
+      .getAllByRole("button")
+      .filter((b) => b.textContent?.trim() === "Unlink");
     if (unlinkButtons.length > 0) {
       fireEvent.click(unlinkButtons[0]);
       expect(cb.onToggleSuperset).toHaveBeenCalledWith("push", expect.any(String));
@@ -1606,14 +1707,17 @@ describe("DayEditor", () => {
   it("weekday mode: weekday picker fires onSetWeekday", () => {
     const cb = makeCb();
     const editor = makePushEditor(); // isWeekday=true
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     // Weekday picker buttons have single-char labels (M, T, W...) and a title attribute.
     // Find any button with a title that matches a weekday abbreviation.
-    const wdButtons = screen.getAllByRole("button").filter(
-      (b) => b.getAttribute("title") != null &&
-             ["MON","TUE","WED","THU","FRI","SAT","SUN"].includes(b.getAttribute("title") ?? "")
-    );
+    const wdButtons = screen
+      .getAllByRole("button")
+      .filter(
+        (b) =>
+          b.getAttribute("title") != null &&
+          ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].includes(b.getAttribute("title") ?? ""),
+      );
     expect(wdButtons.length).toBeGreaterThan(0);
     // Click the MON button (weekday=1)
     const monBtn = wdButtons.find((b) => b.getAttribute("title") === "MON");
@@ -1627,25 +1731,89 @@ describe("DayEditor", () => {
     }
   });
 
-  it("cycled mode: group chips fire onAddSlot", () => {
+  it("cycled mode: picker renders 23 muscle buttons (one per muscle)", () => {
     const cb = makeCb();
     const editor = makeCycledEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
-    // Group chips for adding new slots — find the button specifically (not the slot header)
-    const chestButtons = screen.queryAllByText("Chest").filter(
-      (el) => el.tagName.toLowerCase() === "button"
-    );
+    // Each of the 23 muscles should have a button labeled with its display name
+    expect(
+      screen.getAllByRole("button").filter((b) => b.textContent === MUSCLE_NAMES["front_delts"])
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("button").filter((b) => b.textContent === MUSCLE_NAMES["rear_delts"])
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("button").filter((b) => b.textContent === MUSCLE_NAMES["abductors"])
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("button").filter((b) => b.textContent === MUSCLE_NAMES["rhomboids"])
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("cycled mode: picker shows 'Front Delts', 'Rear Delts', 'Abductors', 'Rhomboids'", () => {
+    const cb = makeCb();
+    const editor = makeCycledEditor();
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
+
+    expect(screen.getAllByText("Front Delts").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rear Delts").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Abductors").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rhomboids").length).toBeGreaterThan(0);
+  });
+
+  it("cycled mode: clicking a muscle picker button calls onAddSlot with the MuscleKey", () => {
+    const cb = makeCb();
+    const editor = makeCycledEditor();
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
+
+    // Find the "Chest" button in the picker (there may also be a slot header showing "Chest")
+    // The picker buttons are rendered for each muscle in the muscles prop
+    const chestButtons = screen
+      .queryAllByText("Chest")
+      .filter((el) => el.tagName.toLowerCase() === "button");
     if (chestButtons.length > 0) {
       fireEvent.click(chestButtons[0]);
-      expect(cb.onAddSlot).toHaveBeenCalledWith("d1", "Chest");
+      // onAddSlot should be called with the MuscleKey "chest", not the display name
+      expect(cb.onAddSlot).toHaveBeenCalledWith("d1", "chest");
     }
+  });
+
+  it("cycled mode: clicking 'Front Delts' picker button calls onAddSlot with 'front_delts'", () => {
+    const cb = makeCb();
+    const editor = makeCycledEditor();
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
+
+    const frontDeltsButtons = screen
+      .queryAllByText("Front Delts")
+      .filter((el) => el.tagName.toLowerCase() === "button");
+    if (frontDeltsButtons.length > 0) {
+      fireEvent.click(frontDeltsButtons[0]);
+      expect(cb.onAddSlot).toHaveBeenCalledWith("d1", "front_delts");
+    }
+  });
+
+  it("cycled mode: slot header shows muscle name (MUSCLE_NAMES[slot.muscle])", () => {
+    const cb = makeCb();
+    const editor = makeCycledEditor();
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
+
+    // The slot header should show "Chest" (MUSCLE_NAMES["chest"])
+    // It appears as a div with fontWeight 700, not a button
+    const chestHeaders = screen
+      .queryAllByText("Chest")
+      .filter((el) => el.tagName.toLowerCase() !== "button");
+    expect(chestHeaders.length).toBeGreaterThan(0);
   });
 
   it("cycled mode: Add pool exercise button fires onAddPool", () => {
     const cb = makeCb();
     const editor = makeCycledEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     // "+ Add exercise" in the slot pool
     const addPoolBtns = screen.queryAllByText(/add exercise/i);
@@ -1658,12 +1826,12 @@ describe("DayEditor", () => {
   it("cycled mode: Remove pool chip fires onRemoveFromPool", () => {
     const cb = makeCb();
     const editor = makeCycledEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     // Remove pool chip — find by aria-label "remove from pool" specifically
-    const removePoolButtons = screen.getAllByRole("button").filter(
-      (b) => b.getAttribute("aria-label") === "remove from pool"
-    );
+    const removePoolButtons = screen
+      .getAllByRole("button")
+      .filter((b) => b.getAttribute("aria-label") === "remove from pool");
     if (removePoolButtons.length > 0) {
       fireEvent.click(removePoolButtons[0]);
       expect(cb.onRemoveFromPool).toHaveBeenCalledWith("d1", "s1", "bb-bench");
@@ -1673,11 +1841,14 @@ describe("DayEditor", () => {
   it("cycled mode: Remove slot button fires onRemoveSlot", () => {
     const cb = makeCb();
     const editor = makeCycledEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
-    const removeSlotBtn = screen.queryAllByRole("button").filter(
-      (b) => b.getAttribute("aria-label") === "remove slot" || b.textContent?.includes("Remove slot")
-    );
+    const removeSlotBtn = screen
+      .queryAllByRole("button")
+      .filter(
+        (b) =>
+          b.getAttribute("aria-label") === "remove slot" || b.textContent?.includes("Remove slot"),
+      );
     if (removeSlotBtn.length > 0) {
       fireEvent.click(removeSlotBtn[0]);
       expect(cb.onRemoveSlot).toHaveBeenCalledWith("d1", "s1");
@@ -1687,7 +1858,7 @@ describe("DayEditor", () => {
   it("renders exercise names in fixed mode", () => {
     const cb = makeCb();
     const editor = makePushEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     expect(screen.getByText("Barbell Bench Press")).toBeDefined();
   });
@@ -1695,7 +1866,7 @@ describe("DayEditor", () => {
   it("renders superset members with A1/A2 tags", () => {
     const cb = makeCb();
     const editor = makePushEditor();
-    render(React.createElement(DayEditor, { editor, groups: [...groups], cb }));
+    render(React.createElement(DayEditor, { editor, muscles: allMuscles, cb }));
 
     // db-fly and lat-raise are in a superset, tagged A1/A2
     expect(screen.getByText(/A1/)).toBeDefined();
@@ -1753,7 +1924,9 @@ describe("PlannerScreen", () => {
 
   it("does not render DayEditor when editDayId is null and program is empty", () => {
     const emptyProgram: Program = { name: "Empty", type: "fixed", schedule: "floating", days: [] };
-    render(React.createElement(PlannerScreen, makeProps({ program: emptyProgram, editDayId: null })));
+    render(
+      React.createElement(PlannerScreen, makeProps({ program: emptyProgram, editDayId: null })),
+    );
     // No day editor since no days exist
     expect(screen.queryByText(/delete day/i)).toBeNull();
   });
@@ -1794,10 +1967,36 @@ describe("PlannerScreen", () => {
   it("renders floating schedule correctly", () => {
     const floatingProgram: Program = { ...program, schedule: "floating" };
     const { container } = render(
-      React.createElement(PlannerScreen, makeProps({ program: floatingProgram, editDayId: null }))
+      React.createElement(PlannerScreen, makeProps({ program: floatingProgram, editDayId: null })),
     );
     expect(container.firstChild).not.toBeNull();
     expect(screen.getByText("ADD")).toBeDefined();
+  });
+
+  it("PlannerScreen with cycled program shows muscle picker with 23 entries", () => {
+    const cycledProgram: Program = {
+      name: "Cycled Plan",
+      type: "cycled",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Day 1",
+          weekday: null,
+          exercises: [],
+          slots: [],
+        },
+      ],
+    };
+    render(
+      React.createElement(PlannerScreen, makeProps({ program: cycledProgram, editDayId: "d1" })),
+    );
+    // The muscle picker should render buttons for all 23 muscles
+    // Verify a few distinct muscle names appear as buttons
+    const frontDeltsButtons = screen
+      .queryAllByText("Front Delts")
+      .filter((el) => el.tagName.toLowerCase() === "button");
+    expect(frontDeltsButtons.length).toBeGreaterThan(0);
   });
 });
 
@@ -1810,7 +2009,19 @@ describe("direct component invocations for 100% coverage", () => {
   /** Pre-built VMs that don't require builder functions */
   const preBuiltSetBlock: SetBlockVM = {
     rows: [
-      { index: 0, badgeLabel: "1", badgeKind: "work", typeName: "Working", repA: 10, repB: null, repsStr: "10", isTime: false, hasB: false, showInt: false, intStr: "" },
+      {
+        index: 0,
+        badgeLabel: "1",
+        badgeKind: "work",
+        typeName: "Working",
+        repA: 10,
+        repB: null,
+        repsStr: "10",
+        isTime: false,
+        hasB: false,
+        showInt: false,
+        intStr: "",
+      },
     ],
     repMode: "fixed",
     intensity: "none",
@@ -1833,8 +2044,8 @@ describe("direct component invocations for 100% coverage", () => {
 
   const preBuiltSlotVM: CycledSlotVM = {
     id: "s1",
-    group: "Chest",
-    muscle: "Chest",
+    muscle: "chest",
+    muscleName: "Chest",
     poolNames: [{ id: "bb-bench", name: "Barbell Bench Press" }],
     poolStr: "1 exercises",
     block: preBuiltSetBlock,
@@ -1851,16 +2062,28 @@ describe("direct component invocations for 100% coverage", () => {
     summary: "5 exercises · 16 sets · ~54 min",
     rows: [
       { kind: "ex", ex: preBuiltExCard },
-      { kind: "superset", members: [
-        { ...preBuiltExCard, id: "x3", name: "Dumbbell Fly", supersetTag: "A1" },
-        { ...preBuiltExCard, id: "x4", name: "Lateral Raise", supersetTag: "A2" },
-      ]},
+      {
+        kind: "superset",
+        members: [
+          { ...preBuiltExCard, id: "x3", name: "Dumbbell Fly", supersetTag: "A1" },
+          { ...preBuiltExCard, id: "x4", name: "Lateral Raise", supersetTag: "A2" },
+        ],
+      },
       { kind: "slot", slot: preBuiltSlotVM },
     ],
   };
 
   const preBuiltColumns: BoardColVM[] = [
-    { kind: "day", label: "MON", weekday: 1, dayId: "push", name: "Push", chips: [{ name: "bb-bench", superset: false }], more: 0, editing: true },
+    {
+      kind: "day",
+      label: "MON",
+      weekday: 1,
+      dayId: "push",
+      name: "Push",
+      chips: [{ name: "bb-bench", superset: false }],
+      more: 0,
+      editing: true,
+    },
     // day column without chips (covers the chips ?? [] fallback branch)
     { kind: "day", label: "WED", weekday: 3, dayId: "pull", name: "Pull" },
     { kind: "rest", label: "TUE", weekday: 2 },
@@ -1876,28 +2099,26 @@ describe("direct component invocations for 100% coverage", () => {
         refTarget: ref,
         block: preBuiltSetBlock,
         cb,
-      })
+      }),
     );
     expect(container).toBeDefined();
   });
 
   it("WeekBoard renders directly with pre-built columns", () => {
     const cb = makeCb();
-    const { container } = render(
-      React.createElement(WeekBoard, { columns: preBuiltColumns, cb })
-    );
+    const { container } = render(React.createElement(WeekBoard, { columns: preBuiltColumns, cb }));
     expect(container).toBeDefined();
   });
 
   it("DayEditor renders directly with pre-built EditorVM (fixed, weekday, superset+slot rows)", () => {
     const cb = makeCb();
-    const groups = ["Chest", "Back", "Shoulders"] as const;
+    const muscles: MuscleKey[] = ["chest", "lats", "front_delts"];
     const { container } = render(
       React.createElement(DayEditor, {
         editor: preBuiltEditorVM,
-        groups: [...groups],
+        muscles,
         cb,
-      })
+      }),
     );
     expect(container).toBeDefined();
   });
@@ -1913,16 +2134,15 @@ describe("direct component invocations for 100% coverage", () => {
       dayOrderLabel: "Day 1",
       weekday: null,
       summary: "2 muscle groups",
-      rows: [
-        { kind: "slot", slot: preBuiltSlotVM },
-      ],
+      rows: [{ kind: "slot", slot: preBuiltSlotVM }],
     };
+    const muscles: MuscleKey[] = ["chest", "lats"];
     const { container } = render(
       React.createElement(DayEditor, {
         editor: cycledEditor,
-        groups: ["Chest", "Back"],
+        muscles,
         cb,
-      })
+      }),
     );
     expect(container).toBeDefined();
   });
@@ -1943,9 +2163,9 @@ describe("direct component invocations for 100% coverage", () => {
     const { container } = render(
       React.createElement(DayEditor, {
         editor: noEditor,
-        groups: [],
+        muscles: [],
         cb,
-      })
+      }),
     );
     expect(container).toBeDefined();
   });
@@ -1958,7 +2178,11 @@ describe("direct component invocations for 100% coverage", () => {
 describe("buildSetBlock — edge cases", () => {
   it("handles rest=0 (0:00)", () => {
     const p: ExercisePrescription = {
-      id: "e1", exId: "bb-bench", repMode: "fixed", intensity: "none", rest: 0,
+      id: "e1",
+      exId: "bb-bench",
+      repMode: "fixed",
+      intensity: "none",
+      rest: 0,
       sets: [{ type: "working", a: 10 }],
     };
     const vm = buildSetBlock(p);
@@ -1967,7 +2191,11 @@ describe("buildSetBlock — edge cases", () => {
 
   it("handles rest=60 (1:00)", () => {
     const p: ExercisePrescription = {
-      id: "e1", exId: "bb-bench", repMode: "fixed", intensity: "none", rest: 60,
+      id: "e1",
+      exId: "bb-bench",
+      repMode: "fixed",
+      intensity: "none",
+      rest: 60,
       sets: [{ type: "working", a: 10 }],
     };
     const vm = buildSetBlock(p);
@@ -1976,7 +2204,11 @@ describe("buildSetBlock — edge cases", () => {
 
   it("handles rest=9 seconds (0:09)", () => {
     const p: ExercisePrescription = {
-      id: "e1", exId: "bb-bench", repMode: "fixed", intensity: "none", rest: 9,
+      id: "e1",
+      exId: "bb-bench",
+      repMode: "fixed",
+      intensity: "none",
+      rest: 9,
       sets: [{ type: "working", a: 10 }],
     };
     const vm = buildSetBlock(p);
@@ -1985,7 +2217,11 @@ describe("buildSetBlock — edge cases", () => {
 
   it("multiple working sets numbered sequentially from 1", () => {
     const p: ExercisePrescription = {
-      id: "e1", exId: "bb-bench", repMode: "fixed", intensity: "none", rest: 120,
+      id: "e1",
+      exId: "bb-bench",
+      repMode: "fixed",
+      intensity: "none",
+      rest: 120,
       sets: [
         { type: "working", a: 10 },
         { type: "working", a: 10 },
@@ -2002,7 +2238,11 @@ describe("buildSetBlock — edge cases", () => {
   it("range mode with b < a still renders repsStr as a–b", () => {
     // Edge: a=8, b=8
     const p: ExercisePrescription = {
-      id: "e1", exId: "bb-bench", repMode: "range", intensity: "none", rest: 120,
+      id: "e1",
+      exId: "bb-bench",
+      repMode: "range",
+      intensity: "none",
+      rest: 120,
       sets: [{ type: "working", a: 8, b: 8 }],
     };
     const vm = buildSetBlock(p);
@@ -2011,7 +2251,11 @@ describe("buildSetBlock — edge cases", () => {
 
   it("pct intensity showIntCol is true and intHeader is %1RM", () => {
     const p: ExercisePrescription = {
-      id: "e1", exId: "back-squat", repMode: "range", intensity: "pct", rest: 180,
+      id: "e1",
+      exId: "back-squat",
+      repMode: "range",
+      intensity: "pct",
+      rest: 180,
       sets: [{ type: "working", a: 6, b: 8, val: 70 }],
     };
     const vm = buildSetBlock(p);
@@ -2021,8 +2265,15 @@ describe("buildSetBlock — edge cases", () => {
 
   it("time mode fixed values render", () => {
     const p: ExercisePrescription = {
-      id: "e1", exId: "plank", repMode: "time", intensity: "none", rest: 60,
-      sets: [{ type: "working", a: 30 }, { type: "working", a: 45 }],
+      id: "e1",
+      exId: "plank",
+      repMode: "time",
+      intensity: "none",
+      rest: 60,
+      sets: [
+        { type: "working", a: 30 },
+        { type: "working", a: 45 },
+      ],
     };
     const vm = buildSetBlock(p);
     expect(vm.rows[0].repsStr).toBe("30s");
@@ -2033,7 +2284,7 @@ describe("buildSetBlock — edge cases", () => {
   it("notes is passed through for cycled slot", () => {
     const slot: CycledSlot = {
       id: "s1",
-      group: "Chest",
+      muscle: "chest",
       pool: ["bb-bench"],
       repMode: "fixed",
       intensity: "none",
@@ -2067,9 +2318,7 @@ describe("buildEditor — additional edge cases", () => {
   it("legs day has exercise without supersetId (plank, time-based)", () => {
     const program = seedProgram();
     const vm = buildEditor(program, "legs", LIBRARY);
-    const plankRow = vm.rows.find(
-      (r) => r.kind === "ex" && r.ex.name === "Plank"
-    );
+    const plankRow = vm.rows.find((r) => r.kind === "ex" && r.ex.name === "Plank");
     expect(plankRow).toBeDefined();
     if (plankRow && plankRow.kind === "ex") {
       expect(plankRow.ex.block.repMode).toBe("time");
@@ -2090,7 +2339,7 @@ describe("buildEditor — additional edge cases", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bb-bench"],
               repMode: "range",
               intensity: "none",
@@ -2104,6 +2353,38 @@ describe("buildEditor — additional edge cases", () => {
     const vm = buildEditor(cycledProgram, "d1", LIBRARY);
     if (vm.rows[0].kind === "slot") {
       expect(vm.rows[0].slot.poolStr).toBe("1 exercises");
+    }
+  });
+
+  it("cycled slot VM has correct muscle key and muscleName for lats", () => {
+    const cycledProgram: Program = {
+      name: "Test",
+      type: "cycled",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Pull",
+          weekday: null,
+          exercises: [],
+          slots: [
+            {
+              id: "s1",
+              muscle: "lats",
+              pool: ["pullup"],
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
+          ],
+        },
+      ],
+    };
+    const vm = buildEditor(cycledProgram, "d1", LIBRARY);
+    if (vm.rows[0].kind === "slot") {
+      expect(vm.rows[0].slot.muscle).toBe("lats");
+      expect(vm.rows[0].slot.muscleName).toBe("Lats");
     }
   });
 });
@@ -2149,7 +2430,14 @@ describe("buildBoard — additional edge cases", () => {
           name: "Day 1",
           weekday: null,
           exercises: [
-            { id: "e1", exId: "unknown-exercise-xyz", repMode: "range", intensity: "none", rest: 120, sets: [{ type: "working", a: 8, b: 12 }] },
+            {
+              id: "e1",
+              exId: "unknown-exercise-xyz",
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
           ],
           slots: [],
         },

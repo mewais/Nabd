@@ -1,15 +1,8 @@
 // @nabd/scheduling — pure scheduling engine: resolve today's day, cycled
 // rotation, slot building, statuses, out-of-order start, day rollover.
 
-import type {
-  Program,
-  Day,
-  Slot,
-  Exercise,
-  RotationState,
-  DayState,
-} from "@nabd/domain";
-import { DEFAULTS } from "@nabd/domain";
+import type { Program, Day, Slot, Exercise, RotationState, DayState } from "@nabd/domain";
+import { DEFAULTS, MUSCLE_NAMES } from "@nabd/domain";
 
 export type ExerciseLookup = (exId: string) => Exercise | undefined;
 
@@ -23,11 +16,7 @@ export interface ScheduleContext {
  * Which program Day applies on `date`. Weekday schedule -> the day whose weekday
  * matches (or null if none/rest). Floating -> days[floatingIndex % days.length].
  */
-export function resolveTodayDay(
-  program: Program,
-  date: Date,
-  ctx: ScheduleContext,
-): Day | null {
+export function resolveTodayDay(program: Program, date: Date, ctx: ScheduleContext): Day | null {
   if (program.schedule === "weekday") {
     const dow = date.getDay();
     return program.days.find((d) => d.weekday === dow) ?? null;
@@ -38,7 +27,11 @@ export function resolveTodayDay(
 }
 
 /** The exercise id a cycled slot rotates to, given its rotation pointer. */
-export function rotationFor(slotId: string, pool: string[], rotation: RotationState): string | null {
+export function rotationFor(
+  slotId: string,
+  pool: string[],
+  rotation: RotationState,
+): string | null {
   if (pool.length === 0) return null;
   const pointer = rotation[slotId] ?? 0;
   return pool[pointer % pool.length];
@@ -113,7 +106,7 @@ export function buildSlots(
         id: `${day.id}-slot-${i}`,
         exId,
         exercise: ex.name,
-        group: cycledSlot.group,
+        group: MUSCLE_NAMES[cycledSlot.muscle],
         muscles: [...ex.primary, ...ex.secondary],
         min,
         timeStr: minToTimeStr(min),

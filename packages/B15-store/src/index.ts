@@ -13,6 +13,7 @@ import type {
   Wallpaper,
   Exercise,
   MuscleGroup,
+  MuscleKey,
   Coverage,
   Slot,
   ActiveSession,
@@ -77,7 +78,7 @@ export interface LibState {
   open: boolean;
   target:
     | { kind: "ex"; dayId: string }
-    | { kind: "pool"; dayId: string; slotId: string; group: MuscleGroup }
+    | { kind: "pool"; dayId: string; slotId: string; muscle: MuscleKey }
     | null;
   search: string;
   group: string;
@@ -166,7 +167,7 @@ export interface NabdActions {
   planAddExercise: (dayId: string, exId: string) => void;
   planRemoveExercise: (dayId: string, rowId: string) => void;
   planToggleSuperset: (dayId: string, rowId: string) => void;
-  planAddSlot: (dayId: string, group: MuscleGroup) => void;
+  planAddSlot: (dayId: string, muscle: MuscleKey) => void;
   planRemoveSlot: (dayId: string, slotId: string) => void;
   planRemoveFromPool: (dayId: string, slotId: string, exId: string) => void;
   /** Generic prescription edit dispatched to program-editor by op name. */
@@ -679,9 +680,9 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       void client.saveSingleton("program", program);
     },
 
-    planAddSlot: (dayId: string, group: MuscleGroup) => {
+    planAddSlot: (dayId: string, muscle: MuscleKey) => {
       const state = get();
-      const program = addSlot(state.program, dayId, group);
+      const program = addSlot(state.program, dayId, muscle);
       set({ program });
       void client.saveSingleton("program", program);
     },

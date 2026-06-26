@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MuscleGroupSchema } from "./muscles";
+import { MuscleKeySchema } from "./muscles";
 
 /** How reps are prescribed for an exercise. */
 export const RepModeSchema = z.enum(["range", "fixed", "time"]);
@@ -37,10 +37,10 @@ export const ExercisePrescriptionSchema = z.object({
 });
 export type ExercisePrescription = z.infer<typeof ExercisePrescriptionSchema>;
 
-/** A cycled muscle-group slot: a pool of exercises + a shared prescription. */
+/** A cycled slot: targets one specific muscle, a pool of exercises + a shared prescription. */
 export const CycledSlotSchema = z.object({
   id: z.string(),
-  group: MuscleGroupSchema,
+  muscle: MuscleKeySchema,
   pool: z.array(z.string()),
   repMode: RepModeSchema,
   intensity: IntensitySchema,

@@ -10,10 +10,12 @@ import type {
   Intensity,
   SetType,
   MuscleGroup,
+  MuscleKey,
   Exercise,
   Equipment,
   GymProfile,
 } from "@nabd/domain";
+import { MUSCLE_NAMES, GROUP_PRIMARY_MUSCLE } from "@nabd/domain";
 
 export type ExerciseLookup = (exId: string) => Exercise | undefined;
 
@@ -164,7 +166,12 @@ function findRef(day: Day, ref: EditRef): Prescription | undefined {
   return day.exercises.find((e) => e.id === ref.id);
 }
 
-function withRef(_p: Program, _dayId: string, ref: EditRef, fn: (c: Prescription) => void): Program {
+function withRef(
+  _p: Program,
+  _dayId: string,
+  ref: EditRef,
+  fn: (c: Prescription) => void,
+): Program {
   const p = clone(_p);
   const day = p.days.find((d) => d.id === _dayId)!;
   const c = findRef(day, ref);
@@ -265,7 +272,13 @@ export function stepRep(
 }
 
 /** Step intensity value (RPE by 0.5 clamp 5–10; %1RM by 2.5 clamp 40–100). */
-export function stepVal(_p: Program, _dayId: string, _ref: EditRef, _i: number, _delta: number): Program {
+export function stepVal(
+  _p: Program,
+  _dayId: string,
+  _ref: EditRef,
+  _i: number,
+  _delta: number,
+): Program {
   return withRef(_p, _dayId, _ref, (c) => {
     const st = c.sets[_i];
     if (c.intensity === "rpe") {
@@ -283,13 +296,13 @@ export function setNotes(_p: Program, _dayId: string, _ref: EditRef, _notes: str
 }
 
 // ----- Cycled-mode slots -----
-export function addSlot(_p: Program, _dayId: string, _group: MuscleGroup): Program {
+export function addSlot(_p: Program, _dayId: string, _muscle: MuscleKey): Program {
   const p = clone(_p);
   const day = p.days.find((d) => d.id === _dayId);
   if (day) {
     day.slots.push({
       id: newId(),
-      group: _group,
+      muscle: _muscle,
       pool: [],
       repMode: "range",
       intensity: "none",
@@ -325,7 +338,12 @@ export function addToPool(_p: Program, _dayId: string, _slotId: string, _exId: s
   return p;
 }
 
-export function removeFromPool(_p: Program, _dayId: string, _slotId: string, _exId: string): Program {
+export function removeFromPool(
+  _p: Program,
+  _dayId: string,
+  _slotId: string,
+  _exId: string,
+): Program {
   const p = clone(_p);
   const day = p.days.find((d) => d.id === _dayId);
   if (day) {
@@ -347,7 +365,7 @@ export function deriveSlots(_day: Day, _lookup: ExerciseLookup): Day["slots"] {
     if (!seen[x.group]) {
       seen[x.group] = {
         id: newId(),
-        group: x.group,
+        muscle: GROUP_PRIMARY_MUSCLE[x.group],
         pool: [],
         repMode: e.repMode,
         intensity: e.intensity,
@@ -388,7 +406,7 @@ export function boardLayout(_p: Program, _profile: GymProfile): BoardColumn[] {
     if (_p.type === "cycled") {
       const sl = d.slots;
       n = sl.length;
-      items = sl.slice(0, 4).map((s) => ({ name: s.group, superset: false }));
+      items = sl.slice(0, 4).map((s) => ({ name: MUSCLE_NAMES[s.muscle], superset: false }));
     } else {
       const ex = d.exercises;
       n = ex.length;

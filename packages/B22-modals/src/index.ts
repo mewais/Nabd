@@ -888,6 +888,8 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
     ),
   );
 
+  // browsing: fixed sub-header (search + chips) + scrollable list; creating: scrollable form
+  let fixedSubHeader: ReactNode = null;
   let content: ReactNode;
 
   if (browsing) {
@@ -903,6 +905,43 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
           style: chipBtnStyle(chip.active),
         },
         chip.label,
+      ),
+    );
+
+    // Fixed sub-header: search input + group filter chips (does not scroll)
+    fixedSubHeader = React.createElement(
+      "div",
+      {
+        style: {
+          padding: "12px 20px 0",
+          flexShrink: 0,
+          borderBottom: "1px solid var(--line)",
+          paddingBottom: 12,
+        },
+      },
+      React.createElement("input", {
+        type: "search",
+        role: "searchbox",
+        value: search,
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) => onSearch(e.target.value),
+        placeholder: "Search exercises…",
+        style: {
+          width: "100%",
+          background: "var(--surface2)",
+          border: "1px solid var(--line)",
+          borderRadius: 10,
+          padding: "11px 13px",
+          fontSize: 13.5,
+          fontFamily: "inherit",
+          color: "var(--text)",
+          outline: "none",
+          boxSizing: "border-box" as const,
+        },
+      }),
+      React.createElement(
+        "div",
+        { style: { paddingTop: 10, display: "flex", gap: 7, flexWrap: "wrap" as const } },
+        ...chips,
       ),
     );
 
@@ -1037,68 +1076,40 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
             ),
           );
 
+    // Scrollable content: exercise item list + "create custom" button
     content = React.createElement(
       "div",
-      null,
-      React.createElement("input", {
-        type: "search",
-        role: "searchbox",
-        value: search,
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) => onSearch(e.target.value),
-        placeholder: "Search exercises…",
+      {
         style: {
-          marginTop: 12,
-          width: "100%",
-          background: "var(--surface2)",
-          border: "1px solid var(--line)",
-          borderRadius: 10,
-          padding: "11px 13px",
-          fontSize: 13.5,
-          fontFamily: "inherit",
-          color: "var(--text)",
-          outline: "none",
-          boxSizing: "border-box" as const,
+          padding: "12px 16px 16px",
+          display: "flex",
+          flexDirection: "column" as const,
+          gap: 7,
         },
-      }),
+      },
+      ...itemRows,
       React.createElement(
-        "div",
-        { style: { padding: "12px 16px 0", display: "flex", gap: 7, flexWrap: "wrap" as const } },
-        ...chips,
-      ),
-      React.createElement(
-        "div",
+        "button",
         {
+          onClick: onStartCreate,
           style: {
-            padding: "12px 16px 16px",
             display: "flex",
-            flexDirection: "column" as const,
-            gap: 7,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            background: "none",
+            border: "1.5px dashed var(--accent)",
+            borderRadius: 11,
+            padding: 13,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            color: "var(--accent)",
+            fontSize: 13.5,
+            fontWeight: 700,
+            marginTop: 4,
           },
         },
-        ...itemRows,
-        React.createElement(
-          "button",
-          {
-            onClick: onStartCreate,
-            style: {
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              background: "none",
-              border: "1.5px dashed var(--accent)",
-              borderRadius: 11,
-              padding: 13,
-              cursor: "pointer",
-              fontFamily: "inherit",
-              color: "var(--accent)",
-              fontSize: 13.5,
-              fontWeight: 700,
-              marginTop: 4,
-            },
-          },
-          createLabel,
-        ),
+        createLabel,
       ),
     );
   } else {
@@ -1262,6 +1273,36 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
     );
   }
 
+  // Scrollable content area: browsing mode has search + chips + list; creating has the form.
+  // Both use overflowY:"auto" with flex:1/minHeight:0 so they scroll inside the fixed-height panel.
+  const scrollContent = browsing
+    ? React.createElement(
+        "div",
+        {
+          "data-library-scroll": true,
+          style: {
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto" as const,
+            display: "flex",
+            flexDirection: "column" as const,
+          },
+        },
+        content,
+      )
+    : React.createElement(
+        "div",
+        {
+          "data-library-scroll": true,
+          style: {
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto" as const,
+          },
+        },
+        content,
+      );
+
   return React.createElement(
     "div",
     {
@@ -1297,22 +1338,27 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
           animation: "nb-fade .22s ease",
         },
       },
+      // Fixed header: title + close button only (does not scroll)
       React.createElement(
         "div",
         {
           style: {
             padding: "18px 20px 14px",
             borderBottom: "1px solid var(--line)",
+            flexShrink: 0,
           },
         },
         React.createElement(
           "div",
           { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
-          React.createElement("div", { style: { fontWeight: "bold", marginBottom: 12 } }, title),
+          React.createElement("div", { style: { fontWeight: "bold" } }, title),
           closeBtn,
         ),
-        content,
       ),
+      // Fixed sub-header (browsing only): search input + group filter chips
+      fixedSubHeader,
+      // Scrollable region: exercise item list + "create custom" button (browsing) or form (creating)
+      scrollContent,
     ),
   );
 }
@@ -1398,7 +1444,7 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
 
   // Display floor-clamped opacity percentage
   const { floor } = GLASS_OPACITY[theme];
-  const clampedOpacity = Math.max(floor, Math.min(0.92, settings.opacity));
+  const clampedOpacity = Math.max(floor, Math.min(1, settings.opacity));
   const opacityPct = Math.round(clampedOpacity * 100) + "%";
 
   // Glass sub-panel (opacity only) — shown when glass is on

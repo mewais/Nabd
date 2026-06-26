@@ -330,7 +330,7 @@ describe("setType", () => {
     // Should have 2 groups: Chest (bench + fly) and Back (pullup)
     expect(day.slots).toHaveLength(2);
 
-    const chestSlot = day.slots.find((s) => s.group === "Chest");
+    const chestSlot = day.slots.find((s) => s.muscle === "chest");
     expect(chestSlot).toBeDefined();
     expect(chestSlot!.pool).toContain("bench");
     expect(chestSlot!.pool).toContain("fly");
@@ -339,7 +339,7 @@ describe("setType", () => {
     expect(chestSlot!.intensity).toBe("none");
     expect(chestSlot!.rest).toBe(120);
 
-    const backSlot = day.slots.find((s) => s.group === "Back");
+    const backSlot = day.slots.find((s) => s.muscle === "lats");
     expect(backSlot).toBeDefined();
     expect(backSlot!.pool).toContain("pullup");
     expect(backSlot!.repMode).toBe("range");
@@ -370,7 +370,7 @@ describe("setType", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bench"],
               repMode: "range",
               intensity: "none",
@@ -404,7 +404,7 @@ describe("setType", () => {
           slots: [
             {
               id: "existing-slot",
-              group: "Chest",
+              muscle: "chest",
               pool: [],
               repMode: "range",
               intensity: "none",
@@ -492,7 +492,7 @@ describe("deriveSlots", () => {
     const slots = deriveSlots(day, lookup);
 
     expect(slots).toHaveLength(1);
-    expect(slots[0].group).toBe("Chest");
+    expect(slots[0].muscle).toBe("chest");
     expect(slots[0].pool).toEqual(["bench", "fly"]);
     // prescription from first exercise
     expect(slots[0].repMode).toBe("range");
@@ -603,8 +603,8 @@ describe("deriveSlots", () => {
     };
     const slots = deriveSlots(day, makeLookup([benchEx, curlEx, flyEx]));
     expect(slots).toHaveLength(2);
-    expect(slots[0].group).toBe("Chest");
-    expect(slots[1].group).toBe("Biceps");
+    expect(slots[0].muscle).toBe("chest");
+    expect(slots[1].muscle).toBe("biceps");
     expect(slots[0].pool).toEqual(["bench", "fly"]);
   });
 });
@@ -892,7 +892,7 @@ describe("setRepMode", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: [],
               repMode: "range",
               intensity: "none",
@@ -1519,13 +1519,13 @@ describe("addSlot", () => {
       ],
     };
     const before = snapshot(p);
-    const result = addSlot(p, "day1", "Chest");
+    const result = addSlot(p, "day1", "chest");
 
     expect(p).toEqual(before);
     const slots = result.days[0].slots;
     expect(slots).toHaveLength(1);
     const slot = slots[0];
-    expect(slot.group).toBe("Chest");
+    expect(slot.muscle).toBe("chest");
     expect(slot.pool).toEqual([]);
     expect(slot.repMode).toBe("range");
     expect(slot.intensity).toBe("none");
@@ -1557,7 +1557,7 @@ describe("removeSlot", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: [],
               repMode: "range",
               intensity: "none",
@@ -1566,7 +1566,7 @@ describe("removeSlot", () => {
             },
             {
               id: "s2",
-              group: "Triceps",
+              muscle: "triceps",
               pool: [],
               repMode: "range",
               intensity: "none",
@@ -1604,7 +1604,7 @@ describe("addToPool", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bench"],
               repMode: "range",
               intensity: "none",
@@ -1636,7 +1636,7 @@ describe("addToPool", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bench"],
               repMode: "range",
               intensity: "none",
@@ -1670,7 +1670,7 @@ describe("removeFromPool", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: ["bench", "fly"],
               repMode: "range",
               intensity: "none",
@@ -1826,7 +1826,7 @@ describe("boardLayout (weekday)", () => {
     expect(monCol.card!.more).toBe(1); // 5 exercises − 4 shown = 1 more
   });
 
-  it("day column chips: cycled → first ≤4 group names", () => {
+  it("day column chips: cycled → first ≤4 muscle display names", () => {
     const p: Program = {
       name: "T",
       type: "cycled",
@@ -1840,7 +1840,7 @@ describe("boardLayout (weekday)", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: [],
               repMode: "range",
               intensity: "none",
@@ -1849,7 +1849,7 @@ describe("boardLayout (weekday)", () => {
             },
             {
               id: "s2",
-              group: "Back",
+              muscle: "lats",
               pool: [],
               repMode: "range",
               intensity: "none",
@@ -1858,7 +1858,7 @@ describe("boardLayout (weekday)", () => {
             },
             {
               id: "s3",
-              group: "Shoulders",
+              muscle: "side_delts",
               pool: [],
               repMode: "range",
               intensity: "none",
@@ -1867,7 +1867,7 @@ describe("boardLayout (weekday)", () => {
             },
             {
               id: "s4",
-              group: "Triceps",
+              muscle: "triceps",
               pool: [],
               repMode: "range",
               intensity: "none",
@@ -1876,7 +1876,7 @@ describe("boardLayout (weekday)", () => {
             },
             {
               id: "s5",
-              group: "Biceps",
+              muscle: "biceps",
               pool: [],
               repMode: "range",
               intensity: "none",
@@ -1891,8 +1891,10 @@ describe("boardLayout (weekday)", () => {
     const monCol = cols[0];
     expect(monCol.card).toBeDefined();
     expect(monCol.card!.chips.length).toBeLessThanOrEqual(4);
-    // chips contain group names
+    // chips contain muscle display names from MUSCLE_NAMES
     expect(monCol.card!.chips[0].name).toBe("Chest");
+    expect(monCol.card!.chips[1].name).toBe("Lats");
+    expect(monCol.card!.chips[2].name).toBe("Side Delts");
     expect(monCol.card!.more).toBe(1); // 5 slots − 4 shown = 1
   });
 });
@@ -2026,7 +2028,7 @@ describe("daySummary", () => {
       slots: [
         {
           id: "s1",
-          group: "Chest",
+          muscle: "chest",
           pool: [],
           repMode: "range",
           intensity: "none",
@@ -2035,7 +2037,7 @@ describe("daySummary", () => {
         },
         {
           id: "s2",
-          group: "Back",
+          muscle: "lats",
           pool: [],
           repMode: "range",
           intensity: "none",
@@ -2044,7 +2046,7 @@ describe("daySummary", () => {
         },
         {
           id: "s3",
-          group: "Shoulders",
+          muscle: "side_delts",
           pool: [],
           repMode: "range",
           intensity: "none",
@@ -2186,7 +2188,7 @@ describe("slot ref coverage", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: [],
               repMode: "range",
               intensity: "none",
@@ -2246,7 +2248,7 @@ describe("slot ref coverage", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: [],
               repMode: "range",
               intensity: "rpe",
@@ -2287,7 +2289,7 @@ describe("slot ref coverage", () => {
           slots: [
             {
               id: "s1",
-              group: "Chest",
+              muscle: "chest",
               pool: [],
               repMode: "range",
               intensity: "rpe",

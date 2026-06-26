@@ -35,7 +35,7 @@ const validPrescription = {
 
 const validCycledSlot = {
   id: "slot1",
-  group: "Chest",
+  muscle: "chest",
   pool: ["bench-press", "incline-press"],
   repMode: "fixed",
   intensity: "none",
@@ -122,8 +122,19 @@ describe("program.ts", () => {
       expect(result.success).toBe(true);
     });
 
-    it("invalid group is rejected", () => {
-      const result = CycledSlotSchema.safeParse({ ...validCycledSlot, group: "InvalidGroup" });
+    it("valid MuscleKey for muscle is accepted", () => {
+      const result = CycledSlotSchema.safeParse({ ...validCycledSlot, muscle: "side_delts" });
+      expect(result.success).toBe(true);
+    });
+
+    it("invalid MuscleKey for muscle is rejected", () => {
+      const result = CycledSlotSchema.safeParse({ ...validCycledSlot, muscle: "InvalidMuscle" });
+      expect(result.success).toBe(false);
+    });
+
+    it("old group shape (MuscleGroup string) is rejected", () => {
+      const { muscle: _muscle, ...withoutMuscle } = validCycledSlot;
+      const result = CycledSlotSchema.safeParse({ ...withoutMuscle, group: "Chest" });
       expect(result.success).toBe(false);
     });
   });

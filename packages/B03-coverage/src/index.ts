@@ -1,7 +1,7 @@
 // @nabd/coverage — pure coverage & volume engine.
 
 import type { Coverage, MuscleKey, Program, Exercise, LoggedSet } from "@nabd/domain";
-import { MUSCLES, GROUP_PRIMARY_MUSCLE, GROUP_MUSCLES } from "@nabd/domain";
+import { MUSCLES } from "@nabd/domain";
 
 /** Per-muscle planned working-set volume. */
 export type Volume = Partial<Record<MuscleKey, number>>;
@@ -13,8 +13,8 @@ export type ExerciseLookup = (exId: string) => Exercise | undefined;
 
 /**
  * Weekly volume per muscle across a program. Primary muscle = full working-set
- * count, secondary = half. Warmup sets excluded. Cycled slots attribute to the
- * group's primary muscle.
+ * count, secondary = half. Warmup sets excluded. Cycled slots attribute the
+ * working-set count to the slot's single target muscle (full amount).
  */
 export function computePlanVolume(program: Program, lookup: ExerciseLookup): Volume {
   const vol: Volume = {};
@@ -40,10 +40,7 @@ export function computePlanVolume(program: Program, lookup: ExerciseLookup): Vol
       // cycled
       for (const slot of day.slots) {
         const workingCount = slot.sets.filter((s) => s.type === "working").length;
-        const muscles = GROUP_MUSCLES[slot.group];
-        for (let i = 0; i < muscles.length; i++) {
-          add(muscles[i], i === 0 ? workingCount : workingCount * 0.5);
-        }
+        add(slot.muscle, workingCount);
       }
     }
   }
