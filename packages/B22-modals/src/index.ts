@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import type { ActiveSession, Slot, Settings, Theme } from "@nabd/domain";
 import { MUSCLE_NAMES, GLASS_OPACITY } from "@nabd/domain";
 import { trendPoints } from "@nabd/progression";
-import { Stepper, Segmented, Toggle, Button, Icon } from "@nabd/design-system";
+import { Stepper, Segmented, Toggle, Button, Icon, Dropdown } from "@nabd/design-system";
 
 // ---------------------------------------------------------------------------
 // ModalShell
@@ -1202,24 +1202,6 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
       boxSizing: "border-box" as const,
     };
 
-    // Inline SVG chevron caret in a neutral colour, encoded for data-URI
-    const caretSvg =
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E";
-
-    const selectStyle: React.CSSProperties = {
-      ...inputStyle,
-      paddingRight: 34,
-      appearance: "none" as const,
-      WebkitAppearance: "none" as const,
-      MozAppearance: "none" as const,
-      cursor: "pointer",
-      backgroundColor: "var(--surface2)",
-      backgroundImage: `url("${caretSvg}")`,
-      backgroundRepeat: "no-repeat",
-      backgroundPosition: "right 12px center",
-      backgroundSize: "14px",
-    };
-
     const labelStyle: React.CSSProperties = {
       fontSize: 10,
       color: "var(--text3)",
@@ -1264,43 +1246,23 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
         "div",
         null,
         React.createElement("div", { style: labelStyle }, "HOW TO TRACK IT"),
-        React.createElement(
-          "select",
-          {
-            value: draftTrack,
-            onChange: (e: React.ChangeEvent<HTMLSelectElement>) => onDraft("track", e.target.value),
-            style: selectStyle,
-          },
-          ...trackOptions.map((opt) =>
-            React.createElement("option", {
-              key: opt.k,
-              value: opt.k,
-              label: opt.n,
-              style: { background: "var(--surface2)", color: "var(--text)" },
-            }),
-          ),
-        ),
+        React.createElement(Dropdown, {
+          value: draftTrack,
+          options: trackOptions.map((opt) => ({ k: opt.k, label: opt.n })),
+          onChange: (k: string) => onDraft("track", k),
+          ariaLabel: "HOW TO TRACK IT",
+        }),
       ),
       React.createElement(
         "div",
         null,
         React.createElement("div", { style: labelStyle }, "EQUIPMENT"),
-        React.createElement(
-          "select",
-          {
-            value: draftEquip,
-            onChange: (e: React.ChangeEvent<HTMLSelectElement>) => onDraft("equip", e.target.value),
-            style: selectStyle,
-          },
-          ...eqOptions.map((opt) =>
-            React.createElement("option", {
-              key: opt.k,
-              value: opt.k,
-              label: opt.n,
-              style: { background: "var(--surface2)", color: "var(--text)" },
-            }),
-          ),
-        ),
+        React.createElement(Dropdown, {
+          value: draftEquip,
+          options: eqOptions.map((opt) => ({ k: opt.k, label: opt.n })),
+          onChange: (k: string) => onDraft("equip", k),
+          ariaLabel: "EQUIPMENT",
+        }),
       ),
       React.createElement(
         "div",

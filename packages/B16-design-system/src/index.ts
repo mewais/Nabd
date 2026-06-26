@@ -12,7 +12,11 @@ export function themeVars(_theme: Theme, _glass: boolean): CSSProperties {
 }
 
 /** Root background: solid `var(--bg)`, or the floor-clamped glass tint + frost. */
-export function rootBackgroundStyle(_theme: Theme, _glass: boolean, _opacity: number): CSSProperties {
+export function rootBackgroundStyle(
+  _theme: Theme,
+  _glass: boolean,
+  _opacity: number,
+): CSSProperties {
   if (_glass) {
     return {
       background: glassTint(_theme, _opacity),
@@ -24,7 +28,11 @@ export function rootBackgroundStyle(_theme: Theme, _glass: boolean, _opacity: nu
 }
 
 /** Fixed full-bleed wallpaper layer (only shown under glass). */
-export function wallpaperStyle(_theme: Theme, _glass: boolean, _wallpaper: Wallpaper): CSSProperties {
+export function wallpaperStyle(
+  _theme: Theme,
+  _glass: boolean,
+  _wallpaper: Wallpaper,
+): CSSProperties {
   if (_glass) {
     return {
       position: "fixed",
@@ -222,7 +230,11 @@ export function Stepper(_p: StepperProps): JSX.Element {
     React.createElement(
       "div",
       { key: "controls", style: { display: "flex", alignItems: "center", gap: 12 } },
-      React.createElement("button", { key: "dec", onClick: onDec, style: STEP_BTN, "aria-label": "decrease" }, "−"),
+      React.createElement(
+        "button",
+        { key: "dec", onClick: onDec, style: STEP_BTN, "aria-label": "decrease" },
+        "−",
+      ),
       React.createElement(
         "span",
         {
@@ -237,7 +249,11 @@ export function Stepper(_p: StepperProps): JSX.Element {
         },
         value,
       ),
-      React.createElement("button", { key: "inc", onClick: onInc, style: STEP_BTN, "aria-label": "increase" }, "+"),
+      React.createElement(
+        "button",
+        { key: "inc", onClick: onInc, style: STEP_BTN, "aria-label": "increase" },
+        "+",
+      ),
     ),
   );
 
@@ -471,22 +487,192 @@ const ICON_PATHS: Record<IconName, string> = {
   today:
     "M8 2v3M16 2v3M3 8h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 13h4M8 17h8",
   plan: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2H9zM9 12h6M9 16h4",
-  progress:
-    "M3 3v18h18M7 16l4-4 4 4 4-8",
+  progress: "M3 3v18h18M7 16l4-4 4 4 4-8",
   settings:
     "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
   bolt: "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
   check: "M20 6L9 17l-5-5",
   close: "M18 6L6 18M6 6l12 12",
   chevron: "M9 18l6-6-6-6",
-  trophy:
-    "M6 9H3l1 6h2m14-6h3l-1 6h-2M6 9V5h12v4M6 9a6 6 0 0 0 12 0M9 21h6M12 17v4",
+  trophy: "M6 9H3l1 6h2m14-6h3l-1 6h-2M6 9V5h12v4M6 9a6 6 0 0 0 12 0M9 21h6M12 17v4",
   heart:
     "M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z",
   home: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10",
   download: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3",
   upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
 };
+
+// ---------------------------------------------------------------------------
+// Dropdown
+// ---------------------------------------------------------------------------
+
+export interface DropdownOption {
+  k: string;
+  label: string;
+}
+export interface DropdownProps {
+  value: string;
+  options: DropdownOption[];
+  onChange: (k: string) => void;
+  ariaLabel?: string;
+}
+
+/**
+ * Styled custom dropdown that replaces the OS-native <select> popup.
+ * Trigger button looks like the form inputs (surface2 bg, 1px line border,
+ * radius 10, chevron caret on the right). The menu is absolutely-positioned
+ * below the trigger with a var(--modal-bg)-style background, 1px solid
+ * var(--line) border, shadow, rounded corners, and max-height + scroll.
+ * Clicking outside or pressing Escape closes the menu.
+ */
+export function Dropdown(_p: DropdownProps): JSX.Element {
+  const { value, options, onChange, ariaLabel } = _p;
+  const [open, setOpen] = React.useState(false);
+
+  const selectedLabel = options.find((o) => o.k === value)?.label ?? value;
+
+  // Close on Escape key
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const containerStyle: CSSProperties = {
+    position: "relative",
+    width: "100%",
+  };
+
+  const triggerStyle: CSSProperties = {
+    width: "100%",
+    background: "var(--surface2)",
+    border: "1px solid var(--line)",
+    borderRadius: 10,
+    padding: "12px 34px 12px 13px",
+    fontSize: 14,
+    fontFamily: "inherit",
+    color: "var(--text)",
+    cursor: "pointer",
+    textAlign: "left" as const,
+    boxSizing: "border-box" as const,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  };
+
+  const caretStyle: CSSProperties = {
+    flexShrink: 0,
+    color: "var(--text3)",
+    pointerEvents: "none" as const,
+  };
+
+  const backdropStyle: CSSProperties = {
+    position: "fixed",
+    inset: 0,
+    zIndex: 200,
+  };
+
+  const menuStyle: CSSProperties = {
+    position: "absolute",
+    top: "calc(100% + 4px)",
+    left: 0,
+    right: 0,
+    background: "var(--modal-bg)",
+    border: "1px solid var(--line)",
+    borderRadius: 10,
+    boxShadow: "0 8px 32px rgba(0,0,0,.22)",
+    maxHeight: 220,
+    overflowY: "auto" as const,
+    zIndex: 201,
+    // Styled scrollbar tokens
+    scrollbarWidth: "thin" as const,
+  };
+
+  const optionStyle = (isActive: boolean): CSSProperties => ({
+    display: "block",
+    width: "100%",
+    padding: "10px 13px",
+    background: isActive ? "color-mix(in oklch, var(--accent) 15%, transparent)" : "transparent",
+    color: isActive ? "var(--accent)" : "var(--text)",
+    border: "none",
+    textAlign: "left" as const,
+    fontFamily: "inherit",
+    fontSize: 14,
+    fontWeight: isActive ? 600 : 400,
+    cursor: "pointer",
+    boxSizing: "border-box" as const,
+  });
+
+  // Caret SVG (chevron-down)
+  const caret = React.createElement(
+    "svg",
+    {
+      key: "caret",
+      style: caretStyle,
+      xmlns: "http://www.w3.org/2000/svg",
+      width: 14,
+      height: 14,
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "2.2",
+      strokeLinecap: "round" as const,
+      strokeLinejoin: "round" as const,
+    },
+    React.createElement("path", { d: "M6 9l6 6 6-6" }),
+  );
+
+  const trigger = React.createElement(
+    "button",
+    {
+      type: "button",
+      "aria-haspopup": "listbox",
+      "aria-expanded": open,
+      "aria-label": ariaLabel,
+      onClick: () => setOpen((prev) => !prev),
+      style: triggerStyle,
+    },
+    React.createElement("span", { key: "label" }, selectedLabel),
+    caret,
+  );
+
+  const optionEls = options.map((opt) =>
+    React.createElement(
+      "button",
+      {
+        key: opt.k,
+        role: "option",
+        "aria-selected": opt.k === value,
+        "data-active": opt.k === value ? "true" : undefined,
+        onClick: () => {
+          onChange(opt.k);
+          setOpen(false);
+        },
+        style: optionStyle(opt.k === value),
+      },
+      opt.label,
+    ),
+  );
+
+  const menu = open
+    ? React.createElement(
+        React.Fragment,
+        null,
+        // Transparent backdrop to capture outside clicks
+        React.createElement("div", {
+          "data-dropdown-backdrop": true,
+          onClick: () => setOpen(false),
+          style: backdropStyle,
+        }),
+        React.createElement("div", { role: "listbox", style: menuStyle }, ...optionEls),
+      )
+    : null;
+
+  return React.createElement("div", { style: containerStyle }, trigger, menu);
+}
 
 /** Feather-style stroke icons + the Nabd heart logo. */
 export function Icon(_p: IconProps): JSX.Element {

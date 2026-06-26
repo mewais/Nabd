@@ -219,7 +219,7 @@ const DEFAULT_LIB_STATE: LibState = {
   search: "",
   group: "",
   creating: false,
-  draft: { name: "", primary: [], equip: "", secondary: [], track: "" },
+  draft: { name: "", primary: [], equip: "bodyweight", secondary: [], track: "weight_reps" },
 };
 
 /** The initial (pre-hydrate) state. */

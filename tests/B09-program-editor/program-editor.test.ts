@@ -2093,7 +2093,7 @@ describe("seedProgram", () => {
     expect(legs!.weekday).toBe(5);
   });
 
-  it("Push day has a superset (ssA: db-fly + lat-raise)", () => {
+  it("Push day has a superset (ssA: fly__dumbbell + lateral_raise__dumbbell)", () => {
     const prog = seedProgram();
     const push = prog.days.find((d) => d.name === "Push")!;
     const supersetExercises = push.exercises.filter((e) => e.supersetId !== undefined);
@@ -2103,7 +2103,7 @@ describe("seedProgram", () => {
     expect(sids.size).toBeGreaterThanOrEqual(1);
   });
 
-  it("Pull day has a superset (ssB: hammer-curl + bb-curl)", () => {
+  it("Pull day has a superset (ssB: hammer_curl__dumbbell + curl__barbell)", () => {
     const prog = seedProgram();
     const pull = prog.days.find((d) => d.name === "Pull")!;
     const supersetExercises = pull.exercises.filter((e) => e.supersetId !== undefined);
@@ -2116,27 +2116,27 @@ describe("seedProgram", () => {
     expect(prog.schedule).toBe("weekday");
   });
 
-  it("Push day has warmup sets (bb-bench has a warmup)", () => {
+  it("Push day has warmup sets (bench_press__barbell has a warmup)", () => {
     const prog = seedProgram();
     const push = prog.days.find((d) => d.name === "Push")!;
-    const benchPrescription = push.exercises.find((e) => e.exId === "bb-bench");
+    const benchPrescription = push.exercises.find((e) => e.exId === "bench_press__barbell");
     expect(benchPrescription).toBeDefined();
     const warmups = benchPrescription!.sets.filter((s) => s.type === "warmup");
     expect(warmups.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("Legs day has a time-based exercise (plank)", () => {
+  it("Legs day has a time-based exercise (plank__bodyweight)", () => {
     const prog = seedProgram();
     const legs = prog.days.find((d) => d.name === "Legs")!;
-    const plank = legs.exercises.find((e) => e.exId === "plank");
+    const plank = legs.exercises.find((e) => e.exId === "plank__bodyweight");
     expect(plank).toBeDefined();
     expect(plank!.repMode).toBe("time");
   });
 
-  it("Push day exercises have drop set (db-oh-ext last set)", () => {
+  it("Push day exercises have drop set (overhead_triceps_extension__dumbbell last set)", () => {
     const prog = seedProgram();
     const push = prog.days.find((d) => d.name === "Push")!;
-    const ohExt = push.exercises.find((e) => e.exId === "db-oh-ext");
+    const ohExt = push.exercises.find((e) => e.exId === "overhead_triceps_extension__dumbbell");
     expect(ohExt).toBeDefined();
     const dropSets = ohExt!.sets.filter((s) => s.type === "drop");
     expect(dropSets.length).toBeGreaterThanOrEqual(1);

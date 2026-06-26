@@ -53,7 +53,7 @@ import { seedProgram } from "@nabd/program-editor";
 /** A small exercise library covering the exercises used in seedProgram */
 const EXERCISES: Exercise[] = [
   {
-    id: "bb-bench",
+    id: "bench_press__barbell",
     name: "Barbell Bench Press",
     group: "Chest",
     primary: ["chest"],
@@ -63,7 +63,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "incline-db-press",
+    id: "incline_bench_press__dumbbell",
     name: "Incline Dumbbell Press",
     group: "Chest",
     primary: ["chest"],
@@ -73,7 +73,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "db-fly",
+    id: "fly__dumbbell",
     name: "Dumbbell Fly",
     group: "Chest",
     primary: ["chest"],
@@ -83,7 +83,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "lat-raise",
+    id: "lateral_raise__dumbbell",
     name: "Lateral Raise",
     group: "Shoulders",
     primary: ["side_delts"],
@@ -93,7 +93,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "db-oh-ext",
+    id: "overhead_triceps_extension__dumbbell",
     name: "DB Overhead Extension",
     group: "Triceps",
     primary: ["triceps"],
@@ -103,7 +103,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "pullup",
+    id: "pull_up__bodyweight",
     name: "Pull-up",
     group: "Back",
     primary: ["lats"],
@@ -113,7 +113,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "bb-row",
+    id: "row__barbell",
     name: "Barbell Row",
     group: "Back",
     primary: ["lats"],
@@ -123,7 +123,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "db-row",
+    id: "row__dumbbell",
     name: "One-Arm Dumbbell Row",
     group: "Back",
     primary: ["lats"],
@@ -133,7 +133,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "hammer-curl",
+    id: "hammer_curl__dumbbell",
     name: "Hammer Curl",
     group: "Biceps",
     primary: ["biceps"],
@@ -143,7 +143,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "bb-curl",
+    id: "curl__barbell",
     name: "Barbell Curl",
     group: "Biceps",
     primary: ["biceps"],
@@ -153,7 +153,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "back-squat",
+    id: "back_squat__barbell",
     name: "Back Squat",
     group: "Quads",
     primary: ["quads"],
@@ -163,7 +163,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "rdl",
+    id: "romanian_deadlift__barbell",
     name: "Romanian Deadlift",
     group: "Hamstrings",
     primary: ["hamstrings"],
@@ -173,7 +173,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "walking-lunge",
+    id: "walking_lunge__dumbbell",
     name: "Walking Lunge",
     group: "Quads",
     primary: ["quads"],
@@ -183,7 +183,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "db-calf",
+    id: "calf_raise__dumbbell",
     name: "Dumbbell Calf Raise",
     group: "Calves",
     primary: ["calves"],
@@ -193,7 +193,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "plank",
+    id: "plank__bodyweight",
     name: "Plank",
     group: "Abs",
     primary: ["abs"],
@@ -265,7 +265,7 @@ describe("buildSetBlock", () => {
   // Prescription with one warmup + working sets (range) + rpe intensity
   const rangeRpePrescription: ExercisePrescription = {
     id: "x1",
-    exId: "bb-bench",
+    exId: "bench_press__barbell",
     repMode: "range",
     intensity: "rpe",
     rest: 150, // 2:30
@@ -344,7 +344,7 @@ describe("buildSetBlock", () => {
   // Fixed repMode
   const fixedPrescription: ExercisePrescription = {
     id: "x2",
-    exId: "incline-db-press",
+    exId: "incline_bench_press__dumbbell",
     repMode: "fixed",
     intensity: "none",
     rest: 120, // 2:00
@@ -389,7 +389,7 @@ describe("buildSetBlock", () => {
   // Time repMode
   const timePrescription: ExercisePrescription = {
     id: "x5",
-    exId: "plank",
+    exId: "plank__bodyweight",
     repMode: "time",
     intensity: "none",
     rest: 60,
@@ -423,7 +423,7 @@ describe("buildSetBlock", () => {
   // Pct intensity
   const pctPrescription: ExercisePrescription = {
     id: "x6",
-    exId: "back-squat",
+    exId: "back_squat__barbell",
     repMode: "range",
     intensity: "pct",
     rest: 180,
@@ -452,7 +452,7 @@ describe("buildSetBlock", () => {
   // Drop set
   const dropPrescription: ExercisePrescription = {
     id: "x7",
-    exId: "db-oh-ext",
+    exId: "overhead_triceps_extension__dumbbell",
     repMode: "range",
     intensity: "none",
     rest: 90,
@@ -485,7 +485,7 @@ describe("buildSetBlock", () => {
   it("rest 75s formats as 1:15", () => {
     const p: ExercisePrescription = {
       id: "x8",
-      exId: "lat-raise",
+      exId: "lateral_raise__dumbbell",
       repMode: "range",
       intensity: "none",
       rest: 75,
@@ -536,7 +536,7 @@ describe("buildSetBlock", () => {
     const slot: CycledSlot = {
       id: "s1",
       muscle: "chest",
-      pool: ["bb-bench"],
+      pool: ["bench_press__barbell"],
       repMode: "range",
       intensity: "rpe",
       rest: 120,
@@ -611,7 +611,7 @@ describe("buildEditor", () => {
             {
               id: "s1",
               muscle: "chest",
-              pool: ["bb-bench"],
+              pool: ["bench_press__barbell"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -686,7 +686,7 @@ describe("buildEditor", () => {
             {
               id: "s1",
               muscle: "chest",
-              pool: ["bb-bench"],
+              pool: ["bench_press__barbell"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -695,7 +695,7 @@ describe("buildEditor", () => {
             {
               id: "s2",
               muscle: "lats",
-              pool: ["pullup"],
+              pool: ["pull_up__bodyweight"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -704,7 +704,7 @@ describe("buildEditor", () => {
             {
               id: "s3",
               muscle: "biceps",
-              pool: ["bb-curl"],
+              pool: ["curl__barbell"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -799,7 +799,7 @@ describe("buildEditor", () => {
             {
               id: "s1",
               muscle: "chest",
-              pool: ["bb-bench", "incline-db-press"],
+              pool: ["bench_press__barbell", "incline_bench_press__dumbbell"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -818,9 +818,9 @@ describe("buildEditor", () => {
       expect(slot.muscleName).toBe("Chest");
       expect(slot.poolStr).toBe("2 exercises");
       expect(slot.poolNames).toHaveLength(2);
-      expect(slot.poolNames[0].id).toBe("bb-bench");
+      expect(slot.poolNames[0].id).toBe("bench_press__barbell");
       expect(slot.poolNames[0].name).toBe("Barbell Bench Press");
-      expect(slot.poolNames[1].id).toBe("incline-db-press");
+      expect(slot.poolNames[1].id).toBe("incline_bench_press__dumbbell");
       expect(slot.poolNames[1].name).toBe("Incline Dumbbell Press");
     }
   });
@@ -840,7 +840,7 @@ describe("buildEditor", () => {
             {
               id: "s1",
               muscle: "chest",
-              pool: ["bb-bench"],
+              pool: ["bench_press__barbell"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -881,7 +881,7 @@ describe("buildEditor", () => {
           exercises: [
             {
               id: "e1",
-              exId: "bb-bench",
+              exId: "bench_press__barbell",
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -997,15 +997,15 @@ describe("buildBoard", () => {
     expect(mon.chips![0].name).toBe("Barbell Bench Press");
     expect(mon.chips![1].name).toBe("Incline Dumbbell Press");
     // must not be raw ids
-    expect(mon.chips![0].name).not.toBe("bb-bench");
-    expect(mon.chips![1].name).not.toBe("incline-db-press");
+    expect(mon.chips![0].name).not.toBe("bench_press__barbell");
+    expect(mon.chips![1].name).not.toBe("incline_bench_press__dumbbell");
   });
 
   it("fixed-mode chips without library fall back to raw exId", () => {
     // When no library is provided, chip.name stays as the raw exId from boardLayout
     const cols = buildBoard(program, null);
     const mon = cols[0];
-    expect(mon.chips![0].name).toBe("bb-bench");
+    expect(mon.chips![0].name).toBe("bench_press__barbell");
   });
 
   it("superset chips have superset:true flag", () => {
@@ -1031,7 +1031,7 @@ describe("buildBoard", () => {
             {
               id: "s1",
               muscle: "chest",
-              pool: ["bb-bench"],
+              pool: ["bench_press__barbell"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -1040,7 +1040,7 @@ describe("buildBoard", () => {
             {
               id: "s2",
               muscle: "lats",
-              pool: ["pullup"],
+              pool: ["pull_up__bodyweight"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -1074,7 +1074,7 @@ describe("SetTable", () => {
   function makeBlock(): SetBlockVM {
     return buildSetBlock({
       id: "x1",
-      exId: "bb-bench",
+      exId: "bench_press__barbell",
       repMode: "range",
       intensity: "rpe",
       rest: 150,
@@ -1089,7 +1089,7 @@ describe("SetTable", () => {
   function makeTimeBlock(): SetBlockVM {
     return buildSetBlock({
       id: "x5",
-      exId: "plank",
+      exId: "plank__bodyweight",
       repMode: "time",
       intensity: "none",
       rest: 60,
@@ -1103,7 +1103,7 @@ describe("SetTable", () => {
   function makeNoIntBlock(): SetBlockVM {
     return buildSetBlock({
       id: "x2",
-      exId: "incline-db-press",
+      exId: "incline_bench_press__dumbbell",
       repMode: "fixed",
       intensity: "none",
       rest: 120,
@@ -1511,7 +1511,7 @@ describe("DayEditor", () => {
             {
               id: "s1",
               muscle: "chest",
-              pool: ["bb-bench"],
+              pool: ["bench_press__barbell"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -1751,7 +1751,7 @@ describe("DayEditor", () => {
       .filter((b) => b.getAttribute("aria-label") === "remove from pool");
     if (removePoolButtons.length > 0) {
       fireEvent.click(removePoolButtons[0]);
-      expect(cb.onRemoveFromPool).toHaveBeenCalledWith("d1", "s1", "bb-bench");
+      expect(cb.onRemoveFromPool).toHaveBeenCalledWith("d1", "s1", "bench_press__barbell");
     }
   });
 
@@ -1959,7 +1959,7 @@ describe("direct component invocations for 100% coverage", () => {
     id: "s1",
     muscle: "chest",
     muscleName: "Chest",
-    poolNames: [{ id: "bb-bench", name: "Barbell Bench Press" }],
+    poolNames: [{ id: "bench_press__barbell", name: "Barbell Bench Press" }],
     poolStr: "1 exercises",
     block: preBuiltSetBlock,
   };
@@ -1993,7 +1993,7 @@ describe("direct component invocations for 100% coverage", () => {
       weekday: 1,
       dayId: "push",
       name: "Push",
-      chips: [{ name: "bb-bench", superset: false }],
+      chips: [{ name: "bench_press__barbell", superset: false }],
       more: 0,
       editing: true,
     },
@@ -2092,7 +2092,7 @@ describe("buildSetBlock — edge cases", () => {
   it("handles rest=0 (0:00)", () => {
     const p: ExercisePrescription = {
       id: "e1",
-      exId: "bb-bench",
+      exId: "bench_press__barbell",
       repMode: "fixed",
       intensity: "none",
       rest: 0,
@@ -2105,7 +2105,7 @@ describe("buildSetBlock — edge cases", () => {
   it("handles rest=60 (1:00)", () => {
     const p: ExercisePrescription = {
       id: "e1",
-      exId: "bb-bench",
+      exId: "bench_press__barbell",
       repMode: "fixed",
       intensity: "none",
       rest: 60,
@@ -2118,7 +2118,7 @@ describe("buildSetBlock — edge cases", () => {
   it("handles rest=9 seconds (0:09)", () => {
     const p: ExercisePrescription = {
       id: "e1",
-      exId: "bb-bench",
+      exId: "bench_press__barbell",
       repMode: "fixed",
       intensity: "none",
       rest: 9,
@@ -2131,7 +2131,7 @@ describe("buildSetBlock — edge cases", () => {
   it("multiple working sets numbered sequentially from 1", () => {
     const p: ExercisePrescription = {
       id: "e1",
-      exId: "bb-bench",
+      exId: "bench_press__barbell",
       repMode: "fixed",
       intensity: "none",
       rest: 120,
@@ -2152,7 +2152,7 @@ describe("buildSetBlock — edge cases", () => {
     // Edge: a=8, b=8
     const p: ExercisePrescription = {
       id: "e1",
-      exId: "bb-bench",
+      exId: "bench_press__barbell",
       repMode: "range",
       intensity: "none",
       rest: 120,
@@ -2165,7 +2165,7 @@ describe("buildSetBlock — edge cases", () => {
   it("pct intensity showIntCol is true and intHeader is %1RM", () => {
     const p: ExercisePrescription = {
       id: "e1",
-      exId: "back-squat",
+      exId: "back_squat__barbell",
       repMode: "range",
       intensity: "pct",
       rest: 180,
@@ -2179,7 +2179,7 @@ describe("buildSetBlock — edge cases", () => {
   it("time mode fixed values render", () => {
     const p: ExercisePrescription = {
       id: "e1",
-      exId: "plank",
+      exId: "plank__bodyweight",
       repMode: "time",
       intensity: "none",
       rest: 60,
@@ -2198,7 +2198,7 @@ describe("buildSetBlock — edge cases", () => {
     const slot: CycledSlot = {
       id: "s1",
       muscle: "chest",
-      pool: ["bb-bench"],
+      pool: ["bench_press__barbell"],
       repMode: "fixed",
       intensity: "none",
       rest: 120,
@@ -2253,7 +2253,7 @@ describe("buildEditor — additional edge cases", () => {
             {
               id: "s1",
               muscle: "chest",
-              pool: ["bb-bench"],
+              pool: ["bench_press__barbell"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -2284,7 +2284,7 @@ describe("buildEditor — additional edge cases", () => {
             {
               id: "s1",
               muscle: "lats",
-              pool: ["pullup"],
+              pool: ["pull_up__bodyweight"],
               repMode: "range",
               intensity: "none",
               rest: 120,

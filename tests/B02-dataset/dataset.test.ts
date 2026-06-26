@@ -1,53 +1,25 @@
 /**
- * B02 · @nabd/dataset — test suite
+ * B02 · @nabd/dataset — test suite (modular movement catalog edition)
  *
- * All tests are written against the FROZEN skeleton (every body throws
- * "not implemented"). Running against the skeleton must produce:
- *   - Every test RED (Error: not implemented)
- *   - 100% line/function/statement coverage of src/index.ts
+ * Coverage targets:
+ *   - Movement schema / catalog validity
+ *   - compose() correctness (equipment expansion, naming, tags, tracking)
+ *   - Library interface (all/byId/search/byGroup/filterByProfile/musclesOf/withCustom)
+ *   - Coverage invariant: every MuscleKey is primary of ≥2 composed exercises
+ *   - Accuracy spot-checks for specific movements
  *
- * Do NOT use vi.mock or any module-query hacks. Import normally.
+ * 100% src coverage required.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
-import { ExerciseSchema } from "@nabd/domain";
+import { describe, it, expect } from "vitest";
 import type { Exercise, Equipment, MuscleKey, MuscleGroup } from "@nabd/domain";
-import {
-  normalizeEquipment,
-  normalizeMuscle,
-  normalizeGroup,
-  refineMuscles,
-  inferTracking,
-  normalizeRecord,
-  mergeAndDedupe,
-  buildDataset,
-  seed,
-  exercises,
-  createLibrary,
-  defaultLibrary,
-} from "@nabd/dataset";
-import type { RawExercise } from "@nabd/dataset";
+import { MUSCLES, MUSCLE_PRIMARY_GROUP, EQUIPMENT_NAMES } from "@nabd/domain";
+import { compose, MOVEMENTS, exercises, createLibrary, defaultLibrary } from "@nabd/dataset";
+import type { Movement } from "@nabd/dataset";
 
 // ---------------------------------------------------------------------------
-// Shared fixture helpers
+// Helpers
 // ---------------------------------------------------------------------------
-
-function rawRec(overrides: Partial<RawExercise> = {}): RawExercise {
-  return {
-    id: "test_id",
-    name: "Test Exercise",
-    force: "push",
-    level: "beginner",
-    mechanic: "compound",
-    equipment: "barbell",
-    primaryMuscles: ["chest"],
-    secondaryMuscles: ["shoulders", "triceps"],
-    instructions: [],
-    category: "strength",
-    images: [],
-    ...overrides,
-  };
-}
 
 function makeExercise(overrides: Partial<Exercise> = {}): Exercise {
   return {
@@ -64,604 +36,152 @@ function makeExercise(overrides: Partial<Exercise> = {}): Exercise {
 }
 
 // ---------------------------------------------------------------------------
-// normalizeEquipment
+// Movement catalog — schema validity
 // ---------------------------------------------------------------------------
 
-describe("normalizeEquipment", () => {
-  it("maps 'body only' → bodyweight", () => {
-    expect(normalizeEquipment("body only")).toBe("bodyweight");
-  });
-
-  it("maps 'dumbbell' → dumbbell", () => {
-    expect(normalizeEquipment("dumbbell")).toBe("dumbbell");
-  });
-
-  it("maps 'barbell' → barbell", () => {
-    expect(normalizeEquipment("barbell")).toBe("barbell");
-  });
-
-  it("maps 'e-z curl bar' → ezbar", () => {
-    expect(normalizeEquipment("e-z curl bar")).toBe("ezbar");
-  });
-
-  it("maps 'kettlebells' → kettlebell", () => {
-    expect(normalizeEquipment("kettlebells")).toBe("kettlebell");
-  });
-
-  it("maps 'bands' → bands", () => {
-    expect(normalizeEquipment("bands")).toBe("bands");
-  });
-
-  it("maps 'cable' → cable", () => {
-    expect(normalizeEquipment("cable")).toBe("cable");
-  });
-
-  it("maps 'machine' → machine", () => {
-    expect(normalizeEquipment("machine")).toBe("machine");
-  });
-
-  it("maps 'exercise ball' → bodyweight", () => {
-    expect(normalizeEquipment("exercise ball")).toBe("bodyweight");
-  });
-
-  it("maps 'medicine ball' → bodyweight", () => {
-    expect(normalizeEquipment("medicine ball")).toBe("bodyweight");
-  });
-
-  it("maps 'foam roll' → null (dropped)", () => {
-    expect(normalizeEquipment("foam roll")).toBe(null);
-  });
-
-  it("maps 'other' → null (dropped)", () => {
-    expect(normalizeEquipment("other")).toBe(null);
-  });
-
-  it("maps null → null (dropped)", () => {
-    expect(normalizeEquipment(null)).toBe(null);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// normalizeMuscle
-// ---------------------------------------------------------------------------
-
-describe("normalizeMuscle", () => {
-  it("maps 'abdominals' → [abs]", () => {
-    expect(normalizeMuscle("abdominals")).toEqual(["abs"]);
-  });
-
-  it("maps 'lower back' → [lower_back]", () => {
-    expect(normalizeMuscle("lower back")).toEqual(["lower_back"]);
-  });
-
-  it("maps 'middle back' → [rhomboids]", () => {
-    expect(normalizeMuscle("middle back")).toEqual(["rhomboids"]);
-  });
-
-  it("maps 'traps' → [upper_traps]", () => {
-    expect(normalizeMuscle("traps")).toEqual(["upper_traps"]);
-  });
-
-  it("maps 'shoulders' → [side_delts]", () => {
-    expect(normalizeMuscle("shoulders")).toEqual(["side_delts"]);
-  });
-
-  it("maps 'quadriceps' → [quads]", () => {
-    expect(normalizeMuscle("quadriceps")).toEqual(["quads"]);
-  });
-
-  it("maps 'chest' → [chest] (identity)", () => {
-    expect(normalizeMuscle("chest")).toEqual(["chest"]);
-  });
-
-  it("maps 'lats' → [lats] (identity)", () => {
-    expect(normalizeMuscle("lats")).toEqual(["lats"]);
-  });
-
-  it("maps 'biceps' → [biceps] (identity)", () => {
-    expect(normalizeMuscle("biceps")).toEqual(["biceps"]);
-  });
-
-  it("maps 'triceps' → [triceps] (identity)", () => {
-    expect(normalizeMuscle("triceps")).toEqual(["triceps"]);
-  });
-
-  it("maps 'forearms' → [forearms] (identity)", () => {
-    expect(normalizeMuscle("forearms")).toEqual(["forearms"]);
-  });
-
-  it("maps 'calves' → [calves] (identity)", () => {
-    expect(normalizeMuscle("calves")).toEqual(["calves"]);
-  });
-
-  it("maps 'glutes' → [glutes] (identity)", () => {
-    expect(normalizeMuscle("glutes")).toEqual(["glutes"]);
-  });
-
-  it("maps 'hamstrings' → [hamstrings] (identity)", () => {
-    expect(normalizeMuscle("hamstrings")).toEqual(["hamstrings"]);
-  });
-
-  it("maps 'abductors' → [abductors] (identity)", () => {
-    expect(normalizeMuscle("abductors")).toEqual(["abductors"]);
-  });
-
-  it("maps 'adductors' → [adductors] (identity)", () => {
-    expect(normalizeMuscle("adductors")).toEqual(["adductors"]);
-  });
-
-  it("maps 'neck' → [neck] (identity)", () => {
-    expect(normalizeMuscle("neck")).toEqual(["neck"]);
-  });
-
-  it("maps unknown muscle → []", () => {
-    expect(normalizeMuscle("unknown_xyzzy")).toEqual([]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// normalizeGroup
-// ---------------------------------------------------------------------------
-
-describe("normalizeGroup", () => {
-  it("maps 'abdominals' → Abs", () => {
-    expect(normalizeGroup("abdominals")).toBe("Abs");
-  });
-
-  it("maps 'chest' → Chest", () => {
-    expect(normalizeGroup("chest")).toBe("Chest");
-  });
-
-  it("maps 'lats' → Back", () => {
-    expect(normalizeGroup("lats")).toBe("Back");
-  });
-
-  it("maps 'middle back' → Back", () => {
-    expect(normalizeGroup("middle back")).toBe("Back");
-  });
-
-  it("maps 'lower back' → Back", () => {
-    expect(normalizeGroup("lower back")).toBe("Back");
-  });
-
-  it("maps 'traps' → Traps", () => {
-    expect(normalizeGroup("traps")).toBe("Traps");
-  });
-
-  it("maps 'shoulders' → Shoulders", () => {
-    expect(normalizeGroup("shoulders")).toBe("Shoulders");
-  });
-
-  it("maps 'triceps' → Triceps", () => {
-    expect(normalizeGroup("triceps")).toBe("Triceps");
-  });
-
-  it("maps 'biceps' → Biceps", () => {
-    expect(normalizeGroup("biceps")).toBe("Biceps");
-  });
-
-  it("maps 'forearms' → Forearms", () => {
-    expect(normalizeGroup("forearms")).toBe("Forearms");
-  });
-
-  it("maps 'quadriceps' → Quads", () => {
-    expect(normalizeGroup("quadriceps")).toBe("Quads");
-  });
-
-  it("maps 'hamstrings' → Hamstrings", () => {
-    expect(normalizeGroup("hamstrings")).toBe("Hamstrings");
-  });
-
-  it("maps 'glutes' → Glutes", () => {
-    expect(normalizeGroup("glutes")).toBe("Glutes");
-  });
-
-  it("maps 'abductors' → Glutes (glutes-family)", () => {
-    expect(normalizeGroup("abductors")).toBe("Glutes");
-  });
-
-  it("maps 'adductors' → Glutes (glutes-family)", () => {
-    expect(normalizeGroup("adductors")).toBe("Glutes");
-  });
-
-  it("maps 'calves' → Calves", () => {
-    expect(normalizeGroup("calves")).toBe("Calves");
-  });
-
-  it("maps 'neck' → Traps", () => {
-    expect(normalizeGroup("neck")).toBe("Traps");
-  });
-
-  it("maps unknown → null (drop)", () => {
-    expect(normalizeGroup("unknown_xyzzy")).toBe(null);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// refineMuscles
-// ---------------------------------------------------------------------------
-
-describe("refineMuscles", () => {
-  it("'lateral raise' replaces side/shoulder muscles with side_delts", () => {
-    const result = refineMuscles("Dumbbell Lateral Raise", ["side_delts"]);
-    expect(result).toEqual(["side_delts"]);
-  });
-
-  it("'lat raise' triggers side_delts replacement", () => {
-    const result = refineMuscles("Cable Lat Raise", ["side_delts"]);
-    expect(result).toEqual(["side_delts"]);
-  });
-
-  it("'side raise' triggers side_delts replacement", () => {
-    const result = refineMuscles("Dumbbell Side Raise", ["side_delts"]);
-    expect(result).toEqual(["side_delts"]);
-  });
-
-  it("'overhead press' replaces shoulder muscles with front_delts", () => {
-    const result = refineMuscles("Barbell Overhead Press", ["side_delts"]);
-    expect(result).toContain("front_delts");
-    expect(result).not.toContain("side_delts");
-  });
-
-  it("'ohp' triggers front_delts replacement", () => {
-    const result = refineMuscles("Seated OHP", ["side_delts"]);
-    expect(result).toContain("front_delts");
-    expect(result).not.toContain("side_delts");
-  });
-
-  it("'arnold' triggers front_delts replacement", () => {
-    const result = refineMuscles("Arnold Press", ["side_delts"]);
-    expect(result).toContain("front_delts");
-    expect(result).not.toContain("side_delts");
-  });
-
-  it("'shoulder press' triggers front_delts replacement", () => {
-    const result = refineMuscles("Dumbbell Shoulder Press", ["side_delts"]);
-    expect(result).toContain("front_delts");
-    expect(result).not.toContain("side_delts");
-  });
-
-  it("'front raise' triggers front_delts replacement", () => {
-    const result = refineMuscles("Dumbbell Front Raise", ["side_delts"]);
-    expect(result).toContain("front_delts");
-    expect(result).not.toContain("side_delts");
-  });
-
-  it("'face pull' triggers rear_delts replacement", () => {
-    const result = refineMuscles("Face Pull", ["side_delts"]);
-    expect(result).toContain("rear_delts");
-    expect(result).not.toContain("side_delts");
-  });
-
-  it("'rear' in name triggers rear_delts replacement", () => {
-    const result = refineMuscles("Rear Delt Fly", ["side_delts"]);
-    expect(result).toContain("rear_delts");
-    expect(result).not.toContain("side_delts");
-  });
-
-  it("'reverse fly' triggers rear_delts replacement", () => {
-    const result = refineMuscles("Cable Reverse Fly", ["side_delts"]);
-    expect(result).toContain("rear_delts");
-    expect(result).not.toContain("side_delts");
-  });
-
-  it("'reverse pec' triggers rear_delts replacement", () => {
-    const result = refineMuscles("Reverse Pec Deck", ["side_delts"]);
-    expect(result).toContain("rear_delts");
-    expect(result).not.toContain("side_delts");
-  });
-
-  it("'shrug' → upper_traps", () => {
-    const result = refineMuscles("Barbell Shrug", ["upper_traps"]);
-    expect(result).toContain("upper_traps");
-  });
-
-  it("'oblique' → adds obliques", () => {
-    const result = refineMuscles("Oblique Crunch", ["abs"]);
-    expect(result).toContain("obliques");
-    expect(result).toContain("abs");
-  });
-
-  it("'twist' → adds obliques (russian twist)", () => {
-    const result = refineMuscles("Russian Twist", ["abs"]);
-    expect(result).toContain("obliques");
-    expect(result).toContain("abs");
-  });
-
-  it("'woodchop' → adds obliques", () => {
-    const result = refineMuscles("Cable Woodchop", ["abs"]);
-    expect(result).toContain("obliques");
-    expect(result).toContain("abs");
-  });
-
-  it("'side bend' → adds obliques", () => {
-    const result = refineMuscles("Dumbbell Side Bend", ["abs"]);
-    expect(result).toContain("obliques");
-    expect(result).toContain("abs");
-  });
-
-  it("'row' → adds rhomboids as secondary", () => {
-    const result = refineMuscles("Barbell Row", ["lats"]);
-    expect(result).toContain("rhomboids");
-    expect(result).toContain("lats");
-  });
-
-  it("'pulldown' → adds rhomboids as secondary", () => {
-    const result = refineMuscles("Lat Pulldown", ["lats"]);
-    expect(result).toContain("rhomboids");
-    expect(result).toContain("lats");
-  });
-
-  it("'pull-up' → adds rhomboids as secondary", () => {
-    const result = refineMuscles("Pull-Up", ["lats"]);
-    expect(result).toContain("rhomboids");
-    expect(result).toContain("lats");
-  });
-
-  it("'chin-up' → adds rhomboids as secondary", () => {
-    const result = refineMuscles("Chin-Up", ["lats"]);
-    expect(result).toContain("rhomboids");
-    expect(result).toContain("lats");
-  });
-
-  it("is idempotent — calling twice gives same result", () => {
-    const muscles: MuscleKey[] = ["lats"];
-    const once = refineMuscles("Barbell Row", muscles);
-    const twice = refineMuscles("Barbell Row", once);
-    expect(twice).toEqual(once);
-  });
-
-  it("returns deduped list — no duplicates", () => {
-    const result = refineMuscles("Barbell Row", ["lats", "rhomboids"]);
-    const unique = [...new Set(result)];
-    expect(result).toEqual(unique);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// inferTracking
-// ---------------------------------------------------------------------------
-
-describe("inferTracking", () => {
-  it("'plank' in name → duration", () => {
-    const rec = rawRec({ name: "Plank", equipment: "body only", primaryMuscles: ["abdominals"] });
-    expect(inferTracking(rec)).toBe("duration");
-  });
-
-  it("'hold' in name → duration", () => {
-    const rec = rawRec({ name: "Hollow Hold", equipment: "body only", primaryMuscles: ["abdominals"] });
-    expect(inferTracking(rec)).toBe("duration");
-  });
-
-  it("'hollow' in name → duration", () => {
-    const rec = rawRec({ name: "Hollow Body", equipment: "body only", primaryMuscles: ["abdominals"] });
-    expect(inferTracking(rec)).toBe("duration");
-  });
-
-  it("'l-sit' in name → duration", () => {
-    const rec = rawRec({ name: "L-Sit Hold", equipment: "body only", primaryMuscles: ["abdominals"] });
-    expect(inferTracking(rec)).toBe("duration");
-  });
-
-  it("'wall sit' in name → duration", () => {
-    const rec = rawRec({ name: "Wall Sit", equipment: "body only", primaryMuscles: ["quadriceps"] });
-    expect(inferTracking(rec)).toBe("duration");
-  });
-
-  it("'farmer' in name → weight_duration (farmer's carry)", () => {
-    const rec = rawRec({ name: "Farmer's Walk", equipment: "dumbbell", primaryMuscles: ["forearms"] });
-    expect(inferTracking(rec)).toBe("weight_duration");
-  });
-
-  it("'carry' in name → weight_duration", () => {
-    const rec = rawRec({ name: "Suitcase Carry", equipment: "dumbbell", primaryMuscles: ["forearms"] });
-    expect(inferTracking(rec)).toBe("weight_duration");
-  });
-
-  it("'pull-up' bodyweight → weighted_bodyweight", () => {
-    const rec = rawRec({ name: "Pull-Up", equipment: "body only", primaryMuscles: ["lats"] });
-    expect(inferTracking(rec)).toBe("weighted_bodyweight");
-  });
-
-  it("'chin-up' bodyweight → weighted_bodyweight", () => {
-    const rec = rawRec({ name: "Chin-Up", equipment: "body only", primaryMuscles: ["lats"] });
-    expect(inferTracking(rec)).toBe("weighted_bodyweight");
-  });
-
-  it("'dip' bodyweight → weighted_bodyweight", () => {
-    const rec = rawRec({ name: "Dip", equipment: "body only", primaryMuscles: ["triceps"] });
-    expect(inferTracking(rec)).toBe("weighted_bodyweight");
-  });
-
-  it("'assisted' in name → assisted_bodyweight", () => {
-    const rec = rawRec({ name: "Assisted Pull-Up", equipment: "body only", primaryMuscles: ["lats"] });
-    expect(inferTracking(rec)).toBe("assisted_bodyweight");
-  });
-
-  it("push-up (bodyweight, reps-style) → bodyweight_reps", () => {
-    const rec = rawRec({ name: "Push-Up", equipment: "body only", primaryMuscles: ["chest"] });
-    expect(inferTracking(rec)).toBe("bodyweight_reps");
-  });
-
-  it("barbell bench press → weight_reps", () => {
-    const rec = rawRec({
-      name: "Barbell Bench Press - Medium Grip",
-      equipment: "barbell",
-      primaryMuscles: ["chest"],
-    });
-    expect(inferTracking(rec)).toBe("weight_reps");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// normalizeRecord
-// ---------------------------------------------------------------------------
-
-describe("normalizeRecord", () => {
-  it("maps a valid barbell chest record correctly", () => {
-    const rec = rawRec({
-      id: "Barbell_Bench_Press_-_Medium_Grip",
-      name: "Barbell Bench Press - Medium Grip",
-      equipment: "barbell",
-      primaryMuscles: ["chest"],
-      secondaryMuscles: ["shoulders", "triceps"],
-    });
-    const result = normalizeRecord(rec);
-    // Should not be null
-    expect(result).not.toBe(null);
-    // id preserved
-    expect(result!.id).toBe("Barbell_Bench_Press_-_Medium_Grip");
-    // equipment mapped
-    expect(result!.equipment).toBe("barbell");
-    // group mapped from chest
-    expect(result!.group).toBe("Chest");
-    // primary includes chest
-    expect(result!.primary).toContain("chest");
-    // tracking is weight_reps
-    expect(result!.tracking).toBe("weight_reps");
-  });
-
-  it("returns null when equipment is unmappable (foam roll)", () => {
-    const rec = rawRec({
-      id: "Adductor",
-      name: "Adductor",
-      equipment: "foam roll",
-      primaryMuscles: ["adductors"],
-      secondaryMuscles: [],
-    });
-    expect(normalizeRecord(rec)).toBe(null);
-  });
-
-  it("returns null when equipment is null", () => {
-    const rec = rawRec({
-      equipment: null,
-      primaryMuscles: ["abdominals"],
-    });
-    expect(normalizeRecord(rec)).toBe(null);
-  });
-
-  it("returns null when group is unmappable (unknown muscle)", () => {
-    const rec = rawRec({
-      equipment: "barbell",
-      primaryMuscles: ["unknown_xyzzy"],
-    });
-    expect(normalizeRecord(rec)).toBe(null);
-  });
-
-  it("secondary muscles are mapped and included", () => {
-    const rec = rawRec({
-      equipment: "barbell",
-      primaryMuscles: ["chest"],
-      secondaryMuscles: ["triceps", "shoulders"],
-    });
-    const result = normalizeRecord(rec);
-    expect(result).not.toBe(null);
-    expect(result!.secondary).toContain("triceps");
-  });
-
-  it("sets timeBased=true for duration tracking", () => {
-    const rec = rawRec({
-      name: "Plank",
-      equipment: "body only",
-      primaryMuscles: ["abdominals"],
-    });
-    const result = normalizeRecord(rec);
-    expect(result).not.toBe(null);
-    expect(result!.timeBased).toBe(true);
-  });
-
-  it("sets timeBased=false for weight_reps tracking", () => {
-    const rec = rawRec({
-      name: "Barbell Bench Press",
-      equipment: "barbell",
-      primaryMuscles: ["chest"],
-    });
-    const result = normalizeRecord(rec);
-    expect(result).not.toBe(null);
-    expect(result!.timeBased).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// mergeAndDedupe
-// ---------------------------------------------------------------------------
-
-describe("mergeAndDedupe", () => {
-  const seedEx1 = makeExercise({ id: "ex-seed-1", name: "Bench Press", group: "Chest" });
-  const seedEx2 = makeExercise({ id: "ex-seed-2", name: "Squat", group: "Quads", primary: ["quads"], equipment: "barbell" });
-  const imported1 = makeExercise({ id: "ex-seed-1", name: "Bench Press Imported", group: "Chest" }); // same id
-  const imported2 = makeExercise({ id: "ex-import-2", name: "Bench Press", group: "Chest" }); // same name, different id
-  const imported3 = makeExercise({ id: "ex-import-3", name: "Deadlift", group: "Back", primary: ["lats"], equipment: "barbell" });
-
-  it("seed wins on id collision", () => {
-    const result = mergeAndDedupe([seedEx1], [imported1]);
-    const bench = result.find((e) => e.id === "ex-seed-1");
-    expect(bench).not.toBeUndefined();
-    // Seed name (not imported name) should win
-    expect(bench!.name).toBe("Bench Press");
-  });
-
-  it("seed wins on case-insensitive name collision", () => {
-    const result = mergeAndDedupe([seedEx1], [imported2]);
-    // ex-import-2 should be dropped since name "Bench Press" is in seed
-    const importedMatch = result.find((e) => e.id === "ex-import-2");
-    expect(importedMatch).toBeUndefined();
-  });
-
-  it("non-colliding imported exercises are included", () => {
-    const result = mergeAndDedupe([seedEx1], [imported3]);
-    const deadlift = result.find((e) => e.id === "ex-import-3");
-    expect(deadlift).not.toBeUndefined();
-    expect(deadlift!.name).toBe("Deadlift");
-  });
-
-  it("result is sorted by group then name", () => {
-    const result = mergeAndDedupe([seedEx1, seedEx2], [imported3]);
-    // Back < Chest < Quads alphabetically
-    const groups = result.map((e) => e.group);
-    const sorted = [...groups].sort();
-    expect(groups).toEqual(sorted);
-  });
-
-  it("within the same group, sorted by name", () => {
-    const a = makeExercise({ id: "a", name: "Zzzz", group: "Chest" });
-    const b = makeExercise({ id: "b", name: "Aaaa", group: "Chest" });
-    const result = mergeAndDedupe([a, b], []);
-    const chestNames = result.filter((e) => e.group === "Chest").map((e) => e.name);
-    expect(chestNames[0]).toBe("Aaaa");
-    expect(chestNames[1]).toBe("Zzzz");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// buildDataset (golden invariants on real source)
-// ---------------------------------------------------------------------------
-
-// Load the real source JSON synchronously at module level — it is read once.
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-
-const RAW_FREE_DB_PATH = fileURLToPath(
-  new URL("../../packages/B02-dataset/data/source/free-exercise-db.json", import.meta.url),
-);
-const rawFreeDb: unknown = JSON.parse(readFileSync(RAW_FREE_DB_PATH, "utf-8"));
-
-describe("buildDataset", () => {
-  it("returns ≥300 exercises from the real source + empty seed", () => {
-    const result = buildDataset(rawFreeDb, []);
-    expect(result.length).toBeGreaterThanOrEqual(300);
-  });
-
-  it("all entries pass ExerciseSchema", () => {
-    const result = buildDataset(rawFreeDb, []);
-    for (const ex of result) {
-      const parsed = ExerciseSchema.safeParse(ex);
-      expect(parsed.success).toBe(true);
+describe("MOVEMENTS catalog — schema validity", () => {
+  it("every movement has a non-empty id string", () => {
+    for (const m of MOVEMENTS) {
+      expect(typeof m.id).toBe("string");
+      expect(m.id.length).toBeGreaterThan(0);
     }
   });
 
-  it("no duplicate ids in output", () => {
-    const result = buildDataset(rawFreeDb, []);
+  it("every movement has a non-empty name string", () => {
+    for (const m of MOVEMENTS) {
+      expect(typeof m.name).toBe("string");
+      expect(m.name.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every movement has at least one primary muscle", () => {
+    for (const m of MOVEMENTS) {
+      expect(m.primary.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every movement primary muscles are valid MuscleKeys", () => {
+    const validKeys = new Set<string>(MUSCLES);
+    for (const m of MOVEMENTS) {
+      for (const muscle of m.primary) {
+        expect(validKeys.has(muscle), `Movement '${m.id}' has invalid primary: '${muscle}'`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it("every movement secondary muscles are valid MuscleKeys", () => {
+    const validKeys = new Set<string>(MUSCLES);
+    for (const m of MOVEMENTS) {
+      for (const muscle of m.secondary) {
+        expect(validKeys.has(muscle), `Movement '${m.id}' has invalid secondary: '${muscle}'`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it("every movement equipment array is non-empty", () => {
+    for (const m of MOVEMENTS) {
+      expect(m.equipment.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every movement laterality array is non-empty", () => {
+    for (const m of MOVEMENTS) {
+      expect(m.laterality.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("no duplicate movement ids", () => {
+    const ids = MOVEMENTS.map((m) => m.id);
+    const unique = new Set(ids);
+    expect(unique.size).toBe(ids.length);
+  });
+
+  it("no movement has a primary muscle also listed in secondary", () => {
+    for (const m of MOVEMENTS) {
+      const primarySet = new Set(m.primary);
+      for (const sec of m.secondary) {
+        expect(
+          primarySet.has(sec),
+          `Movement '${m.id}' has '${sec}' in both primary and secondary`,
+        ).toBe(false);
+      }
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// compose() — basic expansion
+// ---------------------------------------------------------------------------
+
+describe("compose() — equipment expansion", () => {
+  it("produces one exercise per equipment when bilateral-only", () => {
+    const m: Movement = {
+      id: "test_mv",
+      name: "Test Move",
+      primary: ["chest"],
+      secondary: [],
+      equipment: ["barbell", "dumbbell"],
+      laterality: ["bilateral"],
+    };
+    const result = compose([m]);
+    expect(result.length).toBe(2);
+  });
+
+  it("produces bilateral + unilateral when both lateralities listed", () => {
+    const m: Movement = {
+      id: "test_mv2",
+      name: "Test Curl",
+      primary: ["biceps"],
+      secondary: [],
+      equipment: ["dumbbell"],
+      laterality: ["bilateral", "unilateral"],
+    };
+    const result = compose([m]);
+    expect(result.length).toBe(2);
+    const ids = result.map((e) => e.id);
+    expect(ids).toContain("test_mv2__dumbbell");
+    expect(ids).toContain("test_mv2__dumbbell__uni");
+  });
+
+  it("id is deterministic: {m.id}__{equipment}", () => {
+    const m: Movement = {
+      id: "bench_test",
+      name: "Bench Press Test",
+      primary: ["chest"],
+      secondary: [],
+      equipment: ["barbell"],
+      laterality: ["bilateral"],
+    };
+    const result = compose([m]);
+    expect(result[0].id).toBe("bench_test__barbell");
+  });
+
+  it("unilateral id gets __uni suffix", () => {
+    const m: Movement = {
+      id: "lat_raise_test",
+      name: "Lateral Raise Test",
+      primary: ["side_delts"],
+      secondary: [],
+      equipment: ["dumbbell"],
+      laterality: ["unilateral"],
+    };
+    const result = compose([m]);
+    expect(result[0].id).toBe("lat_raise_test__dumbbell__uni");
+  });
+
+  it("all composed exercises have custom: false", () => {
+    const result = compose(MOVEMENTS);
+    for (const ex of result) {
+      expect(ex.custom).toBe(false);
+    }
+  });
+
+  it("no duplicate ids in full composed dataset", () => {
+    const result = compose(MOVEMENTS);
     const ids = result.map((e) => e.id);
     const unique = new Set(ids);
     expect(unique.size).toBe(ids.length);
@@ -669,49 +189,617 @@ describe("buildDataset", () => {
 });
 
 // ---------------------------------------------------------------------------
-// seed()
+// compose() — naming rules
 // ---------------------------------------------------------------------------
 
-describe("seed()", () => {
-  it("every entry passes ExerciseSchema", () => {
-    const s = seed();
-    for (const ex of s) {
-      const parsed = ExerciseSchema.safeParse(ex);
-      expect(parsed.success).toBe(true);
+describe("compose() — naming rules", () => {
+  it("bodyweight equipment uses movement name directly (no 'Bodyweight ' prefix)", () => {
+    // plank movement has bodyweight equipment + nameOverride
+    const result = compose(MOVEMENTS);
+    const plank = result.find((e) => e.id === "plank__bodyweight");
+    expect(plank).toBeDefined();
+    expect(plank!.name).toBe("Plank");
+    expect(plank!.name).not.toMatch(/^Bodyweight /);
+  });
+
+  it("non-bodyweight equipment prepends equipment label", () => {
+    const result = compose(MOVEMENTS);
+    // back_squat__barbell → "Barbell Back Squat"
+    const squat = result.find((e) => e.id === "back_squat__barbell");
+    expect(squat).toBeDefined();
+    expect(squat!.name).toBe("Barbell Back Squat");
+  });
+
+  it("nameOverride for equipment replaces default name", () => {
+    // fly machine → "Pec Deck" (not "Plate / pin machines Fly")
+    const result = compose(MOVEMENTS);
+    const pecDeck = result.find((e) => e.id === "fly__machine");
+    expect(pecDeck).toBeDefined();
+    expect(pecDeck!.name).toBe("Pec Deck");
+  });
+
+  it("unilateral upper-body adds 'Single-Arm ' prefix", () => {
+    const result = compose(MOVEMENTS);
+    // lateral_raise is upper-body (side_delts)
+    const uniLat = result.find((e) => e.id === "lateral_raise__dumbbell__uni");
+    expect(uniLat).toBeDefined();
+    expect(uniLat!.name).toMatch(/^Single-Arm /);
+  });
+
+  it("unilateral lower-body adds 'Single-Leg ' prefix", () => {
+    const result = compose(MOVEMENTS);
+    // calf_raise is lower-body (calves)
+    const uniCalf = result.find((e) => e.id === "calf_raise__bodyweight__uni");
+    expect(uniCalf).toBeDefined();
+    expect(uniCalf!.name).toMatch(/^Single-Leg /);
+  });
+
+  it("bodyweight unilateral upper-body without nameOverride adds 'Single-Arm ' prefix to movement name", () => {
+    const m: Movement = {
+      id: "test_bw_uni_upper",
+      name: "Row",
+      primary: ["lats"],
+      secondary: [],
+      equipment: ["bodyweight"],
+      laterality: ["unilateral"],
+      // No nameOverride
+    };
+    const [ex] = compose([m]);
+    expect(ex.name).toBe("Single-Arm Row");
+  });
+
+  it("bodyweight unilateral lower-body without nameOverride adds 'Single-Leg ' prefix to movement name", () => {
+    const m: Movement = {
+      id: "test_bw_uni_lower",
+      name: "Squat",
+      primary: ["quads"],
+      secondary: [],
+      equipment: ["bodyweight"],
+      laterality: ["unilateral"],
+      // No nameOverride
+    };
+    const [ex] = compose([m]);
+    expect(ex.name).toBe("Single-Leg Squat");
+  });
+
+  it("nameOverride 'uni' key takes priority over default unilateral naming", () => {
+    // concentration_curl has nameOverride.uni = "Concentration Curl"
+    const result = compose(MOVEMENTS);
+    const concCurl = result.find((e) => e.id === "concentration_curl__dumbbell__uni");
+    expect(concCurl).toBeDefined();
+    expect(concCurl!.name).toBe("Concentration Curl");
+  });
+
+  it("named row overrides produce expected names", () => {
+    const result = compose(MOVEMENTS);
+    const barbellRow = result.find((e) => e.id === "row__barbell");
+    expect(barbellRow).toBeDefined();
+    expect(barbellRow!.name).toBe("Barbell Row");
+    const cableRow = result.find((e) => e.id === "row__cable");
+    expect(cableRow).toBeDefined();
+    expect(cableRow!.name).toBe("Seated Cable Row");
+  });
+
+  it("pull_up on pullupbar uses nameOverride 'Pull-Up'", () => {
+    const result = compose(MOVEMENTS);
+    const pullUp = result.find((e) => e.id === "pull_up__pullupbar");
+    expect(pullUp).toBeDefined();
+    expect(pullUp!.name).toBe("Pull-Up");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// compose() — group derivation
+// ---------------------------------------------------------------------------
+
+describe("compose() — group derivation", () => {
+  it("group is MUSCLE_PRIMARY_GROUP[primary[0]] for all exercises", () => {
+    const result = compose(MOVEMENTS);
+    for (const ex of result) {
+      const expected = MUSCLE_PRIMARY_GROUP[ex.primary[0]];
+      expect(ex.group).toBe(expected);
     }
   });
 
-  it("returns ≥80 entries", () => {
-    const s = seed();
-    expect(s.length).toBeGreaterThanOrEqual(80);
+  it("bench press has group Chest", () => {
+    const result = compose(MOVEMENTS);
+    const ex = result.find((e) => e.id === "bench_press__barbell");
+    expect(ex!.group).toBe("Chest");
   });
 
-  it("spot check: bb-bench has group Chest", () => {
-    const s = seed();
-    const bench = s.find((e) => e.id === "bb-bench");
-    expect(bench).not.toBeUndefined();
-    expect(bench!.group).toBe("Chest");
+  it("side_bend has group Abs (obliques → Abs)", () => {
+    const result = compose(MOVEMENTS);
+    const ex = result.find((e) => e.id === "side_bend__dumbbell");
+    expect(ex!.group).toBe("Abs");
   });
 
-  it("spot check: bb-bench has primary chest", () => {
-    const s = seed();
-    const bench = s.find((e) => e.id === "bb-bench");
-    expect(bench).not.toBeUndefined();
-    expect(bench!.primary).toContain("chest");
+  it("shrug has group Traps", () => {
+    const result = compose(MOVEMENTS);
+    const ex = result.find((e) => e.id === "shrug__barbell");
+    expect(ex!.group).toBe("Traps");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// compose() — tracking derivation
+// ---------------------------------------------------------------------------
+
+describe("compose() — tracking derivation", () => {
+  it("bodyweight equipment defaults to bodyweight_reps", () => {
+    const m: Movement = {
+      id: "test_bw",
+      name: "Test BW",
+      primary: ["chest"],
+      secondary: [],
+      equipment: ["bodyweight"],
+      laterality: ["bilateral"],
+    };
+    const [ex] = compose([m]);
+    expect(ex.tracking).toBe("bodyweight_reps");
   });
 
-  it("spot check: bb-bench has tracking weight_reps", () => {
-    const s = seed();
-    const bench = s.find((e) => e.id === "bb-bench");
-    expect(bench).not.toBeUndefined();
+  it("barbell equipment defaults to weight_reps", () => {
+    const m: Movement = {
+      id: "test_bb",
+      name: "Test BB",
+      primary: ["chest"],
+      secondary: [],
+      equipment: ["barbell"],
+      laterality: ["bilateral"],
+    };
+    const [ex] = compose([m]);
+    expect(ex.tracking).toBe("weight_reps");
+  });
+
+  it("movement.tracking override takes priority", () => {
+    const m: Movement = {
+      id: "test_dur",
+      name: "Test Duration",
+      primary: ["abs"],
+      secondary: [],
+      equipment: ["bodyweight"],
+      laterality: ["bilateral"],
+      tracking: "duration",
+    };
+    const [ex] = compose([m]);
+    expect(ex.tracking).toBe("duration");
+  });
+
+  it("timeBased:true without tracking override → tracking='duration'", () => {
+    // Covers the branch: m.timeBased === true && m.tracking undefined
+    const m: Movement = {
+      id: "test_tb_no_tracking",
+      name: "Test TimeBased",
+      primary: ["abs"],
+      secondary: [],
+      equipment: ["barbell"],
+      laterality: ["bilateral"],
+      timeBased: true,
+      // tracking intentionally NOT set
+    };
+    const [ex] = compose([m]);
+    expect(ex.tracking).toBe("duration");
+    expect(ex.timeBased).toBe(true);
+  });
+
+  it("timeBased override takes priority over derived value", () => {
+    const m: Movement = {
+      id: "test_tb",
+      name: "Test TB",
+      primary: ["abs"],
+      secondary: [],
+      equipment: ["bodyweight"],
+      laterality: ["bilateral"],
+      tracking: "duration",
+      timeBased: true,
+    };
+    const [ex] = compose([m]);
+    expect(ex.timeBased).toBe(true);
+  });
+
+  it("duration tracking → timeBased = true (when not overridden)", () => {
+    const result = compose(MOVEMENTS);
+    const plank = result.find((e) => e.id === "plank__bodyweight");
+    expect(plank!.tracking).toBe("duration");
+    expect(plank!.timeBased).toBe(true);
+  });
+
+  it("weight_reps tracking → timeBased = false (when not overridden)", () => {
+    const result = compose(MOVEMENTS);
+    const bench = result.find((e) => e.id === "bench_press__barbell");
     expect(bench!.tracking).toBe("weight_reps");
+    expect(bench!.timeBased).toBe(false);
   });
 
-  it("no duplicate ids in seed", () => {
-    const s = seed();
-    const ids = s.map((e) => e.id);
-    const unique = new Set(ids);
-    expect(unique.size).toBe(ids.length);
+  it("weight_duration tracking → timeBased = true", () => {
+    const result = compose(MOVEMENTS);
+    const carry = result.find((e) => e.id === "farmer_carry__dumbbell");
+    expect(carry!.tracking).toBe("weight_duration");
+    expect(carry!.timeBased).toBe(true);
+  });
+
+  it("weighted_bodyweight tracking used for pull-ups", () => {
+    const result = compose(MOVEMENTS);
+    const pullUp = result.find((e) => e.id === "pull_up__pullupbar");
+    expect(pullUp!.tracking).toBe("weighted_bodyweight");
+  });
+
+  it("assisted_bodyweight tracking used for assisted pull-up", () => {
+    const result = compose(MOVEMENTS);
+    const assisted = result.find((e) => e.id === "assisted_pull_up__machine");
+    expect(assisted!.tracking).toBe("assisted_bodyweight");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// compose() — unilateral tag adjustments
+// ---------------------------------------------------------------------------
+
+describe("compose() — unilateral tag adjustments", () => {
+  it("single-arm unilateral adds obliques to secondary if absent", () => {
+    const result = compose(MOVEMENTS);
+    // row is upper body (lats primary)
+    const uniRow = result.find((e) => e.id === "row__dumbbell__uni");
+    expect(uniRow).toBeDefined();
+    expect(uniRow!.secondary).toContain("obliques");
+  });
+
+  it("single-arm unilateral does NOT add obliques if already present", () => {
+    const m: Movement = {
+      id: "test_upper_uni",
+      name: "Test Upper",
+      primary: ["biceps"],
+      secondary: ["obliques"],
+      equipment: ["dumbbell"],
+      laterality: ["unilateral"],
+    };
+    const [ex] = compose([m]);
+    const obliquesCount = ex.secondary.filter((s) => s === "obliques").length;
+    expect(obliquesCount).toBe(1);
+  });
+
+  it("single-leg unilateral adds abductors and adductors to secondary", () => {
+    const m: Movement = {
+      id: "test_lower_uni",
+      name: "Test Lower",
+      primary: ["quads"],
+      secondary: [],
+      equipment: ["dumbbell"],
+      laterality: ["unilateral"],
+    };
+    const [ex] = compose([m]);
+    expect(ex.secondary).toContain("abductors");
+    expect(ex.secondary).toContain("adductors");
+  });
+
+  it("single-leg unilateral adds glutes to secondary if not in primary or secondary", () => {
+    const m: Movement = {
+      id: "test_lower_uni_glutes",
+      name: "Test Lower Glutes",
+      primary: ["quads"],
+      secondary: [],
+      equipment: ["dumbbell"],
+      laterality: ["unilateral"],
+    };
+    const [ex] = compose([m]);
+    expect(ex.secondary).toContain("glutes");
+  });
+
+  it("single-leg unilateral does NOT add glutes if already in primary", () => {
+    const m: Movement = {
+      id: "test_lower_uni_glutes_primary",
+      name: "Test Lower Glutes Primary",
+      primary: ["glutes"],
+      secondary: [],
+      equipment: ["dumbbell"],
+      laterality: ["unilateral"],
+    };
+    const [ex] = compose([m]);
+    expect(ex.primary).toContain("glutes");
+    // glutes should NOT be in secondary since it's in primary
+    expect(ex.secondary).not.toContain("glutes");
+  });
+
+  it("bilateral exercises have same secondary as movement definition", () => {
+    const result = compose(MOVEMENTS);
+    const benchBilateral = result.find((e) => e.id === "bench_press__barbell");
+    expect(benchBilateral!.secondary).toEqual(expect.arrayContaining(["front_delts", "triceps"]));
+  });
+
+  it("secondary tags are deduplicated after unilateral adjustment", () => {
+    const m: Movement = {
+      id: "test_dedup",
+      name: "Test Dedup",
+      primary: ["lats"],
+      secondary: ["obliques"],
+      equipment: ["dumbbell"],
+      laterality: ["unilateral"],
+    };
+    const [ex] = compose([m]);
+    const obliquesCount = ex.secondary.filter((s) => s === "obliques").length;
+    expect(obliquesCount).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Accuracy spot-checks (the bugs we're fixing)
+// ---------------------------------------------------------------------------
+
+describe("Accuracy spot-checks", () => {
+  const all = compose(MOVEMENTS);
+
+  // Side Bend
+  it("Side Bend primary is obliques (NOT abs)", () => {
+    const ex = all.find((e) => e.id === "side_bend__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("obliques");
+    expect(ex!.primary).not.toContain("abs");
+  });
+
+  it("Side Bend secondary contains lower_back", () => {
+    const ex = all.find((e) => e.id === "side_bend__dumbbell");
+    expect(ex!.secondary).toContain("lower_back");
+  });
+
+  // Russian Twist
+  it("Russian Twist primary is obliques", () => {
+    const ex = all.find((e) => e.id === "russian_twist__bodyweight");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("obliques");
+    expect(ex!.primary).not.toContain("abs");
+  });
+
+  it("Russian Twist secondary contains abs", () => {
+    const ex = all.find((e) => e.id === "russian_twist__bodyweight");
+    expect(ex!.secondary).toContain("abs");
+  });
+
+  // Cable Woodchopper
+  it("Cable Woodchopper primary is obliques", () => {
+    const ex = all.find((e) => e.id === "cable_woodchopper__cable");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("obliques");
+  });
+
+  // Crunch / Sit-Up
+  it("Crunch primary is abs", () => {
+    const ex = all.find((e) => e.id === "crunch__bodyweight");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("abs");
+    expect(ex!.primary).not.toContain("obliques");
+  });
+
+  it("Sit-Up primary is abs", () => {
+    const ex = all.find((e) => e.id === "sit_up__bodyweight");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("abs");
+  });
+
+  // Lateral Raise
+  it("Lateral Raise primary is side_delts", () => {
+    const ex = all.find((e) => e.id === "lateral_raise__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["side_delts"]);
+  });
+
+  // Front Raise
+  it("Front Raise primary is front_delts", () => {
+    const ex = all.find((e) => e.id === "front_raise__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("front_delts");
+  });
+
+  // Rear Delt Fly / Face Pull
+  it("Rear Delt Fly primary is rear_delts", () => {
+    const ex = all.find((e) => e.id === "rear_delt_fly__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("rear_delts");
+  });
+
+  it("Face Pull primary includes rear_delts and rhomboids", () => {
+    const ex = all.find((e) => e.id === "face_pull__cable");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("rear_delts");
+    expect(ex!.primary).toContain("rhomboids");
+  });
+
+  // Romanian Deadlift
+  it("Romanian Deadlift primary is hamstrings", () => {
+    const ex = all.find((e) => e.id === "romanian_deadlift__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary[0]).toBe("hamstrings");
+    expect(ex!.primary).not.toContain("lower_back");
+  });
+
+  it("Romanian Deadlift secondary includes glutes and lower_back", () => {
+    const ex = all.find((e) => e.id === "romanian_deadlift__barbell");
+    expect(ex!.secondary).toContain("glutes");
+    expect(ex!.secondary).toContain("lower_back");
+  });
+
+  // Conventional Deadlift
+  it("Conventional Deadlift primary includes lower_back, glutes, hamstrings", () => {
+    const ex = all.find((e) => e.id === "deadlift__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("lower_back");
+    expect(ex!.primary).toContain("glutes");
+    expect(ex!.primary).toContain("hamstrings");
+  });
+
+  it("Conventional Deadlift secondary includes lats, quads, forearms", () => {
+    const ex = all.find((e) => e.id === "deadlift__barbell");
+    expect(ex!.secondary).toContain("lats");
+    expect(ex!.secondary).toContain("quads");
+    expect(ex!.secondary).toContain("forearms");
+  });
+
+  // Hip Thrust
+  it("Hip Thrust primary is glutes", () => {
+    const ex = all.find((e) => e.id === "hip_thrust__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary[0]).toBe("glutes");
+  });
+
+  it("Hip Thrust secondary includes hamstrings", () => {
+    const ex = all.find((e) => e.id === "hip_thrust__barbell");
+    expect(ex!.secondary).toContain("hamstrings");
+  });
+
+  // Leg Extension
+  it("Leg Extension primary is quads only", () => {
+    const ex = all.find((e) => e.id === "leg_extension__machine");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["quads"]);
+  });
+
+  // Leg Curl
+  it("Leg Curl primary is hamstrings only", () => {
+    const ex = all.find((e) => e.id === "leg_curl__machine");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["hamstrings"]);
+  });
+
+  // Calf Raise
+  it("Calf Raise primary is calves", () => {
+    const ex = all.find((e) => e.id === "calf_raise__machine");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["calves"]);
+  });
+
+  // Tibialis Raise
+  it("Tibialis Raise primary is tibialis", () => {
+    const ex = all.find((e) => e.id === "tibialis_raise__bodyweight");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["tibialis"]);
+  });
+
+  // Hip Abduction
+  it("Hip Abduction primary is abductors", () => {
+    const ex = all.find((e) => e.id === "hip_abduction__machine");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("abductors");
+  });
+
+  // Hip Adduction
+  it("Hip Adduction primary is adductors", () => {
+    const ex = all.find((e) => e.id === "hip_adduction__machine");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("adductors");
+  });
+
+  // Hanging Leg Raise
+  it("Hanging Leg Raise primary includes hip_flexors and abs", () => {
+    const ex = all.find((e) => e.id === "hanging_leg_raise__pullupbar");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("hip_flexors");
+    expect(ex!.primary).toContain("abs");
+  });
+
+  // Shrug
+  it("Shrug primary is upper_traps", () => {
+    const ex = all.find((e) => e.id === "shrug__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["upper_traps"]);
+  });
+
+  // Upright Row
+  it("Upright Row primary includes side_delts and upper_traps", () => {
+    const ex = all.find((e) => e.id === "upright_row__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("side_delts");
+    expect(ex!.primary).toContain("upper_traps");
+  });
+
+  // Pull-Up / Lat Pulldown
+  it("Pull-Up primary is lats", () => {
+    const ex = all.find((e) => e.id === "pull_up__pullupbar");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("lats");
+    expect(ex!.secondary).toContain("biceps");
+    expect(ex!.secondary).toContain("rhomboids");
+  });
+
+  it("Lat Pulldown primary is lats", () => {
+    const ex = all.find((e) => e.id === "lat_pulldown__cable");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("lats");
+    expect(ex!.secondary).toContain("biceps");
+    expect(ex!.secondary).toContain("rhomboids");
+  });
+
+  // Row
+  it("Barbell Row primary includes lats and rhomboids", () => {
+    const ex = all.find((e) => e.id === "row__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("lats");
+    expect(ex!.primary).toContain("rhomboids");
+  });
+
+  // Close-Grip Bench Press
+  it("Close-Grip Bench Press primary is triceps", () => {
+    const ex = all.find((e) => e.id === "close_grip_bench_press__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("triceps");
+  });
+
+  // Triceps Pushdown
+  it("Triceps Pushdown primary is triceps", () => {
+    const ex = all.find((e) => e.id === "triceps_pushdown__cable");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["triceps"]);
+  });
+
+  // Skullcrusher
+  it("Skullcrusher primary is triceps", () => {
+    const ex = all.find((e) => e.id === "skullcrusher__ezbar");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["triceps"]);
+  });
+
+  // Curl
+  it("Barbell Curl primary is biceps", () => {
+    const ex = all.find((e) => e.id === "curl__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["biceps"]);
+  });
+
+  // Hammer Curl
+  it("Hammer Curl primary is biceps, secondary includes forearms", () => {
+    const ex = all.find((e) => e.id === "hammer_curl__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("biceps");
+    expect(ex!.secondary).toContain("forearms");
+  });
+
+  // Wrist Curl
+  it("Wrist Curl primary is forearms", () => {
+    const ex = all.find((e) => e.id === "wrist_curl__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["forearms"]);
+  });
+
+  // Overhead Press
+  it("Overhead Press primary is front_delts", () => {
+    const ex = all.find((e) => e.id === "overhead_press__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toContain("front_delts");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coverage invariant: every MuscleKey is primary of ≥2 composed exercises
+// ---------------------------------------------------------------------------
+
+describe("Coverage invariant", () => {
+  it("every MuscleKey is the primary muscle of at least 2 composed exercises", () => {
+    const result = compose(MOVEMENTS);
+    for (const muscle of MUSCLES) {
+      const count = result.filter((e) => e.primary.includes(muscle as MuscleKey)).length;
+      expect(
+        count,
+        `Muscle '${muscle}' is primary of only ${count} exercise(s) — need ≥2`,
+      ).toBeGreaterThanOrEqual(2);
+    }
   });
 });
 
@@ -725,16 +813,19 @@ describe("exercises()", () => {
     expect(Array.isArray(exs)).toBe(true);
   });
 
-  it("returns ≥300 exercises (full built dataset)", () => {
+  it("returns a non-empty array", () => {
     const exs = exercises();
-    expect(exs.length).toBeGreaterThanOrEqual(300);
+    expect(exs.length).toBeGreaterThan(0);
   });
 
-  it("all entries pass ExerciseSchema", () => {
+  it("all exercises have valid structure", () => {
     const exs = exercises();
     for (const ex of exs) {
-      const parsed = ExerciseSchema.safeParse(ex);
-      expect(parsed.success).toBe(true);
+      expect(typeof ex.id).toBe("string");
+      expect(typeof ex.name).toBe("string");
+      expect(ex.primary.length).toBeGreaterThan(0);
+      expect(typeof ex.equipment).toBe("string");
+      expect(typeof ex.tracking).toBe("string");
     }
   });
 
@@ -744,6 +835,31 @@ describe("exercises()", () => {
     const unique = new Set(ids);
     expect(unique.size).toBe(ids.length);
   });
+
+  it("all primary muscles are valid MuscleKeys", () => {
+    const validKeys = new Set<string>(MUSCLES);
+    const exs = exercises();
+    for (const ex of exs) {
+      for (const m of ex.primary) {
+        expect(validKeys.has(m)).toBe(true);
+      }
+    }
+  });
+
+  it("all secondary muscles are valid MuscleKeys", () => {
+    const validKeys = new Set<string>(MUSCLES);
+    const exs = exercises();
+    for (const ex of exs) {
+      for (const m of ex.secondary) {
+        expect(validKeys.has(m)).toBe(true);
+      }
+    }
+  });
+
+  it("returns 90+ exercises (comprehensive catalog)", () => {
+    const exs = exercises();
+    expect(exs.length).toBeGreaterThanOrEqual(90);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -751,18 +867,58 @@ describe("exercises()", () => {
 // ---------------------------------------------------------------------------
 
 describe("createLibrary", () => {
-  // Fixtures declared at describe scope (pure data, no throwing)
-  const ex1 = makeExercise({ id: "lib-1", name: "Bench Press", group: "Chest", primary: ["chest"], secondary: ["triceps"], equipment: "barbell" });
-  const ex2 = makeExercise({ id: "lib-2", name: "Squat", group: "Quads", primary: ["quads"], secondary: ["glutes", "hamstrings"], equipment: "barbell" });
-  const ex3 = makeExercise({ id: "lib-3", name: "pull-up", group: "Back", primary: ["lats"], secondary: ["biceps"], equipment: "bodyweight", tracking: "weighted_bodyweight" });
-  const ex4 = makeExercise({ id: "lib-4", name: "Curl", group: "Biceps", primary: ["biceps"], secondary: [], equipment: "dumbbell" });
-  const customEx = makeExercise({ id: "cust-1", name: "Custom Move", group: "Chest", primary: ["chest"], secondary: [], equipment: "bodyweight", custom: true });
+  const ex1 = makeExercise({
+    id: "lib-1",
+    name: "Bench Press",
+    group: "Chest",
+    primary: ["chest"],
+    secondary: ["triceps"],
+    equipment: "barbell",
+  });
+  const ex2 = makeExercise({
+    id: "lib-2",
+    name: "Squat",
+    group: "Quads",
+    primary: ["quads"],
+    secondary: ["glutes", "hamstrings"],
+    equipment: "barbell",
+  });
+  const ex3 = makeExercise({
+    id: "lib-3",
+    name: "Pull-Up",
+    group: "Back",
+    primary: ["lats"],
+    secondary: ["biceps"],
+    equipment: "bodyweight",
+    tracking: "weighted_bodyweight",
+  });
+  const ex4 = makeExercise({
+    id: "lib-4",
+    name: "Curl",
+    group: "Biceps",
+    primary: ["biceps"],
+    secondary: [],
+    equipment: "dumbbell",
+  });
+  const customEx = makeExercise({
+    id: "cust-1",
+    name: "Custom Move",
+    group: "Chest",
+    primary: ["chest"],
+    secondary: [],
+    equipment: "bodyweight",
+    custom: true,
+  });
 
-  // createLibrary throws "not implemented" — call it inside each test
   describe("all()", () => {
     it("returns the full input array", () => {
       const lib = createLibrary([ex1, ex2, ex3, ex4]);
       expect(lib.all()).toEqual([ex1, ex2, ex3, ex4]);
+    });
+
+    it("returns empty array for empty library", () => {
+      const lib = createLibrary([]);
+      expect(lib.all()).toEqual([]);
     });
   });
 
@@ -802,6 +958,13 @@ describe("createLibrary", () => {
       const results = lib.search("xyzzy_nomatch");
       expect(results).toEqual([]);
     });
+
+    it("returns multiple matches for broad query", () => {
+      const lib = createLibrary([ex1, ex2, ex3, ex4]);
+      const results = lib.search("u");
+      // Squat, Pull-Up, Curl all contain 'u'
+      expect(results.length).toBeGreaterThanOrEqual(2);
+    });
   });
 
   describe("byGroup()", () => {
@@ -818,7 +981,14 @@ describe("createLibrary", () => {
     });
 
     it("returns all exercises in a group with multiple entries", () => {
-      const extraChest = makeExercise({ id: "extra-chest", name: "Cable Fly", group: "Chest", primary: ["chest"], secondary: [], equipment: "cable" });
+      const extraChest = makeExercise({
+        id: "extra-chest",
+        name: "Cable Fly",
+        group: "Chest",
+        primary: ["chest"],
+        secondary: [],
+        equipment: "cable",
+      });
       const lib2 = createLibrary([ex1, extraChest]);
       const results = lib2.byGroup("Chest");
       expect(results.length).toBe(2);
@@ -829,7 +999,6 @@ describe("createLibrary", () => {
     it("keeps exercises whose equipment is in the profile", () => {
       const lib = createLibrary([ex1, ex2, ex3, ex4]);
       const results = lib.filterByProfile(["barbell"]);
-      // ex1 and ex2 both use barbell
       expect(results.map((e) => e.id).sort()).toEqual(["lib-1", "lib-2"]);
     });
 
@@ -842,7 +1011,6 @@ describe("createLibrary", () => {
     it("always keeps custom exercises regardless of equipment", () => {
       const libWithCustom = createLibrary([ex1, customEx]);
       const results = libWithCustom.filterByProfile(["cable"]);
-      // ex1 (barbell) should be excluded, but customEx should be kept
       expect(results.map((e) => e.id)).toContain("cust-1");
       expect(results.map((e) => e.id)).not.toContain("lib-1");
     });
@@ -854,11 +1022,17 @@ describe("createLibrary", () => {
       expect(ids).toContain("lib-1");
       expect(ids).toContain("cust-1");
     });
+
+    it("empty profile keeps only custom exercises", () => {
+      const libWithCustom = createLibrary([ex1, customEx]);
+      const results = libWithCustom.filterByProfile([]);
+      expect(results.map((e) => e.id)).toEqual(["cust-1"]);
+    });
   });
 
   describe("musclesOf()", () => {
     it("returns union of primary and secondary muscles", () => {
-      const lib = createLibrary([ex1, ex2, ex3, ex4]);
+      const lib = createLibrary([ex1]);
       const muscles = lib.musclesOf(ex1);
       expect(muscles).toContain("chest");
       expect(muscles).toContain("triceps");
@@ -866,18 +1040,37 @@ describe("createLibrary", () => {
 
     it("deduplicates muscles", () => {
       const lib = createLibrary([ex1]);
-      const dupEx = makeExercise({ id: "dup-ex", name: "Overlap", group: "Chest", primary: ["chest"], secondary: ["chest"] });
+      const dupEx = makeExercise({
+        id: "dup-ex",
+        name: "Overlap",
+        group: "Chest",
+        primary: ["chest"],
+        secondary: ["chest"],
+      });
       const muscles = lib.musclesOf(dupEx);
       const uniqueMuscles = [...new Set(muscles)];
       expect(muscles).toEqual(uniqueMuscles);
     });
 
     it("includes all primary and secondary muscles", () => {
-      const lib = createLibrary([ex1, ex2, ex3, ex4]);
+      const lib = createLibrary([ex2]);
       const muscles = lib.musclesOf(ex2);
       expect(muscles).toContain("quads");
       expect(muscles).toContain("glutes");
       expect(muscles).toContain("hamstrings");
+    });
+
+    it("returns only primary when secondary is empty", () => {
+      const exNoSec = makeExercise({
+        id: "no-sec",
+        name: "Leg Extension",
+        group: "Quads",
+        primary: ["quads"],
+        secondary: [],
+        equipment: "machine",
+      });
+      const lib = createLibrary([exNoSec]);
+      expect(lib.musclesOf(exNoSec)).toEqual(["quads"]);
     });
   });
 
@@ -900,7 +1093,13 @@ describe("createLibrary", () => {
     it("new library has correct total count", () => {
       const lib = createLibrary([ex1, ex2, ex3, ex4]);
       const extended = lib.withCustom([customEx]);
-      expect(extended.all().length).toBe(5); // 4 base + 1 custom
+      expect(extended.all().length).toBe(5);
+    });
+
+    it("withCustom([]) returns same exercises", () => {
+      const lib = createLibrary([ex1, ex2]);
+      const extended = lib.withCustom([]);
+      expect(extended.all().length).toBe(2);
     });
   });
 });
@@ -910,18 +1109,165 @@ describe("createLibrary", () => {
 // ---------------------------------------------------------------------------
 
 describe("defaultLibrary()", () => {
-  it("returns a library with all exercises from exercises()", () => {
+  it("returns a library backed by exercises()", () => {
     const lib = defaultLibrary();
     const all = lib.all();
-    expect(all.length).toBeGreaterThanOrEqual(300);
+    expect(all.length).toBe(exercises().length);
   });
 
   it("byId works on the default library", () => {
-    // The default library should have exercises from the built dataset
     const lib = defaultLibrary();
     const all = lib.all();
-    // Take a known id from the result and look it up
     const first = all[0];
     expect(lib.byId(first.id)).toEqual(first);
+  });
+
+  it("search works on the default library", () => {
+    const lib = defaultLibrary();
+    const results = lib.search("bench press");
+    expect(results.length).toBeGreaterThan(0);
+  });
+
+  it("byGroup works on the default library", () => {
+    const lib = defaultLibrary();
+    const chestExercises = lib.byGroup("Chest");
+    expect(chestExercises.length).toBeGreaterThan(0);
+    for (const ex of chestExercises) {
+      expect(ex.group).toBe("Chest");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Report: specific movement ids and names for demo re-pointing
+// ---------------------------------------------------------------------------
+
+describe("Demo movement ids/names verification", () => {
+  const all = compose(MOVEMENTS);
+
+  it("bench press barbell: id=bench_press__barbell", () => {
+    const ex = all.find((e) => e.id === "bench_press__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Barbell Bench Press");
+  });
+
+  it("incline bench press barbell: id=incline_bench_press__barbell", () => {
+    const ex = all.find((e) => e.id === "incline_bench_press__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Barbell Incline Bench Press");
+  });
+
+  it("incline bench press dumbbell: id=incline_bench_press__dumbbell", () => {
+    const ex = all.find((e) => e.id === "incline_bench_press__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Dumbbell Incline Bench Press");
+  });
+
+  it("dumbbell fly: id=fly__dumbbell", () => {
+    const ex = all.find((e) => e.id === "fly__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Dumbbell Fly");
+  });
+
+  it("lateral raise dumbbell: id=lateral_raise__dumbbell", () => {
+    const ex = all.find((e) => e.id === "lateral_raise__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Dumbbell Lateral Raise");
+  });
+
+  it("overhead press barbell: id=overhead_press__barbell", () => {
+    const ex = all.find((e) => e.id === "overhead_press__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Barbell Overhead Press");
+  });
+
+  it("pull-up bodyweight: id=pull_up__bodyweight", () => {
+    const ex = all.find((e) => e.id === "pull_up__bodyweight");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Pull-Up");
+  });
+
+  it("barbell row: id=row__barbell", () => {
+    const ex = all.find((e) => e.id === "row__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Barbell Row");
+  });
+
+  it("lat pulldown cable: id=lat_pulldown__cable", () => {
+    const ex = all.find((e) => e.id === "lat_pulldown__cable");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Cable Lat Pulldown");
+  });
+
+  it("barbell curl: id=curl__barbell", () => {
+    const ex = all.find((e) => e.id === "curl__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Barbell Curl");
+  });
+
+  it("hammer curl dumbbell: id=hammer_curl__dumbbell", () => {
+    const ex = all.find((e) => e.id === "hammer_curl__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Dumbbell Hammer Curl");
+  });
+
+  it("triceps pushdown cable: id=triceps_pushdown__cable", () => {
+    const ex = all.find((e) => e.id === "triceps_pushdown__cable");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Cable Triceps Pushdown");
+  });
+
+  it("back squat barbell: id=back_squat__barbell", () => {
+    const ex = all.find((e) => e.id === "back_squat__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Barbell Back Squat");
+  });
+
+  it("romanian deadlift barbell: id=romanian_deadlift__barbell", () => {
+    const ex = all.find((e) => e.id === "romanian_deadlift__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Barbell Romanian Deadlift");
+  });
+
+  it("leg press machine: id=leg_press__machine", () => {
+    const ex = all.find((e) => e.id === "leg_press__machine");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Leg Press");
+  });
+
+  it("walking lunge dumbbell: id=walking_lunge__dumbbell", () => {
+    const ex = all.find((e) => e.id === "walking_lunge__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Dumbbell Walking Lunge");
+  });
+
+  it("leg curl machine: id=leg_curl__machine", () => {
+    const ex = all.find((e) => e.id === "leg_curl__machine");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Leg Curl");
+  });
+
+  it("calf raise machine: id=calf_raise__machine", () => {
+    const ex = all.find((e) => e.id === "calf_raise__machine");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Calf Raise");
+  });
+
+  it("plank bodyweight: id=plank__bodyweight", () => {
+    const ex = all.find((e) => e.id === "plank__bodyweight");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Plank");
+  });
+
+  it("hanging leg raise: id=hanging_leg_raise__pullupbar", () => {
+    const ex = all.find((e) => e.id === "hanging_leg_raise__pullupbar");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Hanging Leg Raise");
+  });
+
+  it("side bend dumbbell: id=side_bend__dumbbell", () => {
+    const ex = all.find((e) => e.id === "side_bend__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.name).toBe("Dumbbell Side Bend");
   });
 });

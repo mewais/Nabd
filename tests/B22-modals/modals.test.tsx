@@ -745,24 +745,28 @@ describe("LibraryModal", () => {
     expect(onDraft).toHaveBeenCalledWith("name", "Squat");
   });
 
-  it("create form has no group <select> (PRIMARY MUSCLE GROUP dropdown removed)", () => {
-    render(<LibraryModal {...creatingProps} />);
-    // Only two comboboxes should exist: track and equip (no group select)
-    const selects = screen.getAllByRole("combobox");
-    expect(selects).toHaveLength(2);
+  it("create form has no native <select> element (replaced by custom Dropdown)", () => {
+    const { container } = render(<LibraryModal {...creatingProps} />);
+    expect(container.querySelectorAll("select")).toHaveLength(0);
   });
 
-  it("track select change calls onDraft('track', value) — now first combobox (index 0)", () => {
+  it("track Dropdown opens on click and choosing an option calls onDraft('track', key)", () => {
     render(<LibraryModal {...creatingProps} />);
-    const selects = screen.getAllByRole("combobox");
-    fireEvent.change(selects[0], { target: { value: "bodyweight_reps" } });
+    // The track Dropdown trigger shows the currently selected label ("Weight & reps")
+    const trackTrigger = screen.getByRole("button", { name: /HOW TO TRACK IT/i });
+    fireEvent.click(trackTrigger);
+    // Menu is now open — click the "Bodyweight reps" option
+    fireEvent.click(screen.getByText("Bodyweight reps"));
     expect(onDraft).toHaveBeenCalledWith("track", "bodyweight_reps");
   });
 
-  it("equip select change calls onDraft('equip', value) — now second combobox (index 1)", () => {
+  it("equip Dropdown opens on click and choosing an option calls onDraft('equip', key)", () => {
     render(<LibraryModal {...creatingProps} />);
-    const selects = screen.getAllByRole("combobox");
-    fireEvent.change(selects[1], { target: { value: "dumbbell" } });
+    // The equip Dropdown trigger shows the currently selected label ("Barbell")
+    const equipTrigger = screen.getByRole("button", { name: /EQUIPMENT/i });
+    fireEvent.click(equipTrigger);
+    // Menu is now open — click the "Dumbbells" option
+    fireEvent.click(screen.getByText("Dumbbells"));
     expect(onDraft).toHaveBeenCalledWith("equip", "dumbbell");
   });
 
@@ -879,19 +883,22 @@ describe("LibraryModal", () => {
     expect(scrollRegion.querySelector("input[type='search']")).toBeNull();
   });
 
-  // ------ Select styling (Change A) ------
+  // ------ Dropdown styling (replaced native <select>) ------
 
-  it("track select (HOW TO TRACK IT) has appearance:none style", () => {
+  it("track Dropdown trigger (HOW TO TRACK IT) renders the selected label as button text", () => {
     render(<LibraryModal {...creatingProps} />);
-    const selects = screen.getAllByRole("combobox");
-    // Both selects should have appearance: none
-    expect((selects[0] as HTMLElement).style.appearance).toBe("none");
+    // draftTrack = "weight_reps", trackOptions[0].n = "Weight & reps"
+    const trackTrigger = screen.getByRole("button", { name: /HOW TO TRACK IT/i });
+    expect(trackTrigger).toBeInTheDocument();
+    expect(trackTrigger.textContent).toContain("Weight & reps");
   });
 
-  it("equip select (EQUIPMENT) has appearance:none style", () => {
+  it("equip Dropdown trigger (EQUIPMENT) renders the selected label as button text", () => {
     render(<LibraryModal {...creatingProps} />);
-    const selects = screen.getAllByRole("combobox");
-    expect((selects[1] as HTMLElement).style.appearance).toBe("none");
+    // draftEquip = "barbell", eqOptions[0].n = "Barbell"
+    const equipTrigger = screen.getByRole("button", { name: /EQUIPMENT/i });
+    expect(equipTrigger).toBeInTheDocument();
+    expect(equipTrigger.textContent).toContain("Barbell");
   });
 
   // ------ Delete button on custom items (Change B) ------

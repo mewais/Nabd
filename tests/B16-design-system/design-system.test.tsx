@@ -32,6 +32,7 @@ import {
   Donut,
   LiveDot,
   Icon,
+  Dropdown,
 } from "@nabd/design-system";
 import type { IconName } from "@nabd/design-system";
 
@@ -980,5 +981,125 @@ describe("Icon", () => {
     const d1 = c1.querySelector("svg path")?.getAttribute("d");
     const d2 = c2.querySelector("svg path")?.getAttribute("d");
     expect(d1).not.toBe(d2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dropdown
+// ---------------------------------------------------------------------------
+
+describe("Dropdown", () => {
+  const options = [
+    { k: "weight_reps", label: "Weight & reps" },
+    { k: "bodyweight_reps", label: "Bodyweight reps" },
+    { k: "time", label: "Time" },
+  ];
+
+  test("renders a button showing the selected option's label", () => {
+    render(<Dropdown value="weight_reps" options={options} onChange={() => {}} />);
+    const trigger = screen.getByRole("button");
+    expect(trigger).toBeInTheDocument();
+    expect(trigger.textContent).toContain("Weight & reps");
+  });
+
+  test("menu is NOT visible before clicking the trigger", () => {
+    render(<Dropdown value="weight_reps" options={options} onChange={() => {}} />);
+    // No listbox before clicking
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  test("clicking the trigger opens the menu (listbox with all options)", () => {
+    render(<Dropdown value="weight_reps" options={options} onChange={() => {}} />);
+    fireEvent.click(screen.getByRole("button"));
+    const listbox = screen.getByRole("listbox");
+    expect(listbox).toBeInTheDocument();
+    // All three option labels are present in the listbox
+    const optionEls = screen.getAllByRole("option");
+    expect(optionEls).toHaveLength(3);
+    expect(optionEls[0].textContent).toContain("Weight & reps");
+    expect(optionEls[1].textContent).toContain("Bodyweight reps");
+    expect(optionEls[2].textContent).toContain("Time");
+  });
+
+  test("clicking an option calls onChange with that option's key", () => {
+    const onChange = vi.fn();
+    render(<Dropdown value="weight_reps" options={options} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button")); // open
+    fireEvent.click(screen.getByText("Bodyweight reps"));
+    expect(onChange).toHaveBeenCalledWith("bodyweight_reps");
+  });
+
+  test("clicking an option closes the menu (listbox disappears)", () => {
+    render(<Dropdown value="weight_reps" options={options} onChange={() => {}} />);
+    fireEvent.click(screen.getByRole("button")); // open
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Time"));
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  test("the active option (value===k) is highlighted (data-active or aria-selected)", () => {
+    render(<Dropdown value="bodyweight_reps" options={options} onChange={() => {}} />);
+    fireEvent.click(screen.getByRole("button")); // open
+    const activeOpt =
+      document.querySelector("[data-active='true']") ??
+      document.querySelector("[aria-selected='true']");
+    expect(activeOpt).not.toBeNull();
+    expect(activeOpt!.textContent).toContain("Bodyweight reps");
+  });
+
+  test("pressing Escape closes the open menu", () => {
+    render(<Dropdown value="weight_reps" options={options} onChange={() => {}} />);
+    fireEvent.click(screen.getByRole("button")); // open
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  test("clicking the backdrop (outside the menu) closes the menu", () => {
+    const { container } = render(
+      <Dropdown value="weight_reps" options={options} onChange={() => {}} />,
+    );
+    fireEvent.click(screen.getByRole("button")); // open
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    const backdrop = container.querySelector("[data-dropdown-backdrop]") as Element;
+    expect(backdrop).not.toBeNull();
+    fireEvent.click(backdrop);
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  test("ariaLabel prop is applied to the trigger button", () => {
+    render(
+      <Dropdown
+        value="weight_reps"
+        options={options}
+        onChange={() => {}}
+        ariaLabel="HOW TO TRACK IT"
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: /HOW TO TRACK IT/i });
+    expect(trigger).toBeInTheDocument();
+  });
+
+  test("clicking the trigger again while open closes the menu (toggle)", () => {
+    render(<Dropdown value="weight_reps" options={options} onChange={() => {}} />);
+    const trigger = screen.getByRole("button");
+    fireEvent.click(trigger); // open
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    fireEvent.click(trigger); // close
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  test("onChange is NOT called if menu is closed via Escape (no selection)", () => {
+    const onChange = vi.fn();
+    render(<Dropdown value="weight_reps" options={options} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button")); // open
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  test("fallback label: renders value string when no matching option found", () => {
+    render(<Dropdown value="unknown_key" options={options} onChange={() => {}} />);
+    const trigger = screen.getByRole("button");
+    expect(trigger.textContent).toContain("unknown_key");
   });
 });

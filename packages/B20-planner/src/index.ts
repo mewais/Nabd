@@ -1632,6 +1632,8 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
       style: {
         flex: 1,
         minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
         background: "var(--surface)",
         border: "1px solid var(--line)",
         borderRadius: 16,
@@ -1698,7 +1700,8 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
           display: "flex",
           flexDirection: "column",
           gap: 11,
-          maxHeight: 560,
+          flex: 1,
+          minHeight: 0,
           overflow: "auto",
         },
       },
@@ -1752,7 +1755,7 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
             style: {
               display: "flex",
               gap: 16,
-              alignItems: "flex-start",
+              alignItems: "stretch",
               flexWrap: "wrap" as const,
             },
           },

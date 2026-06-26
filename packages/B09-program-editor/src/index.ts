@@ -483,7 +483,7 @@ export function seedProgram(): Program {
         exercises: [
           {
             id: "x1",
-            exId: "bb-bench",
+            exId: "bench_press__barbell",
             repMode: "range",
             intensity: "rpe",
             rest: 150,
@@ -491,7 +491,7 @@ export function seedProgram(): Program {
           },
           {
             id: "x2",
-            exId: "incline-db-press",
+            exId: "incline_bench_press__dumbbell",
             repMode: "range",
             intensity: "rpe",
             rest: 120,
@@ -499,7 +499,7 @@ export function seedProgram(): Program {
           },
           {
             id: "x3",
-            exId: "db-fly",
+            exId: "fly__dumbbell",
             repMode: "range",
             intensity: "none",
             rest: 75,
@@ -508,7 +508,7 @@ export function seedProgram(): Program {
           },
           {
             id: "x4",
-            exId: "lat-raise",
+            exId: "lateral_raise__dumbbell",
             repMode: "range",
             intensity: "none",
             rest: 75,
@@ -517,7 +517,7 @@ export function seedProgram(): Program {
           },
           {
             id: "x5",
-            exId: "db-oh-ext",
+            exId: "overhead_triceps_extension__dumbbell",
             repMode: "range",
             intensity: "none",
             rest: 90,
@@ -533,7 +533,7 @@ export function seedProgram(): Program {
         exercises: [
           {
             id: "y1",
-            exId: "pullup",
+            exId: "pull_up__bodyweight",
             repMode: "range",
             intensity: "rpe",
             rest: 150,
@@ -541,7 +541,7 @@ export function seedProgram(): Program {
           },
           {
             id: "y2",
-            exId: "bb-row",
+            exId: "row__barbell",
             repMode: "range",
             intensity: "rpe",
             rest: 120,
@@ -549,7 +549,7 @@ export function seedProgram(): Program {
           },
           {
             id: "y3",
-            exId: "db-row",
+            exId: "row__dumbbell",
             repMode: "range",
             intensity: "none",
             rest: 90,
@@ -557,7 +557,7 @@ export function seedProgram(): Program {
           },
           {
             id: "y4",
-            exId: "hammer-curl",
+            exId: "hammer_curl__dumbbell",
             repMode: "range",
             intensity: "none",
             rest: 75,
@@ -566,7 +566,7 @@ export function seedProgram(): Program {
           },
           {
             id: "y5",
-            exId: "bb-curl",
+            exId: "curl__barbell",
             repMode: "range",
             intensity: "none",
             rest: 75,
@@ -583,7 +583,7 @@ export function seedProgram(): Program {
         exercises: [
           {
             id: "z1",
-            exId: "back-squat",
+            exId: "back_squat__barbell",
             repMode: "range",
             intensity: "rpe",
             rest: 180,
@@ -591,7 +591,7 @@ export function seedProgram(): Program {
           },
           {
             id: "z2",
-            exId: "rdl",
+            exId: "romanian_deadlift__barbell",
             repMode: "range",
             intensity: "rpe",
             rest: 150,
@@ -599,7 +599,7 @@ export function seedProgram(): Program {
           },
           {
             id: "z3",
-            exId: "walking-lunge",
+            exId: "walking_lunge__dumbbell",
             repMode: "range",
             intensity: "none",
             rest: 120,
@@ -607,7 +607,7 @@ export function seedProgram(): Program {
           },
           {
             id: "z4",
-            exId: "db-calf",
+            exId: "calf_raise__dumbbell",
             repMode: "range",
             intensity: "none",
             rest: 60,
@@ -615,7 +615,7 @@ export function seedProgram(): Program {
           },
           {
             id: "z5",
-            exId: "plank",
+            exId: "plank__bodyweight",
             repMode: "time",
             intensity: "none",
             rest: 60,
