@@ -558,6 +558,7 @@ describe("LibraryModal", () => {
   const onGroup = vi.fn();
   const onPick = vi.fn();
   const onCopy = vi.fn();
+  const onDeleteCustom = vi.fn();
   const onStartCreate = vi.fn();
   const onCancelCreate = vi.fn();
   const onDraft = vi.fn();
@@ -572,6 +573,7 @@ describe("LibraryModal", () => {
       onGroup,
       onPick,
       onCopy,
+      onDeleteCustom,
       onStartCreate,
       onCancelCreate,
       onDraft,
@@ -609,7 +611,6 @@ describe("LibraryModal", () => {
   const browsingProps: LibraryModalProps = {
     open: true,
     title: "Exercise Library",
-    profileName: "Commercial gym",
     browsing: true,
     creating: false,
     search: "",
@@ -632,6 +633,7 @@ describe("LibraryModal", () => {
     onGroup,
     onPick,
     onCopy,
+    onDeleteCustom,
     onStartCreate,
     onCancelCreate,
     onDraft,
@@ -875,6 +877,48 @@ describe("LibraryModal", () => {
     const scrollRegion = container.querySelector("[data-library-scroll]") as HTMLElement;
     // Search input must NOT be inside the scrollable region — it belongs to the fixed header
     expect(scrollRegion.querySelector("input[type='search']")).toBeNull();
+  });
+
+  // ------ Select styling (Change A) ------
+
+  it("track select (HOW TO TRACK IT) has appearance:none style", () => {
+    render(<LibraryModal {...creatingProps} />);
+    const selects = screen.getAllByRole("combobox");
+    // Both selects should have appearance: none
+    expect((selects[0] as HTMLElement).style.appearance).toBe("none");
+  });
+
+  it("equip select (EQUIPMENT) has appearance:none style", () => {
+    render(<LibraryModal {...creatingProps} />);
+    const selects = screen.getAllByRole("combobox");
+    expect((selects[1] as HTMLElement).style.appearance).toBe("none");
+  });
+
+  // ------ Delete button on custom items (Change B) ------
+
+  it("custom item renders a delete button", () => {
+    render(<LibraryModal {...browsingProps} />);
+    // "My Custom Press" (lib2) is custom — should have a delete button
+    const deleteBtns = screen.getAllByRole("button", { name: /delete/i });
+    expect(deleteBtns).toHaveLength(1);
+  });
+
+  it("non-custom item does NOT render a delete button (only custom items do)", () => {
+    // Render with only a non-custom item
+    render(
+      <LibraryModal
+        {...browsingProps}
+        items={[makeLibraryItem({ id: "nc1", name: "Non Custom", custom: false })]}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /delete/i })).toBeNull();
+  });
+
+  it("clicking delete button on custom item calls onDeleteCustom with that item's id", () => {
+    render(<LibraryModal {...browsingProps} />);
+    const deleteBtns = screen.getAllByRole("button", { name: /delete/i });
+    fireEvent.click(deleteBtns[0]);
+    expect(onDeleteCustom).toHaveBeenCalledWith("lib2");
   });
 });
 

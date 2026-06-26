@@ -9,11 +9,8 @@ import type {
   RepMode,
   Intensity,
   SetType,
-  MuscleGroup,
   MuscleKey,
   Exercise,
-  Equipment,
-  GymProfile,
 } from "@nabd/domain";
 import { MUSCLE_NAMES, GROUP_PRIMARY_MUSCLE } from "@nabd/domain";
 
@@ -399,7 +396,7 @@ export interface BoardColumn {
 }
 
 /** Week-board layout for weekday or floating schedule. */
-export function boardLayout(_p: Program, _profile: GymProfile): BoardColumn[] {
+export function boardLayout(_p: Program): BoardColumn[] {
   const cardChips = (d: Day): { chips: { name: string; superset: boolean }[]; more: number } => {
     let items: { name: string; superset: boolean }[];
     let n: number;
@@ -632,9 +629,4 @@ export function seedProgram(): Program {
       },
     ],
   };
-}
-
-/** Equipment available for a profile id (helper for the library filter). */
-export function profileEquipment(_profile: GymProfile): Equipment[] {
-  return _profile.equipment;
 }

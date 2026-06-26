@@ -782,7 +782,6 @@ export interface LibraryItem {
 export interface LibraryModalProps {
   open: boolean;
   title: string;
-  profileName: string;
   browsing: boolean;
   creating: boolean;
   search: string;
@@ -803,6 +802,7 @@ export interface LibraryModalProps {
   onGroup: (g: string) => void;
   onPick: (exId: string) => void;
   onCopy: (exId: string) => void;
+  onDeleteCustom: (exId: string) => void;
   onStartCreate: () => void;
   onCancelCreate: () => void;
   onDraft: (k: string, v: string) => void;
@@ -833,6 +833,7 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
     onGroup,
     onPick,
     onCopy,
+    onDeleteCustom,
     onStartCreate,
     onCancelCreate,
     onDraft,
@@ -1073,6 +1074,50 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
                   React.createElement("path", { d: "M5 15V5a2 2 0 0 1 2-2h10" }),
                 ),
               ),
+              item.custom
+                ? React.createElement(
+                    "button",
+                    {
+                      "aria-label": "delete",
+                      onClick: () => onDeleteCustom(item.id),
+                      title: "Delete custom exercise",
+                      style: {
+                        flexShrink: 0,
+                        width: 42,
+                        background: "var(--surface2)",
+                        border: "1px solid var(--line)",
+                        borderRadius: 11,
+                        cursor: "pointer",
+                        color: "var(--text3)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      },
+                    },
+                    React.createElement(
+                      "svg",
+                      {
+                        width: 15,
+                        height: 15,
+                        viewBox: "0 0 24 24",
+                        fill: "none",
+                        stroke: "#e05252",
+                        strokeWidth: "1.8",
+                        strokeLinecap: "round",
+                        strokeLinejoin: "round",
+                      },
+                      React.createElement("polyline", { points: "3 6 5 6 21 6" }),
+                      React.createElement("path", {
+                        d: "M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6",
+                      }),
+                      React.createElement("path", { d: "M10 11v6" }),
+                      React.createElement("path", { d: "M14 11v6" }),
+                      React.createElement("path", {
+                        d: "M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2",
+                      }),
+                    ),
+                  )
+                : null,
             ),
           );
 
@@ -1157,6 +1202,24 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
       boxSizing: "border-box" as const,
     };
 
+    // Inline SVG chevron caret in a neutral colour, encoded for data-URI
+    const caretSvg =
+      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E";
+
+    const selectStyle: React.CSSProperties = {
+      ...inputStyle,
+      paddingRight: 34,
+      appearance: "none" as const,
+      WebkitAppearance: "none" as const,
+      MozAppearance: "none" as const,
+      cursor: "pointer",
+      backgroundColor: "var(--surface2)",
+      backgroundImage: `url("${caretSvg}")`,
+      backgroundRepeat: "no-repeat",
+      backgroundPosition: "right 12px center",
+      backgroundSize: "14px",
+    };
+
     const labelStyle: React.CSSProperties = {
       fontSize: 10,
       color: "var(--text3)",
@@ -1206,10 +1269,15 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
           {
             value: draftTrack,
             onChange: (e: React.ChangeEvent<HTMLSelectElement>) => onDraft("track", e.target.value),
-            style: inputStyle,
+            style: selectStyle,
           },
           ...trackOptions.map((opt) =>
-            React.createElement("option", { key: opt.k, value: opt.k, label: opt.n }),
+            React.createElement("option", {
+              key: opt.k,
+              value: opt.k,
+              label: opt.n,
+              style: { background: "var(--surface2)", color: "var(--text)" },
+            }),
           ),
         ),
       ),
@@ -1222,10 +1290,15 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
           {
             value: draftEquip,
             onChange: (e: React.ChangeEvent<HTMLSelectElement>) => onDraft("equip", e.target.value),
-            style: inputStyle,
+            style: selectStyle,
           },
           ...eqOptions.map((opt) =>
-            React.createElement("option", { key: opt.k, value: opt.k, label: opt.n }),
+            React.createElement("option", {
+              key: opt.k,
+              value: opt.k,
+              label: opt.n,
+              style: { background: "var(--surface2)", color: "var(--text)" },
+            }),
           ),
         ),
       ),

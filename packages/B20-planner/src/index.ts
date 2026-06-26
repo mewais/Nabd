@@ -3,13 +3,7 @@
 // + presentational React. Mutations are callbacks (wired to the store in B23).
 
 import React from "react";
-import type {
-  Program,
-  ExercisePrescription,
-  CycledSlot,
-  MuscleKey,
-  GymProfile,
-} from "@nabd/domain";
+import type { Program, ExercisePrescription, CycledSlot, MuscleKey } from "@nabd/domain";
 import { MUSCLE_NAMES, MUSCLES, EQUIPMENT_NAMES } from "@nabd/domain";
 import type { Library } from "@nabd/dataset";
 import { boardLayout, daySummary } from "@nabd/program-editor";
@@ -342,11 +336,10 @@ export interface BoardColVM {
 /** Build the week-board columns. */
 export function buildBoard(
   _program: Program,
-  _profile: GymProfile,
   _editDayId: string | null,
   _library?: Library,
 ): BoardColVM[] {
-  const layout = boardLayout(_program, _profile);
+  const layout = boardLayout(_program);
 
   return layout.map((col) => {
     if (col.kind === "add") {
@@ -390,8 +383,6 @@ export function buildBoard(
 export interface PlannerCallbacks {
   onSetType: (t: "fixed" | "cycled") => void;
   onSetSchedule: (s: "weekday" | "floating") => void;
-  onToggleProfileMenu: () => void;
-  onSetProfile: (id: string) => void;
   onSelectDay: (dayId: string) => void;
   onRenameDay: (dayId: string, name: string) => void;
   onSetWeekday: (dayId: string, weekday: number) => void;
@@ -914,15 +905,11 @@ export interface ProgramHeaderProps {
   name: string;
   type: "fixed" | "cycled";
   schedule: "weekday" | "floating";
-  profileName: string;
-  profiles: GymProfile[];
-  activeProfileId: string;
-  profileMenuOpen: boolean;
   cb: PlannerCallbacks;
 }
 
 export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
-  const { name, type, schedule, profileName, profiles, profileMenuOpen, activeProfileId, cb } = _p;
+  const { name, type, schedule, cb } = _p;
 
   const typeOptions = [
     { k: "fixed", label: "Fixed" },
@@ -995,123 +982,6 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
         value: schedule,
         onChange: (k) => cb.onSetSchedule(k as "weekday" | "floating"),
       }),
-    ),
-    // Gym profile dropdown
-    React.createElement(
-      "div",
-      { style: { marginLeft: "auto", position: "relative" as const } },
-      React.createElement(
-        "button",
-        {
-          style: {
-            display: "flex",
-            alignItems: "center",
-            gap: 9,
-            background: "var(--surface2)",
-            border: "1px solid var(--line)",
-            borderRadius: 10,
-            padding: "9px 13px",
-            fontSize: 13,
-            fontWeight: 600,
-            fontFamily: "inherit",
-            color: "var(--text)",
-            cursor: "pointer",
-          },
-          onClick: cb.onToggleProfileMenu,
-        },
-        React.createElement(
-          "svg",
-          {
-            width: 15,
-            height: 15,
-            viewBox: "0 0 24 24",
-            fill: "none",
-            stroke: "var(--text2)",
-            strokeWidth: "1.8",
-            strokeLinecap: "round",
-            strokeLinejoin: "round",
-          },
-          React.createElement("path", { d: "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" }),
-        ),
-        profileName,
-        React.createElement("span", { style: { color: "var(--text3)" } }, "▾"),
-      ),
-      profileMenuOpen
-        ? React.createElement(
-            "div",
-            {
-              role: "menu",
-              style: {
-                position: "absolute" as const,
-                top: 46,
-                right: 0,
-                width: 230,
-                background: "var(--surface)",
-                border: "1px solid var(--line)",
-                borderRadius: 12,
-                boxShadow: "0 16px 40px rgba(0,0,0,.18)",
-                padding: 7,
-                zIndex: 30,
-              },
-            },
-            React.createElement(
-              "div",
-              {
-                style: {
-                  fontSize: 10,
-                  color: "var(--text3)",
-                  fontFamily: "'JetBrains Mono',monospace",
-                  letterSpacing: ".08em",
-                  padding: "6px 8px",
-                },
-              },
-              "GYM PROFILE",
-            ),
-            ...profiles.map((p) =>
-              React.createElement(
-                "div",
-                {
-                  key: p.id,
-                  style: {
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "8px 8px",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    background: p.id === activeProfileId ? "var(--surface2)" : "transparent",
-                  },
-                  onClick: () => cb.onSetProfile(p.id),
-                },
-                React.createElement(
-                  "div",
-                  { style: { flex: 1 } },
-                  React.createElement(
-                    "div",
-                    { style: { fontSize: "13.5px", fontWeight: 600 } },
-                    p.name,
-                  ),
-                ),
-                p.id === activeProfileId
-                  ? React.createElement(
-                      "svg",
-                      {
-                        width: 15,
-                        height: 15,
-                        viewBox: "0 0 24 24",
-                        fill: "none",
-                        stroke: "var(--accent)",
-                        strokeWidth: "2.6",
-                        strokeLinecap: "round",
-                        strokeLinejoin: "round",
-                      },
-                      React.createElement("path", { d: "M20 6 9 17l-5-5" }),
-                    )
-                  : null,
-              ),
-            ),
-          )
-        : null,
     ),
   );
 }
@@ -1841,10 +1711,6 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
 export interface PlannerScreenProps {
   program: Program;
   library: Library;
-  profile: GymProfile;
-  profiles: GymProfile[];
-  activeProfileId: string;
-  profileMenuOpen: boolean;
   editDayId: string | null;
   /** per-muscle planned volume bars for the coverage rail. */
   volumeBars: { muscle: string; name: string; sets: number; pct: number }[];
@@ -1853,20 +1719,9 @@ export interface PlannerScreenProps {
 }
 
 export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
-  const {
-    program,
-    library,
-    profile,
-    profiles,
-    activeProfileId,
-    profileMenuOpen,
-    editDayId,
-    volumeBars,
-    coverage,
-    cb,
-  } = _p;
+  const { program, library, editDayId, volumeBars, coverage, cb } = _p;
 
-  const columns = buildBoard(program, profile, editDayId, library);
+  const columns = buildBoard(program, editDayId, library);
   const editor = buildEditor(program, editDayId, library);
 
   return React.createElement(
@@ -1885,10 +1740,6 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
       name: program.name,
       type: program.type,
       schedule: program.schedule,
-      profileName: profile.name,
-      profiles,
-      activeProfileId,
-      profileMenuOpen,
       cb,
     }),
     // Week board

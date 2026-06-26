@@ -39,7 +39,6 @@ import {
   boardLayout,
   daySummary,
   seedProgram,
-  profileEquipment,
   type ExerciseLookup,
   type EditRef,
 } from "@nabd/program-editor";
@@ -49,7 +48,6 @@ import {
   type Program,
   type Day,
   type Exercise,
-  type GymProfile,
   type ExercisePrescription,
 } from "@nabd/domain";
 
@@ -140,12 +138,6 @@ const noopLookup: ExerciseLookup = () => undefined;
 function makeLookup(exercises: Exercise[]): ExerciseLookup {
   return (id) => exercises.find((e) => e.id === id);
 }
-
-const gymProfile: GymProfile = {
-  id: "commercial",
-  name: "Commercial gym",
-  equipment: ["barbell", "dumbbell", "bench", "cable", "machine"],
-};
 
 // ---------------------------------------------------------------------------
 // Deep-clone helper to snapshot the input for immutability checks
@@ -1696,7 +1688,7 @@ describe("boardLayout (weekday)", () => {
   it("returns 7 columns for MON..SUN", () => {
     const p = makeProgram(); // days at weekday 1 and 3
     const before = snapshot(p);
-    const columns = boardLayout(p, gymProfile);
+    const columns = boardLayout(p);
 
     expect(p).toEqual(before);
     expect(columns).toHaveLength(7);
@@ -1704,7 +1696,7 @@ describe("boardLayout (weekday)", () => {
 
   it("produces a day-card column for Mon (weekday=1)", () => {
     const p = makeProgram();
-    const cols = boardLayout(p, gymProfile);
+    const cols = boardLayout(p);
     const mon = cols[0]; // MON is first
     expect(mon.kind).toBe("day");
     expect(mon.label).toBe("MON");
@@ -1714,14 +1706,14 @@ describe("boardLayout (weekday)", () => {
 
   it("produces a rest column for Tue (weekday=2, no day)", () => {
     const p = makeProgram();
-    const cols = boardLayout(p, gymProfile);
+    const cols = boardLayout(p);
     const tue = cols[1]; // TUE
     expect(tue.kind).toBe("rest");
   });
 
   it("rest column does NOT have a card", () => {
     const p = makeProgram();
-    const cols = boardLayout(p, gymProfile);
+    const cols = boardLayout(p);
     const tue = cols[1];
     expect(tue.card).toBeUndefined();
   });
@@ -1819,7 +1811,7 @@ describe("boardLayout (weekday)", () => {
     });
 
     // We just need the board to include 4 chips max and count 'more' correctly
-    const cols = boardLayout(p, gymProfile);
+    const cols = boardLayout(p);
     const monCol = cols[0];
     expect(monCol.card).toBeDefined();
     expect(monCol.card!.chips.length).toBeLessThanOrEqual(4);
@@ -1887,7 +1879,7 @@ describe("boardLayout (weekday)", () => {
         },
       ],
     };
-    const cols = boardLayout(p, gymProfile);
+    const cols = boardLayout(p);
     const monCol = cols[0];
     expect(monCol.card).toBeDefined();
     expect(monCol.card!.chips.length).toBeLessThanOrEqual(4);
@@ -1926,7 +1918,7 @@ describe("boardLayout (floating)", () => {
       ],
     };
     const before = snapshot(p);
-    const cols = boardLayout(p, gymProfile);
+    const cols = boardLayout(p);
 
     expect(p).toEqual(before);
     expect(cols).toHaveLength(3); // 2 day cards + 1 add
@@ -1951,7 +1943,7 @@ describe("boardLayout (floating)", () => {
         },
       ],
     };
-    const cols = boardLayout(p, gymProfile);
+    const cols = boardLayout(p);
     expect(cols[0].label).toBe("DAY 1");
   });
 });
@@ -2148,22 +2140,6 @@ describe("seedProgram", () => {
     expect(ohExt).toBeDefined();
     const dropSets = ohExt!.sets.filter((s) => s.type === "drop");
     expect(dropSets.length).toBeGreaterThanOrEqual(1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// profileEquipment
-// ---------------------------------------------------------------------------
-describe("profileEquipment", () => {
-  it("returns the equipment array of the gym profile", () => {
-    const result = profileEquipment(gymProfile);
-    expect(result).toEqual(gymProfile.equipment);
-  });
-
-  it("returns empty array for a profile with no equipment", () => {
-    const emptyProfile: GymProfile = { id: "none", name: "No Equipment", equipment: [] };
-    const result = profileEquipment(emptyProfile);
-    expect(result).toEqual([]);
   });
 });
 

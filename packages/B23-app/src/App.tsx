@@ -44,14 +44,7 @@ import { suggest } from "@nabd/progression";
 import { insight, computePlanVolume, planCoverage } from "@nabd/coverage";
 
 // Domain constants
-import {
-  GYM_PROFILES,
-  MUSCLE_NAMES,
-  MUSCLE_GROUPS,
-  MUSCLES,
-  EQUIPMENT_NAMES,
-  TRACK_NAMES,
-} from "@nabd/domain";
+import { MUSCLE_NAMES, MUSCLE_GROUPS, MUSCLES, EQUIPMENT_NAMES, TRACK_NAMES } from "@nabd/domain";
 import type { MuscleKey } from "@nabd/domain";
 
 // Library
@@ -78,7 +71,6 @@ export function App({ store, client }: AppProps): JSX.Element {
   const notif = useStore(store, (s) => s.notif);
   const program = useStore(store, (s) => s.program);
   const customExercises = useStore(store, (s) => s.customExercises);
-  const activeProfileId = useStore(store, (s) => s.activeProfileId);
   const slots = useStore(store, (s) => s.slots);
   const coverage = useStore(store, (s) => s.coverage);
   const history = useStore(store, (s) => s.history);
@@ -86,7 +78,6 @@ export function App({ store, client }: AppProps): JSX.Element {
   const mapStyle = useStore(store, (s) => s.mapStyle);
   const activeSession = useStore(store, (s) => s.activeSession);
   const settingsOpen = useStore(store, (s) => s.settingsOpen);
-  const profileMenu = useStore(store, (s) => s.profileMenu);
   const planEditDay = useStore(store, (s) => s.planEditDay);
   const lib = useStore(store, (s) => s.lib);
   const progTab = useStore(store, (s) => s.progTab);
@@ -124,8 +115,6 @@ export function App({ store, client }: AppProps): JSX.Element {
     importData,
     planSetType,
     planSetSchedule,
-    planSetProfile,
-    toggleProfileMenu,
     planSelectDay,
     planRenameDay,
     planSetWeekday,
@@ -150,6 +139,7 @@ export function App({ store, client }: AppProps): JSX.Element {
     libToggleSecondary,
     libTogglePrimary,
     libCreate,
+    deleteCustomExercise,
     setProgTab,
     openProgChart,
     closeProgChart,
@@ -211,11 +201,6 @@ export function App({ store, client }: AppProps): JSX.Element {
   // ------------------------------------------------------------------
   const glass = settings.glass;
   const idleActive = idleSeconds >= 0.6 * settings.idleNudge;
-
-  // ------------------------------------------------------------------
-  // Active gym profile
-  // ------------------------------------------------------------------
-  const activeProfile = GYM_PROFILES.find((p) => p.id === activeProfileId) ?? GYM_PROFILES[0]!;
 
   // ------------------------------------------------------------------
   // Build library with custom exercises
@@ -292,8 +277,6 @@ export function App({ store, client }: AppProps): JSX.Element {
   const plannerCb: PlannerCallbacks = {
     onSetType: planSetType,
     onSetSchedule: planSetSchedule,
-    onToggleProfileMenu: toggleProfileMenu,
-    onSetProfile: planSetProfile,
     onSelectDay: planSelectDay,
     onRenameDay: planRenameDay,
     onSetWeekday: planSetWeekday,
@@ -353,12 +336,10 @@ export function App({ store, client }: AppProps): JSX.Element {
     active: lib.group === g,
   }));
 
-  // Filter library by active profile for library modal
-  const profileFilteredLibrary = mergedLibrary.filterByProfile(activeProfile.equipment);
+  // Full library for the modal (no gym-profile equipment filtering)
+  const allExercises = mergedLibrary.all();
   const filteredByGroup =
-    lib.group !== ""
-      ? profileFilteredLibrary.filter((ex) => ex.group === lib.group)
-      : profileFilteredLibrary;
+    lib.group !== "" ? allExercises.filter((ex) => ex.group === lib.group) : allExercises;
   const filteredBySearch =
     lib.search !== ""
       ? filteredByGroup.filter((ex) => ex.name.toLowerCase().includes(lib.search.toLowerCase()))
@@ -387,7 +368,7 @@ export function App({ store, client }: AppProps): JSX.Element {
   const libEmptyMsg =
     lib.search !== "" || lib.group !== ""
       ? "No exercises match your filter"
-      : "No exercises available for this profile";
+      : "No exercises available";
 
   // Primary & secondary muscle chips for create form — the 23 specific muscles
   const primaryChips = MUSCLES.map((m) => ({
@@ -547,10 +528,6 @@ export function App({ store, client }: AppProps): JSX.Element {
     screenContent = React.createElement(PlannerScreen, {
       program,
       library: mergedLibrary,
-      profile: activeProfile,
-      profiles: GYM_PROFILES,
-      activeProfileId,
-      profileMenuOpen: profileMenu,
       editDayId: planEditDay,
       volumeBars,
       coverage: planCov,
@@ -618,7 +595,6 @@ export function App({ store, client }: AppProps): JSX.Element {
   const libraryModal = React.createElement(LibraryModal, {
     open: lib.open,
     title: libTitle,
-    profileName: activeProfile.name,
     browsing: !lib.creating,
     creating: lib.creating,
     search: lib.search,
@@ -648,6 +624,7 @@ export function App({ store, client }: AppProps): JSX.Element {
       libDraft("equip", ex.equipment);
       libStartCreate();
     },
+    onDeleteCustom: deleteCustomExercise,
     onStartCreate: libStartCreate,
     onCancelCreate: libCancelCreate,
     onDraft: (k, v) => libDraft(k as keyof import("@nabd/store").LibState["draft"], v),

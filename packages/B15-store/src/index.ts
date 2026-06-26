@@ -98,7 +98,6 @@ export interface NabdState {
   // plan + library
   program: Program;
   customExercises: Exercise[];
-  activeProfileId: string;
   // today
   slots: Slot[];
   coverage: Coverage;
@@ -111,7 +110,6 @@ export interface NabdState {
   activeSession: ActiveSession | null;
   // ui flags
   settingsOpen: boolean;
-  profileMenu: boolean;
   planEditDay: string | null;
   lib: LibState;
   progTab: "calendar" | "weekly";
@@ -156,8 +154,6 @@ export interface NabdActions {
   // planner (delegate to @nabd/program-editor, then persist)
   planSetType: (t: "fixed" | "cycled") => void;
   planSetSchedule: (s: "weekday" | "floating") => void;
-  planSetProfile: (id: string) => void;
-  toggleProfileMenu: () => void;
   planSelectDay: (dayId: string) => void;
   planRenameDay: (dayId: string, name: string) => void;
   planSetWeekday: (dayId: string, weekday: number) => void;
@@ -190,6 +186,7 @@ export interface NabdActions {
   libTogglePrimary: (m: string) => void;
   libToggleSecondary: (m: string) => void;
   libCreate: () => void;
+  deleteCustomExercise: (id: string) => void;
   // progress
   setProgTab: (t: "calendar" | "weekly") => void;
   openProgChart: (i: number) => void;
@@ -237,7 +234,6 @@ export function initialState(_deps: StoreDeps): NabdState {
     notif: null,
     program: { name: "My Plan", type: "fixed", schedule: "weekday", days: [] },
     customExercises: [],
-    activeProfileId: "default",
     slots: [],
     coverage: emptyCoverage(),
     rotationState: {},
@@ -247,7 +243,6 @@ export function initialState(_deps: StoreDeps): NabdState {
     mapStyle: "heat",
     activeSession: null,
     settingsOpen: false,
-    profileMenu: false,
     planEditDay: null,
     lib: {
       ...DEFAULT_LIB_STATE,
@@ -619,15 +614,6 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       void client.saveSingleton("program", program);
     },
 
-    planSetProfile: (id: string) => {
-      set({ activeProfileId: id });
-    },
-
-    toggleProfileMenu: () => {
-      const state = get();
-      set({ profileMenu: !state.profileMenu });
-    },
-
     planSelectDay: (dayId: string) => {
       set({ planEditDay: dayId });
     },
@@ -845,9 +831,48 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
         custom: true,
       };
       const customExercises = [...state.customExercises, newExercise];
+      set({
+        customExercises,
+        lib: {
+          ...state.lib,
+          creating: false,
+          open: true,
+          draft: {
+            name: "",
+            primary: [],
+            equip: "bodyweight",
+            secondary: [],
+            track: "weight_reps",
+          },
+        },
+      });
+      void client.saveSingleton("customExercises", customExercises);
+    },
+
+    deleteCustomExercise: (id: string) => {
+      const state = get();
+      const customExercises = state.customExercises.filter((e) => e.id !== id);
+      // Strip the exercise from every day.exercises and every slot pool
+      const days = state.program.days.map((day) => ({
+        ...day,
+        exercises: day.exercises.filter((e) => e.exId !== id),
+        slots: day.slots.map((slot) => ({
+          ...slot,
+          pool: slot.pool.filter((exId) => exId !== id),
+        })),
+      }));
+      const hasProgramChange = state.program.days.some(
+        (day, di) =>
+          day.exercises.length !== days[di].exercises.length ||
+          day.slots.some((slot, si) => slot.pool.length !== days[di].slots[si].pool.length),
+      );
       set({ customExercises });
       void client.saveSingleton("customExercises", customExercises);
-      get().libPick(id);
+      if (hasProgramChange) {
+        const program = { ...state.program, days };
+        set({ program });
+        void client.saveSingleton("program", program);
+      }
     },
 
     // -------------------------------------------------------------------------
