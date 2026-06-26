@@ -334,8 +334,8 @@ export const MOVEMENTS: Movement[] = [
   {
     id: "inverted_row",
     name: "Inverted Row",
-    primary: ["rhomboids", "lats"],
-    secondary: ["biceps", "rear_delts", "lower_traps"],
+    primary: ["rhomboids"],
+    secondary: ["lats", "rear_delts", "biceps", "lower_traps"],
     equipment: ["bodyweight"],
     laterality: ["bilateral"],
     nameOverride: { bodyweight: "Inverted Row" },
@@ -343,8 +343,8 @@ export const MOVEMENTS: Movement[] = [
   {
     id: "chest_supported_row",
     name: "Chest-Supported Row",
-    primary: ["rhomboids", "lats"],
-    secondary: ["biceps", "rear_delts", "lower_traps"],
+    primary: ["rhomboids"],
+    secondary: ["lats", "rear_delts", "biceps", "lower_traps"],
     equipment: ["dumbbell", "machine"],
     laterality: ["bilateral"],
   },

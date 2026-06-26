@@ -886,11 +886,12 @@ describe("Accuracy spot-checks", () => {
     expect(ex!.secondary).not.toContain("upper_traps");
   });
 
-  it("Inverted Row leads with rhomboids as primary[0] (retraction-focused)", () => {
+  it("Inverted Row primary is rhomboids only; lats demoted to secondary (assist, not prime mover)", () => {
     const ex = all.find((e) => e.id === "inverted_row__bodyweight");
     expect(ex).toBeDefined();
-    expect(ex!.primary[0]).toBe("rhomboids");
-    expect(ex!.primary).toContain("lats");
+    expect(ex!.primary).toEqual(["rhomboids"]);
+    expect(ex!.primary).not.toContain("lats");
+    expect(ex!.secondary).toContain("lats");
   });
 
   it("Inverted Row group is Back (rhomboids → Back)", () => {
@@ -905,11 +906,12 @@ describe("Accuracy spot-checks", () => {
     expect(ex!.secondary).toContain("lower_traps");
   });
 
-  it("Chest-Supported Row leads with rhomboids as primary[0] (retraction-focused)", () => {
+  it("Chest-Supported Row primary is rhomboids only; lats demoted to secondary", () => {
     const ex = all.find((e) => e.id === "chest_supported_row__dumbbell");
     expect(ex).toBeDefined();
-    expect(ex!.primary[0]).toBe("rhomboids");
-    expect(ex!.primary).toContain("lats");
+    expect(ex!.primary).toEqual(["rhomboids"]);
+    expect(ex!.primary).not.toContain("lats");
+    expect(ex!.secondary).toContain("lats");
   });
 
   it("Chest-Supported Row secondary includes biceps, rear_delts, and lower_traps", () => {
