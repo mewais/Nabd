@@ -4,7 +4,7 @@
  * Coverage targets:
  *   - Movement schema / catalog validity
  *   - compose() correctness (equipment expansion, naming, tags, tracking)
- *   - Library interface (all/byId/search/byGroup/filterByProfile/musclesOf/withCustom)
+ *   - Library interface (all/byId/search/byGroup/musclesOf/withCustom)
  *   - Coverage invariant: every MuscleKey is primary of ≥2 composed exercises
  *   - Accuracy spot-checks for specific movements
  *
@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import type { Exercise, Equipment, MuscleKey, MuscleGroup } from "@nabd/domain";
+import type { Exercise, MuscleKey, MuscleGroup } from "@nabd/domain";
 import { MUSCLES, MUSCLE_PRIMARY_GROUP, EQUIPMENT_NAMES } from "@nabd/domain";
 import { compose, MOVEMENTS, exercises, createLibrary, defaultLibrary } from "@nabd/dataset";
 import type { Movement } from "@nabd/dataset";
@@ -999,41 +999,6 @@ describe("createLibrary", () => {
       const lib2 = createLibrary([ex1, extraChest]);
       const results = lib2.byGroup("Chest");
       expect(results.length).toBe(2);
-    });
-  });
-
-  describe("filterByProfile()", () => {
-    it("keeps exercises whose equipment is in the profile", () => {
-      const lib = createLibrary([ex1, ex2, ex3, ex4]);
-      const results = lib.filterByProfile(["barbell"]);
-      expect(results.map((e) => e.id).sort()).toEqual(["lib-1", "lib-2"]);
-    });
-
-    it("drops exercises whose equipment is not in the profile", () => {
-      const lib = createLibrary([ex1, ex2, ex3, ex4]);
-      const results = lib.filterByProfile(["cable"]);
-      expect(results).toEqual([]);
-    });
-
-    it("always keeps custom exercises regardless of equipment", () => {
-      const libWithCustom = createLibrary([ex1, customEx]);
-      const results = libWithCustom.filterByProfile(["cable"]);
-      expect(results.map((e) => e.id)).toContain("cust-1");
-      expect(results.map((e) => e.id)).not.toContain("lib-1");
-    });
-
-    it("keeps both in-profile and custom exercises", () => {
-      const libWithCustom = createLibrary([ex1, customEx]);
-      const results = libWithCustom.filterByProfile(["barbell"]);
-      const ids = results.map((e) => e.id).sort();
-      expect(ids).toContain("lib-1");
-      expect(ids).toContain("cust-1");
-    });
-
-    it("empty profile keeps only custom exercises", () => {
-      const libWithCustom = createLibrary([ex1, customEx]);
-      const results = libWithCustom.filterByProfile([]);
-      expect(results.map((e) => e.id)).toEqual(["cust-1"]);
     });
   });
 

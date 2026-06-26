@@ -6,7 +6,7 @@
  *   - index.ts      → public API: exercises(), createLibrary(), defaultLibrary()
  */
 
-import type { Exercise, Equipment, MuscleGroup, MuscleKey } from "@nabd/domain";
+import type { Exercise, MuscleGroup, MuscleKey } from "@nabd/domain";
 import { MUSCLE_PRIMARY_GROUP } from "@nabd/domain";
 import { compose, MOVEMENTS } from "./movements";
 
@@ -39,8 +39,6 @@ export interface Library {
   search(q: string): Exercise[];
   /** Exercises in the given muscle group. */
   byGroup(group: MuscleGroup): Exercise[];
-  /** Exercises whose equipment is in the given profile equipment set. */
-  filterByProfile(equipment: Equipment[]): Exercise[];
   /** Combined primary+secondary muscles of an exercise. */
   musclesOf(ex: Exercise): MuscleKey[];
   /** A new Library that also includes the given custom exercises. */
@@ -62,10 +60,6 @@ export function createLibrary(exs: Exercise[]): Library {
     },
     byGroup(group: MuscleGroup): Exercise[] {
       return exs.filter((e) => e.group === group);
-    },
-    filterByProfile(equipment: Equipment[]): Exercise[] {
-      const eqSet = new Set(equipment);
-      return exs.filter((e) => e.custom === true || eqSet.has(e.equipment));
     },
     musclesOf(ex: Exercise): MuscleKey[] {
       return [...new Set([...ex.primary, ...ex.secondary])];
