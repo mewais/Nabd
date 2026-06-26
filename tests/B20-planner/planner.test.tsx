@@ -103,7 +103,7 @@ const EXERCISES: Exercise[] = [
     timeBased: false,
   },
   {
-    id: "pull_up__bodyweight",
+    id: "pull_up__pullupbar",
     name: "Pull-up",
     group: "Back",
     primary: ["lats"],
@@ -695,7 +695,7 @@ describe("buildEditor", () => {
             {
               id: "s2",
               muscle: "lats",
-              pool: ["pull_up__bodyweight"],
+              pool: ["pull_up__pullupbar"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -1040,7 +1040,7 @@ describe("buildBoard", () => {
             {
               id: "s2",
               muscle: "lats",
-              pool: ["pull_up__bodyweight"],
+              pool: ["pull_up__pullupbar"],
               repMode: "range",
               intensity: "none",
               rest: 120,
@@ -2284,7 +2284,7 @@ describe("buildEditor — additional edge cases", () => {
             {
               id: "s1",
               muscle: "lats",
-              pool: ["pull_up__bodyweight"],
+              pool: ["pull_up__pullupbar"],
               repMode: "range",
               intensity: "none",
               rest: 120,

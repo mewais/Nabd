@@ -228,10 +228,11 @@ describe("compose() — naming rules", () => {
 
   it("unilateral lower-body adds 'Single-Leg ' prefix", () => {
     const result = compose(MOVEMENTS);
-    // calf_raise is lower-body (calves)
-    const uniCalf = result.find((e) => e.id === "calf_raise__bodyweight__uni");
-    expect(uniCalf).toBeDefined();
-    expect(uniCalf!.name).toMatch(/^Single-Leg /);
+    // glute_bridge is lower-body (glutes) and its bodyweight variant is not deduped
+    // (different name from barbell/bands variants)
+    const uniGlute = result.find((e) => e.id === "glute_bridge__bodyweight__uni");
+    expect(uniGlute).toBeDefined();
+    expect(uniGlute!.name).toMatch(/^Single-Leg /);
   });
 
   it("bodyweight unilateral upper-body without nameOverride adds 'Single-Arm ' prefix to movement name", () => {
@@ -325,7 +326,7 @@ describe("compose() — group derivation", () => {
 // ---------------------------------------------------------------------------
 
 describe("compose() — tracking derivation", () => {
-  it("bodyweight equipment defaults to bodyweight_reps", () => {
+  it("bodyweight equipment defaults to weighted_bodyweight", () => {
     const m: Movement = {
       id: "test_bw",
       name: "Test BW",
@@ -335,7 +336,20 @@ describe("compose() — tracking derivation", () => {
       laterality: ["bilateral"],
     };
     const [ex] = compose([m]);
-    expect(ex.tracking).toBe("bodyweight_reps");
+    expect(ex.tracking).toBe("weighted_bodyweight");
+  });
+
+  it("pullupbar equipment defaults to weighted_bodyweight", () => {
+    const m: Movement = {
+      id: "test_pub",
+      name: "Test PullupBar",
+      primary: ["lats"],
+      secondary: [],
+      equipment: ["pullupbar"],
+      laterality: ["bilateral"],
+    };
+    const [ex] = compose([m]);
+    expect(ex.tracking).toBe("weighted_bodyweight");
   });
 
   it("barbell equipment defaults to weight_reps", () => {
@@ -418,16 +432,122 @@ describe("compose() — tracking derivation", () => {
     expect(carry!.timeBased).toBe(true);
   });
 
-  it("weighted_bodyweight tracking used for pull-ups", () => {
+  it("weighted_bodyweight tracking used for pull-ups (pullupbar equipment)", () => {
     const result = compose(MOVEMENTS);
     const pullUp = result.find((e) => e.id === "pull_up__pullupbar");
     expect(pullUp!.tracking).toBe("weighted_bodyweight");
+  });
+
+  it("push_up (bodyweight, non-time) has tracking weighted_bodyweight", () => {
+    const result = compose(MOVEMENTS);
+    const pushUp = result.find((e) => e.id === "push_up__bodyweight");
+    expect(pushUp).toBeDefined();
+    expect(pushUp!.tracking).toBe("weighted_bodyweight");
+  });
+
+  it("plank (bodyweight, time-based) still has tracking duration", () => {
+    const result = compose(MOVEMENTS);
+    const plank = result.find((e) => e.id === "plank__bodyweight");
+    expect(plank!.tracking).toBe("duration");
+  });
+
+  it("barbell bench press still has tracking weight_reps", () => {
+    const result = compose(MOVEMENTS);
+    const bench = result.find((e) => e.id === "bench_press__barbell");
+    expect(bench!.tracking).toBe("weight_reps");
   });
 
   it("assisted_bodyweight tracking used for assisted pull-up", () => {
     const result = compose(MOVEMENTS);
     const assisted = result.find((e) => e.id === "assisted_pull_up__machine");
     expect(assisted!.tracking).toBe("assisted_bodyweight");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// compose() — dedup pass (bodyweight vs non-bodyweight name collisions)
+// ---------------------------------------------------------------------------
+
+describe("compose() — dedup pass", () => {
+  it("no duplicate display names where a bodyweight variant coexists with a non-bodyweight one", () => {
+    const result = compose(MOVEMENTS);
+    const nameGroups = new Map<string, string[]>();
+    for (const ex of result) {
+      const group = nameGroups.get(ex.name);
+      if (group) {
+        group.push(ex.equipment);
+      } else {
+        nameGroups.set(ex.name, [ex.equipment]);
+      }
+    }
+    for (const [name, equipments] of nameGroups) {
+      const hasBodyweight = equipments.includes("bodyweight");
+      const hasNonBodyweight = equipments.some((e) => e !== "bodyweight");
+      expect(
+        hasBodyweight && hasNonBodyweight,
+        `Display name '${name}' appears with both bodyweight and non-bodyweight equipment`,
+      ).toBe(false);
+    }
+  });
+
+  it("Pull-Up appears exactly once in the composed library", () => {
+    const result = compose(MOVEMENTS);
+    const pullUps = result.filter((e) => e.name === "Pull-Up");
+    expect(pullUps.length).toBe(1);
+  });
+
+  it("kept Pull-Up is the pullupbar variant, not bodyweight", () => {
+    const result = compose(MOVEMENTS);
+    const pullUp = result.find((e) => e.name === "Pull-Up");
+    expect(pullUp).toBeDefined();
+    expect(pullUp!.id).toBe("pull_up__pullupbar");
+    expect(pullUp!.equipment).toBe("pullupbar");
+  });
+
+  it("pull_up__bodyweight is absent from the composed library", () => {
+    const result = compose(MOVEMENTS);
+    const bodyweightPullUp = result.find((e) => e.id === "pull_up__bodyweight");
+    expect(bodyweightPullUp).toBeUndefined();
+  });
+
+  it("chin_up__bodyweight is absent from the composed library (Chin-Up deduped)", () => {
+    const result = compose(MOVEMENTS);
+    const bodyweightChinUp = result.find((e) => e.id === "chin_up__bodyweight");
+    expect(bodyweightChinUp).toBeUndefined();
+    // The pullupbar variant remains
+    const chinUp = result.find((e) => e.id === "chin_up__pullupbar");
+    expect(chinUp).toBeDefined();
+    expect(chinUp!.name).toBe("Chin-Up");
+  });
+
+  it("hanging_leg_raise__bodyweight is absent (Hanging Leg Raise deduped; pullupbar kept)", () => {
+    const result = compose(MOVEMENTS);
+    const bodyweightHLR = result.find((e) => e.id === "hanging_leg_raise__bodyweight");
+    expect(bodyweightHLR).toBeUndefined();
+    const pullupbarHLR = result.find((e) => e.id === "hanging_leg_raise__pullupbar");
+    expect(pullupbarHLR).toBeDefined();
+    expect(pullupbarHLR!.name).toBe("Hanging Leg Raise");
+  });
+
+  it("movements that are ONLY bodyweight keep their single bodyweight entry (push_up)", () => {
+    const result = compose(MOVEMENTS);
+    const pushUp = result.find((e) => e.id === "push_up__bodyweight");
+    expect(pushUp).toBeDefined();
+    expect(pushUp!.name).toBe("Push-Up");
+  });
+
+  it("movements that are ONLY bodyweight keep their single bodyweight entry (plank)", () => {
+    const result = compose(MOVEMENTS);
+    const plank = result.find((e) => e.id === "plank__bodyweight");
+    expect(plank).toBeDefined();
+    expect(plank!.name).toBe("Plank");
+  });
+
+  it("movements that are ONLY bodyweight keep their single bodyweight entry (sit_up)", () => {
+    const result = compose(MOVEMENTS);
+    const sitUp = result.find((e) => e.id === "sit_up__bodyweight");
+    expect(sitUp).toBeDefined();
+    expect(sitUp!.name).toBe("Sit-Up");
   });
 });
 
@@ -1153,10 +1273,14 @@ describe("Demo movement ids/names verification", () => {
     expect(ex!.name).toBe("Barbell Overhead Press");
   });
 
-  it("pull-up bodyweight: id=pull_up__bodyweight", () => {
-    const ex = all.find((e) => e.id === "pull_up__bodyweight");
-    expect(ex).toBeDefined();
-    expect(ex!.name).toBe("Pull-Up");
+  it("pull_up__bodyweight is absent (deduped); pull_up__pullupbar is the canonical Pull-Up", () => {
+    // pull_up__bodyweight is dropped by the dedup pass because pull_up__pullupbar
+    // produces the same display name "Pull-Up" and is the more specific equipment.
+    const bodyweightPullUp = all.find((e) => e.id === "pull_up__bodyweight");
+    expect(bodyweightPullUp).toBeUndefined();
+    const pullupbarPullUp = all.find((e) => e.id === "pull_up__pullupbar");
+    expect(pullupbarPullUp).toBeDefined();
+    expect(pullupbarPullUp!.name).toBe("Pull-Up");
   });
 
   it("barbell row: id=row__barbell", () => {

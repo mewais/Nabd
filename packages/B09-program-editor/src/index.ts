@@ -533,7 +533,7 @@ export function seedProgram(): Program {
         exercises: [
           {
             id: "y1",
-            exId: "pull_up__bodyweight",
+            exId: "pull_up__pullupbar",
             repMode: "range",
             intensity: "rpe",
             rest: 150,

@@ -82,13 +82,15 @@ function isLower(primary0: MuscleKey): boolean {
 function deriveTracking(m: Movement, eq: Equipment): TrackingType {
   if (m.tracking) return m.tracking;
   if (m.timeBased) return "duration";
-  if (eq === "bodyweight") return "bodyweight_reps";
+  if (eq === "bodyweight" || eq === "pullupbar") return "weighted_bodyweight";
   return "weight_reps";
 }
 
 function deriveTimeBased(tracking: TrackingType, m: Movement): boolean {
   if (m.timeBased !== undefined) return m.timeBased;
-  return tracking === "duration" || tracking === "weight_duration" || tracking === "distance_duration";
+  return (
+    tracking === "duration" || tracking === "weight_duration" || tracking === "distance_duration"
+  );
 }
 
 function deriveName(m: Movement, eq: Equipment, uni: boolean): string {
@@ -98,9 +100,7 @@ function deriveName(m: Movement, eq: Equipment, uni: boolean): string {
   if (m.nameOverride?.[eq]) {
     const base = m.nameOverride[eq]!;
     if (uni) {
-      return isLower(m.primary[0])
-        ? `Single-Leg ${base}`
-        : `Single-Arm ${base}`;
+      return isLower(m.primary[0]) ? `Single-Leg ${base}` : `Single-Arm ${base}`;
     }
     return base;
   }
@@ -108,9 +108,7 @@ function deriveName(m: Movement, eq: Equipment, uni: boolean): string {
   const prefix = EQUIPMENT_NAME_PREFIX[eq];
   const base = prefix === "" ? m.name : `${prefix} ${m.name}`;
   if (uni) {
-    return isLower(m.primary[0])
-      ? `Single-Leg ${base}`
-      : `Single-Arm ${base}`;
+    return isLower(m.primary[0]) ? `Single-Leg ${base}` : `Single-Arm ${base}`;
   }
   return base;
 }
@@ -148,7 +146,32 @@ export function compose(movements: Movement[]): Exercise[] {
     }
   }
 
-  return result;
+  // Dedup pass: if a display name has both a bodyweight variant and at least one
+  // non-bodyweight variant, drop the bodyweight one (keep the more specific equipment).
+  const nameGroups = new Map<string, Exercise[]>();
+  for (const ex of result) {
+    const group = nameGroups.get(ex.name);
+    if (group) {
+      group.push(ex);
+    } else {
+      nameGroups.set(ex.name, [ex]);
+    }
+  }
+
+  const dropped = new Set<string>();
+  for (const group of nameGroups.values()) {
+    const hasBodyweight = group.some((e) => e.equipment === "bodyweight");
+    const hasNonBodyweight = group.some((e) => e.equipment !== "bodyweight");
+    if (hasBodyweight && hasNonBodyweight) {
+      for (const ex of group) {
+        if (ex.equipment === "bodyweight") {
+          dropped.add(ex.id);
+        }
+      }
+    }
+  }
+
+  return result.filter((ex) => !dropped.has(ex.id));
 }
 
 // ---------------------------------------------------------------------------

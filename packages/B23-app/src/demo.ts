@@ -32,7 +32,7 @@ function seedHistory(program: Program, nowMs: number): LoggedSet[] {
     const picks = exIds.slice((dayBack * 3) % exIds.length, ((dayBack * 3) % exIds.length) + 4);
     picks.forEach((exId, i) => {
       const m = exMeta(exId);
-      const weighted = !["pull_up__bodyweight", "plank__bodyweight"].includes(exId);
+      const weighted = !["pull_up__pullupbar", "plank__bodyweight"].includes(exId);
       for (let s = 0; s < 3; s++) {
         const ts = new Date(base + (9 + i) * 3600000 + s * 120000).toISOString();
         out.push({
