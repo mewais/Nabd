@@ -180,24 +180,72 @@ export interface StepperProps {
   onInc: () => void;
 }
 /** Large +/- stepper (modals/settings). */
+const STEP_BTN: CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: 8,
+  border: "1px solid var(--line)",
+  background: "var(--surface)",
+  color: "var(--text)",
+  fontSize: "17px",
+  lineHeight: "1",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flex: "none",
+};
+
 export function Stepper(_p: StepperProps): JSX.Element {
   const { label, value, onDec, onInc } = _p;
 
   const children: ReactNode[] = [];
   if (label !== undefined) {
-    children.push(React.createElement("div", { key: "label" }, label));
+    children.push(
+      React.createElement(
+        "span",
+        {
+          key: "label",
+          style: {
+            fontSize: 11,
+            color: "var(--text3)",
+            letterSpacing: ".06em",
+            fontFamily: "'JetBrains Mono', monospace",
+          },
+        },
+        label,
+      ),
+    );
   }
   children.push(
     React.createElement(
       "div",
-      { key: "controls", style: { display: "flex", alignItems: "center", gap: 8 } },
-      React.createElement("button", { key: "dec", onClick: onDec }, "−"),
-      React.createElement("span", { key: "val" }, value),
-      React.createElement("button", { key: "inc", onClick: onInc }, "+"),
+      { key: "controls", style: { display: "flex", alignItems: "center", gap: 12 } },
+      React.createElement("button", { key: "dec", onClick: onDec, style: STEP_BTN, "aria-label": "decrease" }, "−"),
+      React.createElement(
+        "span",
+        {
+          key: "val",
+          style: {
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "14px",
+            fontWeight: 600,
+            minWidth: 56,
+            textAlign: "center",
+          },
+        },
+        value,
+      ),
+      React.createElement("button", { key: "inc", onClick: onInc, style: STEP_BTN, "aria-label": "increase" }, "+"),
     ),
   );
 
-  return React.createElement("div", null, ...children);
+  return React.createElement(
+    "div",
+    { style: { display: "flex", alignItems: "center", gap: 12 } },
+    ...children,
+  );
 }
 
 export interface MiniStepperProps {

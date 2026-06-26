@@ -20,7 +20,7 @@ import type {
   LoggedSet,
   Trigger,
 } from "@nabd/domain";
-import { DEFAULT_SETTINGS, DEFAULTS } from "@nabd/domain";
+import { DEFAULT_SETTINGS, DEFAULTS, GLASS_OPACITY } from "@nabd/domain";
 import type { IpcClient } from "@nabd/ipc-client";
 import type { Library } from "@nabd/dataset";
 import type { Notif } from "@nabd/nudge";
@@ -347,9 +347,12 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       void client.saveSingleton("settings", settings);
     },
 
-    setOpacity: (v: number) => {
+    setOpacity: (d: number) => {
       const state = get();
-      const settings = { ...state.settings, opacity: v };
+      const floor = GLASS_OPACITY[state.settings.theme].floor;
+      const next = Math.round((state.settings.opacity + d * 0.05) * 1000) / 1000;
+      const opacity = Math.min(0.92, Math.max(floor, next));
+      const settings = { ...state.settings, opacity };
       set({ settings });
       void client.saveSingleton("settings", settings);
     },
@@ -369,17 +372,17 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
     },
 
     setInterval: (d: number) => {
-      const clamped = Math.min(90, Math.max(20, d));
       const state = get();
-      const settings = { ...state.settings, interval: clamped };
+      const interval = Math.min(90, Math.max(20, state.settings.interval + d * 5));
+      const settings = { ...state.settings, interval };
       set({ settings });
       void client.saveSingleton("settings", settings);
     },
 
     setIdleNudge: (d: number) => {
-      const clamped = Math.min(180, Math.max(10, d));
       const state = get();
-      const settings = { ...state.settings, idleNudge: clamped };
+      const idleNudge = Math.min(180, Math.max(10, state.settings.idleNudge + d * 5));
+      const settings = { ...state.settings, idleNudge };
       set({ settings });
       void client.saveSingleton("settings", settings);
     },

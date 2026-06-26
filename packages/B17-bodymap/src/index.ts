@@ -36,6 +36,11 @@ export function regionStyle(slug: string, coverage: Coverage, style: MapStyle): 
   }
   const sum = muscles.reduce((acc, m) => acc + Math.min(100, Math.max(0, coverage[m])), 0);
   const avg = sum / muscles.length;
+  // Untrained (0 coverage) reads as neutral grey, not faint accent — so an empty
+  // plan/week shows all-grey and fills toward accent as volume is added.
+  if (avg <= 0) {
+    return { fill: "var(--map-muscle)" };
+  }
   if (style === "heat") {
     return {
       fill: "var(--accent)",

@@ -560,31 +560,94 @@ describe("toggleGlass — flips glass + persists", () => {
 });
 
 // ---------------------------------------------------------------------------
-// setOpacity — updates settings + persists
+// setOpacity — delta-based (±0.05 steps), clamps [floor, 0.92] + persists
+// floor = GLASS_OPACITY[theme].floor: dark=0.5, light=0.6
 // ---------------------------------------------------------------------------
 
-describe("setOpacity — updates + persists", () => {
+describe("setOpacity — delta-based (dark theme, floor=0.5) + persists", () => {
   let client: IpcClient;
   let store: StoreApi<NabdStore>;
 
   beforeEach(async () => {
+    // FIXTURE_THEME = 'dark', floor = 0.5
+    // DEFAULT_SETTINGS.opacity = 0.7 (need to check actual default; set manually to 0.7)
     client = makeFakeClient();
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    // Set a known opacity mid-range so we can step both ways
+    store.setState({ settings: { ...get(store).settings, opacity: 0.7 } });
+    vi.clearAllMocks();
+  });
+
+  it("setOpacity(+1) from 0.7 → 0.75 (adds 0.05)", () => {
+    get(store).setOpacity(1);
+    expect(get(store).settings.opacity).toBeCloseTo(0.75, 5);
+  });
+
+  it("setOpacity(-1) from 0.7 → 0.65 (subtracts 0.05)", () => {
+    get(store).setOpacity(-1);
+    expect(get(store).settings.opacity).toBeCloseTo(0.65, 5);
+  });
+
+  it("clamps at floor (0.5 for dark): from 0.55, setOpacity(-2) → 0.45 → clamped to 0.5", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.55 } });
+    get(store).setOpacity(-2); // 0.55 - 0.10 = 0.45 → clamp to 0.5
+    expect(get(store).settings.opacity).toBeCloseTo(0.5, 5);
+  });
+
+  it("clamps at floor (0.5 for dark): further decrements stay at 0.5", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.5 } });
+    get(store).setOpacity(-1);
+    expect(get(store).settings.opacity).toBeCloseTo(0.5, 5);
+  });
+
+  it("clamps at ceiling (0.92): from 0.87, setOpacity(+2) → 0.97 → clamped to 0.92", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.87 } });
+    get(store).setOpacity(2); // 0.87 + 0.10 = 0.97 → clamp to 0.92
+    expect(get(store).settings.opacity).toBeCloseTo(0.92, 5);
+  });
+
+  it("clamps at ceiling (0.92): further increments stay at 0.92", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.92 } });
+    get(store).setOpacity(1);
+    expect(get(store).settings.opacity).toBeCloseTo(0.92, 5);
+  });
+
+  it("persists settings via saveSingleton('settings', ...) with new opacity", () => {
+    get(store).setOpacity(1);
+    expect(client.saveSingleton).toHaveBeenCalledWith(
+      "settings",
+      expect.objectContaining({ opacity: expect.any(Number) }),
+    );
+    const saved = (client.saveSingleton as ReturnType<typeof vi.fn>).mock.calls[0][1] as { opacity: number };
+    expect(saved.opacity).toBeCloseTo(0.75, 5);
+  });
+});
+
+describe("setOpacity — delta-based (light theme, floor=0.6)", () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    // Use light theme so floor = 0.6
+    const lightSettings: Settings = { ...FIXTURE_SETTINGS, theme: "light", opacity: 0.7 };
+    const snap: BootSnapshot = { ...BOOT_SNAPSHOT_FULL, settings: lightSettings, theme: "light" };
+    client = makeFakeClient(snap);
     store = makeStore(makeDeps(client));
     await get(store).hydrate();
     vi.clearAllMocks();
   });
 
-  it("updates settings.opacity", () => {
-    get(store).setOpacity(0.7);
-    expect(get(store).settings.opacity).toBe(0.7);
+  it("clamps at floor (0.6 for light): from 0.65, setOpacity(-2) → 0.55 → clamped to 0.6", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.65 } });
+    get(store).setOpacity(-2); // 0.65 - 0.10 = 0.55 → clamp to 0.6
+    expect(get(store).settings.opacity).toBeCloseTo(0.6, 5);
   });
 
-  it("persists settings via saveSingleton('settings', ...)", () => {
-    get(store).setOpacity(0.7);
-    expect(client.saveSingleton).toHaveBeenCalledWith(
-      "settings",
-      expect.objectContaining({ opacity: 0.7 }),
-    );
+  it("clamps at floor (0.6 for light): further decrements stay at 0.6", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.6 } });
+    get(store).setOpacity(-1);
+    expect(get(store).settings.opacity).toBeCloseTo(0.6, 5);
   });
 });
 
@@ -652,79 +715,124 @@ describe("setSetting — updates + persists", () => {
 });
 
 // ---------------------------------------------------------------------------
-// setInterval — clamps within domain range (20–90) + persists
+// setInterval — delta-based (±5 min steps), clamps [20, 90] + persists
 // ---------------------------------------------------------------------------
 
-describe("setInterval — clamps + persists", () => {
+describe("setInterval — delta-based + persists", () => {
   let client: IpcClient;
   let store: StoreApi<NabdStore>;
 
   beforeEach(async () => {
+    // FIXTURE_SETTINGS has interval=45
     client = makeFakeClient();
     store = makeStore(makeDeps(client));
     await get(store).hydrate();
     vi.clearAllMocks();
   });
 
-  it("sets interval within range", () => {
-    get(store).setInterval(60);
-    expect(get(store).settings.interval).toBe(60);
+  it("setInterval(+1) from 45 → 50 (adds 5)", () => {
+    expect(get(store).settings.interval).toBe(45);
+    get(store).setInterval(1);
+    expect(get(store).settings.interval).toBe(50);
   });
 
-  it("clamps interval at minimum (20)", () => {
-    get(store).setInterval(5);
+  it("setInterval(-1) from 45 → 40 (subtracts 5)", () => {
+    expect(get(store).settings.interval).toBe(45);
+    get(store).setInterval(-1);
+    expect(get(store).settings.interval).toBe(40);
+  });
+
+  it("clamps at minimum (20): from 25, setInterval(-2) → 15 → clamped to 20", () => {
+    // Force interval to 25
+    store.setState({ settings: { ...get(store).settings, interval: 25 } });
+    get(store).setInterval(-2); // 25 - 10 = 15 → clamp to 20
     expect(get(store).settings.interval).toBe(20);
   });
 
-  it("clamps interval at maximum (90)", () => {
-    get(store).setInterval(200);
+  it("clamps at minimum (20): further decrements stay at 20", () => {
+    store.setState({ settings: { ...get(store).settings, interval: 20 } });
+    get(store).setInterval(-1);
+    expect(get(store).settings.interval).toBe(20);
+  });
+
+  it("clamps at maximum (90): from 85, setInterval(+2) → 95 → clamped to 90", () => {
+    store.setState({ settings: { ...get(store).settings, interval: 85 } });
+    get(store).setInterval(2); // 85 + 10 = 95 → clamp to 90
     expect(get(store).settings.interval).toBe(90);
   });
 
-  it("persists settings via saveSingleton('settings', ...)", () => {
-    get(store).setInterval(60);
+  it("clamps at maximum (90): further increments stay at 90", () => {
+    store.setState({ settings: { ...get(store).settings, interval: 90 } });
+    get(store).setInterval(1);
+    expect(get(store).settings.interval).toBe(90);
+  });
+
+  it("persists settings via saveSingleton('settings', ...) with new interval", () => {
+    get(store).setInterval(1);
     expect(client.saveSingleton).toHaveBeenCalledWith(
       "settings",
-      expect.objectContaining({ interval: 60 }),
+      expect.objectContaining({ interval: 50 }),
     );
   });
 });
 
 // ---------------------------------------------------------------------------
-// setIdleNudge — clamps within domain range (10–180) + persists
+// setIdleNudge — delta-based (±5 sec steps), clamps [10, 180] + persists
 // ---------------------------------------------------------------------------
 
-describe("setIdleNudge — clamps + persists", () => {
+describe("setIdleNudge — delta-based + persists", () => {
   let client: IpcClient;
   let store: StoreApi<NabdStore>;
 
   beforeEach(async () => {
+    // FIXTURE_SETTINGS has idleNudge=25
     client = makeFakeClient();
     store = makeStore(makeDeps(client));
     await get(store).hydrate();
     vi.clearAllMocks();
   });
 
-  it("sets idleNudge within range", () => {
-    get(store).setIdleNudge(60);
-    expect(get(store).settings.idleNudge).toBe(60);
+  it("setIdleNudge(+1) from 25 → 30 (adds 5)", () => {
+    expect(get(store).settings.idleNudge).toBe(25);
+    get(store).setIdleNudge(1);
+    expect(get(store).settings.idleNudge).toBe(30);
   });
 
-  it("clamps idleNudge at minimum (10)", () => {
-    get(store).setIdleNudge(2);
+  it("setIdleNudge(-1) from 25 → 20 (subtracts 5)", () => {
+    expect(get(store).settings.idleNudge).toBe(25);
+    get(store).setIdleNudge(-1);
+    expect(get(store).settings.idleNudge).toBe(20);
+  });
+
+  it("clamps at minimum (10): from 15, setIdleNudge(-2) → 5 → clamped to 10", () => {
+    store.setState({ settings: { ...get(store).settings, idleNudge: 15 } });
+    get(store).setIdleNudge(-2); // 15 - 10 = 5 → clamp to 10
     expect(get(store).settings.idleNudge).toBe(10);
   });
 
-  it("clamps idleNudge at maximum (180)", () => {
-    get(store).setIdleNudge(999);
+  it("clamps at minimum (10): further decrements stay at 10", () => {
+    store.setState({ settings: { ...get(store).settings, idleNudge: 10 } });
+    get(store).setIdleNudge(-1);
+    expect(get(store).settings.idleNudge).toBe(10);
+  });
+
+  it("clamps at maximum (180): from 175, setIdleNudge(+2) → 185 → clamped to 180", () => {
+    store.setState({ settings: { ...get(store).settings, idleNudge: 175 } });
+    get(store).setIdleNudge(2); // 175 + 10 = 185 → clamp to 180
     expect(get(store).settings.idleNudge).toBe(180);
   });
 
-  it("persists settings via saveSingleton('settings', ...)", () => {
-    get(store).setIdleNudge(60);
+  it("clamps at maximum (180): further increments stay at 180", () => {
+    store.setState({ settings: { ...get(store).settings, idleNudge: 180 } });
+    get(store).setIdleNudge(1);
+    expect(get(store).settings.idleNudge).toBe(180);
+  });
+
+  it("persists settings via saveSingleton('settings', ...) with new idleNudge", () => {
+    get(store).setIdleNudge(1);
     expect(client.saveSingleton).toHaveBeenCalledWith(
       "settings",
-      expect.objectContaining({ idleNudge: 60 }),
+      expect.objectContaining({ idleNudge: 30 }),
     );
   });
 });

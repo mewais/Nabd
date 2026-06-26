@@ -94,15 +94,41 @@ export interface BarVM {
   heightPct: number; // 0-100 relative to max
   current?: boolean;
 }
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 export function buildWeekly(history: LoggedSet[], now: Date): BarVM[] {
   const raw = weeklyBars(history, now);
   const max = Math.max(...raw);
-  return raw.map((v, i) => ({
-    label: i === raw.length - 1 ? "now" : String(i - 7),
-    value: v,
-    heightPct: max === 0 ? 0 : Math.round((v / max) * 100),
-    current: i === raw.length - 1 ? true : undefined,
-  }));
+
+  // Compute the Monday of the current week (UTC)
+  const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const currentMonday = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysToMon),
+  );
+
+  return raw.map((v, i) => {
+    let label: string;
+    if (i === raw.length - 1) {
+      label = "This wk";
+    } else {
+      const weekOffset = i - (raw.length - 1); // e.g. -7, -6, ..., -1
+      const weekStart = new Date(
+        Date.UTC(
+          currentMonday.getUTCFullYear(),
+          currentMonday.getUTCMonth(),
+          currentMonday.getUTCDate() + weekOffset * 7,
+        ),
+      );
+      label = `${MONTH_ABBR[weekStart.getUTCMonth()]} ${weekStart.getUTCDate()}`;
+    }
+    return {
+      label,
+      value: v,
+      heightPct: max === 0 ? 0 : Math.round((v / max) * 100),
+      current: i === raw.length - 1 ? true : undefined,
+    };
+  });
 }
 
 export function buildCompletion(

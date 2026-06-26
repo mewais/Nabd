@@ -12,7 +12,7 @@ import type {
 } from "@nabd/domain";
 import { MUSCLE_NAMES, GLASS_OPACITY } from "@nabd/domain";
 import { trendPoints } from "@nabd/progression";
-import { Stepper, Segmented, Toggle, Button } from "@nabd/design-system";
+import { Stepper, Segmented, Toggle, Button, Icon } from "@nabd/design-system";
 
 // ---------------------------------------------------------------------------
 // ModalShell
@@ -1657,7 +1657,7 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
             React.createElement(
               Button,
               {
-                variant: "outline",
+                variant: "ghost",
                 onClick: onExport,
                 style: {
                   flex: 1,
@@ -1665,20 +1665,24 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
+                  background: "var(--surface2)",
+                  border: "1px solid var(--line)",
                   borderRadius: 11,
                   padding: 12,
                   fontSize: 13.5,
                   fontWeight: 600,
                   fontFamily: "inherit",
+                  color: "var(--text)",
                   cursor: "pointer",
                 },
               },
-              "Export",
+              React.createElement(Icon, { name: "download", size: 15 }),
+              "Export data",
             ),
             React.createElement(
               Button,
               {
-                variant: "outline",
+                variant: "ghost",
                 onClick: onImport,
                 style: {
                   flex: 1,
@@ -1686,15 +1690,19 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
+                  background: "var(--surface2)",
+                  border: "1px solid var(--line)",
                   borderRadius: 11,
                   padding: 12,
                   fontSize: 13.5,
                   fontWeight: 600,
                   fontFamily: "inherit",
+                  color: "var(--text)",
                   cursor: "pointer",
                 },
               },
-              "Import",
+              React.createElement(Icon, { name: "upload", size: 15 }),
+              "Import data",
             ),
           ),
         ),

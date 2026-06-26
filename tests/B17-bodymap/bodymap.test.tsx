@@ -200,11 +200,12 @@ describe("regionStyle — heat mode", () => {
     expect(regionStyle("ankles", ZERO_COV, "heat").fill).toBe("var(--map-muscle)");
   });
 
-  it("heat at c=0 for single-muscle slug (chest) → fillOpacity = 0.34", () => {
+  it("heat at c=0 for single-muscle slug (chest) → neutral grey (no fillOpacity, no stroke)", () => {
     const cov = makeCoverage({ chest: 0 });
     const s = regionStyle("chest", cov, "heat");
-    expect(s.fill).toBe("var(--accent)");
-    expect(s.fillOpacity).toBeCloseTo(0.34, 5);
+    expect(s.fill).toBe("var(--map-muscle)");
+    expect(s.fillOpacity).toBeUndefined();
+    expect(s.stroke).toBeUndefined();
   });
 
   it("heat at c=100 for single-muscle slug (chest) → fillOpacity = 1.0", () => {
@@ -225,11 +226,12 @@ describe("regionStyle — heat mode", () => {
     expect(s.stroke).toBeUndefined();
   });
 
-  it("heat: deltoids averages 3 muscles (front=0, side=0, rear=0) → fillOpacity=0.34", () => {
+  it("heat: deltoids averages 3 muscles (front=0, side=0, rear=0) → neutral grey (no fillOpacity, no stroke)", () => {
     const cov = makeCoverage({ front_delts: 0, side_delts: 0, rear_delts: 0 });
     const s = regionStyle("deltoids", cov, "heat");
-    expect(s.fill).toBe("var(--accent)");
-    expect(s.fillOpacity).toBeCloseTo(0.34, 5);
+    expect(s.fill).toBe("var(--map-muscle)");
+    expect(s.fillOpacity).toBeUndefined();
+    expect(s.stroke).toBeUndefined();
   });
 
   it("heat: deltoids averages 3 muscles (front=100, side=100, rear=100) → fillOpacity=1.0", () => {
@@ -257,10 +259,12 @@ describe("regionStyle — heat mode", () => {
     expect(s.fillOpacity).toBeCloseTo(0.67, 5);
   });
 
-  it("heat: gluteal averages 2 muscles (glutes=0, abductors=0) → avg=0 → fillOpacity=0.34", () => {
+  it("heat: gluteal averages 2 muscles (glutes=0, abductors=0) → avg=0 → neutral grey (no fillOpacity, no stroke)", () => {
     const cov = makeCoverage({ glutes: 0, abductors: 0 });
     const s = regionStyle("gluteal", cov, "heat");
-    expect(s.fillOpacity).toBeCloseTo(0.34, 5);
+    expect(s.fill).toBe("var(--map-muscle)");
+    expect(s.fillOpacity).toBeUndefined();
+    expect(s.stroke).toBeUndefined();
   });
 
   it("heat: gluteal averages 2 muscles (glutes=100, abductors=100) → avg=100 → fillOpacity=1.0", () => {
@@ -281,10 +285,12 @@ describe("regionStyle — heat mode", () => {
     expect(s.fillOpacity).toBeCloseTo(1.0, 5);
   });
 
-  it("heat clamps c below 0 to 0 → fillOpacity = 0.34", () => {
+  it("heat clamps c below 0 to 0 → neutral grey (no fillOpacity, no stroke)", () => {
     const cov = makeCoverage({ abs: -50 });
     const s = regionStyle("abs", cov, "heat");
-    expect(s.fillOpacity).toBeCloseTo(0.34, 5);
+    expect(s.fill).toBe("var(--map-muscle)");
+    expect(s.fillOpacity).toBeUndefined();
+    expect(s.stroke).toBeUndefined();
   });
 });
 
@@ -299,12 +305,12 @@ describe("regionStyle — outline mode", () => {
     expect(s.stroke).toBeUndefined();
   });
 
-  it("outline at c=0 for single-muscle slug → strokeOpacity = 0.2", () => {
+  it("outline at c=0 for single-muscle slug → neutral grey (no stroke)", () => {
     const cov = makeCoverage({ biceps: 0 });
     const s = regionStyle("biceps", cov, "outline");
     expect(s.fill).toBe("var(--map-muscle)");
-    expect(s.stroke).toBe("var(--accent)");
-    expect(s.strokeOpacity).toBeCloseTo(0.2, 5);
+    expect(s.stroke).toBeUndefined();
+    expect(s.fillOpacity).toBeUndefined();
   });
 
   it("outline at c=100 for single-muscle slug → strokeOpacity = 1.0", () => {
@@ -344,10 +350,12 @@ describe("regionStyle — outline mode", () => {
     expect(s.strokeOpacity).toBeCloseTo(1.0, 5);
   });
 
-  it("outline clamps c below 0 to 0 → strokeOpacity = 0.2", () => {
+  it("outline clamps c below 0 to 0 → neutral grey (no stroke)", () => {
     const cov = makeCoverage({ calves: -10 });
     const s = regionStyle("calves", cov, "outline");
-    expect(s.strokeOpacity).toBeCloseTo(0.2, 5);
+    expect(s.fill).toBe("var(--map-muscle)");
+    expect(s.stroke).toBeUndefined();
+    expect(s.fillOpacity).toBeUndefined();
   });
 });
 

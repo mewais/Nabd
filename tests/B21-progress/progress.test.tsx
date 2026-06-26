@@ -374,11 +374,40 @@ describe("buildWeekly", () => {
     }
   });
 
-  it("each bar has a label property", () => {
+  it("last bar (index 7) label is 'This wk'", () => {
+    const bars = buildWeekly(BASE_HISTORY, NOW);
+    expect(bars[7].label).toBe("This wk");
+  });
+
+  it("earlier bars have abbreviated 'Mon D' date labels for their week's Monday", () => {
+    // NOW = 2026-06-24 (Wednesday). Current week Monday = Jun 22.
+    // bar[6] = week of Jun 15, bar[5] = Jun 8, bar[4] = Jun 1
+    // bar[3] = May 25, bar[2] = May 18, bar[1] = May 11, bar[0] = May 4
+    const bars = buildWeekly(BASE_HISTORY, NOW);
+    expect(bars[0].label).toBe("May 4");
+    expect(bars[1].label).toBe("May 11");
+    expect(bars[2].label).toBe("May 18");
+    expect(bars[3].label).toBe("May 25");
+    expect(bars[4].label).toBe("Jun 1");
+    expect(bars[5].label).toBe("Jun 8");
+    expect(bars[6].label).toBe("Jun 15");
+  });
+
+  it("each bar has a string label", () => {
     const bars = buildWeekly(BASE_HISTORY, NOW);
     for (const bar of bars) {
       expect(typeof bar.label).toBe("string");
     }
+  });
+
+  it("labels are correct when now is a Sunday (daysToMon=6 branch)", () => {
+    // 2026-06-28 is a Sunday; Monday of that week = Jun 22
+    const sunday = new Date("2026-06-28T12:00:00Z");
+    const bars = buildWeekly([], sunday);
+    expect(bars).toHaveLength(8);
+    expect(bars[7].label).toBe("This wk");
+    // bar[6] should be the previous week's Monday: Jun 22 - 7 = Jun 15
+    expect(bars[6].label).toBe("Jun 15");
   });
 });
 
@@ -826,12 +855,28 @@ describe("ConsistencyCard", () => {
     })),
   };
 
-  const weeklyBars: BarVM[] = Array.from({ length: 8 }, (_, i) => ({
-    label: i === 7 ? "now" : String(i - 7),
-    value: i === 7 ? 7 : 0,
-    heightPct: i === 7 ? 100 : 0,
-    current: i === 7,
-  }));
+  // Labels match the new date-based scheme: last bar = "This wk", earlier = "Mon D"
+  const MONTH_ABBR_TEST = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const _nowForFixture = NOW; // 2026-06-24
+  const _dow = _nowForFixture.getUTCDay();
+  const _daysToMon = _dow === 0 ? 6 : _dow - 1;
+  const _currentMonday = new Date(Date.UTC(_nowForFixture.getUTCFullYear(), _nowForFixture.getUTCMonth(), _nowForFixture.getUTCDate() - _daysToMon));
+  const weeklyBars: BarVM[] = Array.from({ length: 8 }, (_, i) => {
+    let label: string;
+    if (i === 7) {
+      label = "This wk";
+    } else {
+      const offset = i - 7;
+      const ws = new Date(Date.UTC(_currentMonday.getUTCFullYear(), _currentMonday.getUTCMonth(), _currentMonday.getUTCDate() + offset * 7));
+      label = `${MONTH_ABBR_TEST[ws.getUTCMonth()]} ${ws.getUTCDate()}`;
+    }
+    return {
+      label,
+      value: i === 7 ? 7 : 0,
+      heightPct: i === 7 ? 100 : 0,
+      current: i === 7 ? true : undefined,
+    };
+  });
 
   const makeProps = (overrides: Partial<ConsistencyCardProps> = {}): ConsistencyCardProps => ({
     tab: "calendar",

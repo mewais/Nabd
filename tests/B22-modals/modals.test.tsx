@@ -310,15 +310,15 @@ describe("SessionModal", () => {
 
   it("renders Reps stepper and increments by +1 on '+'", () => {
     render(<SessionModal {...defaultProps} />);
-    // First "+" button belongs to the Reps stepper
-    const incButtons = screen.getAllByRole("button", { name: "+" });
+    // First "increase" button belongs to the Reps stepper
+    const incButtons = screen.getAllByRole("button", { name: /increase/i });
     fireEvent.click(incButtons[0]);
     expect(onStepReps).toHaveBeenCalledWith(1);
   });
 
   it("renders Reps stepper and decrements by -1 on '−'", () => {
     render(<SessionModal {...defaultProps} />);
-    const decButtons = screen.getAllByRole("button", { name: "−" });
+    const decButtons = screen.getAllByRole("button", { name: /decrease/i });
     fireEvent.click(decButtons[0]);
     expect(onStepReps).toHaveBeenCalledWith(-1);
   });
@@ -330,8 +330,8 @@ describe("SessionModal", () => {
 
   it("clicking Weight stepper '+' calls onStepWeight(+1)", () => {
     render(<SessionModal {...defaultProps} />);
-    // The weight stepper's "+" is the second "+" button (reps is first)
-    const incButtons = screen.getAllByRole("button", { name: "+" });
+    // The weight stepper's "increase" is the second "increase" button (reps is first)
+    const incButtons = screen.getAllByRole("button", { name: /increase/i });
     expect(incButtons.length).toBeGreaterThanOrEqual(2);
     fireEvent.click(incButtons[1]);
     expect(onStepWeight).toHaveBeenCalledWith(1);
@@ -339,7 +339,7 @@ describe("SessionModal", () => {
 
   it("clicking Weight stepper '−' calls onStepWeight(-1)", () => {
     render(<SessionModal {...defaultProps} />);
-    const decButtons = screen.getAllByRole("button", { name: "−" });
+    const decButtons = screen.getAllByRole("button", { name: /decrease/i });
     expect(decButtons.length).toBeGreaterThanOrEqual(2);
     fireEvent.click(decButtons[1]);
     expect(onStepWeight).toHaveBeenCalledWith(-1);
@@ -353,7 +353,7 @@ describe("SessionModal", () => {
     render(<SessionModal {...props} />);
     expect(screen.queryByText(/weight/i)).not.toBeInTheDocument();
     // Only 1 pair of stepper buttons (reps only)
-    expect(screen.getAllByRole("button", { name: "+" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /increase/i })).toHaveLength(1);
   });
 
   it("clicking 'Log this set' calls onLog", () => {
@@ -925,15 +925,15 @@ describe("SettingsModal", () => {
   it("opacity Stepper '+' calls onOpacity(+1) when glass is on", () => {
     render(<SettingsModal {...darkGlassProps} />);
     // With glass=on, opacity stepper is present; interval and idle steppers are also present.
-    // Opacity stepper is the first pair of +/− buttons.
-    const incBtns = screen.getAllByRole("button", { name: "+" });
+    // Opacity stepper is the first pair of increase/decrease buttons.
+    const incBtns = screen.getAllByRole("button", { name: /increase/i });
     fireEvent.click(incBtns[0]);
     expect(onOpacity).toHaveBeenCalledWith(1);
   });
 
   it("opacity Stepper '−' calls onOpacity(-1) when glass is on", () => {
     render(<SettingsModal {...darkGlassProps} />);
-    const decBtns = screen.getAllByRole("button", { name: "−" });
+    const decBtns = screen.getAllByRole("button", { name: /decrease/i });
     fireEvent.click(decBtns[0]);
     expect(onOpacity).toHaveBeenCalledWith(-1);
   });
@@ -997,17 +997,17 @@ describe("SettingsModal", () => {
     expect(screen.getByText("50")).toBeInTheDocument();
   });
 
-  it("interval Stepper '+' calls onInterval(+1) — glass=off means it is the first + button", () => {
+  it("interval Stepper '+' calls onInterval(+1) — glass=off means it is the first increase button", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    // glass=OFF: no opacity stepper; interval is first +/−
-    const incBtns = screen.getAllByRole("button", { name: "+" });
+    // glass=OFF: no opacity stepper; interval is first increase/decrease
+    const incBtns = screen.getAllByRole("button", { name: /increase/i });
     fireEvent.click(incBtns[0]);
     expect(onInterval).toHaveBeenCalledWith(1);
   });
 
   it("interval Stepper '−' calls onInterval(-1)", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    const decBtns = screen.getAllByRole("button", { name: "−" });
+    const decBtns = screen.getAllByRole("button", { name: /decrease/i });
     fireEvent.click(decBtns[0]);
     expect(onInterval).toHaveBeenCalledWith(-1);
   });
@@ -1019,48 +1019,60 @@ describe("SettingsModal", () => {
     expect(screen.getByText("30")).toBeInTheDocument();
   });
 
-  it("idleNudge Stepper '+' calls onIdleNudge(+1) — second + button when glass=off", () => {
+  it("idleNudge Stepper '+' calls onIdleNudge(+1) — second increase button when glass=off", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    const incBtns = screen.getAllByRole("button", { name: "+" });
+    const incBtns = screen.getAllByRole("button", { name: /increase/i });
     fireEvent.click(incBtns[1]);
     expect(onIdleNudge).toHaveBeenCalledWith(1);
   });
 
   it("idleNudge Stepper '−' calls onIdleNudge(-1)", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    const decBtns = screen.getAllByRole("button", { name: "−" });
+    const decBtns = screen.getAllByRole("button", { name: /decrease/i });
     fireEvent.click(decBtns[1]);
     expect(onIdleNudge).toHaveBeenCalledWith(-1);
   });
 
-  // ---- Export / Import Buttons (shared Button component: consistent border/hover) ----
+  // ---- Export / Import Buttons (shared Button component: surface2 bg, line border, icon + label) ----
 
-  it("renders Export button with text 'Export'", () => {
+  it("renders Export button with text 'Export data'", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    expect(screen.getByText("Export")).toBeInTheDocument();
+    expect(screen.getByText("Export data")).toBeInTheDocument();
   });
 
-  it("renders Import button with text 'Import'", () => {
+  it("renders Import button with text 'Import data'", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    expect(screen.getByText("Import")).toBeInTheDocument();
+    expect(screen.getByText("Import data")).toBeInTheDocument();
   });
 
   it("clicking Export button calls onExport", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    fireEvent.click(screen.getByText("Export"));
+    fireEvent.click(screen.getByText("Export data").closest("button")!);
     expect(onExport).toHaveBeenCalledTimes(1);
   });
 
   it("clicking Import button calls onImport", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    fireEvent.click(screen.getByText("Import"));
+    fireEvent.click(screen.getByText("Import data").closest("button")!);
     expect(onImport).toHaveBeenCalledTimes(1);
+  });
+
+  it("Export button contains an SVG icon (download icon)", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
+    const exportBtn = screen.getByText("Export data").closest("button")!;
+    expect(exportBtn.querySelector("svg")).not.toBeNull();
+  });
+
+  it("Import button contains an SVG icon (upload icon)", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
+    const importBtn = screen.getByText("Import data").closest("button")!;
+    expect(importBtn.querySelector("svg")).not.toBeNull();
   });
 
   it("Export and Import buttons are siblings (side by side in the DATA section)", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    const exportBtn = screen.getByText("Export").closest("button")!;
-    const importBtn = screen.getByText("Import").closest("button")!;
+    const exportBtn = screen.getByText("Export data").closest("button")!;
+    const importBtn = screen.getByText("Import data").closest("button")!;
     // Both buttons share the same parent div
     expect(exportBtn.parentElement).toBe(importBtn.parentElement);
   });

@@ -10,7 +10,7 @@ import type {
   MuscleGroup,
   GymProfile,
 } from "@nabd/domain";
-import { MUSCLE_NAMES, GROUP_PRIMARY_MUSCLE, EQUIPMENT_NAMES } from "@nabd/domain";
+import { MUSCLE_NAMES, GROUP_PRIMARY_MUSCLE, EQUIPMENT_NAMES, MUSCLE_GROUPS } from "@nabd/domain";
 import type { Library } from "@nabd/dataset";
 import { boardLayout, daySummary } from "@nabd/program-editor";
 import { BodyMap } from "@nabd/bodymap";
@@ -1313,7 +1313,7 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
           // Day editor
           React.createElement(DayEditor, {
             editor,
-            groups: [] as MuscleGroup[],
+            groups: MUSCLE_GROUPS as unknown as MuscleGroup[],
             cb,
           }),
           // Coverage rail
