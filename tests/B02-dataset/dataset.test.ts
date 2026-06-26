@@ -601,7 +601,7 @@ describe("compose() — unilateral tag adjustments", () => {
     expect(ex.secondary).not.toContain("glutes");
   });
 
-  it("unilateral upper-body row has same secondaries as bilateral (biceps, rear_delts)", () => {
+  it("unilateral upper-body row has same secondaries as bilateral (biceps, rear_delts, lower_traps)", () => {
     const result = compose(MOVEMENTS);
     const bilat = result.find((e) => e.id === "row__dumbbell");
     const uni = result.find((e) => e.id === "row__dumbbell__uni");
@@ -854,12 +854,69 @@ describe("Accuracy spot-checks", () => {
     expect(ex!.secondary).toContain("rhomboids");
   });
 
-  // Row
+  // Row family — refined muscle tags
   it("Barbell Row primary includes lats and rhomboids", () => {
     const ex = all.find((e) => e.id === "row__barbell");
     expect(ex).toBeDefined();
     expect(ex!.primary).toContain("lats");
     expect(ex!.primary).toContain("rhomboids");
+  });
+
+  it("Barbell Row secondary includes biceps, rear_delts, and lower_traps", () => {
+    const ex = all.find((e) => e.id === "row__barbell");
+    expect(ex!.secondary).toContain("biceps");
+    expect(ex!.secondary).toContain("rear_delts");
+    expect(ex!.secondary).toContain("lower_traps");
+  });
+
+  it("Pendlay Row secondary includes biceps, rear_delts, and lower_traps", () => {
+    const ex = all.find((e) => e.id === "pendlay_row__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.secondary).toContain("biceps");
+    expect(ex!.secondary).toContain("rear_delts");
+    expect(ex!.secondary).toContain("lower_traps");
+  });
+
+  it("T-Bar Row secondary includes biceps, rear_delts, and lower_traps (not upper_traps)", () => {
+    const ex = all.find((e) => e.id === "t_bar_row__barbell");
+    expect(ex).toBeDefined();
+    expect(ex!.secondary).toContain("biceps");
+    expect(ex!.secondary).toContain("rear_delts");
+    expect(ex!.secondary).toContain("lower_traps");
+    expect(ex!.secondary).not.toContain("upper_traps");
+  });
+
+  it("Inverted Row leads with rhomboids as primary[0] (retraction-focused)", () => {
+    const ex = all.find((e) => e.id === "inverted_row__bodyweight");
+    expect(ex).toBeDefined();
+    expect(ex!.primary[0]).toBe("rhomboids");
+    expect(ex!.primary).toContain("lats");
+  });
+
+  it("Inverted Row group is Back (rhomboids → Back)", () => {
+    const ex = all.find((e) => e.id === "inverted_row__bodyweight");
+    expect(ex!.group).toBe("Back");
+  });
+
+  it("Inverted Row secondary includes rear_delts and lower_traps", () => {
+    const ex = all.find((e) => e.id === "inverted_row__bodyweight");
+    expect(ex!.secondary).toContain("biceps");
+    expect(ex!.secondary).toContain("rear_delts");
+    expect(ex!.secondary).toContain("lower_traps");
+  });
+
+  it("Chest-Supported Row leads with rhomboids as primary[0] (retraction-focused)", () => {
+    const ex = all.find((e) => e.id === "chest_supported_row__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary[0]).toBe("rhomboids");
+    expect(ex!.primary).toContain("lats");
+  });
+
+  it("Chest-Supported Row secondary includes biceps, rear_delts, and lower_traps", () => {
+    const ex = all.find((e) => e.id === "chest_supported_row__dumbbell");
+    expect(ex!.secondary).toContain("biceps");
+    expect(ex!.secondary).toContain("rear_delts");
+    expect(ex!.secondary).toContain("lower_traps");
   });
 
   // Close-Grip Bench Press
