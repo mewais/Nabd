@@ -5,6 +5,7 @@ import {
   MUSCLE_GROUPS,
   GROUP_PRIMARY_MUSCLE,
   GROUP_MUSCLES,
+  MUSCLE_PRIMARY_GROUP,
   MuscleKeySchema,
   MuscleGroupSchema,
 } from "@nabd/domain";
@@ -79,5 +80,54 @@ describe("muscles.ts", () => {
   it("MuscleGroupSchema rejects an invalid group", () => {
     const result = MuscleGroupSchema.safeParse("Pecs");
     expect(result.success).toBe(false);
+  });
+
+  describe("MUSCLE_PRIMARY_GROUP", () => {
+    it("has an entry for every one of the 23 muscles, and every value is a valid MuscleGroup", () => {
+      for (const muscle of MUSCLES) {
+        expect(MUSCLE_PRIMARY_GROUP).toHaveProperty(muscle);
+        expect(MUSCLE_GROUPS).toContain(MUSCLE_PRIMARY_GROUP[muscle]);
+      }
+    });
+
+    it("spot-checks canonical group mappings", () => {
+      // Shoulders
+      expect(MUSCLE_PRIMARY_GROUP["front_delts"]).toBe("Shoulders");
+      expect(MUSCLE_PRIMARY_GROUP["side_delts"]).toBe("Shoulders");
+      expect(MUSCLE_PRIMARY_GROUP["rear_delts"]).toBe("Shoulders");
+      // Back
+      expect(MUSCLE_PRIMARY_GROUP["lats"]).toBe("Back");
+      expect(MUSCLE_PRIMARY_GROUP["rhomboids"]).toBe("Back");
+      expect(MUSCLE_PRIMARY_GROUP["lower_traps"]).toBe("Back");
+      expect(MUSCLE_PRIMARY_GROUP["lower_back"]).toBe("Back");
+      // Traps
+      expect(MUSCLE_PRIMARY_GROUP["upper_traps"]).toBe("Traps");
+      expect(MUSCLE_PRIMARY_GROUP["neck"]).toBe("Traps");
+      // Glutes
+      expect(MUSCLE_PRIMARY_GROUP["abductors"]).toBe("Glutes");
+      expect(MUSCLE_PRIMARY_GROUP["adductors"]).toBe("Glutes");
+      expect(MUSCLE_PRIMARY_GROUP["glutes"]).toBe("Glutes");
+      // Quads
+      expect(MUSCLE_PRIMARY_GROUP["hip_flexors"]).toBe("Quads");
+      // Abs
+      expect(MUSCLE_PRIMARY_GROUP["obliques"]).toBe("Abs");
+      // Calves
+      expect(MUSCLE_PRIMARY_GROUP["tibialis"]).toBe("Calves");
+      // Single-muscle groups
+      expect(MUSCLE_PRIMARY_GROUP["chest"]).toBe("Chest");
+    });
+
+    it("for every muscle, its primary group's GROUP_MUSCLES includes it — except neck (the only exception, which maps to Traps)", () => {
+      // neck is the one muscle not listed in any GROUP_MUSCLES entry
+      expect(MUSCLE_PRIMARY_GROUP["neck"]).toBe("Traps");
+      expect(GROUP_MUSCLES["Traps"]).not.toContain("neck");
+
+      // All other muscles must appear in their assigned group's muscle list
+      for (const muscle of MUSCLES) {
+        if (muscle === "neck") continue;
+        const group = MUSCLE_PRIMARY_GROUP[muscle];
+        expect(GROUP_MUSCLES[group]).toContain(muscle);
+      }
+    });
   });
 });

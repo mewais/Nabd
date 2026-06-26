@@ -12,7 +12,6 @@ import type {
   Theme,
   Wallpaper,
   Exercise,
-  MuscleGroup,
   MuscleKey,
   Coverage,
   Slot,
@@ -21,7 +20,7 @@ import type {
   LoggedSet,
   Trigger,
 } from "@nabd/domain";
-import { DEFAULT_SETTINGS, DEFAULTS, GLASS_OPACITY } from "@nabd/domain";
+import { DEFAULT_SETTINGS, DEFAULTS, GLASS_OPACITY, MUSCLE_PRIMARY_GROUP } from "@nabd/domain";
 import type { IpcClient } from "@nabd/ipc-client";
 import type { Library } from "@nabd/dataset";
 import type { Notif } from "@nabd/nudge";
@@ -83,7 +82,7 @@ export interface LibState {
   search: string;
   group: string;
   creating: boolean;
-  draft: { name: string; group: MuscleGroup; equip: string; secondary: string[]; track: string };
+  draft: { name: string; primary: string[]; equip: string; secondary: string[]; track: string };
 }
 
 export interface NabdState {
@@ -188,6 +187,7 @@ export interface NabdActions {
   libStartCreate: () => void;
   libCancelCreate: () => void;
   libDraft: (k: keyof LibState["draft"], v: unknown) => void;
+  libTogglePrimary: (m: string) => void;
   libToggleSecondary: (m: string) => void;
   libCreate: () => void;
   // progress
@@ -222,7 +222,7 @@ const DEFAULT_LIB_STATE: LibState = {
   search: "",
   group: "",
   creating: false,
-  draft: { name: "", group: "Chest", equip: "", secondary: [], track: "" },
+  draft: { name: "", primary: [], equip: "", secondary: [], track: "" },
 };
 
 /** The initial (pre-hydrate) state. */
@@ -249,7 +249,10 @@ export function initialState(_deps: StoreDeps): NabdState {
     settingsOpen: false,
     profileMenu: false,
     planEditDay: null,
-    lib: { ...DEFAULT_LIB_STATE, draft: { ...DEFAULT_LIB_STATE.draft, secondary: [] } },
+    lib: {
+      ...DEFAULT_LIB_STATE,
+      draft: { ...DEFAULT_LIB_STATE.draft, primary: [], secondary: [] },
+    },
     progTab: "calendar",
     progExercise: null,
     booted: false,
@@ -794,6 +797,15 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       set((s) => ({ lib: { ...s.lib, draft: { ...s.lib.draft, [k]: v } } }));
     },
 
+    libTogglePrimary: (m: string) => {
+      set((s) => {
+        const primary = s.lib.draft.primary.includes(m)
+          ? s.lib.draft.primary.filter((x) => x !== m)
+          : [...s.lib.draft.primary, m];
+        return { lib: { ...s.lib, draft: { ...s.lib.draft, primary } } };
+      });
+    },
+
     libToggleSecondary: (m: string) => {
       set((s) => {
         const secondary = s.lib.draft.secondary.includes(m)
@@ -819,13 +831,14 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
     libCreate: () => {
       const state = get();
       const draft = state.lib.draft;
+      if (draft.primary.length === 0) return;
       const id = newId();
       const newExercise: Exercise = {
         id,
         name: draft.name,
-        group: draft.group,
-        primary: [draft.group.toLowerCase() as import("@nabd/domain").MuscleKey],
-        secondary: draft.secondary as import("@nabd/domain").MuscleKey[],
+        group: MUSCLE_PRIMARY_GROUP[draft.primary[0] as MuscleKey],
+        primary: draft.primary as MuscleKey[],
+        secondary: draft.secondary as MuscleKey[],
         equipment: draft.equip as import("@nabd/domain").Equipment,
         tracking: draft.track as import("@nabd/domain").TrackingType,
         timeBased: false,

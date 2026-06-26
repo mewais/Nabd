@@ -2288,14 +2288,42 @@ describe("libDraft", () => {
     expect(get(store).lib.draft.name).toBe("My Custom Exercise");
   });
 
-  it("updates lib.draft.group", () => {
-    get(store).libDraft("group", "Chest");
-    expect(get(store).lib.draft.group).toBe("Chest");
-  });
-
   it("updates lib.draft.equip", () => {
     get(store).libDraft("equip", "dumbbell");
     expect(get(store).lib.draft.equip).toBe("dumbbell");
+  });
+
+  it("draft default has primary=[] (no group field)", () => {
+    expect(get(store).lib.draft.primary).toEqual([]);
+    expect((get(store).lib.draft as Record<string, unknown>).group).toBeUndefined();
+  });
+});
+
+describe("libTogglePrimary", () => {
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    const client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+  });
+
+  it("adds a primary muscle to draft", () => {
+    get(store).libTogglePrimary("side_delts");
+    expect(get(store).lib.draft.primary).toContain("side_delts");
+  });
+
+  it("removes a primary muscle if already present", () => {
+    get(store).libTogglePrimary("side_delts");
+    get(store).libTogglePrimary("side_delts");
+    expect(get(store).lib.draft.primary).not.toContain("side_delts");
+  });
+
+  it("can hold multiple primary muscles", () => {
+    get(store).libTogglePrimary("side_delts");
+    get(store).libTogglePrimary("front_delts");
+    expect(get(store).lib.draft.primary).toContain("side_delts");
+    expect(get(store).lib.draft.primary).toContain("front_delts");
   });
 });
 
@@ -2367,7 +2395,7 @@ describe("libCreate — creates custom exercise + persists customExercises + cal
     get(store).libOpen({ kind: "ex", dayId });
     get(store).libStartCreate();
     get(store).libDraft("name", "Dragon Flag");
-    get(store).libDraft("group", "Abs");
+    get(store).libTogglePrimary("abs");
     get(store).libDraft("equip", "bodyweight");
   });
 
@@ -2382,6 +2410,13 @@ describe("libCreate — creates custom exercise + persists customExercises + cal
     get(store).libCreate();
     const ex = get(store).customExercises.find((e) => e.name === "Dragon Flag")!;
     expect(ex.custom).toBe(true);
+  });
+
+  it('custom exercise has primary=["abs"] and derived group="Abs"', () => {
+    get(store).libCreate();
+    const ex = get(store).customExercises.find((e) => e.name === "Dragon Flag")!;
+    expect(ex.primary).toEqual(["abs"]);
+    expect(ex.group).toBe("Abs");
   });
 
   it("persists customExercises via saveSingleton('customExercises', ...)", () => {
@@ -2400,6 +2435,79 @@ describe("libCreate — creates custom exercise + persists customExercises + cal
   it("closes the library modal", () => {
     get(store).libCreate();
     expect(get(store).lib.open).toBe(false);
+  });
+});
+
+describe('libCreate — primary=["side_delts"] + secondary=["front_delts"] derives group="Shoulders"', () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    vi.clearAllMocks();
+
+    const dayId = get(store).program.days[0].id;
+    get(store).libOpen({ kind: "ex", dayId });
+    get(store).libStartCreate();
+    get(store).libDraft("name", "Lateral Raise");
+    get(store).libTogglePrimary("side_delts");
+    get(store).libToggleSecondary("front_delts");
+    get(store).libDraft("equip", "dumbbell");
+  });
+
+  it('creates exercise with primary=["side_delts"] and secondary=["front_delts"]', () => {
+    get(store).libCreate();
+    const ex = get(store).customExercises.find((e) => e.name === "Lateral Raise")!;
+    expect(ex.primary).toEqual(["side_delts"]);
+    expect(ex.secondary).toEqual(["front_delts"]);
+  });
+
+  it('derives group="Shoulders" from primary[0]="side_delts"', () => {
+    get(store).libCreate();
+    const ex = get(store).customExercises.find((e) => e.name === "Lateral Raise")!;
+    expect(ex.group).toBe("Shoulders");
+  });
+
+  it("persists and closes the modal", () => {
+    get(store).libCreate();
+    expect(client.saveSingleton).toHaveBeenCalledWith("customExercises", expect.any(Array));
+    expect(get(store).lib.open).toBe(false);
+  });
+});
+
+describe("libCreate — empty primary is a no-op (guard)", () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    vi.clearAllMocks();
+
+    const dayId = get(store).program.days[0].id;
+    get(store).libOpen({ kind: "ex", dayId });
+    get(store).libStartCreate();
+    get(store).libDraft("name", "No Muscles");
+    // Do NOT call libTogglePrimary — primary stays []
+  });
+
+  it("does not add any custom exercise when primary is empty", () => {
+    const before = get(store).customExercises.length;
+    get(store).libCreate();
+    expect(get(store).customExercises.length).toBe(before);
+  });
+
+  it("does not persist customExercises when primary is empty", () => {
+    get(store).libCreate();
+    expect(client.saveSingleton).not.toHaveBeenCalledWith("customExercises", expect.anything());
+  });
+
+  it("modal stays open (lib.open unchanged) when primary is empty", () => {
+    get(store).libCreate();
+    expect(get(store).lib.open).toBe(true);
   });
 });
 
@@ -2635,7 +2743,7 @@ describe("libCreate — pool target: creates custom exercise + adds to pool + li
     get(store).libOpen({ kind: "pool", dayId: "push-day", slotId: "slot-chest", muscle: "chest" });
     get(store).libStartCreate();
     get(store).libDraft("name", "Cable Fly");
-    get(store).libDraft("group", "Chest");
+    get(store).libTogglePrimary("chest");
     get(store).libDraft("equip", "cable");
   });
 

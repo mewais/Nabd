@@ -561,6 +561,7 @@ describe("LibraryModal", () => {
   const onStartCreate = vi.fn();
   const onCancelCreate = vi.fn();
   const onDraft = vi.fn();
+  const onTogglePrimary = vi.fn();
   const onToggleSecondary = vi.fn();
   const onCreate = vi.fn();
 
@@ -574,6 +575,7 @@ describe("LibraryModal", () => {
       onStartCreate,
       onCancelCreate,
       onDraft,
+      onTogglePrimary,
       onToggleSecondary,
       onCreate,
     ].forEach((fn) => fn.mockReset());
@@ -584,14 +586,14 @@ describe("LibraryModal", () => {
     { k: "Back", label: "Back", active: false },
   ];
 
-  const secondaryChips = [
-    { k: "triceps", label: "Triceps", active: false },
-    { k: "front_delts", label: "Front Delts", active: true },
+  const primaryChips = [
+    { k: "chest", label: "Chest", active: false },
+    { k: "triceps", label: "Triceps", active: true },
   ];
 
-  const groupOptions = [
-    { k: "Chest", n: "Chest" },
-    { k: "Back", n: "Back" },
+  const secondaryChips = [
+    { k: "front_delts", label: "Front Delts", active: true },
+    { k: "rear_delts", label: "Rear Delts", active: false },
   ];
 
   const trackOptions = [
@@ -619,12 +621,11 @@ describe("LibraryModal", () => {
     emptyMsg: "No exercises found",
     createLabel: "Create…",
     draftName: "",
-    draftGroup: "Chest",
     draftTrack: "weight_reps",
     draftEquip: "barbell",
-    groupOptions,
     trackOptions,
     eqOptions,
+    primaryChips,
     secondaryChips,
     onClose,
     onSearch,
@@ -634,6 +635,7 @@ describe("LibraryModal", () => {
     onStartCreate,
     onCancelCreate,
     onDraft,
+    onTogglePrimary,
     onToggleSecondary,
     onCreate,
   };
@@ -725,7 +727,6 @@ describe("LibraryModal", () => {
     browsing: false,
     creating: true,
     draftName: "My Exercise",
-    draftGroup: "Chest",
     draftTrack: "weight_reps",
     draftEquip: "barbell",
   };
@@ -742,31 +743,62 @@ describe("LibraryModal", () => {
     expect(onDraft).toHaveBeenCalledWith("name", "Squat");
   });
 
-  it("group select change calls onDraft('group', value)", () => {
+  it("create form has no group <select> (PRIMARY MUSCLE GROUP dropdown removed)", () => {
     render(<LibraryModal {...creatingProps} />);
+    // Only two comboboxes should exist: track and equip (no group select)
     const selects = screen.getAllByRole("combobox");
-    fireEvent.change(selects[0], { target: { value: "Back" } });
-    expect(onDraft).toHaveBeenCalledWith("group", "Back");
+    expect(selects).toHaveLength(2);
   });
 
-  it("track select change calls onDraft('track', value)", () => {
+  it("track select change calls onDraft('track', value) — now first combobox (index 0)", () => {
     render(<LibraryModal {...creatingProps} />);
     const selects = screen.getAllByRole("combobox");
-    fireEvent.change(selects[1], { target: { value: "bodyweight_reps" } });
+    fireEvent.change(selects[0], { target: { value: "bodyweight_reps" } });
     expect(onDraft).toHaveBeenCalledWith("track", "bodyweight_reps");
   });
 
-  it("equip select change calls onDraft('equip', value)", () => {
+  it("equip select change calls onDraft('equip', value) — now second combobox (index 1)", () => {
     render(<LibraryModal {...creatingProps} />);
     const selects = screen.getAllByRole("combobox");
-    fireEvent.change(selects[2], { target: { value: "dumbbell" } });
+    fireEvent.change(selects[1], { target: { value: "dumbbell" } });
     expect(onDraft).toHaveBeenCalledWith("equip", "dumbbell");
+  });
+
+  it("renders PRIMARY MUSCLES chips in creating mode", () => {
+    render(<LibraryModal {...creatingProps} />);
+    // primaryChips has "Chest" and "Triceps"
+    expect(screen.getByText("Chest")).toBeInTheDocument();
+    expect(screen.getByText("Triceps")).toBeInTheDocument();
+  });
+
+  it("clicking an inactive primary chip calls onTogglePrimary with its key", () => {
+    render(<LibraryModal {...creatingProps} />);
+    // "Chest" is inactive in primaryChips fixture
+    fireEvent.click(screen.getByText("Chest"));
+    expect(onTogglePrimary).toHaveBeenCalledWith("chest");
+  });
+
+  it("active primary chip is visually marked (data-active or aria-pressed)", () => {
+    render(<LibraryModal {...creatingProps} />);
+    // "Triceps" is active in primaryChips fixture
+    const tricepsChip =
+      screen.getByText("Triceps").closest("[data-active='true']") ??
+      screen.getByText("Triceps").closest("[aria-pressed='true']");
+    expect(tricepsChip).not.toBeNull();
+  });
+
+  it("renders SECONDARY MUSCLES chips in creating mode", () => {
+    render(<LibraryModal {...creatingProps} />);
+    // secondaryChips has "Front Delts" and "Rear Delts"
+    expect(screen.getByText("Front Delts")).toBeInTheDocument();
+    expect(screen.getByText("Rear Delts")).toBeInTheDocument();
   });
 
   it("clicking an inactive secondary chip calls onToggleSecondary with its key", () => {
     render(<LibraryModal {...creatingProps} />);
-    fireEvent.click(screen.getByText("Triceps"));
-    expect(onToggleSecondary).toHaveBeenCalledWith("triceps");
+    // "Rear Delts" is inactive in secondaryChips fixture
+    fireEvent.click(screen.getByText("Rear Delts"));
+    expect(onToggleSecondary).toHaveBeenCalledWith("rear_delts");
   });
 
   it("active secondary chip is visually marked (data-active or aria-pressed)", () => {
@@ -777,7 +809,30 @@ describe("LibraryModal", () => {
     expect(frontDeltsChip).not.toBeNull();
   });
 
-  it("clicking Create button calls onCreate", () => {
+  it("Create button is disabled when no primary chip is active", () => {
+    const noPrimaryProps: LibraryModalProps = {
+      ...creatingProps,
+      primaryChips: [
+        { k: "chest", label: "Chest", active: false },
+        { k: "triceps", label: "Triceps", active: false },
+      ],
+    };
+    render(<LibraryModal {...noPrimaryProps} />);
+    const createBtn = screen.getByText(/^create$/i).closest("button")!;
+    expect(createBtn).toBeDisabled();
+    // Clicking does not call onCreate
+    fireEvent.click(createBtn);
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it("Create button is enabled (not disabled) when at least one primary chip is active", () => {
+    // creatingProps already has one active primary chip (Triceps)
+    render(<LibraryModal {...creatingProps} />);
+    const createBtn = screen.getByText(/^create$/i).closest("button")!;
+    expect(createBtn).not.toBeDisabled();
+  });
+
+  it("clicking Create button calls onCreate when primary is selected", () => {
     render(<LibraryModal {...creatingProps} />);
     fireEvent.click(screen.getByText(/^create$/i));
     expect(onCreate).toHaveBeenCalledTimes(1);

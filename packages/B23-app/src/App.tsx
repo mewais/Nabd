@@ -48,6 +48,7 @@ import {
   GYM_PROFILES,
   MUSCLE_NAMES,
   MUSCLE_GROUPS,
+  MUSCLES,
   EQUIPMENT_NAMES,
   TRACK_NAMES,
 } from "@nabd/domain";
@@ -147,6 +148,7 @@ export function App({ store, client }: AppProps): JSX.Element {
     libCancelCreate,
     libDraft,
     libToggleSecondary,
+    libTogglePrimary,
     libCreate,
     setProgTab,
     openProgChart,
@@ -387,18 +389,20 @@ export function App({ store, client }: AppProps): JSX.Element {
       ? "No exercises match your filter"
       : "No exercises available for this profile";
 
-  // Secondary muscle chips for create form
-  const secondaryChips = MUSCLE_GROUPS.map((g) => {
-    const key = g.toLowerCase();
-    return {
-      k: key,
-      label: g,
-      active: lib.draft.secondary.includes(key),
-    };
-  });
+  // Primary & secondary muscle chips for create form — the 23 specific muscles
+  const primaryChips = MUSCLES.map((m) => ({
+    k: m,
+    label: MUSCLE_NAMES[m],
+    active: lib.draft.primary.includes(m),
+  }));
+  const secondaryChips = MUSCLES.map((m) => ({
+    k: m,
+    label: MUSCLE_NAMES[m],
+    active: lib.draft.secondary.includes(m),
+  }));
 
-  // Group / track / equip options for create form
-  const groupOptions = MUSCLE_GROUPS.map((g) => ({ k: g, n: g }));
+  // Track / equip options for create form
+
   const trackOptions = (
     [
       "weight_reps",
@@ -623,12 +627,11 @@ export function App({ store, client }: AppProps): JSX.Element {
     emptyMsg: libEmptyMsg,
     createLabel: "Create custom exercise",
     draftName: lib.draft.name,
-    draftGroup: lib.draft.group,
     draftTrack: lib.draft.track,
     draftEquip: lib.draft.equip,
-    groupOptions,
     trackOptions,
     eqOptions,
+    primaryChips,
     secondaryChips,
     onClose: libClose,
     onSearch: libSearch,
@@ -639,7 +642,8 @@ export function App({ store, client }: AppProps): JSX.Element {
       const ex = mergedLibrary.byId(exId);
       if (ex === undefined) return;
       libDraft("name", `${ex.name} (copy)`);
-      libDraft("group", ex.group);
+      libDraft("primary", [...ex.primary]);
+      libDraft("secondary", [...ex.secondary]);
       libDraft("track", ex.tracking);
       libDraft("equip", ex.equipment);
       libStartCreate();
@@ -648,6 +652,7 @@ export function App({ store, client }: AppProps): JSX.Element {
     onCancelCreate: libCancelCreate,
     onDraft: (k, v) => libDraft(k as keyof import("@nabd/store").LibState["draft"], v),
     onToggleSecondary: libToggleSecondary,
+    onTogglePrimary: libTogglePrimary,
     onCreate: libCreate,
   });
 

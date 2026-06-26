@@ -3,7 +3,7 @@
 
 import React from "react";
 import type { ReactNode } from "react";
-import type { ActiveSession, Slot, Settings, Theme, MuscleGroup } from "@nabd/domain";
+import type { ActiveSession, Slot, Settings, Theme } from "@nabd/domain";
 import { MUSCLE_NAMES, GLASS_OPACITY } from "@nabd/domain";
 import { trendPoints } from "@nabd/progression";
 import { Stepper, Segmented, Toggle, Button, Icon } from "@nabd/design-system";
@@ -792,12 +792,11 @@ export interface LibraryModalProps {
   createLabel: string;
   // create form
   draftName: string;
-  draftGroup: MuscleGroup;
   draftTrack: string;
   draftEquip: string;
-  groupOptions: { k: string; n: string }[];
   trackOptions: { k: string; n: string }[];
   eqOptions: { k: string; n: string }[];
+  primaryChips: { k: string; label: string; active: boolean }[];
   secondaryChips: { k: string; label: string; active: boolean }[];
   onClose: () => void;
   onSearch: (q: string) => void;
@@ -807,6 +806,7 @@ export interface LibraryModalProps {
   onStartCreate: () => void;
   onCancelCreate: () => void;
   onDraft: (k: string, v: string) => void;
+  onTogglePrimary: (m: string) => void;
   onToggleSecondary: (m: string) => void;
   onCreate: () => void;
 }
@@ -822,12 +822,11 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
     emptyMsg,
     createLabel,
     draftName,
-    draftGroup,
     draftTrack,
     draftEquip,
-    groupOptions,
     trackOptions,
     eqOptions,
+    primaryChips,
     secondaryChips,
     onClose,
     onSearch,
@@ -837,6 +836,7 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
     onStartCreate,
     onCancelCreate,
     onDraft,
+    onTogglePrimary,
     onToggleSecondary,
     onCreate,
   } = _p;
@@ -1114,6 +1114,22 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
     );
   } else {
     // creating mode
+    const noPrimary = primaryChips.every((c) => !c.active);
+
+    const primChips = primaryChips.map((chip) =>
+      React.createElement(
+        "button",
+        {
+          key: chip.k,
+          onClick: () => onTogglePrimary(chip.k),
+          "data-active": chip.active ? "true" : undefined,
+          "aria-pressed": chip.active ? "true" : "false",
+          style: chipBtnStyle(chip.active),
+        },
+        chip.label,
+      ),
+    );
+
     const secChips = secondaryChips.map((chip) =>
       React.createElement(
         "button",
@@ -1174,17 +1190,11 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
       React.createElement(
         "div",
         null,
-        React.createElement("div", { style: labelStyle }, "PRIMARY MUSCLE GROUP"),
+        React.createElement("div", { style: labelStyle }, "PRIMARY MUSCLES"),
         React.createElement(
-          "select",
-          {
-            value: draftGroup,
-            onChange: (e: React.ChangeEvent<HTMLSelectElement>) => onDraft("group", e.target.value),
-            style: inputStyle,
-          },
-          ...groupOptions.map((opt) =>
-            React.createElement("option", { key: opt.k, value: opt.k, label: opt.n }),
-          ),
+          "div",
+          { style: { display: "flex", gap: 6, flexWrap: "wrap" as const } },
+          ...primChips,
         ),
       ),
       React.createElement(
@@ -1235,7 +1245,8 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
         React.createElement(
           "button",
           {
-            onClick: onCreate,
+            onClick: noPrimary ? undefined : onCreate,
+            disabled: noPrimary,
             style: {
               flex: 1,
               background: "var(--accent)",
@@ -1246,7 +1257,8 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
               fontSize: 14,
               fontWeight: 700,
               fontFamily: "inherit",
-              cursor: "pointer",
+              cursor: noPrimary ? "not-allowed" : "pointer",
+              opacity: noPrimary ? 0.5 : 1,
             },
           },
           "Create",

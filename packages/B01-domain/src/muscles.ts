@@ -116,3 +116,36 @@ export const GROUP_MUSCLES: Record<MuscleGroup, MuscleKey[]> = {
   Calves: ["calves", "tibialis"],
   Abs: ["abs", "obliques"],
 };
+
+/**
+ * Canonical browse-category group for each fine muscle. Used to derive an
+ * exercise's `group` (library category) from its primary muscle, so the create
+ * form selects specific muscles rather than broad groups. Ambiguous muscles
+ * (rhomboids, lower_traps — listed under both Back and Traps) resolve to Back;
+ * neck (in no group) maps to Traps.
+ */
+export const MUSCLE_PRIMARY_GROUP: Record<MuscleKey, MuscleGroup> = {
+  front_delts: "Shoulders",
+  side_delts: "Shoulders",
+  rear_delts: "Shoulders",
+  neck: "Traps",
+  upper_traps: "Traps",
+  rhomboids: "Back",
+  lower_traps: "Back",
+  lats: "Back",
+  lower_back: "Back",
+  chest: "Chest",
+  abs: "Abs",
+  obliques: "Abs",
+  quads: "Quads",
+  hamstrings: "Hamstrings",
+  glutes: "Glutes",
+  abductors: "Glutes",
+  adductors: "Glutes",
+  calves: "Calves",
+  tibialis: "Calves",
+  hip_flexors: "Quads",
+  biceps: "Biceps",
+  triceps: "Triceps",
+  forearms: "Forearms",
+};
