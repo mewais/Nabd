@@ -252,11 +252,11 @@ export function buildEditor(
         while (j < exercises.length && exercises[j].supersetId === sid) {
           memberIndex += 1;
           const e = exercises[j];
-          const libEx = _library.byId(e.exId)!;
-          const name = libEx.name;
-          const allMuscles = [...libEx.primary, ...libEx.secondary];
+          const libEx = _library.byId(e.exId);
+          const name = libEx?.name ?? e.exId;
+          const allMuscles = libEx ? [...libEx.primary, ...libEx.secondary] : [];
           const muscles = allMuscles.map((m) => MUSCLE_NAMES[m]).join(", ");
-          const equip = EQUIPMENT_NAMES[libEx.equipment].toUpperCase();
+          const equip = libEx ? EQUIPMENT_NAMES[libEx.equipment].toUpperCase() : "";
           const block = buildSetBlock(e);
           const tag = `A${memberIndex}`;
           members.push({ id: e.id, name, muscles, equip, block, supersetTag: tag });
@@ -265,11 +265,11 @@ export function buildEditor(
         rows.push({ kind: "superset", members });
         i = j;
       } else {
-        const libEx = _library.byId(ex.exId)!;
-        const name = libEx.name;
-        const allMuscles = [...libEx.primary, ...libEx.secondary];
+        const libEx = _library.byId(ex.exId);
+        const name = libEx?.name ?? ex.exId;
+        const allMuscles = libEx ? [...libEx.primary, ...libEx.secondary] : [];
         const muscles = allMuscles.map((m) => MUSCLE_NAMES[m]).join(", ");
-        const equip = EQUIPMENT_NAMES[libEx.equipment].toUpperCase();
+        const equip = libEx ? EQUIPMENT_NAMES[libEx.equipment].toUpperCase() : "";
         const block = buildSetBlock(ex);
         const exCard: ExerciseCardVM = {
           id: ex.id,
@@ -288,8 +288,8 @@ export function buildEditor(
     rows = day.slots.map((slot) => {
       const muscleName = MUSCLE_NAMES[slot.muscle];
       const poolNames = slot.pool.map((exId) => {
-        const libEx = _library.byId(exId)!;
-        return { id: exId, name: libEx.name };
+        const libEx = _library.byId(exId);
+        return { id: exId, name: libEx?.name ?? exId };
       });
       const poolStr = `${slot.pool.length} exercises`;
       const block = buildSetBlock(slot);

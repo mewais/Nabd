@@ -2300,6 +2300,141 @@ describe("buildEditor — additional edge cases", () => {
       expect(vm.rows[0].slot.muscleName).toBe("Lats");
     }
   });
+
+  // ---- resilience: exercise not found in library ----
+
+  it("fixed-mode single exercise with unknown exId: no crash, name=exId, muscles='', equip=''", () => {
+    const unknownExId = "ghost_exercise__unknown";
+    const program: Program = {
+      name: "Ghost",
+      type: "fixed",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Day 1",
+          weekday: null,
+          exercises: [
+            {
+              id: "e1",
+              exId: unknownExId,
+              repMode: "fixed",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 10 }],
+            },
+          ],
+          slots: [],
+        },
+      ],
+    };
+    // Must not throw
+    const vm = buildEditor(program, "d1", LIBRARY);
+    expect(vm.exists).toBe(true);
+    expect(vm.rows).toHaveLength(1);
+    const row = vm.rows[0];
+    expect(row.kind).toBe("ex");
+    if (row.kind === "ex") {
+      expect(row.ex.name).toBe(unknownExId);
+      expect(row.ex.muscles).toBe("");
+      expect(row.ex.equip).toBe("");
+    }
+  });
+
+  it("fixed-mode superset member with unknown exId: no crash, name=exId, muscles='', equip=''", () => {
+    const unknownExId = "phantom_superset__bodyweight";
+    const program: Program = {
+      name: "Phantom",
+      type: "fixed",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Day 1",
+          weekday: null,
+          exercises: [
+            {
+              id: "e1",
+              exId: "bench_press__barbell",
+              supersetId: "ssX",
+              repMode: "fixed",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 10 }],
+            },
+            {
+              id: "e2",
+              exId: unknownExId,
+              supersetId: "ssX",
+              repMode: "fixed",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 10 }],
+            },
+          ],
+          slots: [],
+        },
+      ],
+    };
+    // Must not throw
+    const vm = buildEditor(program, "d1", LIBRARY);
+    expect(vm.exists).toBe(true);
+    expect(vm.rows).toHaveLength(1);
+    const row = vm.rows[0];
+    expect(row.kind).toBe("superset");
+    if (row.kind === "superset") {
+      expect(row.members).toHaveLength(2);
+      // First member (bench_press__barbell) is found — sanity check
+      expect(row.members[0].name).toBe("Barbell Bench Press");
+      // Second member (unknownExId) is NOT found → fallbacks
+      const ghost = row.members[1];
+      expect(ghost.name).toBe(unknownExId);
+      expect(ghost.muscles).toBe("");
+      expect(ghost.equip).toBe("");
+    }
+  });
+
+  it("cycled-mode slot pool with unknown exId: no crash, poolName.name=exId", () => {
+    const unknownExId = "spectre_lift__machine";
+    const cycledProgram: Program = {
+      name: "Spectre",
+      type: "cycled",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Day 1",
+          weekday: null,
+          exercises: [],
+          slots: [
+            {
+              id: "s1",
+              muscle: "chest",
+              pool: ["bench_press__barbell", unknownExId],
+              repMode: "range",
+              intensity: "none",
+              rest: 120,
+              sets: [{ type: "working", a: 8, b: 12 }],
+            },
+          ],
+        },
+      ],
+    };
+    // Must not throw
+    const vm = buildEditor(cycledProgram, "d1", LIBRARY);
+    expect(vm.exists).toBe(true);
+    expect(vm.rows).toHaveLength(1);
+    const row = vm.rows[0];
+    expect(row.kind).toBe("slot");
+    if (row.kind === "slot") {
+      expect(row.slot.poolNames).toHaveLength(2);
+      // First pool entry (bench_press__barbell) resolves normally
+      expect(row.slot.poolNames[0].name).toBe("Barbell Bench Press");
+      // Second pool entry (unknownExId) is NOT in library → falls back to raw exId
+      expect(row.slot.poolNames[1].id).toBe(unknownExId);
+      expect(row.slot.poolNames[1].name).toBe(unknownExId);
+    }
+  });
 });
 
 describe("buildBoard — additional edge cases", () => {
