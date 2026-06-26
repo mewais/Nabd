@@ -185,18 +185,25 @@ describe("rootBackgroundStyle", () => {
     expect(style).toHaveProperty("backdropFilter", GLASS_FROST);
   });
 
-  test("floor clamp: dark glass opacity 0.3 clamps to floor (0.5) → rgba(15,17,24,0.5)", () => {
+  test("relaxed floor: dark glass opacity 0.3 passes through → rgba(15,17,24,0.3)", () => {
     const style = rootBackgroundStyle("dark", true, 0.3);
-    // dark floor is 0.5, so opacity 0.3 is clamped to 0.5
+    // floor is now 0.1, so opacity 0.3 is no longer clamped
     expect(style.background as string).toBe(glassTint("dark", 0.3));
-    expect(style.background as string).toContain("rgba(15,17,24,0.5)");
+    expect(style.background as string).toContain("rgba(15,17,24,0.3)");
   });
 
-  test("floor clamp: light glass opacity 0.3 clamps to floor (0.6) → rgba(244,246,251,0.6)", () => {
+  test("relaxed floor: dark glass opacity 0.05 clamps to floor (0.1) → rgba(15,17,24,0.1)", () => {
+    const style = rootBackgroundStyle("dark", true, 0.05);
+    // floor is now 0.1, so opacity below 0.1 clamps up to 0.1
+    expect(style.background as string).toBe(glassTint("dark", 0.05));
+    expect(style.background as string).toContain("rgba(15,17,24,0.1)");
+  });
+
+  test("relaxed floor: light glass opacity 0.3 passes through → rgba(244,246,251,0.3)", () => {
     const style = rootBackgroundStyle("light", true, 0.3);
-    // light floor is 0.6, so opacity 0.3 is clamped to 0.6
+    // floor is now 0.1, so opacity 0.3 is no longer clamped
     expect(style.background as string).toBe(glassTint("light", 0.3));
-    expect(style.background as string).toContain("rgba(244,246,251,0.6)");
+    expect(style.background as string).toContain("rgba(244,246,251,0.3)");
   });
 
   test("glass:true, dark, opacity 0.7 → produces rgba(15,17,24,0.7)", () => {
@@ -320,9 +327,7 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.style.getPropertyValue("--bg")).toBe(
-      THEMES.dark["--bg"],
-    );
+    expect(wrapper.style.getPropertyValue("--bg")).toBe(THEMES.dark["--bg"]);
   });
 
   test("glass dark theme: wrapper has --bg from THEMES.darkGlass", () => {
@@ -332,9 +337,7 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.style.getPropertyValue("--bg")).toBe(
-      THEMES.darkGlass["--bg"],
-    );
+    expect(wrapper.style.getPropertyValue("--bg")).toBe(THEMES.darkGlass["--bg"]);
   });
 
   test("glass light theme: wrapper has --accent from THEMES.lightGlass", () => {
@@ -344,9 +347,7 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.style.getPropertyValue("--accent")).toBe(
-      THEMES.lightGlass["--accent"],
-    );
+    expect(wrapper.style.getPropertyValue("--accent")).toBe(THEMES.lightGlass["--accent"]);
   });
 
   test("solid light theme: wrapper has --text from THEMES.light", () => {
@@ -356,9 +357,7 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.style.getPropertyValue("--text")).toBe(
-      THEMES.light["--text"],
-    );
+    expect(wrapper.style.getPropertyValue("--text")).toBe(THEMES.light["--text"]);
   });
 
   test("glass:true: wrapper background contains rgba for dark glass tint", () => {
@@ -481,23 +480,17 @@ describe("Button", () => {
   });
 
   test("filled variant produces a button (baseline render)", () => {
-    const { container } = render(
-      <Button variant="filled">Filled</Button>,
-    );
+    const { container } = render(<Button variant="filled">Filled</Button>);
     expect(container.querySelector("button")).toBeInTheDocument();
   });
 
   test("outline variant produces a button (baseline render)", () => {
-    const { container } = render(
-      <Button variant="outline">Outline</Button>,
-    );
+    const { container } = render(<Button variant="outline">Outline</Button>);
     expect(container.querySelector("button")).toBeInTheDocument();
   });
 
   test("ghost variant produces a button (baseline render)", () => {
-    const { container } = render(
-      <Button variant="ghost">Ghost</Button>,
-    );
+    const { container } = render(<Button variant="ghost">Ghost</Button>);
     expect(container.querySelector("button")).toBeInTheDocument();
   });
 
@@ -519,17 +512,13 @@ describe("Segmented", () => {
   ];
 
   test("renders one button per option", () => {
-    render(
-      <Segmented options={options} value="a" onChange={() => {}} />,
-    );
+    render(<Segmented options={options} value="a" onChange={() => {}} />);
     const buttons = screen.getAllByRole("button");
     expect(buttons).toHaveLength(3);
   });
 
   test("renders each option label", () => {
-    render(
-      <Segmented options={options} value="a" onChange={() => {}} />,
-    );
+    render(<Segmented options={options} value="a" onChange={() => {}} />);
     expect(screen.getByText("Alpha")).toBeInTheDocument();
     expect(screen.getByText("Beta")).toBeInTheDocument();
     expect(screen.getByText("Gamma")).toBeInTheDocument();
@@ -537,26 +526,20 @@ describe("Segmented", () => {
 
   test("clicking an inactive option calls onChange with its key", () => {
     const onChange = vi.fn();
-    render(
-      <Segmented options={options} value="a" onChange={onChange} />,
-    );
+    render(<Segmented options={options} value="a" onChange={onChange} />);
     fireEvent.click(screen.getByText("Beta"));
     expect(onChange).toHaveBeenCalledWith("b");
   });
 
   test("clicking another inactive option calls onChange with its key", () => {
     const onChange = vi.fn();
-    render(
-      <Segmented options={options} value="a" onChange={onChange} />,
-    );
+    render(<Segmented options={options} value="a" onChange={onChange} />);
     fireEvent.click(screen.getByText("Gamma"));
     expect(onChange).toHaveBeenCalledWith("c");
   });
 
   test("active option (k===value) is visually distinct — has aria-pressed or data-active attribute", () => {
-    render(
-      <Segmented options={options} value="b" onChange={() => {}} />,
-    );
+    render(<Segmented options={options} value="b" onChange={() => {}} />);
     // The active button should have aria-pressed=true OR a data-active attribute
     const buttons = screen.getAllByRole("button");
     const betaButton = buttons.find((b) => b.textContent === "Beta");
@@ -571,9 +554,7 @@ describe("Segmented", () => {
   });
 
   test("inactive option is NOT marked active", () => {
-    render(
-      <Segmented options={options} value="b" onChange={() => {}} />,
-    );
+    render(<Segmented options={options} value="b" onChange={() => {}} />);
     const buttons = screen.getAllByRole("button");
     const alphaButton = buttons.find((b) => b.textContent === "Alpha");
     expect(alphaButton).toBeDefined();
@@ -586,17 +567,13 @@ describe("Segmented", () => {
   });
 
   test("small prop renders without error and buttons remain present", () => {
-    render(
-      <Segmented options={options} value="a" onChange={() => {}} small />,
-    );
+    render(<Segmented options={options} value="a" onChange={() => {}} small />);
     expect(screen.getAllByRole("button")).toHaveLength(3);
   });
 
   test("onChange called with correct key for first option", () => {
     const onChange = vi.fn();
-    render(
-      <Segmented options={options} value="c" onChange={onChange} />,
-    );
+    render(<Segmented options={options} value="c" onChange={onChange} />);
     fireEvent.click(screen.getByText("Alpha"));
     expect(onChange).toHaveBeenCalledWith("a");
   });
@@ -613,9 +590,7 @@ describe("Stepper", () => {
   });
 
   test("renders label when provided", () => {
-    render(
-      <Stepper label="Sets" value={3} onDec={() => {}} onInc={() => {}} />,
-    );
+    render(<Stepper label="Sets" value={3} onDec={() => {}} onInc={() => {}} />);
     expect(screen.getByText("Sets")).toBeInTheDocument();
   });
 
@@ -646,14 +621,7 @@ describe("Stepper", () => {
   });
 
   test("renders label as ReactNode (JSX child)", () => {
-    render(
-      <Stepper
-        label={<em>Reps</em>}
-        value={10}
-        onDec={() => {}}
-        onInc={() => {}}
-      />,
-    );
+    render(<Stepper label={<em>Reps</em>} value={10} onDec={() => {}} onInc={() => {}} />);
     expect(screen.getByText("Reps")).toBeInTheDocument();
   });
 
@@ -712,16 +680,14 @@ describe("Toggle", () => {
   test("renders a clickable element (role=switch or button)", () => {
     render(<Toggle on={false} onChange={() => {}} />);
     // Toggle is a track+knob; look for button or switch role
-    const toggle =
-      screen.queryByRole("switch") ?? screen.queryByRole("button");
+    const toggle = screen.queryByRole("switch") ?? screen.queryByRole("button");
     expect(toggle).toBeInTheDocument();
   });
 
   test("clicking toggle when off calls onChange(true)", () => {
     const onChange = vi.fn();
     render(<Toggle on={false} onChange={onChange} />);
-    const toggle =
-      screen.queryByRole("switch") ?? screen.getByRole("button");
+    const toggle = screen.queryByRole("switch") ?? screen.getByRole("button");
     fireEvent.click(toggle!);
     expect(onChange).toHaveBeenCalledWith(true);
   });
@@ -729,8 +695,7 @@ describe("Toggle", () => {
   test("clicking toggle when on calls onChange(false)", () => {
     const onChange = vi.fn();
     render(<Toggle on={true} onChange={onChange} />);
-    const toggle =
-      screen.queryByRole("switch") ?? screen.getByRole("button");
+    const toggle = screen.queryByRole("switch") ?? screen.getByRole("button");
     fireEvent.click(toggle!);
     expect(onChange).toHaveBeenCalledWith(false);
   });
@@ -805,9 +770,7 @@ describe("Pill", () => {
   });
 
   test("merges style prop", () => {
-    const { container } = render(
-      <Pill style={{ opacity: 0.5 }}>styled</Pill>,
-    );
+    const { container } = render(<Pill style={{ opacity: 0.5 }}>styled</Pill>);
     const span = container.querySelector("span") as HTMLElement;
     expect(span.style.opacity).toBe("0.5");
   });
@@ -829,9 +792,7 @@ describe("Card", () => {
   });
 
   test("merges style prop", () => {
-    const { container } = render(
-      <Card style={{ opacity: 0.3 }}>styled</Card>,
-    );
+    const { container } = render(<Card style={{ opacity: 0.3 }}>styled</Card>);
     const div = container.querySelector("div") as HTMLElement;
     expect(div.style.opacity).toBe("0.3");
   });
@@ -929,9 +890,7 @@ describe("Donut", () => {
   });
 
   test("caption as ReactNode renders a span", () => {
-    render(
-      <Donut pct={50} done={2} total={4} caption={<span>cap</span>} />,
-    );
+    render(<Donut pct={50} done={2} total={4} caption={<span>cap</span>} />);
     expect(screen.getByText("cap")).toBeInTheDocument();
   });
 });
@@ -991,14 +950,10 @@ describe("Icon", () => {
   });
 
   test("stroke prop is applied to svg or path", () => {
-    const { container } = render(
-      <Icon name="check" stroke="red" />,
-    );
+    const { container } = render(<Icon name="check" stroke="red" />);
     const svg = container.querySelector("svg") as SVGSVGElement;
     const path = svg.querySelector("path") as SVGPathElement;
-    const hasStroke =
-      svg.getAttribute("stroke") === "red" ||
-      path.getAttribute("stroke") === "red";
+    const hasStroke = svg.getAttribute("stroke") === "red" || path.getAttribute("stroke") === "red";
     expect(hasStroke).toBe(true);
   });
 

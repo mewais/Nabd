@@ -24,7 +24,13 @@ import { MUSCLES, DEFAULTS } from "@nabd/domain";
 // Helpers — minimal fixture builders
 // ---------------------------------------------------------------------------
 
-function makeExercise(overrides: Partial<Exercise> & { id: string; primary: Exercise["primary"]; secondary: Exercise["secondary"] }): Exercise {
+function makeExercise(
+  overrides: Partial<Exercise> & {
+    id: string;
+    primary: Exercise["primary"];
+    secondary: Exercise["secondary"];
+  },
+): Exercise {
   return {
     id: overrides.id,
     name: overrides.name ?? overrides.id,
@@ -43,15 +49,13 @@ function makeLookup(exercises: Exercise[]) {
 }
 
 /** Build a minimal LoggedSet. */
-function makeLoggedSet(
-  overrides: {
-    id?: string;
-    exId?: string;
-    muscles: LoggedSet["muscles"];
-    ts: string;
-    date?: string;
-  },
-): LoggedSet {
+function makeLoggedSet(overrides: {
+  id?: string;
+  exId?: string;
+  muscles: LoggedSet["muscles"];
+  ts: string;
+  date?: string;
+}): LoggedSet {
   return {
     id: overrides.id ?? "ls1",
     exId: overrides.exId ?? "ex1",
@@ -203,8 +207,8 @@ describe("computePlanVolume — fixed", () => {
               intensity: "rpe",
               rest: 180,
               sets: [
-                { type: "warmup", a: 10 },  // excluded
-                { type: "warmup", a: 8 },   // excluded
+                { type: "warmup", a: 10 }, // excluded
+                { type: "warmup", a: 8 }, // excluded
                 { type: "working", a: 5 },
                 { type: "working", a: 5 },
               ],
@@ -422,7 +426,9 @@ describe("computePlanVolume — cycled", () => {
     expect(vol["chest"]).toBe(3);
   });
 
-  it("maps Back group slot to lats primary muscle", () => {
+  it("maps Back group slot to lats primary + half to rhomboids/lower_traps/lower_back", () => {
+    // Back GROUP_MUSCLES = [lats, rhomboids, lower_traps, lower_back]
+    // 2 working sets → lats=2, rhomboids=1, lower_traps=1, lower_back=1
     const program: Program = {
       name: "Cycled",
       type: "cycled",
@@ -453,6 +459,47 @@ describe("computePlanVolume — cycled", () => {
 
     const vol = computePlanVolume(program, makeLookup([]));
     expect(vol["lats"]).toBe(2);
+    expect(vol["rhomboids"]).toBe(1);
+    expect(vol["lower_traps"]).toBe(1);
+    expect(vol["lower_back"]).toBe(1);
+  });
+
+  it("distributes Shoulders slot: side_delts full, front_delts and rear_delts half", () => {
+    // Shoulders GROUP_MUSCLES = [side_delts, front_delts, rear_delts]
+    // 3 working sets → side_delts=3, front_delts=1.5, rear_delts=1.5
+    const program: Program = {
+      name: "Cycled",
+      type: "cycled",
+      schedule: "floating",
+      days: [
+        {
+          id: "d1",
+          name: "Day 1",
+          weekday: null,
+          exercises: [],
+          slots: [
+            {
+              id: "s1",
+              group: "Shoulders",
+              pool: ["ohp"],
+              repMode: "fixed",
+              intensity: "none",
+              rest: 120,
+              sets: [
+                { type: "working", a: 10 },
+                { type: "working", a: 10 },
+                { type: "working", a: 10 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const vol = computePlanVolume(program, makeLookup([]));
+    expect(vol["side_delts"]).toBe(3);
+    expect(vol["front_delts"]).toBe(1.5);
+    expect(vol["rear_delts"]).toBe(1.5);
   });
 
   it("handles multiple cycled slots on the same day with mixed groups", () => {

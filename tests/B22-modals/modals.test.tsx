@@ -166,6 +166,18 @@ describe("ModalShell", () => {
     );
     expect(screen.getByTestId("w-child")).toBeInTheDocument();
   });
+
+  it("panel container uses var(--modal-bg) background (not var(--surface))", () => {
+    const { container } = render(
+      <ModalShell onClose={onClose}>
+        <span>content</span>
+      </ModalShell>,
+    );
+    // The inner panel div (second child of backdrop) should use --modal-bg
+    const backdrop = container.querySelector("[data-modal-backdrop]") as HTMLElement;
+    const panel = backdrop.firstElementChild as HTMLElement;
+    expect(panel.style.background).toBe("var(--modal-bg)");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -401,7 +413,8 @@ describe("SessionModal", () => {
   it("complete row shows a check marker (data-complete or aria-label)", () => {
     render(<SessionModal {...defaultProps} />);
     // The complete row for s1 should have a visual indicator
-    const checkEl = document.querySelector("[data-complete='true']") ??
+    const checkEl =
+      document.querySelector("[data-complete='true']") ??
       document.querySelector("[aria-label='complete']");
     expect(checkEl).not.toBeNull();
   });
@@ -411,6 +424,13 @@ describe("SessionModal", () => {
     // The active row (s2 - Pull-up) should be marked
     const activeRow = document.querySelector("[data-row-active='true']");
     expect(activeRow).not.toBeNull();
+  });
+
+  it("modal panel uses var(--modal-bg) background (not var(--surface))", () => {
+    const { container } = render(<SessionModal {...defaultProps} />);
+    const backdrop = container.querySelector("[data-modal-backdrop]") as HTMLElement;
+    const panel = backdrop.firstElementChild as HTMLElement;
+    expect(panel.style.background).toBe("var(--modal-bg)");
   });
 
   it("shows muscles of active session in right pane", () => {
@@ -513,7 +533,7 @@ describe("NotificationToast", () => {
     expect(screen.getByText("Biceps · 10:30")).toBeInTheDocument();
   });
 
-  it("clicking \"Let's go\" calls onConfirm and not onSnooze", () => {
+  it('clicking "Let\'s go" calls onConfirm and not onSnooze', () => {
     render(<NotificationToast {...defaultProps} />);
     fireEvent.click(screen.getByText(/let's go/i));
     expect(onConfirm).toHaveBeenCalledTimes(1);
@@ -546,8 +566,16 @@ describe("LibraryModal", () => {
 
   beforeEach(() => {
     [
-      onClose, onSearch, onGroup, onPick, onCopy, onStartCreate,
-      onCancelCreate, onDraft, onToggleSecondary, onCreate,
+      onClose,
+      onSearch,
+      onGroup,
+      onPick,
+      onCopy,
+      onStartCreate,
+      onCancelCreate,
+      onDraft,
+      onToggleSecondary,
+      onCreate,
     ].forEach((fn) => fn.mockReset());
   });
 
@@ -760,6 +788,13 @@ describe("LibraryModal", () => {
     fireEvent.click(screen.getByText(/back/i));
     expect(onCancelCreate).toHaveBeenCalledTimes(1);
   });
+
+  it("modal panel uses var(--modal-bg) background (not var(--surface))", () => {
+    const { container } = render(<LibraryModal {...browsingProps} />);
+    const backdrop = container.querySelector("[data-modal-backdrop]") as HTMLElement;
+    const panel = backdrop.firstElementChild as HTMLElement;
+    expect(panel.style.background).toBe("var(--modal-bg)");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -780,8 +815,15 @@ describe("SettingsModal", () => {
 
   beforeEach(() => {
     [
-      onClose, onTheme, onOpacity, onToggleStartup,
-      onToggleMinimized, onInterval, onIdleNudge, onExport, onImport,
+      onClose,
+      onTheme,
+      onOpacity,
+      onToggleStartup,
+      onToggleMinimized,
+      onInterval,
+      onIdleNudge,
+      onExport,
+      onImport,
       onToggleGlass,
     ].forEach((fn) => fn.mockReset());
   });
@@ -901,7 +943,9 @@ describe("SettingsModal", () => {
 
   it("glass=false: no wallpaper swatches shown (aurora/dusk/slate/mesh/sand/frost/mixed absent)", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    expect(screen.queryByRole("button", { name: /aurora|dusk|slate|mesh|sand|frost|mixed/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /aurora|dusk|slate|mesh|sand|frost|mixed/i }),
+    ).toBeNull();
   });
 
   it("glass=true shows opacity stepper label 'Background opacity'", () => {
@@ -912,14 +956,18 @@ describe("SettingsModal", () => {
   it("glass=true: NO wallpaper swatches rendered (translucency uses OS desktop)", () => {
     render(<SettingsModal {...darkGlassProps} />);
     // No wallpaper picker buttons; no preview caption
-    expect(screen.queryByRole("button", { name: /aurora|dusk|slate|mesh|sand|frost|mixed/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /aurora|dusk|slate|mesh|sand|frost|mixed/i }),
+    ).toBeNull();
     expect(screen.queryByText(/preview wallpaper/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/os wallpaper/i)).not.toBeInTheDocument();
   });
 
   it("glass=true light theme: also no wallpaper swatches", () => {
     render(<SettingsModal {...lightGlassProps} />);
-    expect(screen.queryByRole("button", { name: /aurora|dusk|slate|mesh|sand|frost|mixed/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /aurora|dusk|slate|mesh|sand|frost|mixed/i }),
+    ).toBeNull();
   });
 
   it("opacity Stepper '+' calls onOpacity(+1) when glass is on", () => {
@@ -949,10 +997,7 @@ describe("SettingsModal", () => {
 
   it("openAtStartup toggle (index 1) reflects openAtStartup=false via aria-checked='false'", () => {
     render(
-      <SettingsModal
-        {...darkNoGlassProps}
-        settings={makeSettings({ openAtStartup: false })}
-      />,
+      <SettingsModal {...darkNoGlassProps} settings={makeSettings({ openAtStartup: false })} />,
     );
     const allSwitches = screen.getAllByRole("switch");
     expect(allSwitches[1]).toHaveAttribute("aria-checked", "false");
@@ -975,10 +1020,7 @@ describe("SettingsModal", () => {
 
   it("minimizedByDefault toggle (index 2) reflects minimizedByDefault=true via aria-checked='true'", () => {
     render(
-      <SettingsModal
-        {...darkNoGlassProps}
-        settings={makeSettings({ minimizedByDefault: true })}
-      />,
+      <SettingsModal {...darkNoGlassProps} settings={makeSettings({ minimizedByDefault: true })} />,
     );
     const allSwitches = screen.getAllByRole("switch");
     expect(allSwitches[2]).toHaveAttribute("aria-checked", "true");
@@ -992,9 +1034,9 @@ describe("SettingsModal", () => {
 
   // ---- Interval Stepper ----
 
-  it("interval Stepper shows settings.interval value (50)", () => {
+  it("interval Stepper shows settings.interval value with 'min' unit (50 min)", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    expect(screen.getByText("50")).toBeInTheDocument();
+    expect(screen.getByText("50 min")).toBeInTheDocument();
   });
 
   it("interval Stepper '+' calls onInterval(+1) — glass=off means it is the first increase button", () => {
@@ -1014,9 +1056,9 @@ describe("SettingsModal", () => {
 
   // ---- Idle Nudge Stepper ----
 
-  it("idleNudge Stepper shows settings.idleNudge value (30)", () => {
+  it("idleNudge Stepper shows settings.idleNudge value with 'sec' unit (30 sec)", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
-    expect(screen.getByText("30")).toBeInTheDocument();
+    expect(screen.getByText("30 sec")).toBeInTheDocument();
   });
 
   it("idleNudge Stepper '+' calls onIdleNudge(+1) — second increase button when glass=off", () => {
@@ -1101,6 +1143,13 @@ describe("SettingsModal", () => {
     render(<SettingsModal {...darkNoGlassProps} />);
     // With glass=off no opacity stepper renders, so '70%' must be absent
     expect(screen.queryByText("70%")).not.toBeInTheDocument();
+  });
+
+  it("modal panel uses var(--modal-bg) background (not var(--surface))", () => {
+    const { container } = render(<SettingsModal {...darkNoGlassProps} />);
+    const backdrop = container.querySelector("[data-modal-backdrop]") as HTMLElement;
+    const panel = backdrop.firstElementChild as HTMLElement;
+    expect(panel.style.background).toBe("var(--modal-bg)");
   });
 });
 

@@ -23,14 +23,35 @@ export interface LegendRow {
 }
 
 const DEFAULT_LEGEND_MUSCLES: MuscleKey[] = [
-  "chest",
-  "lats",
+  // Shoulders
+  "front_delts",
   "side_delts",
-  "biceps",
-  "quads",
-  "glutes",
+  "rear_delts",
+  // Back
+  "upper_traps",
+  "rhomboids",
+  "lower_traps",
+  "lats",
+  "lower_back",
+  // Chest & Core
+  "chest",
   "abs",
+  "obliques",
+  // Arms
+  "biceps",
+  "triceps",
+  "forearms",
+  // Legs
+  "quads",
+  "hamstrings",
+  "glutes",
+  "abductors",
+  "adductors",
+  "hip_flexors",
   "calves",
+  "tibialis",
+  // Neck
+  "neck",
 ];
 
 /** Per-muscle legend rows for the given muscles (default: a fixed display set). */
@@ -268,11 +289,7 @@ export function HeroCard(p: HeroCardProps): JSX.Element {
         },
         vm.kicker,
       ),
-      React.createElement(
-        "span",
-        { style: { fontSize: 12, color: "var(--text3)" } },
-        vm.group,
-      ),
+      React.createElement("span", { style: { fontSize: 12, color: "var(--text3)" } }, vm.group),
     ),
     // exercise name
     React.createElement(
@@ -349,11 +366,7 @@ export function HeroCard(p: HeroCardProps): JSX.Element {
         "div",
         { style: { fontSize: 13.5, color: "var(--text2)", lineHeight: 1.45 } },
         "Suggested ",
-        React.createElement(
-          "b",
-          { style: { color: "var(--text)", ...MONO } },
-          vm.suggestion,
-        ),
+        React.createElement("b", { style: { color: "var(--text)", ...MONO } }, vm.suggestion),
         " · ",
         React.createElement("span", null, vm.note),
       ),

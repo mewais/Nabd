@@ -23,6 +23,7 @@ export const THEMES: Record<Material, Record<string, string>> = {
     "--map-muscle": "oklch(0.86 0.006 250)",
     "--glow": "none",
     "--cardshadow": "0 1px 2px rgba(0,0,0,0.04)",
+    "--modal-bg": "oklch(1 0 0)",
   },
   dark: {
     "--bg": "oklch(0.21 0.014 265)",
@@ -38,6 +39,7 @@ export const THEMES: Record<Material, Record<string, string>> = {
     "--map-muscle": "oklch(0.42 0.02 265)",
     "--glow": "none",
     "--cardshadow": "0 1px 2px rgba(0,0,0,0.2)",
+    "--modal-bg": "oklch(0.25 0.016 265)",
   },
   lightGlass: {
     "--bg": "rgba(244,246,251,0.6)",
@@ -53,6 +55,7 @@ export const THEMES: Record<Material, Record<string, string>> = {
     "--map-muscle": "rgba(34,38,52,0.18)",
     "--glow": "inset 0 1px 0 rgba(255,255,255,0.55)",
     "--cardshadow": "0 6px 22px rgba(20,28,48,0.16)",
+    "--modal-bg": "rgba(244,246,251,0.95)",
   },
   darkGlass: {
     "--bg": "rgba(15,17,24,0.5)",
@@ -68,6 +71,7 @@ export const THEMES: Record<Material, Record<string, string>> = {
     "--map-muscle": "rgba(255,255,255,0.2)",
     "--glow": "inset 0 1px 0 rgba(255,255,255,0.14)",
     "--cardshadow": "0 6px 22px rgba(0,0,0,0.28)",
+    "--modal-bg": "rgba(22,24,32,0.94)",
   },
 };
 

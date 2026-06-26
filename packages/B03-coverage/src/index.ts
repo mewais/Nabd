@@ -1,7 +1,7 @@
 // @nabd/coverage — pure coverage & volume engine.
 
 import type { Coverage, MuscleKey, Program, Exercise, LoggedSet } from "@nabd/domain";
-import { MUSCLES, GROUP_PRIMARY_MUSCLE } from "@nabd/domain";
+import { MUSCLES, GROUP_PRIMARY_MUSCLE, GROUP_MUSCLES } from "@nabd/domain";
 
 /** Per-muscle planned working-set volume. */
 export type Volume = Partial<Record<MuscleKey, number>>;
@@ -40,8 +40,10 @@ export function computePlanVolume(program: Program, lookup: ExerciseLookup): Vol
       // cycled
       for (const slot of day.slots) {
         const workingCount = slot.sets.filter((s) => s.type === "working").length;
-        const primaryMuscle = GROUP_PRIMARY_MUSCLE[slot.group];
-        add(primaryMuscle, workingCount);
+        const muscles = GROUP_MUSCLES[slot.group];
+        for (let i = 0; i < muscles.length; i++) {
+          add(muscles[i], i === 0 ? workingCount : workingCount * 0.5);
+        }
       }
     }
   }
@@ -85,11 +87,7 @@ export function coverageFrom7dHistory(history: LoggedSet[], now: Date): Coverage
 }
 
 /** Apply one logged set's muscles to a coverage map (primary full, secondary half). */
-export function applySetDelta(
-  cov: Coverage,
-  muscles: MuscleKey[],
-  perSet: number,
-): Coverage {
+export function applySetDelta(cov: Coverage, muscles: MuscleKey[], perSet: number): Coverage {
   const next = { ...cov };
   for (const muscle of muscles) {
     next[muscle] = Math.min(100, next[muscle] + perSet);

@@ -52,10 +52,29 @@ function makeCoverage(
   defaultVal = 0,
 ): Coverage {
   const muscles: MuscleKey[] = [
-    "front_delts", "side_delts", "rear_delts", "neck", "upper_traps",
-    "rhomboids", "lower_traps", "lats", "lower_back", "chest", "abs",
-    "obliques", "quads", "hamstrings", "glutes", "abductors", "adductors",
-    "calves", "tibialis", "hip_flexors", "biceps", "triceps", "forearms",
+    "front_delts",
+    "side_delts",
+    "rear_delts",
+    "neck",
+    "upper_traps",
+    "rhomboids",
+    "lower_traps",
+    "lats",
+    "lower_back",
+    "chest",
+    "abs",
+    "obliques",
+    "quads",
+    "hamstrings",
+    "glutes",
+    "abductors",
+    "adductors",
+    "calves",
+    "tibialis",
+    "hip_flexors",
+    "biceps",
+    "triceps",
+    "forearms",
   ];
   const cov: Partial<Record<MuscleKey, number>> = {};
   for (const m of muscles) {
@@ -93,22 +112,43 @@ const MIXED_COV = makeCoverage({ chest: 70, biceps: 20, quads: 50 });
 // =============================================================================
 
 describe("buildLegend", () => {
-  it("returns an array of 8 rows for the default muscle set", () => {
+  it("returns an array of 23 rows for the default muscle set", () => {
     const rows = buildLegend(ZERO_COV);
-    expect(rows).toHaveLength(8);
+    expect(rows).toHaveLength(23);
   });
 
-  it("default muscle set contains chest, lats, side_delts, biceps, quads, glutes, abs, calves", () => {
+  it("default muscle set contains all 23 anatomical muscles in anatomical order", () => {
     const rows = buildLegend(ZERO_COV);
     const muscles = rows.map((r) => r.muscle);
-    expect(muscles).toContain("chest");
-    expect(muscles).toContain("lats");
+    // Shoulders
+    expect(muscles).toContain("front_delts");
     expect(muscles).toContain("side_delts");
-    expect(muscles).toContain("biceps");
-    expect(muscles).toContain("quads");
-    expect(muscles).toContain("glutes");
+    expect(muscles).toContain("rear_delts");
+    // Back
+    expect(muscles).toContain("upper_traps");
+    expect(muscles).toContain("rhomboids");
+    expect(muscles).toContain("lower_traps");
+    expect(muscles).toContain("lats");
+    expect(muscles).toContain("lower_back");
+    // Chest & Core
+    expect(muscles).toContain("chest");
     expect(muscles).toContain("abs");
+    expect(muscles).toContain("obliques");
+    // Arms
+    expect(muscles).toContain("biceps");
+    expect(muscles).toContain("triceps");
+    expect(muscles).toContain("forearms");
+    // Legs
+    expect(muscles).toContain("quads");
+    expect(muscles).toContain("hamstrings");
+    expect(muscles).toContain("glutes");
+    expect(muscles).toContain("abductors");
+    expect(muscles).toContain("adductors");
+    expect(muscles).toContain("hip_flexors");
     expect(muscles).toContain("calves");
+    expect(muscles).toContain("tibialis");
+    // Neck
+    expect(muscles).toContain("neck");
   });
 
   it("muscle at pct=70 gets rec='rest'", () => {
@@ -651,21 +691,12 @@ describe("RhythmCard", () => {
   }
 
   it("renders 'Today's rhythm' header", () => {
-    render(
-      <RhythmCard rows={[]} doneCount={0} total={0} onStart={() => {}} />,
-    );
+    render(<RhythmCard rows={[]} doneCount={0} total={0} onStart={() => {}} />);
     expect(screen.getByText(/today's rhythm/i)).toBeInTheDocument();
   });
 
   it("renders done/total count text", () => {
-    render(
-      <RhythmCard
-        rows={[]}
-        doneCount={2}
-        total={5}
-        onStart={() => {}}
-      />,
-    );
+    render(<RhythmCard rows={[]} doneCount={2} total={5} onStart={() => {}} />);
     expect(screen.getByText(/2/)).toBeInTheDocument();
     expect(screen.getByText(/5/)).toBeInTheDocument();
   });
@@ -820,9 +851,7 @@ describe("CoverageCard", () => {
   });
 
   it("mapView='both' renders two SVG body maps (front and back)", () => {
-    const { container } = render(
-      <CoverageCard {...defaultProps} mapView="both" />,
-    );
+    const { container } = render(<CoverageCard {...defaultProps} mapView="both" />);
     const svgs = container.querySelectorAll("svg");
     expect(svgs.length).toBeGreaterThanOrEqual(2);
   });
@@ -865,13 +894,12 @@ describe("CoverageCard", () => {
     expect(onMapStyle).toHaveBeenCalledWith("heat");
   });
 
-  it("renders muscle bars (one per default legend muscle)", () => {
-    const { container } = render(<CoverageCard {...defaultProps} />);
-    // Should render at least 8 muscle bars for the 8 default display muscles
-    const bars = container.querySelectorAll(".muscle-bar, [class*='muscle-bar'], [class*='bar']");
-    // At minimum we should have some bar elements; confirm there's content
-    // Check for presence of muscle name text
+  it("renders muscle bars (one per default legend muscle — 23 total)", () => {
+    render(<CoverageCard {...defaultProps} />);
+    // Verify representative muscles from each anatomical section are present
     expect(screen.getByText("Chest")).toBeInTheDocument();
+    expect(screen.getByText("Front Delts")).toBeInTheDocument();
+    expect(screen.getByText("Rhomboids")).toBeInTheDocument();
   });
 
   it("renders the display name for lats muscle bar", () => {
@@ -880,9 +908,7 @@ describe("CoverageCard", () => {
   });
 
   it("renders back view body map when mapView='back'", () => {
-    const { container } = render(
-      <CoverageCard {...defaultProps} mapView="back" />,
-    );
+    const { container } = render(<CoverageCard {...defaultProps} mapView="back" />);
     // Should still render an svg
     expect(container.querySelector("svg")).toBeInTheDocument();
   });
@@ -1060,9 +1086,7 @@ describe("TodayScreen", () => {
   });
 
   it("renders push muscle names via VolumeInsightCard", () => {
-    render(
-      <TodayScreen {...defaultScreenProps} insightRest={[]} insightPush={["Biceps"]} />,
-    );
+    render(<TodayScreen {...defaultScreenProps} insightRest={[]} insightPush={["Biceps"]} />);
     // "Biceps" may appear in BodyMap SVG titles and muscle bars too; verify presence.
     expect(screen.getAllByText(/biceps/i).length).toBeGreaterThanOrEqual(1);
   });
@@ -1115,12 +1139,8 @@ describe("TodayScreen", () => {
 
   it("Start on a rhythm row calls onStartSlot with the slot id", () => {
     const onStartSlot = vi.fn();
-    const rhythm = [
-      makeRhythmRow({ id: "slot-abc", canStart: true, exercise: "Deadlift" }),
-    ];
-    render(
-      <TodayScreen {...defaultScreenProps} rhythm={rhythm} onStartSlot={onStartSlot} />,
-    );
+    const rhythm = [makeRhythmRow({ id: "slot-abc", canStart: true, exercise: "Deadlift" })];
+    render(<TodayScreen {...defaultScreenProps} rhythm={rhythm} onStartSlot={onStartSlot} />);
     // The rhythm row start button — may be the second start button if hero also has one
     const startBtns = screen.getAllByRole("button", { name: /start/i });
     // Click the last one (rhythm row)

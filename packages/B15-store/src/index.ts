@@ -26,12 +26,7 @@ import type { Library } from "@nabd/dataset";
 import type { Notif } from "@nabd/nudge";
 
 // Engine imports
-import {
-  resolveTodayDay,
-  buildSlots,
-  applyStatuses,
-  currentSlot,
-} from "@nabd/scheduling";
+import { resolveTodayDay, buildSlots, applyStatuses, currentSlot } from "@nabd/scheduling";
 import {
   openSession,
   logSet as sessionLogSet,
@@ -39,7 +34,13 @@ import {
   stepReps as sessionStepReps,
   stepWeight as sessionStepWeight,
 } from "@nabd/session";
-import { tick as nudgeTick, resetIdle as nudgeResetIdle, snooze as nudgeSnooze, resetTimer as nudgeResetTimer, dueNotif } from "@nabd/nudge";
+import {
+  tick as nudgeTick,
+  resetIdle as nudgeResetIdle,
+  snooze as nudgeSnooze,
+  resetTimer as nudgeResetTimer,
+  dueNotif,
+} from "@nabd/nudge";
 import { coverageFrom7dHistory, applySetDelta, emptyCoverage } from "@nabd/coverage";
 import {
   addDay,
@@ -74,7 +75,10 @@ export type MapStyle = "heat" | "outline";
 /** Exercise-library modal state. */
 export interface LibState {
   open: boolean;
-  target: { kind: "ex"; dayId: string } | { kind: "pool"; dayId: string; slotId: string; group: MuscleGroup } | null;
+  target:
+    | { kind: "ex"; dayId: string }
+    | { kind: "pool"; dayId: string; slotId: string; group: MuscleGroup }
+    | null;
   search: string;
   group: string;
   creating: boolean;
@@ -166,7 +170,12 @@ export interface NabdActions {
   planRemoveSlot: (dayId: string, slotId: string) => void;
   planRemoveFromPool: (dayId: string, slotId: string, exId: string) => void;
   /** Generic prescription edit dispatched to program-editor by op name. */
-  planEdit: (dayId: string, ref: { kind: "ex" | "slot"; id: string }, op: PlanEditOp, ...args: number[]) => void;
+  planEdit: (
+    dayId: string,
+    ref: { kind: "ex" | "slot"; id: string },
+    op: PlanEditOp,
+    ...args: number[]
+  ) => void;
   planSetNotes: (dayId: string, ref: { kind: "ex" | "slot"; id: string }, notes: string) => void;
   // library modal
   libOpen: (target: LibState["target"]) => void;
@@ -275,7 +284,12 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       await client.init();
       const snapshot = await client.loadAll();
 
-      const program = snapshot.program ?? { name: "My Plan", type: "fixed", schedule: "weekday", days: [] };
+      const program = snapshot.program ?? {
+        name: "My Plan",
+        type: "fixed",
+        schedule: "weekday",
+        days: [],
+      };
       const settings = snapshot.settings ?? DEFAULT_SETTINGS;
       const theme = snapshot.theme ?? DEFAULT_SETTINGS.theme;
       const customExercises = snapshot.customExercises ?? [];
@@ -349,9 +363,9 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
 
     setOpacity: (d: number) => {
       const state = get();
-      const floor = GLASS_OPACITY[state.settings.theme].floor;
+      const { floor, max } = GLASS_OPACITY[state.settings.theme];
       const next = Math.round((state.settings.opacity + d * 0.05) * 1000) / 1000;
-      const opacity = Math.min(0.92, Math.max(floor, next));
+      const opacity = Math.min(max, Math.max(floor, next));
       const settings = { ...state.settings, opacity };
       set({ settings });
       void client.saveSingleton("settings", settings);
@@ -373,7 +387,7 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
 
     setInterval: (d: number) => {
       const state = get();
-      const interval = Math.min(90, Math.max(20, state.settings.interval + d * 5));
+      const interval = Math.min(180, Math.max(5, state.settings.interval + d * 5));
       const settings = { ...state.settings, interval };
       set({ settings });
       void client.saveSingleton("settings", settings);
@@ -381,7 +395,7 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
 
     setIdleNudge: (d: number) => {
       const state = get();
-      const idleNudge = Math.min(180, Math.max(10, state.settings.idleNudge + d * 5));
+      const idleNudge = Math.min(600, Math.max(5, state.settings.idleNudge + d * 5));
       const settings = { ...state.settings, idleNudge };
       set({ settings });
       void client.saveSingleton("settings", settings);
@@ -539,7 +553,11 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       };
 
       // Update coverage
-      const coverage = applySetDelta(state.coverage, result.coverageMuscles, DEFAULTS.coveragePerSet);
+      const coverage = applySetDelta(
+        state.coverage,
+        result.coverageMuscles,
+        DEFAULTS.coveragePerSet,
+      );
 
       // Update history
       const history = [...state.history, loggedSet];
@@ -682,7 +700,12 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       void client.saveSingleton("program", program);
     },
 
-    planEdit: (dayId: string, ref: { kind: "ex" | "slot"; id: string }, op: PlanEditOp, ...args: number[]) => {
+    planEdit: (
+      dayId: string,
+      ref: { kind: "ex" | "slot"; id: string },
+      op: PlanEditOp,
+      ...args: number[]
+    ) => {
       const state = get();
       let program: Program;
       switch (op) {

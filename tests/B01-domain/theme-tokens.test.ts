@@ -67,6 +67,7 @@ describe("theme-tokens.ts", () => {
       "--map-muscle",
       "--glow",
       "--cardshadow",
+      "--modal-bg",
     ];
     for (const material of MATERIAL_KEYS) {
       for (const key of expectedKeys) {
@@ -74,6 +75,13 @@ describe("theme-tokens.ts", () => {
         expect(typeof THEMES[material][key]).toBe("string");
       }
     }
+  });
+
+  it("each material exposes --modal-bg with correct value", () => {
+    expect(THEMES.light["--modal-bg"]).toBe("oklch(1 0 0)");
+    expect(THEMES.dark["--modal-bg"]).toBe("oklch(0.25 0.016 265)");
+    expect(THEMES.lightGlass["--modal-bg"]).toBe("rgba(244,246,251,0.95)");
+    expect(THEMES.darkGlass["--modal-bg"]).toBe("rgba(22,24,32,0.94)");
   });
 
   it("all materials have the same set of CSS keys", () => {
@@ -124,24 +132,32 @@ describe("theme-tokens.ts", () => {
   });
 
   describe("glassTint", () => {
-    it('glassTint("dark", 0.3) floors to dark floor 0.5 → "rgba(15,17,24,0.5)"', () => {
-      expect(glassTint("dark", 0.3)).toBe("rgba(15,17,24,0.5)");
+    it('glassTint("dark", 0.3) passes through as-is → "rgba(15,17,24,0.3)"', () => {
+      expect(glassTint("dark", 0.3)).toBe("rgba(15,17,24,0.3)");
     });
 
-    it('glassTint("light", 0.99) clamps to max 0.92 → "rgba(244,246,251,0.92)"', () => {
-      expect(glassTint("light", 0.99)).toBe("rgba(244,246,251,0.92)");
+    it('glassTint("light", 1) passes through at max → "rgba(244,246,251,1)"', () => {
+      expect(glassTint("light", 1)).toBe("rgba(244,246,251,1)");
     });
 
     it('glassTint("light", 0.7) passes through as-is → "rgba(244,246,251,0.7)"', () => {
       expect(glassTint("light", 0.7)).toBe("rgba(244,246,251,0.7)");
     });
 
-    it('glassTint("dark", 0.99) clamps to max 0.92 → "rgba(15,17,24,0.92)"', () => {
-      expect(glassTint("dark", 0.99)).toBe("rgba(15,17,24,0.92)");
+    it('glassTint("dark", 1) passes through at max → "rgba(15,17,24,1)"', () => {
+      expect(glassTint("dark", 1)).toBe("rgba(15,17,24,1)");
     });
 
-    it('glassTint("light", 0.1) floors to light floor 0.6 → "rgba(244,246,251,0.6)"', () => {
-      expect(glassTint("light", 0.1)).toBe("rgba(244,246,251,0.6)");
+    it('glassTint("light", 0.1) passes through at floor → "rgba(244,246,251,0.1)"', () => {
+      expect(glassTint("light", 0.1)).toBe("rgba(244,246,251,0.1)");
+    });
+
+    it('glassTint("dark", 0.05) clamps to floor 0.1 → "rgba(15,17,24,0.1)"', () => {
+      expect(glassTint("dark", 0.05)).toBe("rgba(15,17,24,0.1)");
+    });
+
+    it('glassTint("light", 1.5) clamps to max 1 → "rgba(244,246,251,1)"', () => {
+      expect(glassTint("light", 1.5)).toBe("rgba(244,246,251,1)");
     });
   });
 });

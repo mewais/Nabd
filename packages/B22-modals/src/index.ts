@@ -3,13 +3,7 @@
 
 import React from "react";
 import type { ReactNode } from "react";
-import type {
-  ActiveSession,
-  Slot,
-  Settings,
-  Theme,
-  MuscleGroup,
-} from "@nabd/domain";
+import type { ActiveSession, Slot, Settings, Theme, MuscleGroup } from "@nabd/domain";
 import { MUSCLE_NAMES, GLASS_OPACITY } from "@nabd/domain";
 import { trendPoints } from "@nabd/progression";
 import { Stepper, Segmented, Toggle, Button, Icon } from "@nabd/design-system";
@@ -52,7 +46,7 @@ export function ModalShell(_p: ModalShellProps): JSX.Element {
       {
         onClick: handlePanelClick,
         style: {
-          background: "var(--surface)",
+          background: "var(--modal-bg)",
           border: "1px solid var(--line)",
           borderRadius: 18,
           boxShadow: "0 24px 70px rgba(0,0,0,.3)",
@@ -135,8 +129,12 @@ export function SessionModal(_p: SessionModalProps): JSX.Element {
     const rowStyle: React.CSSProperties = {
       cursor: "pointer",
       padding: "9px 10px",
-      background: row.active ? "color-mix(in oklch, var(--accent) 12%, transparent)" : "transparent",
-      border: row.active ? "1px solid color-mix(in oklch, var(--accent) 30%, transparent)" : "1px solid transparent",
+      background: row.active
+        ? "color-mix(in oklch, var(--accent) 12%, transparent)"
+        : "transparent",
+      border: row.active
+        ? "1px solid color-mix(in oklch, var(--accent) 30%, transparent)"
+        : "1px solid transparent",
       borderRadius: 10,
       display: "flex",
       alignItems: "center",
@@ -290,7 +288,11 @@ export function SessionModal(_p: SessionModalProps): JSX.Element {
       React.createElement(
         "div",
         { style: { fontSize: 13.5 } },
-        React.createElement("b", { style: { fontFamily: "'JetBrains Mono', monospace" } }, session.sugg.note),
+        React.createElement(
+          "b",
+          { style: { fontFamily: "'JetBrains Mono', monospace" } },
+          session.sugg.note,
+        ),
         " suggested",
       ),
     ),
@@ -571,11 +573,7 @@ export function SessionModal(_p: SessionModalProps): JSX.Element {
         borderTop: "1px solid var(--line)",
       },
     },
-    React.createElement(
-      "span",
-      { style: { fontSize: 12.5, color: "var(--text3)" } },
-      footerText,
-    ),
+    React.createElement("span", { style: { fontSize: 12.5, color: "var(--text3)" } }, footerText),
     React.createElement(
       "button",
       {
@@ -623,7 +621,7 @@ export function SessionModal(_p: SessionModalProps): JSX.Element {
           maxHeight: "86vh",
           display: "flex",
           flexDirection: "column" as const,
-          background: "var(--surface)",
+          background: "var(--modal-bg)",
           border: "1px solid var(--line)",
           borderRadius: 20,
           boxShadow: "var(--cardshadow, 0 24px 70px rgba(0,0,0,.3))",
@@ -916,7 +914,12 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
               "div",
               {
                 key: "empty",
-                style: { fontSize: 12.5, color: "var(--text3)", textAlign: "center" as const, padding: "14px 18px 6px" },
+                style: {
+                  fontSize: 12.5,
+                  color: "var(--text3)",
+                  textAlign: "center" as const,
+                  padding: "14px 18px 6px",
+                },
               },
               emptyMsg,
             ),
@@ -954,7 +957,15 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
                   { style: { flex: 1, minWidth: 0 } },
                   React.createElement(
                     "div",
-                    { style: { fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 7 } },
+                    {
+                      style: {
+                        fontSize: 14,
+                        fontWeight: 600,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 7,
+                      },
+                    },
                     item.name,
                     item.custom
                       ? React.createElement(
@@ -982,7 +993,9 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
                 ),
                 React.createElement(
                   "span",
-                  { style: { color: "var(--accent)", fontSize: 18, fontWeight: 700, flexShrink: 0 } },
+                  {
+                    style: { color: "var(--accent)", fontSize: 18, fontWeight: 700, flexShrink: 0 },
+                  },
                   "+",
                 ),
               ),
@@ -1054,7 +1067,14 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
       ),
       React.createElement(
         "div",
-        { style: { padding: "12px 16px 16px", display: "flex", flexDirection: "column" as const, gap: 7 } },
+        {
+          style: {
+            padding: "12px 16px 16px",
+            display: "flex",
+            flexDirection: "column" as const,
+            gap: 7,
+          },
+        },
         ...itemRows,
         React.createElement(
           "button",
@@ -1120,7 +1140,14 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
 
     content = React.createElement(
       "div",
-      { style: { padding: "18px 18px 20px", display: "flex", flexDirection: "column" as const, gap: 16 } },
+      {
+        style: {
+          padding: "18px 18px 20px",
+          display: "flex",
+          flexDirection: "column" as const,
+          gap: 16,
+        },
+      },
       React.createElement(
         "div",
         null,
@@ -1260,7 +1287,7 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
           maxWidth: "100%",
           height: 680,
           maxHeight: "90vh",
-          background: "var(--surface)",
+          background: "var(--modal-bg)",
           border: "1px solid var(--line)",
           borderRadius: 18,
           boxShadow: "0 24px 70px rgba(0,0,0,.3)",
@@ -1281,11 +1308,7 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
         React.createElement(
           "div",
           { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
-          React.createElement(
-            "div",
-            { style: { fontWeight: "bold", marginBottom: 12 } },
-            title,
-          ),
+          React.createElement("div", { style: { fontWeight: "bold", marginBottom: 12 } }, title),
           closeBtn,
         ),
         content,
@@ -1503,7 +1526,7 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
           maxWidth: "100%",
           maxHeight: "90vh",
           overflowY: "auto" as const,
-          background: "var(--surface)",
+          background: "var(--modal-bg)",
           border: "1px solid var(--line)",
           borderRadius: 18,
           boxShadow: "0 24px 70px rgba(0,0,0,.4)",
@@ -1568,7 +1591,14 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
       ),
       React.createElement(
         "div",
-        { style: { padding: "18px 22px 24px", display: "flex", flexDirection: "column" as const, gap: 22 } },
+        {
+          style: {
+            padding: "18px 22px 24px",
+            display: "flex",
+            flexDirection: "column" as const,
+            gap: 22,
+          },
+        },
 
         // APPEARANCE
         React.createElement(
@@ -1630,7 +1660,7 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
           stepperRow(
             "Interval",
             "Timer length before the next nudge.",
-            settings.interval,
+            `${settings.interval} min`,
             "Interval",
             () => onInterval(-1),
             () => onInterval(1),
@@ -1638,7 +1668,7 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
           stepperRow(
             "Idle nudge",
             "No keyboard/mouse for this long → suggest a set.",
-            settings.idleNudge,
+            `${settings.idleNudge} sec`,
             "Idle nudge",
             () => onIdleNudge(-1),
             () => onIdleNudge(1),
@@ -1927,7 +1957,12 @@ export function FullHistoryChartModal(_p: ChartModalProps): JSX.Element {
           "svg",
           {
             viewBox: vm.viewBox,
-            style: { width: "100%", height: "auto", display: "block", fontFamily: "'JetBrains Mono', monospace" },
+            style: {
+              width: "100%",
+              height: "auto",
+              display: "block",
+              fontFamily: "'JetBrains Mono', monospace",
+            },
           },
           ...gridLines,
           React.createElement("polygon", {

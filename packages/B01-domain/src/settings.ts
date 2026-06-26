@@ -20,15 +20,15 @@ export const SettingsSchema = z.object({
   theme: ThemeSchema,
   /** Translucency on/off (the "Glass" toggle). When true the matching glass material is used. */
   glass: z.boolean(),
-  /** Glass tint strength, clamped per-material (light floor 0.60, dark floor 0.50, max 0.92). */
-  opacity: z.number().min(0.2).max(0.92),
+  /** Glass tint strength (0.1–1.0). */
+  opacity: z.number().min(0.1).max(1),
   wallpaper: WallpaperSchema,
   openAtStartup: z.boolean(),
   minimizedByDefault: z.boolean(),
   /** Minutes between sets (timer length). */
-  interval: z.number().int().min(20).max(90),
+  interval: z.number().int().min(5).max(180),
   /** Seconds of idle before a nudge. */
-  idleNudge: z.number().int().min(10).max(180),
+  idleNudge: z.number().int().min(5).max(600),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 
@@ -43,10 +43,10 @@ export const DEFAULT_SETTINGS: Settings = {
   idleNudge: 30,
 };
 
-/** Per-theme glass opacity floor + ceiling (the slider can't be dragged illegible). */
+/** Per-theme glass opacity bounds (floors relaxed — user controls legibility). */
 export const GLASS_OPACITY: Record<Theme, { floor: number; max: number }> = {
-  light: { floor: 0.6, max: 0.92 },
-  dark: { floor: 0.5, max: 0.92 },
+  light: { floor: 0.1, max: 1 },
+  dark: { floor: 0.1, max: 1 },
 };
 
 /** The material key for a theme + glass flag. */

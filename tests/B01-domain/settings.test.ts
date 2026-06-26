@@ -26,9 +26,9 @@ describe("settings.ts", () => {
     expect(DEFAULT_SETTINGS.idleNudge).toBe(30);
   });
 
-  it("DEFAULT_SETTINGS.opacity is within [0.2, 0.92]", () => {
-    expect(DEFAULT_SETTINGS.opacity).toBeGreaterThanOrEqual(0.2);
-    expect(DEFAULT_SETTINGS.opacity).toBeLessThanOrEqual(0.92);
+  it("DEFAULT_SETTINGS.opacity is within [0.1, 1]", () => {
+    expect(DEFAULT_SETTINGS.opacity).toBeGreaterThanOrEqual(0.1);
+    expect(DEFAULT_SETTINGS.opacity).toBeLessThanOrEqual(1);
   });
 
   it("Settings has glass field", () => {
@@ -39,43 +39,43 @@ describe("settings.ts", () => {
     }
   });
 
-  it("opacity below 0.2 is rejected", () => {
+  it("opacity below 0.1 is rejected", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 0.05 });
+    expect(result.success).toBe(false);
+  });
+
+  it("opacity above 1 is rejected", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 1.01 });
+    expect(result.success).toBe(false);
+  });
+
+  it("opacity at boundary 0.1 is accepted", () => {
     const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 0.1 });
-    expect(result.success).toBe(false);
-  });
-
-  it("opacity above 0.92 is rejected", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 0.95 });
-    expect(result.success).toBe(false);
-  });
-
-  it("opacity at boundary 0.2 is accepted", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 0.2 });
     expect(result.success).toBe(true);
   });
 
-  it("opacity at boundary 0.92 is accepted", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 0.92 });
+  it("opacity at boundary 1 is accepted", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, opacity: 1 });
     expect(result.success).toBe(true);
   });
 
-  it("interval below 20 is rejected", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, interval: 19 });
+  it("interval below 5 is rejected", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, interval: 4 });
     expect(result.success).toBe(false);
   });
 
-  it("interval above 90 is rejected", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, interval: 91 });
+  it("interval above 180 is rejected", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, interval: 181 });
     expect(result.success).toBe(false);
   });
 
-  it("interval at boundary 20 is accepted", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, interval: 20 });
+  it("interval at boundary 5 is accepted", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, interval: 5 });
     expect(result.success).toBe(true);
   });
 
-  it("interval at boundary 90 is accepted", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, interval: 90 });
+  it("interval at boundary 180 is accepted", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, interval: 180 });
     expect(result.success).toBe(true);
   });
 
@@ -84,23 +84,23 @@ describe("settings.ts", () => {
     expect(result.success).toBe(false);
   });
 
-  it("idleNudge below 10 is rejected", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, idleNudge: 9 });
+  it("idleNudge below 5 is rejected", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, idleNudge: 4 });
     expect(result.success).toBe(false);
   });
 
-  it("idleNudge above 180 is rejected", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, idleNudge: 181 });
+  it("idleNudge above 600 is rejected", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, idleNudge: 601 });
     expect(result.success).toBe(false);
   });
 
-  it("idleNudge at boundary 10 is accepted", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, idleNudge: 10 });
+  it("idleNudge at boundary 5 is accepted", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, idleNudge: 5 });
     expect(result.success).toBe(true);
   });
 
-  it("idleNudge at boundary 180 is accepted", () => {
-    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, idleNudge: 180 });
+  it("idleNudge at boundary 600 is accepted", () => {
+    const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, idleNudge: 600 });
     expect(result.success).toBe(true);
   });
 
@@ -132,7 +132,8 @@ describe("settings.ts", () => {
   describe("ThemeSchema", () => {
     it("accepts light", () => expect(ThemeSchema.safeParse("light").success).toBe(true));
     it("accepts dark", () => expect(ThemeSchema.safeParse("dark").success).toBe(true));
-    it("rejects translucent", () => expect(ThemeSchema.safeParse("translucent").success).toBe(false));
+    it("rejects translucent", () =>
+      expect(ThemeSchema.safeParse("translucent").success).toBe(false));
     it("rejects invalid", () => expect(ThemeSchema.safeParse("midnight").success).toBe(false));
   });
 
@@ -148,14 +149,14 @@ describe("settings.ts", () => {
   });
 
   describe("GLASS_OPACITY", () => {
-    it("light has floor 0.6 and max 0.92", () => {
-      expect(GLASS_OPACITY.light.floor).toBe(0.6);
-      expect(GLASS_OPACITY.light.max).toBe(0.92);
+    it("light has floor 0.1 and max 1", () => {
+      expect(GLASS_OPACITY.light.floor).toBe(0.1);
+      expect(GLASS_OPACITY.light.max).toBe(1);
     });
 
-    it("dark has floor 0.5 and max 0.92", () => {
-      expect(GLASS_OPACITY.dark.floor).toBe(0.5);
-      expect(GLASS_OPACITY.dark.max).toBe(0.92);
+    it("dark has floor 0.1 and max 1", () => {
+      expect(GLASS_OPACITY.dark.floor).toBe(0.1);
+      expect(GLASS_OPACITY.dark.max).toBe(1);
     });
   });
 

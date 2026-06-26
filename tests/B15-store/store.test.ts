@@ -560,17 +560,16 @@ describe("toggleGlass — flips glass + persists", () => {
 });
 
 // ---------------------------------------------------------------------------
-// setOpacity — delta-based (±0.05 steps), clamps [floor, 0.92] + persists
-// floor = GLASS_OPACITY[theme].floor: dark=0.5, light=0.6
+// setOpacity — delta-based (±0.05 steps), clamps [floor, max] + persists
+// floor = GLASS_OPACITY[theme].floor: dark=0.1, light=0.1; max=1.0 for both
 // ---------------------------------------------------------------------------
 
-describe("setOpacity — delta-based (dark theme, floor=0.5) + persists", () => {
+describe("setOpacity — delta-based (dark theme, floor=0.1) + persists", () => {
   let client: IpcClient;
   let store: StoreApi<NabdStore>;
 
   beforeEach(async () => {
-    // FIXTURE_THEME = 'dark', floor = 0.5
-    // DEFAULT_SETTINGS.opacity = 0.7 (need to check actual default; set manually to 0.7)
+    // FIXTURE_THEME = 'dark', floor = 0.1, max = 1.0
     client = makeFakeClient();
     store = makeStore(makeDeps(client));
     await get(store).hydrate();
@@ -589,28 +588,28 @@ describe("setOpacity — delta-based (dark theme, floor=0.5) + persists", () => 
     expect(get(store).settings.opacity).toBeCloseTo(0.65, 5);
   });
 
-  it("clamps at floor (0.5 for dark): from 0.55, setOpacity(-2) → 0.45 → clamped to 0.5", () => {
-    store.setState({ settings: { ...get(store).settings, opacity: 0.55 } });
-    get(store).setOpacity(-2); // 0.55 - 0.10 = 0.45 → clamp to 0.5
-    expect(get(store).settings.opacity).toBeCloseTo(0.5, 5);
+  it("clamps at floor (0.1 for dark): from 0.15, setOpacity(-2) → 0.05 → clamped to 0.1", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.15 } });
+    get(store).setOpacity(-2); // 0.15 - 0.10 = 0.05 → clamp to 0.1
+    expect(get(store).settings.opacity).toBeCloseTo(0.1, 5);
   });
 
-  it("clamps at floor (0.5 for dark): further decrements stay at 0.5", () => {
-    store.setState({ settings: { ...get(store).settings, opacity: 0.5 } });
+  it("clamps at floor (0.1 for dark): further decrements stay at 0.1", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.1 } });
     get(store).setOpacity(-1);
-    expect(get(store).settings.opacity).toBeCloseTo(0.5, 5);
+    expect(get(store).settings.opacity).toBeCloseTo(0.1, 5);
   });
 
-  it("clamps at ceiling (0.92): from 0.87, setOpacity(+2) → 0.97 → clamped to 0.92", () => {
-    store.setState({ settings: { ...get(store).settings, opacity: 0.87 } });
-    get(store).setOpacity(2); // 0.87 + 0.10 = 0.97 → clamp to 0.92
-    expect(get(store).settings.opacity).toBeCloseTo(0.92, 5);
+  it("clamps at ceiling (1.0): from 0.95, setOpacity(+2) → 1.05 → clamped to 1.0", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.95 } });
+    get(store).setOpacity(2); // 0.95 + 0.10 = 1.05 → clamp to 1.0
+    expect(get(store).settings.opacity).toBeCloseTo(1.0, 5);
   });
 
-  it("clamps at ceiling (0.92): further increments stay at 0.92", () => {
-    store.setState({ settings: { ...get(store).settings, opacity: 0.92 } });
+  it("clamps at ceiling (1.0): further increments stay at 1.0", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 1.0 } });
     get(store).setOpacity(1);
-    expect(get(store).settings.opacity).toBeCloseTo(0.92, 5);
+    expect(get(store).settings.opacity).toBeCloseTo(1.0, 5);
   });
 
   it("persists settings via saveSingleton('settings', ...) with new opacity", () => {
@@ -619,17 +618,19 @@ describe("setOpacity — delta-based (dark theme, floor=0.5) + persists", () => 
       "settings",
       expect.objectContaining({ opacity: expect.any(Number) }),
     );
-    const saved = (client.saveSingleton as ReturnType<typeof vi.fn>).mock.calls[0][1] as { opacity: number };
+    const saved = (client.saveSingleton as ReturnType<typeof vi.fn>).mock.calls[0][1] as {
+      opacity: number;
+    };
     expect(saved.opacity).toBeCloseTo(0.75, 5);
   });
 });
 
-describe("setOpacity — delta-based (light theme, floor=0.6)", () => {
+describe("setOpacity — delta-based (light theme, floor=0.1)", () => {
   let client: IpcClient;
   let store: StoreApi<NabdStore>;
 
   beforeEach(async () => {
-    // Use light theme so floor = 0.6
+    // Use light theme so floor = 0.1, max = 1.0
     const lightSettings: Settings = { ...FIXTURE_SETTINGS, theme: "light", opacity: 0.7 };
     const snap: BootSnapshot = { ...BOOT_SNAPSHOT_FULL, settings: lightSettings, theme: "light" };
     client = makeFakeClient(snap);
@@ -638,16 +639,16 @@ describe("setOpacity — delta-based (light theme, floor=0.6)", () => {
     vi.clearAllMocks();
   });
 
-  it("clamps at floor (0.6 for light): from 0.65, setOpacity(-2) → 0.55 → clamped to 0.6", () => {
-    store.setState({ settings: { ...get(store).settings, opacity: 0.65 } });
-    get(store).setOpacity(-2); // 0.65 - 0.10 = 0.55 → clamp to 0.6
-    expect(get(store).settings.opacity).toBeCloseTo(0.6, 5);
+  it("clamps at floor (0.1 for light): from 0.15, setOpacity(-2) → 0.05 → clamped to 0.1", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.15 } });
+    get(store).setOpacity(-2); // 0.15 - 0.10 = 0.05 → clamp to 0.1
+    expect(get(store).settings.opacity).toBeCloseTo(0.1, 5);
   });
 
-  it("clamps at floor (0.6 for light): further decrements stay at 0.6", () => {
-    store.setState({ settings: { ...get(store).settings, opacity: 0.6 } });
+  it("clamps at floor (0.1 for light): further decrements stay at 0.1", () => {
+    store.setState({ settings: { ...get(store).settings, opacity: 0.1 } });
     get(store).setOpacity(-1);
-    expect(get(store).settings.opacity).toBeCloseTo(0.6, 5);
+    expect(get(store).settings.opacity).toBeCloseTo(0.1, 5);
   });
 });
 
@@ -715,7 +716,7 @@ describe("setSetting — updates + persists", () => {
 });
 
 // ---------------------------------------------------------------------------
-// setInterval — delta-based (±5 min steps), clamps [20, 90] + persists
+// setInterval — delta-based (±5 min steps), clamps [5, 180] + persists
 // ---------------------------------------------------------------------------
 
 describe("setInterval — delta-based + persists", () => {
@@ -742,29 +743,29 @@ describe("setInterval — delta-based + persists", () => {
     expect(get(store).settings.interval).toBe(40);
   });
 
-  it("clamps at minimum (20): from 25, setInterval(-2) → 15 → clamped to 20", () => {
-    // Force interval to 25
-    store.setState({ settings: { ...get(store).settings, interval: 25 } });
-    get(store).setInterval(-2); // 25 - 10 = 15 → clamp to 20
-    expect(get(store).settings.interval).toBe(20);
+  it("clamps at minimum (5): from 10, setInterval(-2) → 0 → clamped to 5", () => {
+    // Force interval to 10
+    store.setState({ settings: { ...get(store).settings, interval: 10 } });
+    get(store).setInterval(-2); // 10 - 10 = 0 → clamp to 5
+    expect(get(store).settings.interval).toBe(5);
   });
 
-  it("clamps at minimum (20): further decrements stay at 20", () => {
-    store.setState({ settings: { ...get(store).settings, interval: 20 } });
+  it("clamps at minimum (5): further decrements stay at 5", () => {
+    store.setState({ settings: { ...get(store).settings, interval: 5 } });
     get(store).setInterval(-1);
-    expect(get(store).settings.interval).toBe(20);
+    expect(get(store).settings.interval).toBe(5);
   });
 
-  it("clamps at maximum (90): from 85, setInterval(+2) → 95 → clamped to 90", () => {
-    store.setState({ settings: { ...get(store).settings, interval: 85 } });
-    get(store).setInterval(2); // 85 + 10 = 95 → clamp to 90
-    expect(get(store).settings.interval).toBe(90);
+  it("clamps at maximum (180): from 175, setInterval(+2) → 185 → clamped to 180", () => {
+    store.setState({ settings: { ...get(store).settings, interval: 175 } });
+    get(store).setInterval(2); // 175 + 10 = 185 → clamp to 180
+    expect(get(store).settings.interval).toBe(180);
   });
 
-  it("clamps at maximum (90): further increments stay at 90", () => {
-    store.setState({ settings: { ...get(store).settings, interval: 90 } });
+  it("clamps at maximum (180): further increments stay at 180", () => {
+    store.setState({ settings: { ...get(store).settings, interval: 180 } });
     get(store).setInterval(1);
-    expect(get(store).settings.interval).toBe(90);
+    expect(get(store).settings.interval).toBe(180);
   });
 
   it("persists settings via saveSingleton('settings', ...) with new interval", () => {
@@ -777,7 +778,7 @@ describe("setInterval — delta-based + persists", () => {
 });
 
 // ---------------------------------------------------------------------------
-// setIdleNudge — delta-based (±5 sec steps), clamps [10, 180] + persists
+// setIdleNudge — delta-based (±5 sec steps), clamps [5, 600] + persists
 // ---------------------------------------------------------------------------
 
 describe("setIdleNudge — delta-based + persists", () => {
@@ -804,28 +805,28 @@ describe("setIdleNudge — delta-based + persists", () => {
     expect(get(store).settings.idleNudge).toBe(20);
   });
 
-  it("clamps at minimum (10): from 15, setIdleNudge(-2) → 5 → clamped to 10", () => {
-    store.setState({ settings: { ...get(store).settings, idleNudge: 15 } });
-    get(store).setIdleNudge(-2); // 15 - 10 = 5 → clamp to 10
-    expect(get(store).settings.idleNudge).toBe(10);
-  });
-
-  it("clamps at minimum (10): further decrements stay at 10", () => {
+  it("clamps at minimum (5): from 10, setIdleNudge(-2) → 0 → clamped to 5", () => {
     store.setState({ settings: { ...get(store).settings, idleNudge: 10 } });
+    get(store).setIdleNudge(-2); // 10 - 10 = 0 → clamp to 5
+    expect(get(store).settings.idleNudge).toBe(5);
+  });
+
+  it("clamps at minimum (5): further decrements stay at 5", () => {
+    store.setState({ settings: { ...get(store).settings, idleNudge: 5 } });
     get(store).setIdleNudge(-1);
-    expect(get(store).settings.idleNudge).toBe(10);
+    expect(get(store).settings.idleNudge).toBe(5);
   });
 
-  it("clamps at maximum (180): from 175, setIdleNudge(+2) → 185 → clamped to 180", () => {
-    store.setState({ settings: { ...get(store).settings, idleNudge: 175 } });
-    get(store).setIdleNudge(2); // 175 + 10 = 185 → clamp to 180
-    expect(get(store).settings.idleNudge).toBe(180);
+  it("clamps at maximum (600): from 595, setIdleNudge(+2) → 605 → clamped to 600", () => {
+    store.setState({ settings: { ...get(store).settings, idleNudge: 595 } });
+    get(store).setIdleNudge(2); // 595 + 10 = 605 → clamp to 600
+    expect(get(store).settings.idleNudge).toBe(600);
   });
 
-  it("clamps at maximum (180): further increments stay at 180", () => {
-    store.setState({ settings: { ...get(store).settings, idleNudge: 180 } });
+  it("clamps at maximum (600): further increments stay at 600", () => {
+    store.setState({ settings: { ...get(store).settings, idleNudge: 600 } });
     get(store).setIdleNudge(1);
-    expect(get(store).settings.idleNudge).toBe(180);
+    expect(get(store).settings.idleNudge).toBe(600);
   });
 
   it("persists settings via saveSingleton('settings', ...) with new idleNudge", () => {
@@ -2105,7 +2106,7 @@ describe("planEdit — stepRep", () => {
     const aAfter = get(store).program.days[0].exercises[0].sets[0].a;
     const bAfter = get(store).program.days[0].exercises[0].sets[0].b!;
     expect(bAfter).toBe(bBefore + 1); // b must increase by 1
-    expect(aAfter).toBe(aBefore);     // a must NOT change when stepping 'b'
+    expect(aAfter).toBe(aBefore); // a must NOT change when stepping 'b'
   });
 });
 
