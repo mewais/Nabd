@@ -42,7 +42,6 @@ import {
 import { tick as nudgeTick, resetIdle as nudgeResetIdle, snooze as nudgeSnooze, resetTimer as nudgeResetTimer, dueNotif } from "@nabd/nudge";
 import { coverageFrom7dHistory, applySetDelta, emptyCoverage } from "@nabd/coverage";
 import {
-  seedProgram,
   addDay,
   removeDay,
   renameDay,
@@ -225,7 +224,7 @@ export function initialState(_deps: StoreDeps): NabdState {
     secondsToNext: DEFAULT_SETTINGS.interval * 60,
     idleSeconds: 0,
     notif: null,
-    program: seedProgram(),
+    program: { name: "My Plan", type: "fixed", schedule: "weekday", days: [] },
     customExercises: [],
     activeProfileId: "default",
     slots: [],
@@ -276,7 +275,7 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       await client.init();
       const snapshot = await client.loadAll();
 
-      const program = snapshot.program ?? seedProgram();
+      const program = snapshot.program ?? { name: "My Plan", type: "fixed", schedule: "weekday", days: [] };
       const settings = snapshot.settings ?? DEFAULT_SETTINGS;
       const theme = snapshot.theme ?? DEFAULT_SETTINGS.theme;
       const customExercises = snapshot.customExercises ?? [];

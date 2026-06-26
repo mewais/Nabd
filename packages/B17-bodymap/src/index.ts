@@ -1,46 +1,51 @@
-// @nabd/bodymap — anatomical body map renderer (vendored body-muscles SVG).
-// Tints each region by aggregated per-muscle coverage via MUSCLE_REGION_MAP.
+// @nabd/bodymap — anatomical body map renderer (react-native-body-highlighter asset).
+// Tints each region by averaged per-muscle coverage via MUSCLE_REGION_MAP.
 
 /** @jsxImportSource react */
 import { createElement } from "react";
 import type { CSSProperties } from "react";
 import type { Coverage, MuscleKey } from "@nabd/domain";
 import { MUSCLE_REGION_MAP, MUSCLE_NAMES } from "@nabd/domain";
-import { FRONT_MUSCLES, BACK_MUSCLES, ViewSide, VIEWBOX } from "../../../assets/body/index";
+import { FRONT_MUSCLES, BACK_MUSCLES, VIEWBOX } from "../../../assets/body/index";
 
 export type MapStyle = "heat" | "outline";
 export type MapView = "front" | "back";
 
-/** Which tracking muscle a region id belongs to (reverse of MUSCLE_REGION_MAP),
- *  or null if the region is decorative (head, hands, …). */
-export function regionMuscle(regionId: string): MuscleKey | null {
-  for (const [muscle, prefixes] of Object.entries(MUSCLE_REGION_MAP) as [MuscleKey, string[]][]) {
-    for (const prefix of prefixes) {
-      if (regionId === prefix || regionId.startsWith(prefix + "-")) {
-        return muscle;
-      }
+/**
+ * Return the list of MuscleKeys whose MUSCLE_REGION_MAP includes `slug`.
+ * Many muscles can map to one slug (e.g. front/side/rear delts → "deltoids").
+ */
+export function regionMuscles(slug: string): MuscleKey[] {
+  const result: MuscleKey[] = [];
+  for (const [muscle, slugs] of Object.entries(MUSCLE_REGION_MAP) as [MuscleKey, string[]][]) {
+    if (slugs.includes(slug)) {
+      result.push(muscle);
     }
   }
-  return null;
+  return result;
 }
 
-/** SVG fill/stroke style for a region given coverage + style mode. */
-export function regionStyle(regionId: string, coverage: Coverage, style: MapStyle): CSSProperties {
-  const muscle = regionMuscle(regionId);
-  if (muscle === null) {
+/** SVG fill/stroke style for a slug given coverage + style mode.
+ *  Average the coverage of all muscles that map to this slug.
+ *  Slugs with no mapped muscle (head/hair/hands/feet/knees/ankles) → neutral.
+ */
+export function regionStyle(slug: string, coverage: Coverage, style: MapStyle): CSSProperties {
+  const muscles = regionMuscles(slug);
+  if (muscles.length === 0) {
     return { fill: "var(--map-muscle)" };
   }
-  const c = Math.min(100, Math.max(0, coverage[muscle]));
+  const sum = muscles.reduce((acc, m) => acc + Math.min(100, Math.max(0, coverage[m])), 0);
+  const avg = sum / muscles.length;
   if (style === "heat") {
     return {
       fill: "var(--accent)",
-      fillOpacity: 0.34 + 0.66 * (c / 100),
+      fillOpacity: 0.34 + 0.66 * (avg / 100),
     };
   } else {
     return {
       fill: "var(--map-muscle)",
       stroke: "var(--accent)",
-      strokeOpacity: 0.2 + 0.8 * (c / 100),
+      strokeOpacity: 0.2 + 0.8 * (avg / 100),
     };
   }
 }
@@ -55,26 +60,47 @@ export interface BodyMapProps {
 /** Render one side of the body as an SVG with tinted regions. */
 export function BodyMap(p: BodyMapProps): JSX.Element {
   const { side, coverage, style = "heat", width = 124 } = p;
-  const viewSide = side === "front" ? ViewSide.FRONT : ViewSide.BACK;
   const muscles = side === "front" ? FRONT_MUSCLES : BACK_MUSCLES;
-  const viewBox = VIEWBOX[viewSide];
+  const viewBox = VIEWBOX[side];
 
   const svgProps: Record<string, unknown> = { viewBox, width };
 
-  const paths = muscles.map((region) => {
-    const s = regionStyle(region.id, coverage, style);
-    const muscle = regionMuscle(region.id);
-    const titleText =
-      muscle !== null
-        ? `${MUSCLE_NAMES[muscle]} · ${Math.round(Math.min(100, Math.max(0, coverage[muscle])))}%`
-        : null;
+  const paths: JSX.Element[] = [];
+  for (const part of muscles) {
+    const s = regionStyle(part.slug, coverage, style);
+    const mappedMuscles = regionMuscles(part.slug);
+    let titleEl: JSX.Element | null = null;
+    if (mappedMuscles.length > 0) {
+      const sum = mappedMuscles.reduce(
+        (acc, m) => acc + Math.min(100, Math.max(0, coverage[m])),
+        0
+      );
+      const avg = Math.round(sum / mappedMuscles.length);
+      const names = mappedMuscles.map((m) => MUSCLE_NAMES[m]).join(", ");
+      titleEl = createElement("title", null, `${names} · ${avg}%`);
+    }
 
-    return createElement(
-      "path",
-      { key: region.id, d: region.path, style: s },
-      titleText !== null ? createElement("title", null, titleText) : null
-    );
-  });
+    // Render a path for each defined side-array in part.path
+    const pathArrays = [
+      ...(part.path.left ?? []),
+      ...(part.path.right ?? []),
+      ...(part.path.center ?? []),
+      ...(part.path.common ?? []),
+    ];
+
+    for (let i = 0; i < pathArrays.length; i++) {
+      const d = pathArrays[i];
+      const key = `${part.slug}-${i}`;
+      paths.push(
+        createElement(
+          "path",
+          { key, d, style: s },
+          // Only attach title to the first path of a mapped region
+          i === 0 && titleEl !== null ? titleEl : null
+        )
+      );
+    }
+  }
 
   return createElement("svg", svgProps, ...paths);
 }

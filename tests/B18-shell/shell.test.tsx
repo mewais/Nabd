@@ -623,7 +623,6 @@ const defaultAppLayoutProps: AppLayoutProps = {
   theme: "dark",
   glass: false,
   opacity: 0.55,
-  wallpaper: "aurora",
   sidebar: React.createElement("aside", { "data-testid": "sidebar-slot" }, "Sidebar"),
   topbar: React.createElement("nav", { "data-testid": "topbar-slot" }, "Topbar"),
   children: React.createElement("main", { "data-testid": "children-slot" }, "Content"),
@@ -648,23 +647,21 @@ describe("AppLayout", () => {
     expect(screen.getByText("Content")).toBeInTheDocument();
   });
 
-  it("glass=true: wallpaper layer is present (display:block or not display:none)", () => {
+  it("glass=true dark: root wrapper background contains the glass tint (dark rgba)", () => {
     const { container } = render(
       React.createElement(AppLayout, {
         ...defaultAppLayoutProps,
         theme: "dark",
         glass: true,
-        wallpaper: "aurora",
       }),
     );
-    // The wallpaper layer should not be hidden when glass is enabled
-    const wallpaperLayer = container.querySelector(
-      "[style*='display: block'], [style*='display:block']",
-    );
-    expect(wallpaperLayer).not.toBeNull();
+    // In glass mode the ThemeProvider applies a semi-opaque tint as the background
+    // browsers may normalize rgba(15,17,24,...) → rgba(15, 17, 24, ...) with spaces
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.style.background).toMatch(/rgba\(15,?\s*17,?\s*24,/);
   });
 
-  it("glass=false with light theme: wallpaper layer is hidden (display:none)", () => {
+  it("glass=false with light theme: root wrapper background is var(--bg)", () => {
     const { container } = render(
       React.createElement(AppLayout, {
         ...defaultAppLayoutProps,
@@ -672,14 +669,11 @@ describe("AppLayout", () => {
         glass: false,
       }),
     );
-    // The wallpaper layer should have display:none when glass is off
-    const wallpaperLayer = container.querySelector(
-      "[style*='display: none'], [style*='display:none']",
-    );
-    expect(wallpaperLayer).not.toBeNull();
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.style.background).toBe("var(--bg)");
   });
 
-  it("glass=false with dark theme: wallpaper layer is hidden (display:none)", () => {
+  it("glass=false with dark theme: root wrapper background is var(--bg)", () => {
     const { container } = render(
       React.createElement(AppLayout, {
         ...defaultAppLayoutProps,
@@ -687,10 +681,8 @@ describe("AppLayout", () => {
         glass: false,
       }),
     );
-    const wallpaperLayer = container.querySelector(
-      "[style*='display: none'], [style*='display:none']",
-    );
-    expect(wallpaperLayer).not.toBeNull();
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.style.background).toBe("var(--bg)");
   });
 
   it("glass=true vs glass=false produce different root/container styles", () => {
@@ -772,38 +764,40 @@ describe("AppLayout", () => {
     expect(screen.getByText("Content")).toBeInTheDocument();
   });
 
-  it("accepts different wallpaper values (dusk)", () => {
+  it("glass=true light theme: root wrapper background contains light glass tint rgba", () => {
     const { container } = render(
       React.createElement(AppLayout, {
         ...defaultAppLayoutProps,
-        theme: "dark",
+        theme: "light",
         glass: true,
-        wallpaper: "dusk",
+        opacity: 0.7,
       }),
     );
-    expect(container.firstChild).not.toBeNull();
-    expect(screen.getByText("Content")).toBeInTheDocument();
+    const wrapper = container.firstChild as HTMLElement;
+    // browsers may normalize rgba(244,246,251,...) → rgba(244, 246, 251, ...) with spaces
+    expect(wrapper.style.background).toMatch(/rgba\(244,?\s*246,?\s*251,/);
   });
 
-  it("accepts wallpaper='mesh'", () => {
+  it("glass=true dark theme opacity 0.8: root wrapper background is dark glass tint at 0.8", () => {
     const { container } = render(
       React.createElement(AppLayout, {
         ...defaultAppLayoutProps,
         theme: "dark",
         glass: true,
-        wallpaper: "mesh",
+        opacity: 0.8,
       }),
     );
-    expect(screen.getByText("Sidebar")).toBeInTheDocument();
+    const wrapper = container.firstChild as HTMLElement;
+    // browsers may normalize rgba(15,17,24,0.8) → rgba(15, 17, 24, 0.8) with spaces
+    expect(wrapper.style.background).toMatch(/rgba\(15,?\s*17,?\s*24,?\s*0\.8\)/);
   });
 
-  it("accepts wallpaper='slate'", () => {
-    const { container } = render(
+  it("glass=true renders children correctly (no wallpaper layer blocks content)", () => {
+    render(
       React.createElement(AppLayout, {
         ...defaultAppLayoutProps,
         theme: "dark",
         glass: true,
-        wallpaper: "slate",
       }),
     );
     expect(screen.getByText("Sidebar")).toBeInTheDocument();

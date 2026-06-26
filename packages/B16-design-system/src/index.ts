@@ -42,13 +42,16 @@ export interface ThemeProviderProps {
   theme: Theme;
   glass: boolean;
   opacity: number;
-  wallpaper: Wallpaper;
   children?: ReactNode;
 }
-/** Applies the active material's CSS vars + background/frost + wallpaper layer. */
+/**
+ * Applies the active material's CSS vars + background. In glass mode the root is
+ * a semi-opaque tint (no opaque wallpaper) so the **real OS desktop** shows
+ * through the transparent window (frosted by native vibrancy); in solid mode it
+ * paints `var(--bg)`.
+ */
 export function ThemeProvider(_p: ThemeProviderProps): JSX.Element {
   const vars = themeVars(_p.theme, _p.glass);
-  const wpStyle = wallpaperStyle(_p.theme, _p.glass, _p.wallpaper);
   const bg = rootBackgroundStyle(_p.theme, _p.glass, _p.opacity);
   return React.createElement(
     "div",
@@ -57,6 +60,7 @@ export function ThemeProvider(_p: ThemeProviderProps): JSX.Element {
       "data-glass": _p.glass ? "on" : "off",
       style: {
         ...vars,
+        ...bg,
         height: "100vh",
         width: "100%",
         overflow: "hidden",
@@ -65,22 +69,7 @@ export function ThemeProvider(_p: ThemeProviderProps): JSX.Element {
         fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
       },
     },
-    // Fixed full-bleed wallpaper layer (behind everything) — glass only.
-    React.createElement("div", { style: wpStyle }),
-    // Themed panel: solid bg for light/dark, frosted tint over the wallpaper for glass.
-    React.createElement(
-      "div",
-      {
-        style: {
-          ...bg,
-          position: "relative",
-          zIndex: 1,
-          height: "100%",
-          width: "100%",
-        },
-      },
-      _p.children,
-    ),
+    _p.children,
   );
 }
 
@@ -138,7 +127,9 @@ export interface SegmentedProps {
 }
 export function Segmented(_p: SegmentedProps): JSX.Element {
   const { options, value, onChange, small } = _p;
-  const padding = small ? "2px 8px" : "4px 16px";
+  // Match the design: a surface2 container with a 1px line border; the active
+  // option is filled accent (white text), inactive is transparent (text2).
+  const padding = small ? "5px 9px" : "6px 12px";
 
   const buttons = options.map((opt) => {
     const isActive = opt.k === value;
@@ -151,16 +142,35 @@ export function Segmented(_p: SegmentedProps): JSX.Element {
         onClick: () => onChange(opt.k),
         style: {
           padding,
-          background: isActive ? "var(--accent)" : "transparent",
-          border: "1px solid var(--accent)",
+          borderRadius: small ? 7 : 8,
+          border: "none",
           cursor: "pointer",
+          fontFamily: "inherit",
+          fontSize: small ? "11.5px" : "12.5px",
+          fontWeight: 600,
+          background: isActive ? "var(--accent)" : "transparent",
+          color: isActive ? "#fff" : "var(--text2)",
         },
       },
       opt.label,
     );
   });
 
-  return React.createElement("div", { style: { display: "flex" } }, ...buttons);
+  return React.createElement(
+    "div",
+    {
+      "data-segmented": "true",
+      style: {
+        display: "inline-flex",
+        background: "var(--surface2)",
+        border: "1px solid var(--line)",
+        borderRadius: small ? 9 : 10,
+        padding: 3,
+        gap: 2,
+      },
+    },
+    ...buttons,
+  );
 }
 
 export interface StepperProps {

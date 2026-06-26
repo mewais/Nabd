@@ -604,7 +604,6 @@ export function App({ store, client }: AppProps): JSX.Element {
         onTheme: setTheme,
         onToggleGlass: () => store.getState().toggleGlass(),
         onOpacity: setOpacity,
-        onWallpaper: setWallpaper,
         onToggleStartup: () => setSetting("openAtStartup", !settings.openAtStartup),
         onToggleMinimized: () => setSetting("minimizedByDefault", !settings.minimizedByDefault),
         onInterval: setInterval,
@@ -666,7 +665,6 @@ export function App({ store, client }: AppProps): JSX.Element {
     theme,
     glass,
     opacity: settings.opacity,
-    wallpaper: settings.wallpaper,
     sidebar: sidebarEl,
     topbar: topbarEl,
     children: React.createElement(

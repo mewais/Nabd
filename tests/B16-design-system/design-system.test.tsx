@@ -295,7 +295,7 @@ describe("wallpaperStyle", () => {
 describe("ThemeProvider", () => {
   test("renders children text", () => {
     render(
-      <ThemeProvider theme="dark" glass={false} opacity={0.55} wallpaper="aurora">
+      <ThemeProvider theme="dark" glass={false} opacity={0.55}>
         <span>child-content</span>
       </ThemeProvider>,
     );
@@ -304,7 +304,7 @@ describe("ThemeProvider", () => {
 
   test("renders a wrapper div that contains children", () => {
     const { container } = render(
-      <ThemeProvider theme="light" glass={false} opacity={0.55} wallpaper="slate">
+      <ThemeProvider theme="light" glass={false} opacity={0.55}>
         <p>inner</p>
       </ThemeProvider>,
     );
@@ -315,7 +315,7 @@ describe("ThemeProvider", () => {
 
   test("wrapper div has style with theme CSS vars set (solid dark --bg)", () => {
     const { container } = render(
-      <ThemeProvider theme="dark" glass={false} opacity={0.55} wallpaper="aurora">
+      <ThemeProvider theme="dark" glass={false} opacity={0.55}>
         <span>x</span>
       </ThemeProvider>,
     );
@@ -327,7 +327,7 @@ describe("ThemeProvider", () => {
 
   test("glass dark theme: wrapper has --bg from THEMES.darkGlass", () => {
     const { container } = render(
-      <ThemeProvider theme="dark" glass={true} opacity={0.55} wallpaper="aurora">
+      <ThemeProvider theme="dark" glass={true} opacity={0.55}>
         <span>x</span>
       </ThemeProvider>,
     );
@@ -339,7 +339,7 @@ describe("ThemeProvider", () => {
 
   test("glass light theme: wrapper has --accent from THEMES.lightGlass", () => {
     const { container } = render(
-      <ThemeProvider theme="light" glass={true} opacity={0.7} wallpaper="aurora">
+      <ThemeProvider theme="light" glass={true} opacity={0.7}>
         <span>x</span>
       </ThemeProvider>,
     );
@@ -351,7 +351,7 @@ describe("ThemeProvider", () => {
 
   test("solid light theme: wrapper has --text from THEMES.light", () => {
     const { container } = render(
-      <ThemeProvider theme="light" glass={false} opacity={0.55} wallpaper="dusk">
+      <ThemeProvider theme="light" glass={false} opacity={0.55}>
         <span>x</span>
       </ThemeProvider>,
     );
@@ -361,40 +361,40 @@ describe("ThemeProvider", () => {
     );
   });
 
-  test("glass:true renders a wallpaper layer element inside the wrapper", () => {
+  test("glass:true: wrapper background contains rgba for dark glass tint", () => {
     const { container } = render(
-      <ThemeProvider theme="dark" glass={true} opacity={0.55} wallpaper="aurora">
+      <ThemeProvider theme="dark" glass={true} opacity={0.55}>
         <span>content</span>
       </ThemeProvider>,
     );
-    // A wallpaper layer div must be present (not the child, a separate element)
-    const allDivs = container.querySelectorAll("div");
-    expect(allDivs.length).toBeGreaterThanOrEqual(2);
+    const wrapper = container.firstChild as HTMLElement;
+    // glass mode: background is the floor-clamped tint (no separate wallpaper layer)
+    // browsers may normalize rgba(15,17,24,...) → rgba(15, 17, 24, ...) with spaces
+    expect(wrapper.style.background).toMatch(/rgba\(15,?\s*17,?\s*24,/);
   });
 
-  test("glass:false: wallpaper layer is present but hidden (display:none)", () => {
+  test("glass:false: wrapper background is var(--bg) (solid mode)", () => {
     const { container } = render(
-      <ThemeProvider theme="dark" glass={false} opacity={0.55} wallpaper="aurora">
+      <ThemeProvider theme="dark" glass={false} opacity={0.55}>
         <span>content</span>
       </ThemeProvider>,
     );
-    // wallpaper div exists but has display:none
-    const allDivs = container.querySelectorAll("div");
-    expect(allDivs.length).toBeGreaterThanOrEqual(2);
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.style.background).toBe("var(--bg)");
   });
 
-  test("children render inside (not swallowed by wallpaper layer) — glass:true", () => {
+  test("children render inside wrapper — glass:true", () => {
     render(
-      <ThemeProvider theme="dark" glass={true} opacity={0.7} wallpaper="mesh">
+      <ThemeProvider theme="dark" glass={true} opacity={0.7}>
         <button>click-me</button>
       </ThemeProvider>,
     );
     expect(screen.getByRole("button", { name: "click-me" })).toBeInTheDocument();
   });
 
-  test("children render inside (not swallowed by wallpaper layer) — glass:false", () => {
+  test("children render inside wrapper — glass:false", () => {
     render(
-      <ThemeProvider theme="light" glass={false} opacity={0.7} wallpaper="slate">
+      <ThemeProvider theme="light" glass={false} opacity={0.7}>
         <button>click-me-solid</button>
       </ThemeProvider>,
     );

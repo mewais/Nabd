@@ -603,48 +603,22 @@ export function CoverageCard(p: CoverageCardProps): JSX.Element {
         "7-DAY",
       ),
     ),
-    // segmented controls row
+    // segmented controls row — Segmented renders its own surface2 container
     React.createElement(
       "div",
       { style: { display: "flex", gap: 6, marginBottom: 6 } },
-      React.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            background: "var(--surface2)",
-            border: "1px solid var(--line)",
-            borderRadius: 9,
-            padding: 3,
-            gap: 2,
-          },
-        },
-        React.createElement(Segmented, {
-          options: viewOptions,
-          value: mapView,
-          onChange: (v) => onMapView(v as CoverageView),
-          small: true,
-        }),
-      ),
-      React.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            background: "var(--surface2)",
-            border: "1px solid var(--line)",
-            borderRadius: 9,
-            padding: 3,
-            gap: 2,
-          },
-        },
-        React.createElement(Segmented, {
-          options: styleOptions,
-          value: mapStyle,
-          onChange: (s) => onMapStyle(s as MapStyle),
-          small: true,
-        }),
-      ),
+      React.createElement(Segmented, {
+        options: viewOptions,
+        value: mapView,
+        onChange: (v) => onMapView(v as CoverageView),
+        small: true,
+      }),
+      React.createElement(Segmented, {
+        options: styleOptions,
+        value: mapStyle,
+        onChange: (s) => onMapStyle(s as MapStyle),
+        small: true,
+      }),
     ),
     // body map(s)
     React.createElement(

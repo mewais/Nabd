@@ -4,8 +4,8 @@ Copyright (c) 2026 Mohammad Ewais
 This product includes third-party open-source material:
 
 1. Anatomical muscle SVG path data
-   Source: vulovix/body-muscles  (https://github.com/vulovix/body-muscles)
-   License: Apache License 2.0
+   Source: react-native-body-highlighter (HichamELBSI), (c) 2022 ELABBASSI Hicham
+   License: MIT
    The SVG path definitions vendored under assets/body/ are derived from this
    project. A copy of the Apache 2.0 license is included at assets/body/LICENSE.
 

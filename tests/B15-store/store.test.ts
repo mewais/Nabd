@@ -24,7 +24,6 @@ import type {
   RotationState,
   DayState,
 } from "@nabd/domain";
-import { seedProgram } from "@nabd/program-editor";
 import { DEFAULT_SETTINGS } from "@nabd/domain";
 
 // ---------------------------------------------------------------------------
@@ -341,10 +340,9 @@ describe("hydrate() with null snapshot → seed defaults", () => {
     expect(get(store).booted).toBe(true);
   });
 
-  it("uses seedProgram() as default program", () => {
-    const sp = seedProgram();
-    expect(get(store).program.name).toBe(sp.name);
-    expect(get(store).program.type).toBe(sp.type);
+  it("uses empty program as default (name='My Plan', days.length=0)", () => {
+    expect(get(store).program.name).toBe("My Plan");
+    expect(get(store).program.days.length).toBe(0);
   });
 
   it("uses DEFAULT_SETTINGS", () => {
@@ -363,6 +361,42 @@ describe("hydrate() with null snapshot → seed defaults", () => {
     const cov = get(store).coverage;
     const vals = Object.values(cov);
     expect(vals.every((v) => v === 0)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// hydrate — stale dayState (date mismatch) → doneCount = 0
+// ---------------------------------------------------------------------------
+
+describe("hydrate() with stale dayState (date mismatch) → slots start fresh", () => {
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    // dayState exists but its date is yesterday — not today (2026-06-24)
+    const staleDayState: DayState = {
+      date: "2026-06-23", // yesterday — does not match FIXED_NOW (2026-06-24)
+      floatingIndex: 0,
+      slots: [{ id: "s1", status: "done" }],
+    };
+    const snap: BootSnapshot = {
+      ...BOOT_SNAPSHOT_FULL,
+      dayState: staleDayState,
+    };
+    const client = makeFakeClient(snap);
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+  });
+
+  it("sets booted=true", () => {
+    expect(get(store).booted).toBe(true);
+  });
+
+  it("slots are populated (matching day exists for Wednesday)", () => {
+    expect(get(store).slots.length).toBeGreaterThan(0);
+  });
+
+  it("first slot is 'now', not 'done' (stale dayState ignored)", () => {
+    expect(get(store).slots[0].status).toBe("now");
   });
 });
 

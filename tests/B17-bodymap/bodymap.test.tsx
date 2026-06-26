@@ -1,28 +1,39 @@
 /** @jsxImportSource react */
 /**
- * Tests for @nabd/bodymap — regionMuscle, regionStyle, BodyMap, MuscleBar.
- * All tests are RED against the skeleton (which throws "not implemented").
- * They turn GREEN once the code agent implements the bodies.
- * Together they exercise every export and every branch → 100% coverage of src/index.ts.
+ * Tests for @nabd/bodymap — regionMuscles, regionStyle, BodyMap, MuscleBar.
+ * Uses the new react-native-body-highlighter asset (slug-based, path arrays).
+ * Covers every export and branch → 100% coverage of src/index.ts.
  */
 
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import { FRONT_MUSCLES, BACK_MUSCLES, VIEWBOX, ViewSide } from "../../assets/body/index";
+import { FRONT_MUSCLES, BACK_MUSCLES, VIEWBOX } from "../../assets/body/index";
 import { MUSCLE_NAMES } from "@nabd/domain";
 import type { Coverage, MuscleKey } from "@nabd/domain";
 import {
-  regionMuscle,
+  regionMuscles,
   regionStyle,
   BodyMap,
   MuscleBar,
 } from "@nabd/bodymap";
 
 // ---------------------------------------------------------------------------
-// Coverage fixture helpers
+// Helpers
 // ---------------------------------------------------------------------------
 
-/** Build a Coverage where every muscle is set to `defaultVal` (default 0). */
+/** Count total paths rendered for a side (sum of all path-array entries per part). */
+function totalPathCount(parts: typeof FRONT_MUSCLES): number {
+  let n = 0;
+  for (const p of parts) {
+    n += (p.path.left?.length ?? 0);
+    n += (p.path.right?.length ?? 0);
+    n += (p.path.center?.length ?? 0);
+    n += (p.path.common?.length ?? 0);
+  }
+  return n;
+}
+
+/** Build a Coverage where every muscle is set to `defaultVal`. */
 function makeCoverage(overrides: Partial<Record<MuscleKey, number>> = {}, defaultVal = 0): Coverage {
   const muscles: MuscleKey[] = [
     "front_delts", "side_delts", "rear_delts", "neck", "upper_traps",
@@ -31,219 +42,129 @@ function makeCoverage(overrides: Partial<Record<MuscleKey, number>> = {}, defaul
     "calves", "tibialis", "hip_flexors", "biceps", "triceps", "forearms",
   ];
   const cov: Partial<Record<MuscleKey, number>> = {};
-  for (const m of muscles) {
-    cov[m] = defaultVal;
-  }
+  for (const m of muscles) cov[m] = defaultVal;
   return { ...cov, ...overrides } as Coverage;
 }
 
-// Zero coverage — all muscles at 0
 const ZERO_COV = makeCoverage({}, 0);
-// Full coverage — all muscles at 100
 const FULL_COV = makeCoverage({}, 100);
-// Mixed: front_delts=50, everything else 0
-const MID_COV = makeCoverage({ front_delts: 50 });
 
 // ---------------------------------------------------------------------------
-// regionMuscle
+// regionMuscles
 // ---------------------------------------------------------------------------
 
-describe("regionMuscle", () => {
-  it('returns "front_delts" for "shoulder-front-left"', () => {
-    expect(regionMuscle("shoulder-front-left")).toBe("front_delts");
+describe("regionMuscles", () => {
+  it("returns empty array for unmapped slugs (head)", () => {
+    expect(regionMuscles("head")).toEqual([]);
   });
 
-  it('returns "front_delts" for "shoulder-front-right"', () => {
-    expect(regionMuscle("shoulder-front-right")).toBe("front_delts");
+  it("returns empty array for unmapped slugs (hair)", () => {
+    expect(regionMuscles("hair")).toEqual([]);
   });
 
-  it('returns "front_delts" for exact prefix "shoulder-front" (no suffix)', () => {
-    // The prefix itself is "shoulder-front"; a region whose id IS the prefix is also matched
-    expect(regionMuscle("shoulder-front")).toBe("front_delts");
+  it("returns empty array for unmapped slugs (hands)", () => {
+    expect(regionMuscles("hands")).toEqual([]);
   });
 
-  it('returns "rhomboids" for "traps-mid-right"', () => {
-    expect(regionMuscle("traps-mid-right")).toBe("rhomboids");
+  it("returns empty array for unmapped slugs (feet)", () => {
+    expect(regionMuscles("feet")).toEqual([]);
   });
 
-  it('returns "rhomboids" for "traps-mid-left"', () => {
-    expect(regionMuscle("traps-mid-left")).toBe("rhomboids");
+  it("returns empty array for unmapped slugs (knees)", () => {
+    expect(regionMuscles("knees")).toEqual([]);
   });
 
-  it('returns "abductors" for "gluteus-medius-left"', () => {
-    expect(regionMuscle("gluteus-medius-left")).toBe("abductors");
+  it("returns empty array for unmapped slugs (ankles)", () => {
+    expect(regionMuscles("ankles")).toEqual([]);
   });
 
-  it('returns "abductors" for "gluteus-medius-right"', () => {
-    expect(regionMuscle("gluteus-medius-right")).toBe("abductors");
+  it("returns empty array for a completely unknown slug", () => {
+    expect(regionMuscles("totally-unknown-slug")).toEqual([]);
   });
 
-  it('returns null for decorative region "head"', () => {
-    expect(regionMuscle("head")).toBeNull();
+  it("deltoids → 3 muscles: front_delts, side_delts, rear_delts", () => {
+    const result = regionMuscles("deltoids");
+    expect(result).toContain("front_delts");
+    expect(result).toContain("side_delts");
+    expect(result).toContain("rear_delts");
+    expect(result.length).toBe(3);
   });
 
-  it('returns null for decorative region "hand-left"', () => {
-    expect(regionMuscle("hand-left")).toBeNull();
+  it("trapezius → 2 muscles: upper_traps, lower_traps", () => {
+    const result = regionMuscles("trapezius");
+    expect(result).toContain("upper_traps");
+    expect(result).toContain("lower_traps");
+    expect(result.length).toBe(2);
   });
 
-  it('returns null for decorative region "hand-right"', () => {
-    expect(regionMuscle("hand-right")).toBeNull();
+  it("upper-back → 2 muscles: rhomboids, lats", () => {
+    const result = regionMuscles("upper-back");
+    expect(result).toContain("rhomboids");
+    expect(result).toContain("lats");
+    expect(result.length).toBe(2);
   });
 
-  it('returns null for decorative region "face"', () => {
-    expect(regionMuscle("face")).toBeNull();
+  it("gluteal → 2 muscles: glutes, abductors", () => {
+    const result = regionMuscles("gluteal");
+    expect(result).toContain("glutes");
+    expect(result).toContain("abductors");
+    expect(result.length).toBe(2);
   });
 
-  it('returns null for decorative region "knee-left"', () => {
-    expect(regionMuscle("knee-left")).toBeNull();
+  it("quadriceps → 2 muscles: quads, hip_flexors", () => {
+    const result = regionMuscles("quadriceps");
+    expect(result).toContain("quads");
+    expect(result).toContain("hip_flexors");
+    expect(result.length).toBe(2);
   });
 
-  it('returns null for decorative region "knee-right"', () => {
-    expect(regionMuscle("knee-right")).toBeNull();
+  it("lower-back → [lower_back]", () => {
+    const result = regionMuscles("lower-back");
+    expect(result).toEqual(["lower_back"]);
   });
 
-  it('returns null for decorative region "foot-left"', () => {
-    expect(regionMuscle("foot-left")).toBeNull();
+  it("chest → [chest]", () => {
+    expect(regionMuscles("chest")).toEqual(["chest"]);
   });
 
-  it('returns null for decorative region "elbow-right"', () => {
-    expect(regionMuscle("elbow-right")).toBeNull();
+  it("abs → [abs]", () => {
+    expect(regionMuscles("abs")).toEqual(["abs"]);
   });
 
-  it('returns null for an entirely unknown region id', () => {
-    expect(regionMuscle("totally-unknown-region")).toBeNull();
+  it("obliques → [obliques]", () => {
+    expect(regionMuscles("obliques")).toEqual(["obliques"]);
   });
 
-  it('returns "side_delts" for "shoulder-side-left"', () => {
-    expect(regionMuscle("shoulder-side-left")).toBe("side_delts");
+  it("hamstring → [hamstrings]", () => {
+    expect(regionMuscles("hamstring")).toEqual(["hamstrings"]);
   });
 
-  it('returns "rear_delts" for "deltoid-rear-left"', () => {
-    expect(regionMuscle("deltoid-rear-left")).toBe("rear_delts");
+  it("adductors → [adductors]", () => {
+    expect(regionMuscles("adductors")).toEqual(["adductors"]);
   });
 
-  it('returns "upper_traps" for "traps-upper-left"', () => {
-    expect(regionMuscle("traps-upper-left")).toBe("upper_traps");
+  it("calves → [calves]", () => {
+    expect(regionMuscles("calves")).toEqual(["calves"]);
   });
 
-  it('returns "lower_traps" for "traps-lower-right"', () => {
-    expect(regionMuscle("traps-lower-right")).toBe("lower_traps");
+  it("tibialis → [tibialis]", () => {
+    expect(regionMuscles("tibialis")).toEqual(["tibialis"]);
   });
 
-  it('returns "lats" for "lats-upper-left"', () => {
-    expect(regionMuscle("lats-upper-left")).toBe("lats");
+  it("biceps → [biceps]", () => {
+    expect(regionMuscles("biceps")).toEqual(["biceps"]);
   });
 
-  it('returns "lats" for "lats-mid-right"', () => {
-    expect(regionMuscle("lats-mid-right")).toBe("lats");
+  it("triceps → [triceps]", () => {
+    expect(regionMuscles("triceps")).toEqual(["triceps"]);
   });
 
-  it('returns "lats" for "lats-lower-left"', () => {
-    expect(regionMuscle("lats-lower-left")).toBe("lats");
+  it("forearm → [forearms]", () => {
+    expect(regionMuscles("forearm")).toEqual(["forearms"]);
   });
 
-  it('returns "lower_back" for "lower-back-erectors-left"', () => {
-    expect(regionMuscle("lower-back-erectors-left")).toBe("lower_back");
-  });
-
-  it('returns "lower_back" for "lower-back-ql-right"', () => {
-    expect(regionMuscle("lower-back-ql-right")).toBe("lower_back");
-  });
-
-  it('returns "lower_back" for "spine"', () => {
-    expect(regionMuscle("spine")).toBe("lower_back");
-  });
-
-  it('returns "chest" for "chest-upper-left"', () => {
-    expect(regionMuscle("chest-upper-left")).toBe("chest");
-  });
-
-  it('returns "chest" for "chest-lower-right"', () => {
-    expect(regionMuscle("chest-lower-right")).toBe("chest");
-  });
-
-  it('returns "abs" for "abs-upper-left"', () => {
-    expect(regionMuscle("abs-upper-left")).toBe("abs");
-  });
-
-  it('returns "abs" for "abs-lower-right"', () => {
-    expect(regionMuscle("abs-lower-right")).toBe("abs");
-  });
-
-  it('returns "obliques" for "obliques-left"', () => {
-    expect(regionMuscle("obliques-left")).toBe("obliques");
-  });
-
-  it('returns "obliques" for "serratus-anterior-right"', () => {
-    expect(regionMuscle("serratus-anterior-right")).toBe("obliques");
-  });
-
-  it('returns "quads" for "quads-left"', () => {
-    expect(regionMuscle("quads-left")).toBe("quads");
-  });
-
-  it('returns "hamstrings" for "hamstrings-medial-left"', () => {
-    expect(regionMuscle("hamstrings-medial-left")).toBe("hamstrings");
-  });
-
-  it('returns "hamstrings" for "hamstrings-lateral-right"', () => {
-    expect(regionMuscle("hamstrings-lateral-right")).toBe("hamstrings");
-  });
-
-  it('returns "glutes" for "gluteus-maximus-left"', () => {
-    expect(regionMuscle("gluteus-maximus-left")).toBe("glutes");
-  });
-
-  it('returns "adductors" for "adductors-left"', () => {
-    expect(regionMuscle("adductors-left")).toBe("adductors");
-  });
-
-  it('returns "calves" for "calves-gastroc-medial-left"', () => {
-    expect(regionMuscle("calves-gastroc-medial-left")).toBe("calves");
-  });
-
-  it('returns "calves" for "calves-soleus-right"', () => {
-    expect(regionMuscle("calves-soleus-right")).toBe("calves");
-  });
-
-  it('returns "tibialis" for "tibialis-anterior-left"', () => {
-    expect(regionMuscle("tibialis-anterior-left")).toBe("tibialis");
-  });
-
-  it('returns "hip_flexors" for "hip-flexor-left"', () => {
-    expect(regionMuscle("hip-flexor-left")).toBe("hip_flexors");
-  });
-
-  it('returns "biceps" for "biceps-left"', () => {
-    expect(regionMuscle("biceps-left")).toBe("biceps");
-  });
-
-  it('returns "triceps" for "triceps-long-right"', () => {
-    expect(regionMuscle("triceps-long-right")).toBe("triceps");
-  });
-
-  it('returns "triceps" for "triceps-lateral-left"', () => {
-    expect(regionMuscle("triceps-lateral-left")).toBe("triceps");
-  });
-
-  it('returns "forearms" for "forearm-left"', () => {
-    expect(regionMuscle("forearm-left")).toBe("forearms");
-  });
-
-  it('returns "forearms" for "forearm-flexors-left"', () => {
-    expect(regionMuscle("forearm-flexors-left")).toBe("forearms");
-  });
-
-  it('returns "forearms" for "forearm-extensors-right"', () => {
-    expect(regionMuscle("forearm-extensors-right")).toBe("forearms");
-  });
-
-  it('returns "neck" for "neck-right"', () => {
-    expect(regionMuscle("neck-right")).toBe("neck");
-  });
-
-  it('returns "neck" for "nape"', () => {
-    expect(regionMuscle("nape")).toBe("neck");
+  it("neck → [neck]", () => {
+    expect(regionMuscles("neck")).toEqual(["neck"]);
   });
 });
 
@@ -252,70 +173,117 @@ describe("regionMuscle", () => {
 // ---------------------------------------------------------------------------
 
 describe("regionStyle — heat mode", () => {
-  it("null region (decorative head) → neutral fill, no stroke/fillOpacity", () => {
+  it("unmapped slug (head) → neutral fill, no fillOpacity, no stroke", () => {
     const s = regionStyle("head", ZERO_COV, "heat");
     expect(s.fill).toBe("var(--map-muscle)");
-    // No fillOpacity on neutral
     expect(s.fillOpacity).toBeUndefined();
     expect(s.stroke).toBeUndefined();
   });
 
-  it("null region (hand-left) → neutral fill", () => {
-    const s = regionStyle("hand-left", ZERO_COV, "heat");
-    expect(s.fill).toBe("var(--map-muscle)");
+  it("unmapped slug (hair) → neutral fill", () => {
+    expect(regionStyle("hair", ZERO_COV, "heat").fill).toBe("var(--map-muscle)");
   });
 
-  it("heat at c=0 → fillOpacity = 0.34", () => {
-    const cov = makeCoverage({ front_delts: 0 });
-    const s = regionStyle("shoulder-front-left", cov, "heat");
+  it("unmapped slug (hands) → neutral fill", () => {
+    expect(regionStyle("hands", ZERO_COV, "heat").fill).toBe("var(--map-muscle)");
+  });
+
+  it("unmapped slug (feet) → neutral fill", () => {
+    expect(regionStyle("feet", ZERO_COV, "heat").fill).toBe("var(--map-muscle)");
+  });
+
+  it("unmapped slug (knees) → neutral fill", () => {
+    expect(regionStyle("knees", ZERO_COV, "heat").fill).toBe("var(--map-muscle)");
+  });
+
+  it("unmapped slug (ankles) → neutral fill", () => {
+    expect(regionStyle("ankles", ZERO_COV, "heat").fill).toBe("var(--map-muscle)");
+  });
+
+  it("heat at c=0 for single-muscle slug (chest) → fillOpacity = 0.34", () => {
+    const cov = makeCoverage({ chest: 0 });
+    const s = regionStyle("chest", cov, "heat");
     expect(s.fill).toBe("var(--accent)");
     expect(s.fillOpacity).toBeCloseTo(0.34, 5);
   });
 
-  it("heat at c=100 → fillOpacity = 1.0", () => {
-    const cov = makeCoverage({ front_delts: 100 });
-    const s = regionStyle("shoulder-front-left", cov, "heat");
+  it("heat at c=100 for single-muscle slug (chest) → fillOpacity = 1.0", () => {
+    const cov = makeCoverage({ chest: 100 });
+    const s = regionStyle("chest", cov, "heat");
     expect(s.fill).toBe("var(--accent)");
     expect(s.fillOpacity).toBeCloseTo(1.0, 5);
   });
 
-  it("heat at c=50 → fillOpacity = 0.34 + 0.66*0.5 = 0.67", () => {
-    const cov = makeCoverage({ front_delts: 50 });
-    const s = regionStyle("shoulder-front-left", cov, "heat");
-    expect(s.fill).toBe("var(--accent)");
+  it("heat at c=50 for single-muscle slug (chest) → fillOpacity = 0.67", () => {
+    const cov = makeCoverage({ chest: 50 });
+    const s = regionStyle("chest", cov, "heat");
     expect(s.fillOpacity).toBeCloseTo(0.67, 5);
   });
 
   it("heat mode does not set stroke", () => {
-    const cov = makeCoverage({ rhomboids: 80 });
-    const s = regionStyle("traps-mid-right", cov, "heat");
+    const s = regionStyle("chest", makeCoverage({ chest: 80 }), "heat");
     expect(s.stroke).toBeUndefined();
   });
 
-  it("heat at c=0 for abductors (gluteus-medius) → fillOpacity = 0.34", () => {
-    const cov = makeCoverage({ abductors: 0 });
-    const s = regionStyle("gluteus-medius-left", cov, "heat");
+  it("heat: deltoids averages 3 muscles (front=0, side=0, rear=0) → fillOpacity=0.34", () => {
+    const cov = makeCoverage({ front_delts: 0, side_delts: 0, rear_delts: 0 });
+    const s = regionStyle("deltoids", cov, "heat");
     expect(s.fill).toBe("var(--accent)");
     expect(s.fillOpacity).toBeCloseTo(0.34, 5);
   });
 
-  it("heat at c=100 for abductors (gluteus-medius) → fillOpacity = 1.0", () => {
-    const cov = makeCoverage({ abductors: 100 });
-    const s = regionStyle("gluteus-medius-left", cov, "heat");
-    expect(s.fill).toBe("var(--accent)");
+  it("heat: deltoids averages 3 muscles (front=100, side=100, rear=100) → fillOpacity=1.0", () => {
+    const cov = makeCoverage({ front_delts: 100, side_delts: 100, rear_delts: 100 });
+    const s = regionStyle("deltoids", cov, "heat");
     expect(s.fillOpacity).toBeCloseTo(1.0, 5);
   });
 
-  // Clamp checks: values beyond 0–100 should be clamped
+  it("heat: deltoids averages 3 muscles (front=100, side=0, rear=50) → avg=50 → fillOpacity=0.67", () => {
+    const cov = makeCoverage({ front_delts: 100, side_delts: 0, rear_delts: 50 });
+    const s = regionStyle("deltoids", cov, "heat");
+    // avg = (100+0+50)/3 = 50; fillOpacity = 0.34 + 0.66*0.5 = 0.67
+    expect(s.fillOpacity).toBeCloseTo(0.67, 5);
+  });
+
+  it("heat: trapezius averages 2 muscles (upper=60, lower=40) → avg=50 → fillOpacity=0.67", () => {
+    const cov = makeCoverage({ upper_traps: 60, lower_traps: 40 });
+    const s = regionStyle("trapezius", cov, "heat");
+    expect(s.fillOpacity).toBeCloseTo(0.67, 5);
+  });
+
+  it("heat: upper-back averages 2 muscles (rhomboids=100, lats=0) → avg=50 → fillOpacity=0.67", () => {
+    const cov = makeCoverage({ rhomboids: 100, lats: 0 });
+    const s = regionStyle("upper-back", cov, "heat");
+    expect(s.fillOpacity).toBeCloseTo(0.67, 5);
+  });
+
+  it("heat: gluteal averages 2 muscles (glutes=0, abductors=0) → avg=0 → fillOpacity=0.34", () => {
+    const cov = makeCoverage({ glutes: 0, abductors: 0 });
+    const s = regionStyle("gluteal", cov, "heat");
+    expect(s.fillOpacity).toBeCloseTo(0.34, 5);
+  });
+
+  it("heat: gluteal averages 2 muscles (glutes=100, abductors=100) → avg=100 → fillOpacity=1.0", () => {
+    const cov = makeCoverage({ glutes: 100, abductors: 100 });
+    const s = regionStyle("gluteal", cov, "heat");
+    expect(s.fillOpacity).toBeCloseTo(1.0, 5);
+  });
+
+  it("heat: quadriceps averages 2 muscles (quads=100, hip_flexors=0) → avg=50 → fillOpacity=0.67", () => {
+    const cov = makeCoverage({ quads: 100, hip_flexors: 0 });
+    const s = regionStyle("quadriceps", cov, "heat");
+    expect(s.fillOpacity).toBeCloseTo(0.67, 5);
+  });
+
   it("heat clamps c above 100 to 100 → fillOpacity = 1.0", () => {
-    const cov = makeCoverage({ lats: 200 });
-    const s = regionStyle("lats-upper-left", cov, "heat");
+    const cov = makeCoverage({ abs: 200 });
+    const s = regionStyle("abs", cov, "heat");
     expect(s.fillOpacity).toBeCloseTo(1.0, 5);
   });
 
   it("heat clamps c below 0 to 0 → fillOpacity = 0.34", () => {
-    const cov = makeCoverage({ lats: -50 });
-    const s = regionStyle("lats-upper-left", cov, "heat");
+    const cov = makeCoverage({ abs: -50 });
+    const s = regionStyle("abs", cov, "heat");
     expect(s.fillOpacity).toBeCloseTo(0.34, 5);
   });
 });
@@ -325,50 +293,60 @@ describe("regionStyle — heat mode", () => {
 // ---------------------------------------------------------------------------
 
 describe("regionStyle — outline mode", () => {
-  it("null region → neutral fill, no stroke", () => {
+  it("unmapped slug (head) → neutral fill, no stroke", () => {
     const s = regionStyle("head", ZERO_COV, "outline");
     expect(s.fill).toBe("var(--map-muscle)");
     expect(s.stroke).toBeUndefined();
   });
 
-  it("outline at c=0 → strokeOpacity = 0.2", () => {
-    const cov = makeCoverage({ rhomboids: 0 });
-    const s = regionStyle("traps-mid-right", cov, "outline");
+  it("outline at c=0 for single-muscle slug → strokeOpacity = 0.2", () => {
+    const cov = makeCoverage({ biceps: 0 });
+    const s = regionStyle("biceps", cov, "outline");
     expect(s.fill).toBe("var(--map-muscle)");
     expect(s.stroke).toBe("var(--accent)");
     expect(s.strokeOpacity).toBeCloseTo(0.2, 5);
   });
 
-  it("outline at c=100 → strokeOpacity = 1.0", () => {
-    const cov = makeCoverage({ rhomboids: 100 });
-    const s = regionStyle("traps-mid-right", cov, "outline");
-    expect(s.fill).toBe("var(--map-muscle)");
-    expect(s.stroke).toBe("var(--accent)");
+  it("outline at c=100 for single-muscle slug → strokeOpacity = 1.0", () => {
+    const cov = makeCoverage({ biceps: 100 });
+    const s = regionStyle("biceps", cov, "outline");
     expect(s.strokeOpacity).toBeCloseTo(1.0, 5);
   });
 
-  it("outline at c=50 → strokeOpacity = 0.2 + 0.8*0.5 = 0.6", () => {
-    const cov = makeCoverage({ rhomboids: 50 });
-    const s = regionStyle("traps-mid-left", cov, "outline");
-    expect(s.stroke).toBe("var(--accent)");
+  it("outline at c=50 for single-muscle slug → strokeOpacity = 0.6", () => {
+    const cov = makeCoverage({ triceps: 50 });
+    const s = regionStyle("triceps", cov, "outline");
     expect(s.strokeOpacity).toBeCloseTo(0.6, 5);
   });
 
-  it("outline mode does not override fill with accent", () => {
-    const cov = makeCoverage({ front_delts: 100 });
-    const s = regionStyle("shoulder-front-left", cov, "outline");
+  it("outline: deltoids averages 3 muscles (all=100) → strokeOpacity=1.0", () => {
+    const cov = makeCoverage({ front_delts: 100, side_delts: 100, rear_delts: 100 });
+    const s = regionStyle("deltoids", cov, "outline");
+    expect(s.strokeOpacity).toBeCloseTo(1.0, 5);
+  });
+
+  it("outline: deltoids averages 3 muscles (front=60, side=0, rear=0) → avg=20 → strokeOpacity=0.36", () => {
+    const cov = makeCoverage({ front_delts: 60, side_delts: 0, rear_delts: 0 });
+    const s = regionStyle("deltoids", cov, "outline");
+    // avg = 60/3 = 20; strokeOpacity = 0.2 + 0.8*0.2 = 0.36
+    expect(s.strokeOpacity).toBeCloseTo(0.36, 5);
+  });
+
+  it("outline mode fill is always var(--map-muscle), not accent", () => {
+    const cov = makeCoverage({ chest: 100 });
+    const s = regionStyle("chest", cov, "outline");
     expect(s.fill).toBe("var(--map-muscle)");
   });
 
   it("outline clamps c above 100 to 100 → strokeOpacity = 1.0", () => {
-    const cov = makeCoverage({ chest: 150 });
-    const s = regionStyle("chest-upper-left", cov, "outline");
+    const cov = makeCoverage({ calves: 150 });
+    const s = regionStyle("calves", cov, "outline");
     expect(s.strokeOpacity).toBeCloseTo(1.0, 5);
   });
 
   it("outline clamps c below 0 to 0 → strokeOpacity = 0.2", () => {
-    const cov = makeCoverage({ chest: -10 });
-    const s = regionStyle("chest-lower-right", cov, "outline");
+    const cov = makeCoverage({ calves: -10 });
+    const s = regionStyle("calves", cov, "outline");
     expect(s.strokeOpacity).toBeCloseTo(0.2, 5);
   });
 });
@@ -379,148 +357,152 @@ describe("regionStyle — outline mode", () => {
 
 describe("BodyMap", () => {
   it("renders an <svg> element", () => {
-    const { container } = render(
-      <BodyMap side="front" coverage={ZERO_COV} />
-    );
+    const { container } = render(<BodyMap side="front" coverage={ZERO_COV} />);
     expect(container.querySelector("svg")).not.toBeNull();
   });
 
   it("front view: svg viewBox matches VIEWBOX.front", () => {
-    const { container } = render(
-      <BodyMap side="front" coverage={ZERO_COV} />
-    );
+    const { container } = render(<BodyMap side="front" coverage={ZERO_COV} />);
     const svg = container.querySelector("svg");
     expect(svg).not.toBeNull();
-    expect(svg!.getAttribute("viewBox")).toBe(VIEWBOX[ViewSide.FRONT]);
+    expect(svg!.getAttribute("viewBox")).toBe(VIEWBOX.front);
   });
 
   it("back view: svg viewBox matches VIEWBOX.back", () => {
-    const { container } = render(
-      <BodyMap side="back" coverage={ZERO_COV} />
-    );
+    const { container } = render(<BodyMap side="back" coverage={ZERO_COV} />);
     const svg = container.querySelector("svg");
     expect(svg).not.toBeNull();
-    expect(svg!.getAttribute("viewBox")).toBe(VIEWBOX[ViewSide.BACK]);
+    expect(svg!.getAttribute("viewBox")).toBe(VIEWBOX.back);
   });
 
-  it("front view: number of <path> elements equals FRONT_MUSCLES length", () => {
-    const { container } = render(
-      <BodyMap side="front" coverage={ZERO_COV} />
-    );
+  it("front view: number of <path> elements equals total path strings in FRONT_MUSCLES", () => {
+    const { container } = render(<BodyMap side="front" coverage={ZERO_COV} />);
     const paths = container.querySelectorAll("path");
-    expect(paths.length).toBe(FRONT_MUSCLES.length);
+    expect(paths.length).toBe(totalPathCount(FRONT_MUSCLES));
   });
 
-  it("back view: number of <path> elements equals BACK_MUSCLES length", () => {
-    const { container } = render(
-      <BodyMap side="back" coverage={ZERO_COV} />
-    );
+  it("back view: number of <path> elements equals total path strings in BACK_MUSCLES", () => {
+    const { container } = render(<BodyMap side="back" coverage={ZERO_COV} />);
     const paths = container.querySelectorAll("path");
-    expect(paths.length).toBe(BACK_MUSCLES.length);
+    expect(paths.length).toBe(totalPathCount(BACK_MUSCLES));
   });
 
-  it("front view: a muscle region path (shoulder-front-left) carries an accent fill when coverage > 0", () => {
-    const cov = makeCoverage({ front_delts: 80 });
-    const { container } = render(
-      <BodyMap side="front" coverage={cov} style="heat" />
-    );
-    // Find the path for "shoulder-front-left" by its expected d attribute prefix
-    const frontDeltRegion = FRONT_MUSCLES.find((m) => m.id === "shoulder-front-left");
-    expect(frontDeltRegion).not.toBeUndefined();
-    // We can check by querying all paths and matching by their d attribute
+  it("front view: a chest path carries accent fill when coverage > 0 (heat)", () => {
+    const cov = makeCoverage({ chest: 80 });
+    const { container } = render(<BodyMap side="front" coverage={cov} style="heat" />);
+    // All chest paths should have accent fill
+    const chestPart = FRONT_MUSCLES.find((m) => m.slug === "chest");
+    expect(chestPart).not.toBeUndefined();
+    const firstChestPath = chestPart!.path.left![0];
     const paths = Array.from(container.querySelectorAll("path"));
-    const targetPath = paths.find(
-      (p) => p.getAttribute("d") === frontDeltRegion!.path
-    );
+    const targetPath = paths.find((p) => p.getAttribute("d") === firstChestPath);
     expect(targetPath).not.toBeUndefined();
-    // The fill should be accent (heat mode, non-zero coverage)
-    const fill = (targetPath as HTMLElement).style.fill;
-    expect(fill).toBe("var(--accent)");
+    expect((targetPath as HTMLElement).style.fill).toBe("var(--accent)");
   });
 
-  it("front view: a decorative region (head) has neutral fill", () => {
-    const cov = FULL_COV;
-    const { container } = render(
-      <BodyMap side="front" coverage={cov} style="heat" />
-    );
-    const headRegion = FRONT_MUSCLES.find((m) => m.id === "head");
-    expect(headRegion).not.toBeUndefined();
+  it("front view: head paths (unmapped) have neutral fill even at full coverage", () => {
+    const { container } = render(<BodyMap side="front" coverage={FULL_COV} style="heat" />);
+    const headPart = FRONT_MUSCLES.find((m) => m.slug === "head");
+    expect(headPart).not.toBeUndefined();
+    // Head uses common paths
+    const firstHeadPath = headPart!.path.common![0];
     const paths = Array.from(container.querySelectorAll("path"));
-    const headPath = paths.find(
-      (p) => p.getAttribute("d") === headRegion!.path
-    );
+    const headPath = paths.find((p) => p.getAttribute("d") === firstHeadPath);
     expect(headPath).not.toBeUndefined();
-    const fill = (headPath as HTMLElement).style.fill;
-    expect(fill).toBe("var(--map-muscle)");
+    expect((headPath as HTMLElement).style.fill).toBe("var(--map-muscle)");
   });
 
-  it("back view: traps-mid-right path carries accent fill when rhomboids coverage > 0", () => {
-    const cov = makeCoverage({ rhomboids: 60 });
-    const { container } = render(
-      <BodyMap side="back" coverage={cov} style="heat" />
-    );
-    const region = BACK_MUSCLES.find((m) => m.id === "traps-mid-right");
-    expect(region).not.toBeUndefined();
+  it("back view: gluteal slug carries accent fill when glutes+abductors coverage > 0", () => {
+    const cov = makeCoverage({ glutes: 60, abductors: 40 });
+    const { container } = render(<BodyMap side="back" coverage={cov} style="heat" />);
+    const glutealPart = BACK_MUSCLES.find((m) => m.slug === "gluteal");
+    expect(glutealPart).not.toBeUndefined();
+    const firstGlutealPath = glutealPart!.path.left![0];
     const paths = Array.from(container.querySelectorAll("path"));
-    const targetPath = paths.find(
-      (p) => p.getAttribute("d") === region!.path
-    );
+    const targetPath = paths.find((p) => p.getAttribute("d") === firstGlutealPath);
     expect(targetPath).not.toBeUndefined();
-    const fill = (targetPath as HTMLElement).style.fill;
-    expect(fill).toBe("var(--accent)");
+    expect((targetPath as HTMLElement).style.fill).toBe("var(--accent)");
   });
 
-  it("outline style: a muscle region path carries accent stroke", () => {
-    const cov = makeCoverage({ front_delts: 50 });
-    const { container } = render(
-      <BodyMap side="front" coverage={cov} style="outline" />
-    );
-    const frontDeltRegion = FRONT_MUSCLES.find((m) => m.id === "shoulder-front-left");
+  it("outline style: a muscle slug path carries accent stroke", () => {
+    const cov = makeCoverage({ biceps: 50 });
+    const { container } = render(<BodyMap side="front" coverage={cov} style="outline" />);
+    const bicepsPart = FRONT_MUSCLES.find((m) => m.slug === "biceps");
+    expect(bicepsPart).not.toBeUndefined();
+    const firstBicepsPath = bicepsPart!.path.left![0];
     const paths = Array.from(container.querySelectorAll("path"));
-    const targetPath = paths.find(
-      (p) => p.getAttribute("d") === frontDeltRegion!.path
-    );
+    const targetPath = paths.find((p) => p.getAttribute("d") === firstBicepsPath);
     expect(targetPath).not.toBeUndefined();
-    const stroke = (targetPath as HTMLElement).style.stroke;
-    expect(stroke).toBe("var(--accent)");
+    expect((targetPath as HTMLElement).style.stroke).toBe("var(--accent)");
   });
 
-  it("default style is heat (no style prop → heat behavior)", () => {
-    // When style is omitted, it defaults to "heat"
-    const cov = makeCoverage({ front_delts: 100 });
-    const { container } = render(
-      <BodyMap side="front" coverage={cov} />
-    );
-    const frontDeltRegion = FRONT_MUSCLES.find((m) => m.id === "shoulder-front-left");
+  it("default style is heat (no style prop)", () => {
+    const cov = makeCoverage({ chest: 100 });
+    const { container } = render(<BodyMap side="front" coverage={cov} />);
+    const chestPart = FRONT_MUSCLES.find((m) => m.slug === "chest");
+    const firstChestPath = chestPart!.path.left![0];
     const paths = Array.from(container.querySelectorAll("path"));
-    const targetPath = paths.find(
-      (p) => p.getAttribute("d") === frontDeltRegion!.path
-    );
+    const targetPath = paths.find((p) => p.getAttribute("d") === firstChestPath);
     expect(targetPath).not.toBeUndefined();
-    // Heat mode → fill = accent
-    const fill = (targetPath as HTMLElement).style.fill;
-    expect(fill).toBe("var(--accent)");
+    expect((targetPath as HTMLElement).style.fill).toBe("var(--accent)");
   });
 
-  it("renders a <title> element for a tracked muscle region with correct text", () => {
-    const cov = makeCoverage({ front_delts: 75 });
-    const { container } = render(
-      <BodyMap side="front" coverage={cov} style="heat" />
-    );
-    // Title should be "<Muscle name> · <pct>%"
-    // "front_delts" → "Front Delts · 75%"
+  it("renders a <title> element for a tracked muscle region with muscle name and avg %", () => {
+    // chest maps to ["chest"], avg = 75%
+    const cov = makeCoverage({ chest: 75 });
+    const { container } = render(<BodyMap side="front" coverage={cov} style="heat" />);
     const titles = Array.from(container.querySelectorAll("title"));
-    const frontDeltTitle = titles.find(
-      (t) => t.textContent === `${MUSCLE_NAMES["front_delts"]} · 75%`
+    const chestTitle = titles.find(
+      (t) => t.textContent === `${MUSCLE_NAMES["chest"]} · 75%`
     );
-    expect(frontDeltTitle).not.toBeUndefined();
+    expect(chestTitle).not.toBeUndefined();
+  });
+
+  it("renders a <title> for deltoids region with 3-muscle average rounded", () => {
+    // front=90, side=60, rear=0 → avg = 50 → title has 50%
+    const cov = makeCoverage({ front_delts: 90, side_delts: 60, rear_delts: 0 });
+    const { container } = render(<BodyMap side="front" coverage={cov} style="heat" />);
+    const titles = Array.from(container.querySelectorAll("title"));
+    // Title should contain all 3 muscle names and 50%
+    const deltaTitle = titles.find(
+      (t) => t.textContent !== null && t.textContent.includes("50%")
+    );
+    expect(deltaTitle).not.toBeUndefined();
+    expect(deltaTitle!.textContent).toContain("Front Delts");
+    expect(deltaTitle!.textContent).toContain("Side Delts");
+    expect(deltaTitle!.textContent).toContain("Rear Delts");
+  });
+
+  it("no <title> element for unmapped regions (head, hair)", () => {
+    const { container } = render(<BodyMap side="front" coverage={FULL_COV} />);
+    const paths = container.querySelectorAll("path");
+    // Paths for head/hair should have no title child
+    const headPart = FRONT_MUSCLES.find((m) => m.slug === "head");
+    const hairPart = FRONT_MUSCLES.find((m) => m.slug === "hair");
+    expect(headPart).not.toBeUndefined();
+    expect(hairPart).not.toBeUndefined();
+    const firstHeadD = headPart!.path.common![0];
+    const firstHairD = hairPart!.path.common![0];
+    const allPaths = Array.from(paths);
+    const headPath = allPaths.find((p) => p.getAttribute("d") === firstHeadD);
+    const hairPath = allPaths.find((p) => p.getAttribute("d") === firstHairD);
+    expect(headPath).not.toBeUndefined();
+    expect(hairPath).not.toBeUndefined();
+    expect(headPath!.querySelector("title")).toBeNull();
+    expect(hairPath!.querySelector("title")).toBeNull();
   });
 
   it("accepts a width prop without error", () => {
-    const { container } = render(
-      <BodyMap side="front" coverage={ZERO_COV} width={300} />
-    );
+    const { container } = render(<BodyMap side="front" coverage={ZERO_COV} width={300} />);
     expect(container.querySelector("svg")).not.toBeNull();
+  });
+
+  it("default width is 124", () => {
+    const { container } = render(<BodyMap side="front" coverage={ZERO_COV} />);
+    const svg = container.querySelector("svg");
+    expect(svg).not.toBeNull();
+    // React renders width as attribute
+    expect(svg!.getAttribute("width")).toBe("124");
   });
 });
 
@@ -530,39 +512,27 @@ describe("BodyMap", () => {
 
 describe("MuscleBar", () => {
   it("renders the muscle display name", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="front_delts" pct={50} />
-    );
+    const { getByText } = render(<MuscleBar muscle="front_delts" pct={50} />);
     expect(getByText(MUSCLE_NAMES["front_delts"])).not.toBeNull();
   });
 
   it("renders the pct as text (e.g. '50%')", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="front_delts" pct={50} />
-    );
+    const { getByText } = render(<MuscleBar muscle="front_delts" pct={50} />);
     expect(getByText("50%")).not.toBeNull();
   });
 
   it("renders '0%' when pct is 0", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="lats" pct={0} />
-    );
+    const { getByText } = render(<MuscleBar muscle="lats" pct={0} />);
     expect(getByText("0%")).not.toBeNull();
   });
 
   it("renders '100%' when pct is 100", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="quads" pct={100} />
-    );
+    const { getByText } = render(<MuscleBar muscle="quads" pct={100} />);
     expect(getByText("100%")).not.toBeNull();
   });
 
   it("bar width style reflects pct (50% → width 50%)", () => {
-    const { container } = render(
-      <MuscleBar muscle="front_delts" pct={50} />
-    );
-    // Find the bar element — it should have width: 50% (or "50%")
-    // Look for a child element whose style.width matches
+    const { container } = render(<MuscleBar muscle="front_delts" pct={50} />);
     const bars = container.querySelectorAll("[style]");
     const barEl = Array.from(bars).find(
       (el) => (el as HTMLElement).style.width === "50%"
@@ -571,9 +541,7 @@ describe("MuscleBar", () => {
   });
 
   it("bar width style reflects pct (20% → width 20%)", () => {
-    const { container } = render(
-      <MuscleBar muscle="biceps" pct={20} />
-    );
+    const { container } = render(<MuscleBar muscle="biceps" pct={20} />);
     const bars = container.querySelectorAll("[style]");
     const barEl = Array.from(bars).find(
       (el) => (el as HTMLElement).style.width === "20%"
@@ -582,9 +550,7 @@ describe("MuscleBar", () => {
   });
 
   it("bar width style reflects pct (70% → width 70%)", () => {
-    const { container } = render(
-      <MuscleBar muscle="hamstrings" pct={70} />
-    );
+    const { container } = render(<MuscleBar muscle="hamstrings" pct={70} />);
     const bars = container.querySelectorAll("[style]");
     const barEl = Array.from(bars).find(
       (el) => (el as HTMLElement).style.width === "70%"
@@ -593,104 +559,73 @@ describe("MuscleBar", () => {
   });
 
   it("shows 'Rest' tag when pct >= 66 (pct=70)", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="hamstrings" pct={70} showRec={true} />
-    );
+    const { getByText } = render(<MuscleBar muscle="hamstrings" pct={70} showRec={true} />);
     expect(getByText("Rest")).not.toBeNull();
   });
 
   it("shows 'Push' tag when pct <= 38 (pct=20)", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="biceps" pct={20} showRec={true} />
-    );
+    const { getByText } = render(<MuscleBar muscle="biceps" pct={20} showRec={true} />);
     expect(getByText("Push")).not.toBeNull();
   });
 
   it("shows no rec tag when pct is between 39 and 65 (pct=50)", () => {
-    const { queryByText } = render(
-      <MuscleBar muscle="front_delts" pct={50} showRec={true} />
-    );
+    const { queryByText } = render(<MuscleBar muscle="front_delts" pct={50} showRec={true} />);
     expect(queryByText("Rest")).toBeNull();
     expect(queryByText("Push")).toBeNull();
   });
 
   it("boundary: pct=66 shows 'Rest'", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="lats" pct={66} showRec={true} />
-    );
+    const { getByText } = render(<MuscleBar muscle="lats" pct={66} showRec={true} />);
     expect(getByText("Rest")).not.toBeNull();
   });
 
   it("boundary: pct=38 shows 'Push'", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="triceps" pct={38} showRec={true} />
-    );
+    const { getByText } = render(<MuscleBar muscle="triceps" pct={38} showRec={true} />);
     expect(getByText("Push")).not.toBeNull();
   });
 
   it("showRec=false hides the rec tag even when pct=70 (Rest territory)", () => {
-    const { queryByText } = render(
-      <MuscleBar muscle="hamstrings" pct={70} showRec={false} />
-    );
+    const { queryByText } = render(<MuscleBar muscle="hamstrings" pct={70} showRec={false} />);
     expect(queryByText("Rest")).toBeNull();
   });
 
   it("showRec=false hides the rec tag even when pct=20 (Push territory)", () => {
-    const { queryByText } = render(
-      <MuscleBar muscle="biceps" pct={20} showRec={false} />
-    );
+    const { queryByText } = render(<MuscleBar muscle="biceps" pct={20} showRec={false} />);
     expect(queryByText("Push")).toBeNull();
   });
 
   it("showRec not provided (undefined) hides the rec tag", () => {
-    // Default for showRec should hide the tag
-    const { queryByText } = render(
-      <MuscleBar muscle="hamstrings" pct={70} />
-    );
-    // If showRec is undefined/false by default, no tag shown
-    // (the spec says "if showRec" — undefined is falsy)
+    const { queryByText } = render(<MuscleBar muscle="hamstrings" pct={70} />);
     expect(queryByText("Rest")).toBeNull();
   });
 
-  it("renders 'forearms' muscle name (all 23 muscles are exercised via prior tests + this)", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="forearms" pct={50} />
-    );
+  it("renders 'forearms' muscle name", () => {
+    const { getByText } = render(<MuscleBar muscle="forearms" pct={50} />);
     expect(getByText(MUSCLE_NAMES["forearms"])).not.toBeNull();
   });
 
   it("renders 'tibialis' muscle name", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="tibialis" pct={50} />
-    );
+    const { getByText } = render(<MuscleBar muscle="tibialis" pct={50} />);
     expect(getByText(MUSCLE_NAMES["tibialis"])).not.toBeNull();
   });
 
   it("renders 'calves' muscle name", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="calves" pct={50} />
-    );
+    const { getByText } = render(<MuscleBar muscle="calves" pct={50} />);
     expect(getByText(MUSCLE_NAMES["calves"])).not.toBeNull();
   });
 
   it("renders 'glutes' muscle name", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="glutes" pct={50} />
-    );
+    const { getByText } = render(<MuscleBar muscle="glutes" pct={50} />);
     expect(getByText(MUSCLE_NAMES["glutes"])).not.toBeNull();
   });
 
   it("renders 'quads' muscle name", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="quads" pct={50} />
-    );
+    const { getByText } = render(<MuscleBar muscle="quads" pct={50} />);
     expect(getByText(MUSCLE_NAMES["quads"])).not.toBeNull();
   });
 
   it("renders 'adductors' muscle name", () => {
-    const { getByText } = render(
-      <MuscleBar muscle="adductors" pct={50} />
-    );
+    const { getByText } = render(<MuscleBar muscle="adductors" pct={50} />);
     expect(getByText(MUSCLE_NAMES["adductors"])).not.toBeNull();
   });
 });

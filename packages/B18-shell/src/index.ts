@@ -3,10 +3,11 @@
 
 import React from "react";
 import type { ReactNode } from "react";
-import type { Theme, Wallpaper } from "@nabd/domain";
+import type { Theme } from "@nabd/domain";
 import {
   LiveDot,
   Icon,
+  Segmented,
   ThemeProvider,
 } from "@nabd/design-system";
 
@@ -500,46 +501,13 @@ export function TopBar(p: TopBarProps): JSX.Element {
     React.createElement(
       "div",
       { style: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 } },
-      // Light/Dark segmented control
-      React.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            background: "var(--surface2)",
-            border: "1px solid var(--line)",
-            borderRadius: 10,
-            padding: 3,
-            gap: 2,
-          },
-        },
-        ...THEME_OPTIONS.map((opt) => {
-          const isActive = opt.k === theme;
-          return React.createElement(
-            "button",
-            {
-              key: opt.k,
-              "aria-pressed": isActive,
-              "data-active": isActive ? "true" : undefined,
-              onClick: () => onTheme(opt.k as Theme),
-              style: {
-                padding: "4px 12px",
-                background: isActive ? "var(--accent)" : "transparent",
-                color: isActive ? "#fff" : "var(--text2)",
-                border: "none",
-                borderRadius: 7,
-                fontSize: 12,
-                fontWeight: isActive ? 600 : 400,
-                fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
-                cursor: "pointer",
-                transition: "background 0.14s ease",
-              },
-            },
-            opt.label,
-          );
-        }),
-      ),
-      // Glass toggle button
+      // Light/Dark segmented control — shared component
+      React.createElement(Segmented, {
+        options: THEME_OPTIONS,
+        value: theme,
+        onChange: (k) => onTheme(k as Theme),
+      }),
+      // Glass toggle button — pill, same height as Segmented (~34px via padding)
       React.createElement(
         "button",
         {
@@ -547,11 +515,10 @@ export function TopBar(p: TopBarProps): JSX.Element {
           title: "Translucent window",
           "data-glass-active": glass ? "true" : "false",
           style: {
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
-            gap: 6,
-            padding: "0 13px",
-            height: 40,
+            gap: 7,
+            padding: "6px 12px",
             background: glass ? "var(--accent)" : "var(--surface2)",
             color: glass ? "#fff" : "var(--text2)",
             border: "1px solid var(--line)",
@@ -566,8 +533,8 @@ export function TopBar(p: TopBarProps): JSX.Element {
         React.createElement(
           "svg",
           {
-            width: 15,
-            height: 15,
+            width: 14,
+            height: 14,
             viewBox: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -610,19 +577,18 @@ export interface AppLayoutProps {
   theme: Theme;
   glass: boolean;
   opacity: number;
-  wallpaper: Wallpaper;
   sidebar: ReactNode;
   topbar: ReactNode;
   children: ReactNode;
 }
 
-/** Full-window layout: wallpaper + frosted root, sidebar (250px) + main column. */
+/** Full-window layout: frosted root, sidebar (250px) + main column. */
 export function AppLayout(p: AppLayoutProps): JSX.Element {
-  const { theme, glass, opacity, wallpaper, sidebar, topbar, children } = p;
+  const { theme, glass, opacity, sidebar, topbar, children } = p;
 
   return React.createElement(
     ThemeProvider,
-    { theme, glass, opacity, wallpaper },
+    { theme, glass, opacity },
     React.createElement(
       "div",
       {

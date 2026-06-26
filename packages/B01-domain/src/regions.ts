@@ -1,34 +1,34 @@
 import type { MuscleKey } from "./muscles";
 
 /**
- * Maps each tracking muscle to one or more body-muscles SVG region-id prefixes
- * (the id minus its `-left` / `-right` suffix). The body map tints every region
- * whose id starts with one of a muscle's prefixes by that muscle's coverage.
- * Several fine regions roll up into one tracking muscle (e.g. all three lat
- * bands → `lats`); regions with no muscle here render neutral grey.
+ * Maps each tracking muscle to one or more coarse body-map slugs from the
+ * react-native-body-highlighter asset (assets/body). Multiple tracking muscles
+ * can share the same slug (e.g. front/side/rear delts all → "deltoids"); the
+ * renderer averages their coverages to compute per-slug opacity.
+ * Slugs with no mapping here (head/hair/hands/feet/knees/ankles) render neutral.
  */
 export const MUSCLE_REGION_MAP: Record<MuscleKey, string[]> = {
-  front_delts: ["shoulder-front"],
-  side_delts: ["shoulder-side"],
-  rear_delts: ["deltoid-rear"],
-  neck: ["neck", "nape"],
-  upper_traps: ["traps-upper"],
-  rhomboids: ["traps-mid"],
-  lower_traps: ["traps-lower"],
-  lats: ["lats-upper", "lats-mid", "lats-lower"],
-  lower_back: ["lower-back-erectors", "lower-back-ql", "spine"],
-  chest: ["chest-upper", "chest-lower"],
-  abs: ["abs-upper", "abs-lower"],
-  obliques: ["obliques", "serratus-anterior"],
-  quads: ["quads"],
-  hamstrings: ["hamstrings-medial", "hamstrings-lateral"],
-  glutes: ["gluteus-maximus"],
-  abductors: ["gluteus-medius"],
+  front_delts: ["deltoids"],
+  side_delts: ["deltoids"],
+  rear_delts: ["deltoids"],
+  neck: ["neck"],
+  upper_traps: ["trapezius"],
+  lower_traps: ["trapezius"],
+  rhomboids: ["upper-back"],
+  lats: ["upper-back"],
+  lower_back: ["lower-back"],
+  chest: ["chest"],
+  abs: ["abs"],
+  obliques: ["obliques"],
+  quads: ["quadriceps"],
+  hamstrings: ["hamstring"],
+  glutes: ["gluteal"],
+  abductors: ["gluteal"],
   adductors: ["adductors"],
-  calves: ["calves-gastroc-medial", "calves-gastroc-lateral", "calves-soleus"],
-  tibialis: ["tibialis-anterior"],
-  hip_flexors: ["hip-flexor"],
+  calves: ["calves"],
+  tibialis: ["tibialis"],
+  hip_flexors: ["quadriceps"],
   biceps: ["biceps"],
-  triceps: ["triceps-long", "triceps-lateral"],
-  forearms: ["forearm", "forearm-flexors", "forearm-extensors"],
+  triceps: ["triceps"],
+  forearms: ["forearm"],
 };

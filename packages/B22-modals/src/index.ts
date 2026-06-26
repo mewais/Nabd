@@ -8,12 +8,11 @@ import type {
   Slot,
   Settings,
   Theme,
-  Wallpaper,
   MuscleGroup,
 } from "@nabd/domain";
-import { MUSCLE_NAMES, WALLPAPERS, GLASS_OPACITY } from "@nabd/domain";
+import { MUSCLE_NAMES, GLASS_OPACITY } from "@nabd/domain";
 import { trendPoints } from "@nabd/progression";
-import { Stepper, Segmented, Toggle } from "@nabd/design-system";
+import { Stepper, Segmented, Toggle, Button } from "@nabd/design-system";
 
 // ---------------------------------------------------------------------------
 // ModalShell
@@ -1310,7 +1309,6 @@ export interface SettingsModalProps {
   /** Toggle the glass overlay on/off. */
   onToggleGlass: () => void;
   onOpacity: (d: number) => void;
-  onWallpaper: (w: Wallpaper) => void;
   onToggleStartup: () => void;
   onToggleMinimized: () => void;
   onInterval: (d: number) => void;
@@ -1318,8 +1316,6 @@ export interface SettingsModalProps {
   onExport: () => void;
   onImport: () => void;
 }
-
-const WALLPAPER_KEYS: Wallpaper[] = ["aurora", "dusk", "slate", "mesh", "sand", "frost", "mixed"];
 
 export function SettingsModal(_p: SettingsModalProps): JSX.Element {
   const {
@@ -1330,7 +1326,6 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
     onTheme,
     onToggleGlass,
     onOpacity,
-    onWallpaper,
     onToggleStartup,
     onToggleMinimized,
     onInterval,
@@ -1383,27 +1378,8 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
   const clampedOpacity = Math.max(floor, Math.min(0.92, settings.opacity));
   const opacityPct = Math.round(clampedOpacity * 100) + "%";
 
-  // Wallpaper swatches (7)
-  const wallpaperSwatches = WALLPAPER_KEYS.map((w) =>
-    React.createElement("button", {
-      key: w,
-      "aria-label": w,
-      onClick: () => onWallpaper(w),
-      title: w,
-      style: {
-        background: WALLPAPERS[w],
-        backgroundSize: "cover",
-        borderRadius: 8,
-        height: 42,
-        border: settings.wallpaper === w ? "2px solid var(--accent)" : "2px solid transparent",
-        cursor: "pointer",
-        outline: settings.wallpaper === w ? "2px solid var(--accent)" : "none",
-        outlineOffset: 1,
-      },
-    }),
-  );
-
-  // Glass sub-panel (opacity + wallpapers) — shown when glass is on
+  // Glass sub-panel (opacity only) — shown when glass is on
+  // Translucency frosts the actual OS desktop; no wallpaper picker needed.
   const glassSubPanel = glass
     ? React.createElement(
         "div",
@@ -1442,43 +1418,22 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
             }),
           ),
         ),
-        React.createElement(
-          "div",
-          {
-            style: {
-              fontSize: 11,
-              color: "var(--text3)",
-              margin: "14px 0 8px",
-            },
-          },
-          "Preview wallpaper (on a real desktop this is your OS wallpaper)",
-        ),
-        React.createElement(
-          "div",
-          {
-            style: {
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 8,
-            },
-          },
-          ...wallpaperSwatches,
-        ),
       )
     : null;
 
-  // Startup toggle row helper
+  // Toggle row helper — uses the shared Toggle primitive (pill track + knob, accent when on)
   const toggleRow = (
     label: string,
     desc: string,
     checked: boolean,
-    ariaLabel: string,
+    dataLabel: string,
     onToggle: () => void,
     borderTop?: boolean,
   ) =>
     React.createElement(
       "div",
       {
+        "data-toggle-row": dataLabel,
         style: {
           ...rowStyle,
           padding: "6px 0",
@@ -1486,16 +1441,10 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
         },
       },
       rowLabelBlock(label, desc),
-      React.createElement(
-        "button",
-        {
-          role: "switch",
-          "aria-label": ariaLabel,
-          "aria-checked": String(checked),
-          onClick: onToggle,
-          style: { cursor: "pointer" },
-        },
-      ),
+      React.createElement(Toggle, {
+        on: checked,
+        onChange: onToggle,
+      }),
     );
 
   // Notification stepper row
@@ -1706,9 +1655,9 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
             "div",
             { style: { display: "flex", gap: 10 } },
             React.createElement(
-              "button",
+              Button,
               {
-                "aria-label": "Export",
+                variant: "outline",
                 onClick: onExport,
                 style: {
                   flex: 1,
@@ -1716,23 +1665,20 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
-                  background: "var(--surface2)",
-                  border: "1px solid var(--line)",
                   borderRadius: 11,
                   padding: 12,
                   fontSize: 13.5,
                   fontWeight: 600,
                   fontFamily: "inherit",
-                  color: "var(--text)",
                   cursor: "pointer",
                 },
               },
               "Export",
             ),
             React.createElement(
-              "button",
+              Button,
               {
-                "aria-label": "Import",
+                variant: "outline",
                 onClick: onImport,
                 style: {
                   flex: 1,
@@ -1740,14 +1686,11 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
-                  background: "var(--surface2)",
-                  border: "1px solid var(--line)",
                   borderRadius: 11,
                   padding: 12,
                   fontSize: 13.5,
                   fontWeight: 600,
                   fontFamily: "inherit",
-                  color: "var(--text)",
                   cursor: "pointer",
                 },
               },
