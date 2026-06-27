@@ -186,6 +186,10 @@ export interface StepperProps {
   value: ReactNode;
   onDec: () => void;
   onInc: () => void;
+  /** When provided, the value becomes a typeable numeric input (for irregular increments). */
+  onSet?: (value: number) => void;
+  /** Accessible name for the typeable input (when onSet is used and there's no string label). */
+  ariaLabel?: string;
 }
 /** Large +/- stepper (modals/settings). */
 const STEP_BTN: CSSProperties = {
@@ -206,7 +210,7 @@ const STEP_BTN: CSSProperties = {
 };
 
 export function Stepper(_p: StepperProps): JSX.Element {
-  const { label, value, onDec, onInc } = _p;
+  const { label, value, onDec, onInc, onSet, ariaLabel } = _p;
 
   const children: ReactNode[] = [];
   if (label !== undefined) {
@@ -235,20 +239,45 @@ export function Stepper(_p: StepperProps): JSX.Element {
         { key: "dec", onClick: onDec, style: STEP_BTN, "aria-label": "decrease" },
         "−",
       ),
-      React.createElement(
-        "span",
-        {
-          key: "val",
-          style: {
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: "14px",
-            fontWeight: 600,
-            minWidth: 56,
-            textAlign: "center",
-          },
-        },
-        value,
-      ),
+      onSet
+        ? React.createElement("input", {
+            key: "val",
+            type: "number",
+            value: value as number,
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+              const n = parseFloat(e.target.value);
+              if (!Number.isNaN(n)) onSet(n);
+            },
+            "aria-label": ariaLabel ?? (typeof label === "string" ? label : "value"),
+            style: {
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "14px",
+              fontWeight: 600,
+              width: 64,
+              textAlign: "center",
+              background: "var(--surface)",
+              color: "var(--text)",
+              border: "1px solid var(--line)",
+              borderRadius: 8,
+              padding: "5px 4px",
+              outline: "none",
+              MozAppearance: "textfield" as const,
+            },
+          })
+        : React.createElement(
+            "span",
+            {
+              key: "val",
+              style: {
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "14px",
+                fontWeight: 600,
+                minWidth: 56,
+                textAlign: "center",
+              },
+            },
+            value,
+          ),
       React.createElement(
         "button",
         { key: "inc", onClick: onInc, style: STEP_BTN, "aria-label": "increase" },

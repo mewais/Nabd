@@ -101,6 +101,8 @@ export function App({ store, client }: AppProps): JSX.Element {
     switchExercise,
     stepReps,
     stepWeight,
+    setReps,
+    setWeight,
     logSet,
     closeActive,
     openSettings,
@@ -558,6 +560,8 @@ export function App({ store, client }: AppProps): JSX.Element {
           onPick: switchExercise,
           onStepReps: stepReps,
           onStepWeight: stepWeight,
+          onSetReps: setReps,
+          onSetWeight: setWeight,
           onLog: () => void logSet(),
           onClose: closeActive,
         })

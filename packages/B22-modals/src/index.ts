@@ -105,12 +105,25 @@ export interface SessionModalProps {
   onPick: (slotId: string) => void;
   onStepReps: (d: number) => void;
   onStepWeight: (d: number) => void;
+  onSetReps: (v: number) => void;
+  onSetWeight: (v: number) => void;
   onLog: () => void;
   onClose: () => void;
 }
 
 export function SessionModal(_p: SessionModalProps): JSX.Element {
-  const { session, list, setOfLabel, onPick, onStepReps, onStepWeight, onLog, onClose } = _p;
+  const {
+    session,
+    list,
+    setOfLabel,
+    onPick,
+    onStepReps,
+    onStepWeight,
+    onSetReps,
+    onSetWeight,
+    onLog,
+    onClose,
+  } = _p;
 
   // Left pane: list of exercises
   const leftRows = list.map((row) => {
@@ -331,6 +344,8 @@ export function SessionModal(_p: SessionModalProps): JSX.Element {
       value: session.reps,
       onDec: () => onStepReps(-1),
       onInc: () => onStepReps(1),
+      onSet: onSetReps,
+      ariaLabel: repLabel,
     }),
   );
 
@@ -367,6 +382,8 @@ export function SessionModal(_p: SessionModalProps): JSX.Element {
           value: session.weight,
           onDec: () => onStepWeight(-1),
           onInc: () => onStepWeight(1),
+          onSet: onSetWeight,
+          ariaLabel: "Weight",
         }),
       )
     : null;
@@ -450,6 +467,42 @@ export function SessionModal(_p: SessionModalProps): JSX.Element {
         },
         "LOGGED THIS SESSION",
       ),
+      session.logged.length === 0
+        ? null
+        : React.createElement(
+            "div",
+            { style: { display: "flex", flexDirection: "column" as const, gap: 6 } },
+            ...session.logged.map((item, idx) =>
+              React.createElement(
+                "div",
+                {
+                  key: idx,
+                  style: {
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    background: "var(--surface2)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 9,
+                    padding: "8px 11px",
+                    fontSize: 12.5,
+                  },
+                },
+                React.createElement("span", { style: { color: "var(--text2)" } }, item.exercise),
+                React.createElement(
+                  "span",
+                  {
+                    style: {
+                      fontFamily: "'JetBrains Mono', monospace",
+                      color: "var(--text)",
+                      fontWeight: 600,
+                    },
+                  },
+                  item.setStr,
+                ),
+              ),
+            ),
+          ),
     ),
   );
 

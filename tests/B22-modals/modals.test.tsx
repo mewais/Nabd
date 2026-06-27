@@ -259,6 +259,8 @@ describe("SessionModal", () => {
   const onPick = vi.fn();
   const onStepReps = vi.fn();
   const onStepWeight = vi.fn();
+  const onSetReps = vi.fn();
+  const onSetWeight = vi.fn();
   const onLog = vi.fn();
   const onClose = vi.fn();
 
@@ -266,6 +268,8 @@ describe("SessionModal", () => {
     onPick.mockReset();
     onStepReps.mockReset();
     onStepWeight.mockReset();
+    onSetReps.mockReset();
+    onSetWeight.mockReset();
     onLog.mockReset();
     onClose.mockReset();
   });
@@ -300,6 +304,8 @@ describe("SessionModal", () => {
     onPick,
     onStepReps,
     onStepWeight,
+    onSetReps,
+    onSetWeight,
     onLog,
     onClose,
   };
@@ -366,6 +372,34 @@ describe("SessionModal", () => {
     expect(screen.queryByText(/weight/i)).not.toBeInTheDocument();
     // Only 1 pair of stepper buttons (reps only)
     expect(screen.getAllByRole("button", { name: /increase/i })).toHaveLength(1);
+  });
+
+  it("typing into the Weight field calls onSetWeight with the typed value", () => {
+    render(<SessionModal {...defaultProps} />);
+    fireEvent.change(screen.getByLabelText("Weight"), { target: { value: "62.5" } });
+    expect(onSetWeight).toHaveBeenCalledWith(62.5);
+  });
+
+  it("typing into the Reps field calls onSetReps with the typed value", () => {
+    render(<SessionModal {...defaultProps} />);
+    fireEvent.change(screen.getByLabelText("Reps"), { target: { value: "13" } });
+    expect(onSetReps).toHaveBeenCalledWith(13);
+  });
+
+  it("renders logged sets in the receipt", () => {
+    const props: SessionModalProps = {
+      ...defaultProps,
+      session: makeActiveSession({
+        weighted: true,
+        logged: [
+          { exercise: "Bench Press", group: "Chest", setStr: "8 · 60kg" },
+          { exercise: "Bench Press", group: "Chest", setStr: "8 · 62.5kg" },
+        ],
+      }),
+    };
+    render(<SessionModal {...props} />);
+    expect(screen.getByText("8 · 60kg")).toBeInTheDocument();
+    expect(screen.getByText("8 · 62.5kg")).toBeInTheDocument();
   });
 
   it("clicking 'Log this set' calls onLog", () => {
@@ -439,16 +473,14 @@ describe("SessionModal", () => {
     expect(screen.getAllByText(/lats/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("displays the current reps value in the stepper", () => {
+  it("displays the current reps value in the reps input", () => {
     render(<SessionModal {...defaultProps} />);
-    // reps=8 should appear in the reps stepper value display
-    expect(screen.getByText("8")).toBeInTheDocument();
+    expect((screen.getByLabelText("Reps") as HTMLInputElement).value).toBe("8");
   });
 
-  it("displays the current weight value in the weight stepper", () => {
+  it("displays the current weight value in the weight input", () => {
     render(<SessionModal {...defaultProps} />);
-    // weight=20 should appear
-    expect(screen.getByText("20")).toBeInTheDocument();
+    expect((screen.getByLabelText("Weight") as HTMLInputElement).value).toBe("20");
   });
 
   it("rep-input label is 'Reps' for a reps-based exercise (unit='reps')", () => {

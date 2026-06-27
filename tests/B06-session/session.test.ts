@@ -9,6 +9,8 @@ import {
   switchExercise,
   stepReps,
   stepWeight,
+  setReps,
+  setWeight,
   applyCoverage,
 } from "@nabd/session";
 import type { HistoryLookup } from "@nabd/session";
@@ -926,6 +928,61 @@ describe("stepWeight", () => {
     const session = makeWeightedSession({ weight: 5 });
     const next = stepWeight(session, -100);
     expect(next.weight).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// setReps / setWeight — typed (absolute) values
+// ---------------------------------------------------------------------------
+
+describe("setReps (typed value)", () => {
+  it("sets reps to an exact typed value", () => {
+    const next = setReps(makeWeightedSession({ reps: 8 }), 13);
+    expect(next.reps).toBe(13);
+  });
+
+  it("floors fractional input to an integer", () => {
+    const next = setReps(makeWeightedSession({ reps: 8 }), 9.7);
+    expect(next.reps).toBe(9);
+  });
+
+  it("clamps below 1 up to 1", () => {
+    const next = setReps(makeWeightedSession({ reps: 8 }), 0);
+    expect(next.reps).toBe(1);
+  });
+
+  it("non-finite input keeps the current reps", () => {
+    const next = setReps(makeWeightedSession({ reps: 8 }), NaN);
+    expect(next.reps).toBe(8);
+  });
+
+  it("does not mutate the input session", () => {
+    const session = makeWeightedSession({ reps: 8 });
+    const next = setReps(session, 12);
+    expect(next).not.toBe(session);
+    expect(session.reps).toBe(8);
+  });
+});
+
+describe("setWeight (typed value)", () => {
+  it("sets weight to an exact typed value (irregular increment)", () => {
+    const next = setWeight(makeWeightedSession({ weight: 60 }), 62.3);
+    expect(next.weight).toBeCloseTo(62.3, 5);
+  });
+
+  it("clamps negatives to 0", () => {
+    const next = setWeight(makeWeightedSession({ weight: 60 }), -5);
+    expect(next.weight).toBe(0);
+  });
+
+  it("rounds to one decimal place", () => {
+    const next = setWeight(makeWeightedSession({ weight: 60 }), 62.34);
+    expect(next.weight).toBeCloseTo(62.3, 5);
+  });
+
+  it("non-finite input keeps the current weight", () => {
+    const next = setWeight(makeWeightedSession({ weight: 60 }), NaN);
+    expect(next.weight).toBe(60);
   });
 });
 

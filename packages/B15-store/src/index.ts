@@ -33,6 +33,8 @@ import {
   switchExercise as sessionSwitchExercise,
   stepReps as sessionStepReps,
   stepWeight as sessionStepWeight,
+  setReps as sessionSetReps,
+  setWeight as sessionSetWeight,
 } from "@nabd/session";
 import {
   tick as nudgeTick,
@@ -138,6 +140,8 @@ export interface NabdActions {
   switchExercise: (slotId: string) => void;
   stepReps: (d: number) => void;
   stepWeight: (d: number) => void;
+  setReps: (v: number) => void;
+  setWeight: (v: number) => void;
   logSet: (trigger?: Trigger) => Promise<void>;
   closeActive: () => void;
   // settings + persistence
@@ -527,6 +531,16 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       set({ activeSession: session });
     },
 
+    setReps: (v: number) => {
+      const state = get();
+      set({ activeSession: sessionSetReps(state.activeSession!, v) });
+    },
+
+    setWeight: (v: number) => {
+      const state = get();
+      set({ activeSession: sessionSetWeight(state.activeSession!, v) });
+    },
+
     logSet: async (trigger: Trigger = "manual") => {
       const state = get();
       if (state.activeSession === null) return;
@@ -572,17 +586,8 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       };
       const nudgeNext = nudgeResetTimer(nudgeState, state.settings.interval);
 
-      // Persist the logged set
-      await client.appendSet(loggedSet);
-
-      // Build dayState for persistence
-      const dayState = {
-        date,
-        floatingIndex: state.floatingIndex,
-        slots: result.slots,
-      };
-      void client.saveSingleton("dayState", dayState);
-
+      // Update the UI state FIRST so the set is always reflected immediately —
+      // persistence must never be able to freeze the "Log this set" action.
       set({
         activeSession: result.session,
         slots: result.slots,
@@ -592,6 +597,19 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
         idleSeconds: nudgeNext.idleSeconds,
         notif: nudgeNext.notif,
       });
+
+      // Persist (best-effort; a failure here is non-fatal to the session).
+      const dayState = {
+        date,
+        floatingIndex: state.floatingIndex,
+        slots: result.slots,
+      };
+      try {
+        await client.appendSet(loggedSet);
+        await client.saveSingleton("dayState", dayState);
+      } catch {
+        // Swallow persistence errors — the set is already logged in-memory.
+      }
     },
 
     closeActive: () => set({ activeSession: null }),

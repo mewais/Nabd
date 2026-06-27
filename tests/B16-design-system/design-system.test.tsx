@@ -630,6 +630,30 @@ describe("Stepper", () => {
     render(<Stepper value={0} onDec={() => {}} onInc={() => {}} />);
     expect(screen.getByText("0")).toBeInTheDocument();
   });
+
+  test("with onSet, renders a typeable number input (not a static span)", () => {
+    render(
+      <Stepper label="Weight" value={60} onDec={() => {}} onInc={() => {}} onSet={() => {}} />,
+    );
+    const input = screen.getByLabelText("Weight") as HTMLInputElement;
+    expect(input.tagName).toBe("INPUT");
+    expect(input.type).toBe("number");
+    expect(input.value).toBe("60");
+  });
+
+  test("typing a value calls onSet with the parsed number", () => {
+    const onSet = vi.fn();
+    render(<Stepper value={60} onDec={() => {}} onInc={() => {}} onSet={onSet} />);
+    fireEvent.change(screen.getByLabelText("value"), { target: { value: "62.5" } });
+    expect(onSet).toHaveBeenCalledWith(62.5);
+  });
+
+  test("typing an invalid value does not call onSet", () => {
+    const onSet = vi.fn();
+    render(<Stepper value={60} onDec={() => {}} onInc={() => {}} onSet={onSet} />);
+    fireEvent.change(screen.getByLabelText("value"), { target: { value: "" } });
+    expect(onSet).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -1055,6 +1055,16 @@ describe("stepReps / stepWeight", () => {
     get(store).stepWeight(-1);
     expect(get(store).activeSession!.weight).toBeCloseTo(Math.max(0, before - 2.5), 1);
   });
+
+  it("setReps(v) sets reps to an exact typed value", () => {
+    get(store).setReps(13);
+    expect(get(store).activeSession!.reps).toBe(13);
+  });
+
+  it("setWeight(v) sets weight to an exact typed value (irregular increment)", () => {
+    get(store).setWeight(62.3);
+    expect(get(store).activeSession!.weight).toBeCloseTo(62.3, 1);
+  });
 });
 
 describe("closeActive", () => {
@@ -1130,6 +1140,15 @@ describe("logSet — manual trigger", () => {
     const slotsAfter = get(store).slots;
     const updatedSlot = slotsAfter.find((s) => s.id === slot.id)!;
     expect(updatedSlot.done).toBe(doneBefore + 1);
+  });
+
+  it("still logs the set in-memory when persistence fails (resilient, no throw)", async () => {
+    (client.appendSet as MockedFunction<IpcClient["appendSet"]>).mockRejectedValueOnce(
+      new Error("db unavailable"),
+    );
+    const historyBefore = get(store).history.length;
+    await expect(get(store).logSet("manual")).resolves.toBeUndefined();
+    expect(get(store).history.length).toBe(historyBefore + 1);
   });
 
   it("appends logged set to history", async () => {

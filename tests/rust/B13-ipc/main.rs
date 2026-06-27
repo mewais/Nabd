@@ -163,7 +163,8 @@ fn append_set_valid_row_appears_in_load_all_history() {
 
     let r = &hist[0];
     assert_eq!(r["id"], Value::String("set-001".to_string()));
-    assert_eq!(r["ex_id"], Value::String("ex-push-up".to_string()));
+    // JSON boundary is camelCase to match the TypeScript LoggedSet contract.
+    assert_eq!(r["exId"], Value::String("ex-push-up".to_string()));
     assert_eq!(r["exercise"], Value::String("Push-up".to_string()));
     assert_eq!(r["group"], Value::String("Chest".to_string()));
     assert_eq!(r["value"], serde_json::json!(12.0));
@@ -175,6 +176,22 @@ fn append_set_valid_row_appears_in_load_all_history() {
     assert_eq!(muscles.len(), 2);
     assert_eq!(muscles[0], Value::String("pectoralis major".to_string()));
     assert_eq!(muscles[1], Value::String("triceps".to_string()));
+}
+
+/// Contract guard: the exact camelCase JSON the TypeScript client sends
+/// (`exId`, not `ex_id`) must deserialize and persist. This is what the live
+/// "Log this set" button posts; a snake_case-only struct silently rejected it.
+#[test]
+fn append_set_accepts_camelcase_js_payload() {
+    let c = fresh_db();
+    let js_payload = r#"{"id":"js-1","exId":"bench_press__barbell","exercise":"Barbell Bench Press","group":"Chest","muscles":["chest"],"value":8,"weight":60,"ts":"2024-03-15T10:00:00Z","date":"2024-03-15","trigger":"manual"}"#;
+    nabd_ipc::append_set(&c, js_payload).expect("append_set must accept camelCase JS payload");
+
+    let v = parse(&nabd_ipc::load_all(&c).expect("load_all must not error"));
+    let hist = v["history"].as_array().expect("history must be an array");
+    assert_eq!(hist.len(), 1);
+    assert_eq!(hist[0]["exId"], Value::String("bench_press__barbell".to_string()));
+    assert_eq!(hist[0]["weight"], serde_json::json!(60.0));
 }
 
 /// Appending multiple sets preserves insertion order and all rows appear.

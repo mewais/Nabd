@@ -29,7 +29,10 @@ pub const KV_KEYS: [&str; 6] = [
 ];
 
 /// One persisted logged set (a row of history).
+/// JSON uses camelCase to match the TypeScript `LoggedSet` contract at the IPC
+/// boundary (e.g. `exId`), while Rust fields stay snake_case.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct LoggedSetRow {
     pub id: String,
     pub ex_id: String,

@@ -229,6 +229,18 @@ export function stepWeight(session: ActiveSession, delta: number): ActiveSession
   return { ...session, weight };
 }
 
+/** Set reps/seconds to an exact value (typed input), clamped to a sane minimum. */
+export function setReps(session: ActiveSession, value: number): ActiveSession {
+  const v = Number.isFinite(value) ? Math.floor(value) : session.reps;
+  return { ...session, reps: Math.max(1, v) };
+}
+
+/** Set weight to an exact value (typed input, allows irregular increments), clamped at 0. */
+export function setWeight(session: ActiveSession, value: number): ActiveSession {
+  const v = Number.isFinite(value) ? value : session.weight;
+  return { ...session, weight: Math.max(0, Math.round(v * 10) / 10) };
+}
+
 /** Apply a coverage delta for a logged set's muscles. */
 export function applyCoverage(cov: Coverage, muscles: MuscleKey[]): Coverage {
   const next = { ...cov };
