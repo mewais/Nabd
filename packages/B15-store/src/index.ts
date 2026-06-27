@@ -133,6 +133,8 @@ export interface NabdActions {
   /** Set idle seconds from an authoritative source (OS idle poll); may raise an idle nudge. */
   setIdleSeconds: (seconds: number) => void;
   snooze: () => void;
+  /** Fire an OS notification for the current due nudge (best-effort). */
+  osNotifyDue: () => void;
   confirmNotif: () => void;
   // session
   startNext: () => void;
@@ -485,6 +487,13 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
         secondsToNext: next.secondsToNext,
         idleSeconds: next.idleSeconds,
       });
+    },
+
+    /** Fire an OS notification for the current due nudge (best-effort; no-op if none). */
+    osNotifyDue: () => {
+      const notif = get().notif;
+      if (notif === null) return;
+      void client.notify(notif.reason, notif.slot.exercise);
     },
 
     confirmNotif: () => {

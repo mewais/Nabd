@@ -96,6 +96,7 @@ export function App({ store, client }: AppProps): JSX.Element {
     setMapStyle,
     startNext,
     snooze,
+    osNotifyDue,
     confirmNotif,
     openActive,
     switchExercise,
@@ -190,6 +191,15 @@ export function App({ store, client }: AppProps): JSX.Element {
       window.removeEventListener("touchstart", resetIdleFn);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When a set becomes due while the app is NOT focused (you're working in another
+  // window), fire an OS notification so the cue surfaces outside the app. When the
+  // app is focused, the in-app prompt already shows, so we skip the toast.
+  useEffect(() => {
+    if (notif !== null && typeof document !== "undefined" && !document.hasFocus()) {
+      osNotifyDue();
+    }
+  }, [notif]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ------------------------------------------------------------------
   // Derived: sidebar donut values

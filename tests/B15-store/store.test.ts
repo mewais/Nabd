@@ -1419,6 +1419,30 @@ describe("snooze", () => {
   });
 });
 
+describe("osNotifyDue", () => {
+  it("fires client.notify(reason, exercise) for the current due notif", async () => {
+    const snap: BootSnapshot = {
+      ...BOOT_SNAPSHOT_FULL,
+      settings: { ...FIXTURE_SETTINGS, idleNudge: 1 },
+    };
+    const client = makeFakeClient(snap);
+    const store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    get(store).tick(); // raise an idle notif
+    const notif = get(store).notif!;
+    get(store).osNotifyDue();
+    expect(client.notify).toHaveBeenCalledWith(notif.reason, notif.slot.exercise);
+  });
+
+  it("is a no-op when there is no due notif", async () => {
+    const client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    const store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    get(store).osNotifyDue();
+    expect(client.notify).not.toHaveBeenCalled();
+  });
+});
+
 describe("confirmNotif", () => {
   let store: StoreApi<NabdStore>;
 
