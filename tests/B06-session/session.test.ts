@@ -21,7 +21,13 @@ import { DEFAULTS, MUSCLES } from "@nabd/domain";
 
 /** Build a minimal Slot fixture with sensible defaults. */
 function makeSlot(
-  overrides: Partial<Slot> & { id: string; exId: string; sets: number; done: number; status: Slot["status"] },
+  overrides: Partial<Slot> & {
+    id: string;
+    exId: string;
+    sets: number;
+    done: number;
+    status: Slot["status"];
+  },
 ): Slot {
   return {
     exercise: "Bench Press",
@@ -91,6 +97,21 @@ const weightedSlot: Slot = makeSlot({
   exercise: "Bench Press",
   group: "Chest",
   muscles: ["chest"],
+  tracking: "weight_reps",
+  sets: 3,
+  done: 0,
+  status: "now",
+  result: "",
+});
+
+/** Bodyweight (reps-only, unweighted) slot. */
+const bodyweightSlot: Slot = makeSlot({
+  id: "slot-bw",
+  exId: "situp",
+  exercise: "Sit-Up",
+  group: "Abs",
+  muscles: ["abs"],
+  tracking: "bodyweight_reps",
   sets: 3,
   done: 0,
   status: "now",
@@ -104,6 +125,7 @@ const timeSlot: Slot = makeSlot({
   exercise: "Plank",
   group: "Abs",
   muscles: ["abs"],
+  tracking: "duration",
   sets: 3,
   done: 0,
   status: "now",
@@ -214,14 +236,38 @@ describe("openSession", () => {
     expect(sess.weight).toBeGreaterThanOrEqual(0);
   });
 
-  it("unit is 'sec' for time-based exercises", () => {
-    // timeSlot would have a time-based tracking type
-    // Since slot doesn't embed tracking type, we verify openSession determines
-    // it from the slot's exercise id via history + suggestion
-    // Just verify the call completes and returns a valid session shape
+  it("weighted exercise shows the weight field even with NO history (from tracking type)", () => {
+    const sess = openSession(weightedSlot, noHistory);
+    expect(sess.weighted).toBe(true);
+  });
+
+  it("bodyweight (reps-only) exercise is not weighted", () => {
+    const sess = openSession(bodyweightSlot, noHistory);
+    expect(sess.weighted).toBe(false);
+    expect(sess.unit).toBe("reps");
+  });
+
+  it("unit is 'sec' for time-based exercises (from tracking type)", () => {
     const sess = openSession(timeSlot, noHistory);
     expect(sess.slotId).toBe("slot-t");
     expect(sess.exercise).toBe("Plank");
+    expect(sess.unit).toBe("sec");
+  });
+
+  it("falls back to history when slot has no tracking (legacy slot)", () => {
+    const legacy = makeSlot({
+      id: "slot-legacy",
+      exId: "bench-press",
+      exercise: "Bench Press",
+      group: "Chest",
+      muscles: ["chest"],
+      sets: 3,
+      done: 0,
+      status: "now",
+      result: "",
+    });
+    expect(openSession(legacy, withBenchHistory).weighted).toBe(true);
+    expect(openSession(legacy, noHistory).weighted).toBe(false);
   });
 
   it("last is null when no history", () => {
@@ -380,7 +426,12 @@ describe("logSet — completing an exercise", () => {
       result: "",
     });
 
-    const session = makeWeightedSession({ slotId: "slot-w", reps: 8, weight: 60, sets: 1 } as unknown as Partial<ActiveSession>);
+    const session = makeWeightedSession({
+      slotId: "slot-w",
+      reps: 8,
+      weight: 60,
+      sets: 1,
+    } as unknown as Partial<ActiveSession>);
     const slots = [singleSlot, { ...slotB }];
 
     const { slots: updatedSlots } = logSet(session, slots, noHistory);
@@ -576,7 +627,12 @@ describe("logSet — multi-set receipt accumulation", () => {
 
 describe("logSet — setStr formatting", () => {
   it("bodyweight/reps-only: setStr is '<v> reps'", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a", reps: 12, weighted: false, unit: "reps" });
+    const session = makeBodyweightSession({
+      slotId: "slot-a",
+      reps: 12,
+      weighted: false,
+      unit: "reps",
+    });
     const slots = [{ ...slotA }];
 
     const { receiptItem } = logSet(session, slots, noHistory);
@@ -592,7 +648,13 @@ describe("logSet — setStr formatting", () => {
   });
 
   it("weighted: setStr is '<v> · <w>kg'", () => {
-    const sess = makeWeightedSession({ slotId: "slot-w", reps: 8, weight: 60, weighted: true, unit: "reps" });
+    const sess = makeWeightedSession({
+      slotId: "slot-w",
+      reps: 8,
+      weight: 60,
+      weighted: true,
+      unit: "reps",
+    });
     const slots = [{ ...weightedSlot }];
 
     const { receiptItem } = logSet(sess, slots, noHistory);
@@ -600,7 +662,13 @@ describe("logSet — setStr formatting", () => {
   });
 
   it("weight value in setStr has no trailing decimal when whole number", () => {
-    const sess = makeWeightedSession({ slotId: "slot-w", reps: 5, weight: 100, weighted: true, unit: "reps" });
+    const sess = makeWeightedSession({
+      slotId: "slot-w",
+      reps: 5,
+      weight: 100,
+      weighted: true,
+      unit: "reps",
+    });
     const slots = [{ ...weightedSlot }];
 
     const { receiptItem } = logSet(sess, slots, noHistory);

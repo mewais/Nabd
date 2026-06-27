@@ -10,7 +10,7 @@ import type {
   MuscleKey,
   SessionReceiptItem,
 } from "@nabd/domain";
-import { DEFAULTS } from "@nabd/domain";
+import { DEFAULTS, WEIGHTED_TRACKS, TIME_TRACKS } from "@nabd/domain";
 
 /** History lookup keyed by exercise id, for suggestions. */
 export type HistoryLookup = (exId: string) => import("@nabd/progression").LastResult | null;
@@ -82,7 +82,13 @@ function buildSession(
   logged: SessionReceiptItem[],
   allDone: boolean,
 ): ActiveSession {
-  const weighted = last !== null && last.weight !== null;
+  // Weighted/unit come from the exercise's tracking type (so a fresh weighted
+  // exercise with no history still shows the weight field). Fall back to history
+  // only when an older slot has no tracking recorded.
+  const weighted = slot.tracking
+    ? WEIGHTED_TRACKS.has(slot.tracking)
+    : last !== null && last.weight !== null;
+  const unit: "reps" | "sec" = slot.tracking && TIME_TRACKS.has(slot.tracking) ? "sec" : "reps";
   const sugg = suggest(last);
   const reps = sugg.reps;
   const weight = sugg.weight ?? 0;
@@ -93,7 +99,7 @@ function buildSession(
     group: slot.group,
     muscles: slot.muscles,
     weighted,
-    unit: "reps",
+    unit,
     reps,
     weight,
     sugg,

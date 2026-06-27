@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MuscleKeySchema, type MuscleKey } from "./muscles";
+import { TrackingTypeSchema } from "./tracking";
 
 /** Status of a Today rhythm slot. */
 export const SlotStatusSchema = z.enum(["done", "now", "upcoming", "skipped"]);
@@ -15,6 +16,8 @@ export const SlotSchema = z.object({
   exercise: z.string(),
   group: z.string(),
   muscles: z.array(MuscleKeySchema),
+  /** How this exercise is tracked (drives weight field + reps/sec unit). Optional for back-compat with older persisted slots. */
+  tracking: TrackingTypeSchema.optional(),
   /** Minutes from midnight for the scheduled time of this slot. */
   min: z.number().int(),
   timeStr: z.string(),
