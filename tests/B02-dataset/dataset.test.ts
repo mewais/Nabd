@@ -964,6 +964,64 @@ describe("Accuracy spot-checks", () => {
     expect(ex!.primary).toEqual(["forearms"]);
   });
 
+  // Reverse Wrist Curl
+  it("Reverse Wrist Curl dumbbell exists with primary forearms and group Forearms", () => {
+    const ex = all.find((e) => e.id === "reverse_wrist_curl__dumbbell");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["forearms"]);
+    expect(ex!.group).toBe("Forearms");
+  });
+
+  it("Reverse Wrist Curl has bilateral and unilateral variants", () => {
+    const bilat = all.find((e) => e.id === "reverse_wrist_curl__dumbbell");
+    const uni = all.find((e) => e.id === "reverse_wrist_curl__dumbbell__uni");
+    expect(bilat).toBeDefined();
+    expect(uni).toBeDefined();
+    expect(uni!.name).toMatch(/^Single-Arm /);
+  });
+
+  it("Reverse Wrist Curl secondary is empty", () => {
+    const ex = all.find((e) => e.id === "reverse_wrist_curl__dumbbell");
+    expect(ex!.secondary).toEqual([]);
+  });
+
+  // Dead Hang
+  it("Dead Hang pullupbar exists with primary forearms and tracking duration", () => {
+    const ex = all.find((e) => e.id === "dead_hang__pullupbar");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["forearms"]);
+    expect(ex!.tracking).toBe("duration");
+    expect(ex!.timeBased).toBe(true);
+  });
+
+  it("Dead Hang group is Forearms", () => {
+    const ex = all.find((e) => e.id === "dead_hang__pullupbar");
+    expect(ex!.group).toBe("Forearms");
+  });
+
+  it("Dead Hang secondary is empty", () => {
+    const ex = all.find((e) => e.id === "dead_hang__pullupbar");
+    expect(ex!.secondary).toEqual([]);
+  });
+
+  // Wrist Roller
+  it("Wrist Roller cable exists with primary forearms and group Forearms", () => {
+    const ex = all.find((e) => e.id === "wrist_roller__cable");
+    expect(ex).toBeDefined();
+    expect(ex!.primary).toEqual(["forearms"]);
+    expect(ex!.group).toBe("Forearms");
+  });
+
+  it("Wrist Roller cable tracking is weight_reps", () => {
+    const ex = all.find((e) => e.id === "wrist_roller__cable");
+    expect(ex!.tracking).toBe("weight_reps");
+  });
+
+  it("Wrist Roller secondary is empty", () => {
+    const ex = all.find((e) => e.id === "wrist_roller__cable");
+    expect(ex!.secondary).toEqual([]);
+  });
+
   // Overhead Press
   it("Overhead Press primary is front_delts", () => {
     const ex = all.find((e) => e.id === "overhead_press__barbell");

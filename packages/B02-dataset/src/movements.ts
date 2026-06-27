@@ -668,6 +668,31 @@ export const MOVEMENTS: Movement[] = [
     timeBased: true,
     nameOverride: { bodyweight: "Farmer Carry" },
   },
+  {
+    id: "reverse_wrist_curl",
+    name: "Reverse Wrist Curl",
+    primary: ["forearms"],
+    secondary: [],
+    equipment: ["dumbbell", "barbell", "cable"],
+    laterality: ["bilateral", "unilateral"],
+  },
+  {
+    id: "dead_hang",
+    name: "Dead Hang",
+    primary: ["forearms"],
+    secondary: [],
+    equipment: ["pullupbar"],
+    laterality: ["bilateral"],
+    timeBased: true,
+  },
+  {
+    id: "wrist_roller",
+    name: "Wrist Roller",
+    primary: ["forearms"],
+    secondary: [],
+    equipment: ["cable"],
+    laterality: ["bilateral"],
+  },
 
   // =========================================================================
   // QUADS
