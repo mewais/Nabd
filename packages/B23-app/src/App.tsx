@@ -212,7 +212,9 @@ export function App({ store, client }: AppProps): JSX.Element {
   // ------------------------------------------------------------------
   // Derived: sidebar donut values
   // ------------------------------------------------------------------
-  const setsDone = slots.filter((s) => s.status === "done").reduce((acc, s) => acc + s.done, 0);
+  // Count every logged set immediately (sum done across ALL slots), not only
+  // sets belonging to fully-completed exercises.
+  const setsDone = slots.reduce((acc, s) => acc + s.done, 0);
   const setsTotal = slots.reduce((acc, s) => acc + s.sets, 0);
   const donutPct = setsTotal > 0 ? Math.round((setsDone / setsTotal) * 100) : 0;
 
