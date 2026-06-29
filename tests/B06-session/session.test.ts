@@ -231,11 +231,20 @@ describe("openSession", () => {
     expect(sess.reps).toBe(sess.sugg.reps);
   });
 
-  it("uses suggestion weight when slot is weighted", () => {
+  it("fields come from history (last session), not the suggestion", () => {
+    // history: reps 8 @ 60kg → fields show 8 and 60 (the user's actuals)
     const sess = openSession(weightedSlot, withBenchHistory);
     expect(sess.weighted).toBe(true);
-    expect(typeof sess.weight).toBe("number");
-    expect(sess.weight).toBeGreaterThanOrEqual(0);
+    expect(sess.reps).toBe(8);
+    expect(sess.weight).toBe(60);
+    // the +2.5 bump lives ONLY in the suggestion, never in the fields
+    expect(sess.sugg.weight).toBe(62.5);
+    expect(sess.sugg.note).toBe("+2.5 kg over last session");
+  });
+
+  it("weight field is 0 when a weighted exercise has no history", () => {
+    const sess = openSession(weightedSlot, noHistory);
+    expect(sess.weight).toBe(0);
   });
 
   it("weighted exercise shows the weight field even with NO history (from tracking type)", () => {

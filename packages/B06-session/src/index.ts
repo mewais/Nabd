@@ -90,8 +90,11 @@ function buildSession(
     : last !== null && last.weight !== null;
   const unit: "reps" | "sec" = slot.tracking && TIME_TRACKS.has(slot.tracking) ? "sec" : "reps";
   const sugg = suggest(last);
-  const reps = sugg.reps;
-  const weight = sugg.weight ?? 0;
+  // The reps/weight FIELDS reflect the user's own history (last session's actual
+  // values); the suggestion (e.g. "+2.5 kg over last session") lives only in the
+  // suggestion line, never auto-populated into the fields. No history → defaults.
+  const reps = last !== null ? last.reps : sugg.reps;
+  const weight = last !== null && last.weight !== null ? last.weight : 0;
 
   return {
     slotId: slot.id,
