@@ -261,7 +261,6 @@ export function App({ store, client }: AppProps): JSX.Element {
 
   const heroVM = buildHero(cs, suggestionStr, cs?.exercise ?? "", setsTotal);
   const rhythmRows = buildRhythmRows(slots);
-  const doneCount = slots.filter((s) => s.status === "done").length;
 
   // Coverage insight
   const { rest: restMuscles, push: pushMuscles } = insight(coverage);
@@ -531,8 +530,6 @@ export function App({ store, client }: AppProps): JSX.Element {
     screenContent = React.createElement(TodayScreen, {
       hero: heroVM,
       rhythm: rhythmRows,
-      doneCount,
-      total: setsTotal,
       coverage,
       // CoverageCard now supports the 3-value Both/Front/Back view directly.
       mapView,

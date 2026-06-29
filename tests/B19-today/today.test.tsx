@@ -691,14 +691,8 @@ describe("RhythmCard", () => {
   }
 
   it("renders 'Today's rhythm' header", () => {
-    render(<RhythmCard rows={[]} doneCount={0} total={0} onStart={() => {}} />);
+    render(<RhythmCard rows={[]} onStart={() => {}} />);
     expect(screen.getByText(/today's rhythm/i)).toBeInTheDocument();
-  });
-
-  it("renders done/total count text", () => {
-    render(<RhythmCard rows={[]} doneCount={2} total={5} onStart={() => {}} />);
-    expect(screen.getByText(/2/)).toBeInTheDocument();
-    expect(screen.getByText(/5/)).toBeInTheDocument();
   });
 
   it("renders one row per RhythmRow in rows[]", () => {
@@ -707,7 +701,7 @@ describe("RhythmCard", () => {
       makeRow({ id: "r2", exercise: "Deadlift" }),
       makeRow({ id: "r3", exercise: "Press" }),
     ];
-    render(<RhythmCard rows={rows} doneCount={0} total={3} onStart={() => {}} />);
+    render(<RhythmCard rows={rows} onStart={() => {}} />);
     expect(screen.getByText("Squat")).toBeInTheDocument();
     expect(screen.getByText("Deadlift")).toBeInTheDocument();
     expect(screen.getByText("Press")).toBeInTheDocument();
@@ -715,38 +709,38 @@ describe("RhythmCard", () => {
 
   it("renders timeStr for each row", () => {
     const rows = [makeRow({ timeStr: "10:30" })];
-    render(<RhythmCard rows={rows} doneCount={0} total={1} onStart={() => {}} />);
+    render(<RhythmCard rows={rows} onStart={() => {}} />);
     expect(screen.getByText("10:30")).toBeInTheDocument();
   });
 
   it("renders the sub text for a row", () => {
     const rows = [makeRow({ sub: "Chest · Chest" })];
-    render(<RhythmCard rows={rows} doneCount={0} total={1} onStart={() => {}} />);
+    render(<RhythmCard rows={rows} onStart={() => {}} />);
     expect(screen.getByText("Chest · Chest")).toBeInTheDocument();
   });
 
   it("renders the badge text for a row", () => {
     const rows = [makeRow({ badge: "3×12", status: "done", canStart: false })];
-    render(<RhythmCard rows={rows} doneCount={1} total={1} onStart={() => {}} />);
+    render(<RhythmCard rows={rows} onStart={() => {}} />);
     expect(screen.getByText("3×12")).toBeInTheDocument();
   });
 
   it("canStart=true row has a Start button", () => {
     const rows = [makeRow({ canStart: true, id: "r1" })];
-    render(<RhythmCard rows={rows} doneCount={0} total={1} onStart={() => {}} />);
+    render(<RhythmCard rows={rows} onStart={() => {}} />);
     expect(screen.getByRole("button", { name: /start/i })).toBeInTheDocument();
   });
 
   it("canStart=false row (done) has NO Start button", () => {
     const rows = [makeRow({ canStart: false, status: "done", badge: "3×10" })];
-    render(<RhythmCard rows={rows} doneCount={1} total={1} onStart={() => {}} />);
+    render(<RhythmCard rows={rows} onStart={() => {}} />);
     expect(screen.queryByRole("button", { name: /start/i })).not.toBeInTheDocument();
   });
 
   it("clicking Start on a canStart row calls onStart with that row's id", () => {
     const onStart = vi.fn();
     const rows = [makeRow({ id: "slot-xyz", canStart: true })];
-    render(<RhythmCard rows={rows} doneCount={0} total={1} onStart={onStart} />);
+    render(<RhythmCard rows={rows} onStart={onStart} />);
     fireEvent.click(screen.getByRole("button", { name: /start/i }));
     expect(onStart).toHaveBeenCalledWith("slot-xyz");
   });
@@ -757,7 +751,7 @@ describe("RhythmCard", () => {
       makeRow({ id: "r1", canStart: false, status: "done", badge: "done" }),
       makeRow({ id: "r2", canStart: true, exercise: "Deadlift" }),
     ];
-    render(<RhythmCard rows={rows} doneCount={1} total={2} onStart={onStart} />);
+    render(<RhythmCard rows={rows} onStart={onStart} />);
     fireEvent.click(screen.getByRole("button", { name: /start/i }));
     expect(onStart).toHaveBeenCalledWith("r2");
   });
@@ -767,14 +761,14 @@ describe("RhythmCard", () => {
       makeRow({ id: "r1", canStart: true, exercise: "Ex1" }),
       makeRow({ id: "r2", canStart: true, exercise: "Ex2" }),
     ];
-    render(<RhythmCard rows={rows} doneCount={0} total={2} onStart={() => {}} />);
+    render(<RhythmCard rows={rows} onStart={() => {}} />);
     const startBtns = screen.getAllByRole("button", { name: /start/i });
     expect(startBtns).toHaveLength(2);
   });
 
   it("renders 'Now' badge for now-status row", () => {
     const rows = [makeRow({ status: "now", badge: "Now", isNow: true, canStart: true })];
-    render(<RhythmCard rows={rows} doneCount={0} total={1} onStart={() => {}} />);
+    render(<RhythmCard rows={rows} onStart={() => {}} />);
     expect(screen.getByText("Now")).toBeInTheDocument();
   });
 });
@@ -1057,8 +1051,6 @@ describe("TodayScreen", () => {
   const defaultScreenProps: TodayScreenProps = {
     hero: makeHeroVM(),
     rhythm: [makeRhythmRow()],
-    doneCount: 0,
-    total: 1,
     coverage: ZERO_COV,
     mapView: "front",
     mapStyle: "heat",

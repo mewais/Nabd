@@ -419,13 +419,11 @@ export function HeroCard(p: HeroCardProps): JSX.Element {
 
 export interface RhythmCardProps {
   rows: RhythmRow[];
-  doneCount: number;
-  total: number;
   onStart: (slotId: string) => void;
 }
 
 export function RhythmCard(p: RhythmCardProps): JSX.Element {
-  const { rows, doneCount, total, onStart } = p;
+  const { rows, onStart } = p;
 
   return React.createElement(
     Card,
@@ -451,11 +449,6 @@ export function RhythmCard(p: RhythmCardProps): JSX.Element {
         "div",
         { style: { fontSize: 15, fontWeight: 700, letterSpacing: "-0.01em" } },
         "Today's rhythm",
-      ),
-      React.createElement(
-        "div",
-        { style: { ...MONO, fontSize: 11.5, color: "var(--text3)" } },
-        `${doneCount} / ${total} done`,
       ),
     ),
     // rows
@@ -886,8 +879,6 @@ export function StatTiles(p: StatTilesProps): JSX.Element {
 export interface TodayScreenProps {
   hero: HeroVM;
   rhythm: RhythmRow[];
-  doneCount: number;
-  total: number;
   coverage: Coverage;
   mapView: CoverageView;
   mapStyle: MapStyle;
@@ -911,8 +902,6 @@ export function TodayScreen(p: TodayScreenProps): JSX.Element {
   const {
     hero,
     rhythm,
-    doneCount,
-    total,
     coverage,
     mapView,
     mapStyle,
@@ -966,8 +955,6 @@ export function TodayScreen(p: TodayScreenProps): JSX.Element {
         }),
         React.createElement(RhythmCard, {
           rows: rhythm,
-          doneCount,
-          total,
           onStart: onStartSlot,
         }),
       ),
