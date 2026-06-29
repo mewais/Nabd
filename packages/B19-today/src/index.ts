@@ -825,10 +825,12 @@ export interface StatTilesProps {
   streak: string;
   weekSets: string;
   volume: string;
+  /** Weight unit shown under the volume tile (defaults to "kg"). */
+  weightUnit?: string;
 }
 
 export function StatTiles(p: StatTilesProps): JSX.Element {
-  const { streak, weekSets, volume } = p;
+  const { streak, weekSets, volume, weightUnit = "kg" } = p;
 
   const tileStyle: CSSProperties = {
     background: "var(--surface)",
@@ -876,7 +878,7 @@ export function StatTiles(p: StatTilesProps): JSX.Element {
       "div",
       { style: tileStyle },
       React.createElement("div", { style: numStyle }, volume),
-      React.createElement("div", { style: labelStyle }, "kg volume"),
+      React.createElement("div", { style: labelStyle }, `${weightUnit} volume`),
     ),
   );
 }
@@ -892,6 +894,8 @@ export interface TodayScreenProps {
   insightRest: string[];
   insightPush: string[];
   stats: StatTilesProps;
+  /** Weight unit for the volume tile label (defaults to "kg"). */
+  weightUnit?: string;
   onStartNext: () => void;
   onSnooze: () => void;
   onStartSlot: (slotId: string) => void;
@@ -915,6 +919,7 @@ export function TodayScreen(p: TodayScreenProps): JSX.Element {
     insightRest,
     insightPush,
     stats,
+    weightUnit,
     onStartNext,
     onSnooze,
     onStartSlot,
@@ -988,7 +993,10 @@ export function TodayScreen(p: TodayScreenProps): JSX.Element {
           rest: insightRest,
           push: insightPush,
         }),
-        React.createElement(StatTiles, { ...stats }),
+        React.createElement(StatTiles, {
+          ...stats,
+          weightUnit: weightUnit ?? stats.weightUnit,
+        }),
       ),
     ),
   );

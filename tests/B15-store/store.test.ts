@@ -839,6 +839,39 @@ describe("setIdleNudge — delta-based + persists", () => {
 });
 
 // ---------------------------------------------------------------------------
+// setWeightUnit — sets unit + persists
+// ---------------------------------------------------------------------------
+
+describe("setWeightUnit — sets unit + persists", () => {
+  let client: IpcClient;
+  let store: StoreApi<NabdStore>;
+
+  beforeEach(async () => {
+    client = makeFakeClient();
+    store = makeStore(makeDeps(client));
+    await get(store).hydrate();
+    vi.clearAllMocks();
+  });
+
+  it("defaults to kg from fixture", () => {
+    expect(get(store).settings.weightUnit).toBe("kg");
+  });
+
+  it("setWeightUnit('lb') updates the setting", () => {
+    get(store).setWeightUnit("lb");
+    expect(get(store).settings.weightUnit).toBe("lb");
+  });
+
+  it("persists settings via saveSingleton('settings', ...) with new weightUnit", () => {
+    get(store).setWeightUnit("lb");
+    expect(client.saveSingleton).toHaveBeenCalledWith(
+      "settings",
+      expect.objectContaining({ weightUnit: "lb" }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // openSettings / closeSettings
 // ---------------------------------------------------------------------------
 
@@ -1064,6 +1097,19 @@ describe("stepReps / stepWeight", () => {
   it("setWeight(v) sets weight to an exact typed value (irregular increment)", () => {
     get(store).setWeight(62.3);
     expect(get(store).activeSession!.weight).toBeCloseTo(62.3, 1);
+  });
+
+  it("lb unit: stepWeight(+1) bumps the stored kg by the lb step (≈2.268 kg)", () => {
+    store.setState({ settings: { ...get(store).settings, weightUnit: "lb" } });
+    const before = get(store).activeSession!.weight;
+    get(store).stepWeight(1);
+    expect(get(store).activeSession!.weight).toBeCloseTo(before + 2.268, 1);
+  });
+
+  it("lb unit: setWeight(displayValue) converts the display lb value back to kg", () => {
+    store.setState({ settings: { ...get(store).settings, weightUnit: "lb" } });
+    get(store).setWeight(132.3); // 132.3 lb ≈ 60 kg stored
+    expect(get(store).activeSession!.weight).toBeCloseTo(60, 1);
   });
 });
 

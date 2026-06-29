@@ -55,10 +55,29 @@ function makeCoverage(
   defaultVal = 0,
 ): Coverage {
   const muscles: MuscleKey[] = [
-    "front_delts", "side_delts", "rear_delts", "neck", "upper_traps",
-    "rhomboids", "lower_traps", "lats", "lower_back", "chest", "abs",
-    "obliques", "quads", "hamstrings", "glutes", "abductors", "adductors",
-    "calves", "tibialis", "hip_flexors", "biceps", "triceps", "forearms",
+    "front_delts",
+    "side_delts",
+    "rear_delts",
+    "neck",
+    "upper_traps",
+    "rhomboids",
+    "lower_traps",
+    "lats",
+    "lower_back",
+    "chest",
+    "abs",
+    "obliques",
+    "quads",
+    "hamstrings",
+    "glutes",
+    "abductors",
+    "adductors",
+    "calves",
+    "tibialis",
+    "hip_flexors",
+    "biceps",
+    "triceps",
+    "forearms",
   ];
   const cov: Partial<Record<MuscleKey, number>> = {};
   for (const m of muscles) {
@@ -566,7 +585,11 @@ describe("buildTimeOfDay", () => {
   it("peakLabel for hour 18 is '6p'", () => {
     const eveningHistory: LoggedSet[] = BASE_HISTORY.map((s) => ({
       ...s,
-      ts: s.ts.replace("T09", "T18").replace("T09:30", "T18:30").replace("T12", "T18").replace("T12:30", "T18:30"),
+      ts: s.ts
+        .replace("T09", "T18")
+        .replace("T09:30", "T18:30")
+        .replace("T12", "T18")
+        .replace("T12:30", "T18:30"),
     }));
     const result = buildTimeOfDay(eveningHistory);
     expect(result.peakLabel).toBe("6p");
@@ -680,9 +703,16 @@ describe("buildProgression", () => {
     // weight=90, reps=30 → estimate1RM = 90*(1+30/30) = 180 (exact integer)
     const wholeHistory: LoggedSet[] = [
       {
-        id: "w1", exId: "ex-ohp", exercise: "OHP", group: "Shoulders",
-        muscles: ["front_delts"], value: 30, weight: 90,
-        ts: "2026-06-22T09:00:00Z", date: "2026-06-22", trigger: "idle",
+        id: "w1",
+        exId: "ex-ohp",
+        exercise: "OHP",
+        group: "Shoulders",
+        muscles: ["front_delts"],
+        value: 30,
+        weight: 90,
+        ts: "2026-06-22T09:00:00Z",
+        date: "2026-06-22",
+        trigger: "idle",
       },
     ];
     const rows = buildProgression(wholeHistory, { "ex-ohp": "OHP" });
@@ -698,6 +728,18 @@ describe("buildProgression", () => {
   it("up is true when last 1RM > first 1RM", () => {
     const rows = buildProgression(BASE_HISTORY, EX_NAMES);
     expect(rows[0].up).toBe(true);
+  });
+
+  it("uses the configured weightUnit for the label of weighted exercises", () => {
+    const rows = buildProgression(BASE_HISTORY, EX_NAMES, "lb");
+    expect(rows[0].pr).toContain("lb");
+    expect(rows[0].gainStr).toContain("lb");
+  });
+
+  it("bodyweight exercises stay 'reps' regardless of weightUnit", () => {
+    const bwHistory: LoggedSet[] = BASE_HISTORY.map((s) => ({ ...s, weight: null }));
+    const rows = buildProgression(bwHistory, EX_NAMES, "lb");
+    expect(rows[0].pr).toContain("reps");
   });
 
   it("points is a valid SVG polyline string (contains comma-separated numbers)", () => {
@@ -721,14 +763,28 @@ describe("buildProgression", () => {
     const declining: LoggedSet[] = [
       // Jun22: 70kg, Jun24: 60kg => series decreases
       {
-        id: "d1", exId: "ex-squat", exercise: "Squat", group: "Quads",
-        muscles: ["quads"], value: 10, weight: 70,
-        ts: "2026-06-22T09:00:00Z", date: "2026-06-22", trigger: "idle",
+        id: "d1",
+        exId: "ex-squat",
+        exercise: "Squat",
+        group: "Quads",
+        muscles: ["quads"],
+        value: 10,
+        weight: 70,
+        ts: "2026-06-22T09:00:00Z",
+        date: "2026-06-22",
+        trigger: "idle",
       },
       {
-        id: "d2", exId: "ex-squat", exercise: "Squat", group: "Quads",
-        muscles: ["quads"], value: 10, weight: 60,
-        ts: "2026-06-24T09:00:00Z", date: "2026-06-24", trigger: "idle",
+        id: "d2",
+        exId: "ex-squat",
+        exercise: "Squat",
+        group: "Quads",
+        muscles: ["quads"],
+        value: 10,
+        weight: 60,
+        ts: "2026-06-24T09:00:00Z",
+        date: "2026-06-24",
+        trigger: "idle",
       },
     ];
     const rows = buildProgression(declining, { "ex-squat": "Squat" });
@@ -738,14 +794,28 @@ describe("buildProgression", () => {
   it("unit is 'reps' for bodyweight exercise (no weight)", () => {
     const bwHistory: LoggedSet[] = [
       {
-        id: "b1", exId: "ex-pushup", exercise: "Push-up", group: "Chest",
-        muscles: ["chest"], value: 15, weight: null,
-        ts: "2026-06-22T09:00:00Z", date: "2026-06-22", trigger: "idle",
+        id: "b1",
+        exId: "ex-pushup",
+        exercise: "Push-up",
+        group: "Chest",
+        muscles: ["chest"],
+        value: 15,
+        weight: null,
+        ts: "2026-06-22T09:00:00Z",
+        date: "2026-06-22",
+        trigger: "idle",
       },
       {
-        id: "b2", exId: "ex-pushup", exercise: "Push-up", group: "Chest",
-        muscles: ["chest"], value: 20, weight: null,
-        ts: "2026-06-24T09:00:00Z", date: "2026-06-24", trigger: "idle",
+        id: "b2",
+        exId: "ex-pushup",
+        exercise: "Push-up",
+        group: "Chest",
+        muscles: ["chest"],
+        value: 20,
+        weight: null,
+        ts: "2026-06-24T09:00:00Z",
+        date: "2026-06-24",
+        trigger: "idle",
       },
     ];
     const rows = buildProgression(bwHistory, { "ex-pushup": "Push-up" });
@@ -758,14 +828,28 @@ describe("buildProgression", () => {
     const multiHistory: LoggedSet[] = [
       ...BASE_HISTORY,
       {
-        id: "x1", exId: "ex-squat", exercise: "Squat", group: "Quads",
-        muscles: ["quads"], value: 10, weight: 80,
-        ts: "2026-06-22T10:00:00Z", date: "2026-06-22", trigger: "timer",
+        id: "x1",
+        exId: "ex-squat",
+        exercise: "Squat",
+        group: "Quads",
+        muscles: ["quads"],
+        value: 10,
+        weight: 80,
+        ts: "2026-06-22T10:00:00Z",
+        date: "2026-06-22",
+        trigger: "timer",
       },
       {
-        id: "x2", exId: "ex-squat", exercise: "Squat", group: "Quads",
-        muscles: ["quads"], value: 10, weight: 85,
-        ts: "2026-06-23T10:00:00Z", date: "2026-06-23", trigger: "manual",
+        id: "x2",
+        exId: "ex-squat",
+        exercise: "Squat",
+        group: "Quads",
+        muscles: ["quads"],
+        value: 10,
+        weight: 85,
+        ts: "2026-06-23T10:00:00Z",
+        date: "2026-06-23",
+        trigger: "manual",
       },
     ];
     const names = { ...EX_NAMES, "ex-squat": "Squat" };
@@ -780,14 +864,28 @@ describe("buildProgression", () => {
     const multiHistory: LoggedSet[] = [
       ...BASE_HISTORY,
       {
-        id: "x1", exId: "ex-squat", exercise: "Squat", group: "Quads",
-        muscles: ["quads"], value: 10, weight: 80,
-        ts: "2026-06-22T10:00:00Z", date: "2026-06-22", trigger: "timer",
+        id: "x1",
+        exId: "ex-squat",
+        exercise: "Squat",
+        group: "Quads",
+        muscles: ["quads"],
+        value: 10,
+        weight: 80,
+        ts: "2026-06-22T10:00:00Z",
+        date: "2026-06-22",
+        trigger: "timer",
       },
       {
-        id: "x2", exId: "ex-squat", exercise: "Squat", group: "Quads",
-        muscles: ["quads"], value: 10, weight: 85,
-        ts: "2026-06-23T10:00:00Z", date: "2026-06-23", trigger: "manual",
+        id: "x2",
+        exId: "ex-squat",
+        exercise: "Squat",
+        group: "Quads",
+        muscles: ["quads"],
+        value: 10,
+        weight: 85,
+        ts: "2026-06-23T10:00:00Z",
+        date: "2026-06-23",
+        trigger: "manual",
       },
     ];
     const names = { ...EX_NAMES, "ex-squat": "Squat" };
@@ -856,18 +954,43 @@ describe("ConsistencyCard", () => {
   };
 
   // Labels match the new date-based scheme: last bar = "This wk", earlier = "Mon D"
-  const MONTH_ABBR_TEST = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const MONTH_ABBR_TEST = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const _nowForFixture = NOW; // 2026-06-24
   const _dow = _nowForFixture.getUTCDay();
   const _daysToMon = _dow === 0 ? 6 : _dow - 1;
-  const _currentMonday = new Date(Date.UTC(_nowForFixture.getUTCFullYear(), _nowForFixture.getUTCMonth(), _nowForFixture.getUTCDate() - _daysToMon));
+  const _currentMonday = new Date(
+    Date.UTC(
+      _nowForFixture.getUTCFullYear(),
+      _nowForFixture.getUTCMonth(),
+      _nowForFixture.getUTCDate() - _daysToMon,
+    ),
+  );
   const weeklyBars: BarVM[] = Array.from({ length: 8 }, (_, i) => {
     let label: string;
     if (i === 7) {
       label = "This wk";
     } else {
       const offset = i - 7;
-      const ws = new Date(Date.UTC(_currentMonday.getUTCFullYear(), _currentMonday.getUTCMonth(), _currentMonday.getUTCDate() + offset * 7));
+      const ws = new Date(
+        Date.UTC(
+          _currentMonday.getUTCFullYear(),
+          _currentMonday.getUTCMonth(),
+          _currentMonday.getUTCDate() + offset * 7,
+        ),
+      );
       label = `${MONTH_ABBR_TEST[ws.getUTCMonth()]} ${ws.getUTCDate()}`;
     }
     return {
@@ -945,10 +1068,10 @@ describe("ConsistencyCard", () => {
       month: "June 2026",
       cells: [
         { day: 1, level: -1 }, // future
-        { day: 2, level: 0 },  // no sets
-        { day: 3, level: 1 },  // 1-2 sets
-        { day: 4, level: 2 },  // 3-5 sets
-        { day: 5, level: 3 },  // 6+ sets
+        { day: 2, level: 0 }, // no sets
+        { day: 3, level: 1 }, // 1-2 sets
+        { day: 4, level: 2 }, // 3-5 sets
+        { day: 5, level: 3 }, // 6+ sets
       ],
     };
     const { container } = render(
@@ -1235,6 +1358,13 @@ describe("ProgressScreen", () => {
   it("renders SVG body map (MuscleHeatmapCard)", () => {
     const { container } = render(<ProgressScreen {...defaultProps} />);
     expect(container.querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("threads weightUnit into progression rows (lb): values converted, not just relabeled", () => {
+    render(<ProgressScreen {...defaultProps} weightUnit="lb" />);
+    // +6.7 kg gain converts to ~+14.7 lb — the value itself is converted (not "+6.7 lb").
+    expect(screen.getByText(/^\+1[45]\.\d lb$/)).toBeInTheDocument();
+    expect(screen.queryByText("+6.7 lb")).not.toBeInTheDocument();
   });
 
   it("renders peak label in time-of-day section", () => {

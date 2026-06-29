@@ -7,6 +7,12 @@ import {
   WallpaperSchema,
   GLASS_OPACITY,
   materialKey,
+  WeightUnitSchema,
+  displayWeight,
+  kgFromDisplay,
+  weightStepKg,
+  weightStepLabel,
+  formatWeight,
 } from "@nabd/domain";
 
 describe("settings.ts", () => {
@@ -24,6 +30,7 @@ describe("settings.ts", () => {
     expect(DEFAULT_SETTINGS.minimizedByDefault).toBe(false);
     expect(DEFAULT_SETTINGS.interval).toBe(50);
     expect(DEFAULT_SETTINGS.idleNudge).toBe(30);
+    expect(DEFAULT_SETTINGS.weightUnit).toBe("kg");
   });
 
   it("DEFAULT_SETTINGS.opacity is within [0.1, 1]", () => {
@@ -158,6 +165,50 @@ describe("settings.ts", () => {
       expect(GLASS_OPACITY.dark.floor).toBe(0.1);
       expect(GLASS_OPACITY.dark.max).toBe(1);
     });
+  });
+
+  describe("WeightUnitSchema", () => {
+    it("accepts kg", () => expect(WeightUnitSchema.safeParse("kg").success).toBe(true));
+    it("accepts lb", () => expect(WeightUnitSchema.safeParse("lb").success).toBe(true));
+    it("rejects lbs", () => expect(WeightUnitSchema.safeParse("lbs").success).toBe(false));
+    it("rejects invalid", () => expect(WeightUnitSchema.safeParse("stone").success).toBe(false));
+  });
+
+  describe("Settings weightUnit field", () => {
+    it("accepts lb", () => {
+      const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, weightUnit: "lb" });
+      expect(result.success).toBe(true);
+    });
+    it("rejects an invalid unit", () => {
+      const result = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, weightUnit: "stone" });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("displayWeight", () => {
+    it("kg is identity", () => expect(displayWeight(60, "kg")).toBe(60));
+    it("lb converts and rounds to 1dp", () =>
+      expect(displayWeight(60, "lb")).toBeCloseTo(132.3, 1));
+  });
+
+  describe("kgFromDisplay", () => {
+    it("kg is identity", () => expect(kgFromDisplay(60, "kg")).toBe(60));
+    it("lb converts back to kg", () => expect(kgFromDisplay(132.3, "lb")).toBeCloseTo(60, 1));
+  });
+
+  describe("weightStepKg", () => {
+    it("kg step is 2.5", () => expect(weightStepKg("kg")).toBe(2.5));
+    it("lb step (5 lb) in kg ≈ 2.268", () => expect(weightStepKg("lb")).toBeCloseTo(2.268, 3));
+  });
+
+  describe("weightStepLabel", () => {
+    it("kg label is 2.5", () => expect(weightStepLabel("kg")).toBe(2.5));
+    it("lb label is 5", () => expect(weightStepLabel("lb")).toBe(5));
+  });
+
+  describe("formatWeight", () => {
+    it("kg", () => expect(formatWeight(60, "kg")).toBe("60 kg"));
+    it("lb", () => expect(formatWeight(60, "lb")).toBe("132.3 lb"));
   });
 
   describe("materialKey", () => {

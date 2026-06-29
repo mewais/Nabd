@@ -44,7 +44,14 @@ import { suggest } from "@nabd/progression";
 import { insight, computePlanVolume, planCoverage } from "@nabd/coverage";
 
 // Domain constants
-import { MUSCLE_NAMES, MUSCLE_GROUPS, MUSCLES, EQUIPMENT_NAMES, TRACK_NAMES } from "@nabd/domain";
+import {
+  MUSCLE_NAMES,
+  MUSCLE_GROUPS,
+  MUSCLES,
+  EQUIPMENT_NAMES,
+  TRACK_NAMES,
+  displayWeight,
+} from "@nabd/domain";
 import type { MuscleKey } from "@nabd/domain";
 
 // Library
@@ -114,6 +121,7 @@ export function App({ store, client }: AppProps): JSX.Element {
     setWallpaper,
     setInterval,
     setIdleNudge,
+    setWeightUnit,
     exportData,
     importData,
     planSetType,
@@ -240,7 +248,7 @@ export function App({ store, client }: AppProps): JSX.Element {
         : null;
     const sugg = suggest(track, last);
     if (sugg.weight !== null) {
-      suggestionStr = `${sugg.sets}×${sugg.reps} @ ${sugg.weight}kg`;
+      suggestionStr = `${sugg.sets}×${sugg.reps} @ ${displayWeight(sugg.weight, settings.weightUnit)} ${settings.weightUnit}`;
     } else {
       suggestionStr = `${sugg.sets}×${sugg.reps}`;
     }
@@ -444,7 +452,7 @@ export function App({ store, client }: AppProps): JSX.Element {
       const exName = exNames[targetExId] ?? targetExId;
       const series = fullHistorySeries(history, targetExId);
       const hasWeight = history.some((h) => h.exId === targetExId && h.weight !== null);
-      const unit = hasWeight ? "kg" : "reps";
+      const unit = hasWeight ? settings.weightUnit : "reps";
       const startDate =
         series.length > 0 ? (history.find((h) => h.exId === targetExId)?.date ?? "") : "";
       if (series.length > 0) {
@@ -530,6 +538,7 @@ export function App({ store, client }: AppProps): JSX.Element {
       insightRest,
       insightPush,
       stats: todayStats,
+      weightUnit: settings.weightUnit,
       onStartNext: startNext,
       onSnooze: snooze,
       onStartSlot: openActive,
@@ -554,6 +563,7 @@ export function App({ store, client }: AppProps): JSX.Element {
       plannedPerWeek,
       plannedPerDay,
       exNames,
+      weightUnit: settings.weightUnit,
       tab: progTab,
       onTab: setProgTab,
       onOpenChart: openProgChart,
@@ -567,6 +577,7 @@ export function App({ store, client }: AppProps): JSX.Element {
           session: activeSession,
           list: sessionList,
           setOfLabel,
+          weightUnit: settings.weightUnit,
           onPick: switchExercise,
           onStepReps: stepReps,
           onStepWeight: stepWeight,
@@ -593,8 +604,10 @@ export function App({ store, client }: AppProps): JSX.Element {
         settings,
         theme,
         glass,
+        weightUnit: settings.weightUnit,
         onClose: closeSettings,
         onTheme: setTheme,
+        onWeightUnit: setWeightUnit,
         onToggleGlass: () => store.getState().toggleGlass(),
         onOpacity: setOpacity,
         onToggleStartup: () => setSetting("openAtStartup", !settings.openAtStartup),

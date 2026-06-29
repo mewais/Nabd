@@ -4,6 +4,7 @@
 
 import React from "react";
 import type { Coverage, LoggedSet } from "@nabd/domain";
+import { displayWeight } from "@nabd/domain";
 import {
   streak,
   completionThisWeek,
@@ -15,13 +16,7 @@ import {
   timeOfDay,
   triggerMix,
 } from "@nabd/analytics";
-import {
-  fullHistorySeries,
-  trendPoints,
-  personalBest,
-  gain,
-  formatGain,
-} from "@nabd/progression";
+import { fullHistorySeries, trendPoints, personalBest, gain, formatGain } from "@nabd/progression";
 import { Segmented } from "@nabd/design-system";
 import { BodyMap } from "@nabd/bodymap";
 
@@ -80,8 +75,18 @@ export function buildCalendar(
   cells: CalendarCellVM[];
 } {
   const MONTHS = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
   const month = `${MONTHS[now.getUTCMonth()]} ${now.getUTCFullYear()}`;
   const cells = calendarHeatmap(history, now);
@@ -94,7 +99,20 @@ export interface BarVM {
   heightPct: number; // 0-100 relative to max
   current?: boolean;
 }
-const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_ABBR = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export function buildWeekly(history: LoggedSet[], now: Date): BarVM[] {
   const raw = weeklyBars(history, now);
@@ -221,6 +239,7 @@ export interface ProgressionRowVM {
 export function buildProgression(
   history: LoggedSet[],
   exNames: Record<string, string>,
+  weightUnit: string = "kg",
 ): ProgressionRowVM[] {
   // Collect unique exIds in order of first appearance
   const seen = new Map<string, boolean>();
@@ -235,11 +254,16 @@ export function buildProgression(
   const rows: ProgressionRowVM[] = [];
   for (let i = 0; i < exIds.length; i++) {
     const exId = exIds[i] as string;
-    const series = fullHistorySeries(history, exId);
 
-    // Determine unit: kg if any logged set for this exercise has weight, else reps
+    // Determine unit: configured weight unit if any logged set has weight, else reps
     const hasWeight = history.some((s) => s.exId === exId && s.weight !== null);
-    const unit = hasWeight ? "kg" : "reps";
+    const unit = hasWeight ? weightUnit : "reps";
+
+    // Series values are stored in kg; convert to the display unit for weighted
+    // exercises so the numbers match the label (reps-based series stay as-is).
+    const rawSeries = fullHistorySeries(history, exId);
+    const series =
+      hasWeight && weightUnit === "lb" ? rawSeries.map((v) => displayWeight(v, "lb")) : rawSeries;
 
     const pb = personalBest(series);
     const g = gain(series);
@@ -471,7 +495,13 @@ export function ConsistencyCard(p: ConsistencyCardProps): JSX.Element {
       React.createElement("span", { key: "less" }, "Less"),
       React.createElement("span", {
         key: "l0",
-        style: { width: 13, height: 13, borderRadius: 4, background: "var(--surface2)", display: "inline-block" },
+        style: {
+          width: 13,
+          height: 13,
+          borderRadius: 4,
+          background: "var(--surface2)",
+          display: "inline-block",
+        },
       }),
       React.createElement("span", {
         key: "l1",
@@ -495,7 +525,13 @@ export function ConsistencyCard(p: ConsistencyCardProps): JSX.Element {
       }),
       React.createElement("span", {
         key: "l3",
-        style: { width: 13, height: 13, borderRadius: 4, background: "var(--accent)", display: "inline-block" },
+        style: {
+          width: 13,
+          height: 13,
+          borderRadius: 4,
+          background: "var(--accent)",
+          display: "inline-block",
+        },
       }),
       React.createElement("span", { key: "more" }, "More"),
     );
@@ -657,11 +693,7 @@ export function ConsistencyCard(p: ConsistencyCardProps): JSX.Element {
         },
         "Consistency",
       ),
-      React.createElement(
-        "div",
-        { key: "seg", style: { marginLeft: "auto" } },
-        segmented,
-      ),
+      React.createElement("div", { key: "seg", style: { marginLeft: "auto" } }, segmented),
     ),
     content,
   );
@@ -778,7 +810,9 @@ export function CompletionCard(p: { weekPct: string; days: BarVM[] }): JSX.Eleme
               style: {
                 width: "100%",
                 height: bar.heightPct > 0 ? `${bar.heightPct}%` : "3px",
-                background: bar.current ? "var(--accent)" : "color-mix(in oklch,var(--accent2) 70%,var(--surface2))",
+                background: bar.current
+                  ? "var(--accent)"
+                  : "color-mix(in oklch,var(--accent2) 70%,var(--surface2))",
                 borderRadius: "3px 3px 0 0",
                 minHeight: 3,
                 transition: "height 0.3s",
@@ -868,7 +902,9 @@ export function TimeOfDayCard(p: { bars: BarVM[]; peakLabel: string }): JSX.Elem
           style: {
             width: "100%",
             height: bar.heightPct > 0 ? `${bar.heightPct}%` : "3px",
-            background: isCurrentPeak ? "var(--accent)" : "color-mix(in oklch,var(--accent) 30%,var(--surface2))",
+            background: isCurrentPeak
+              ? "var(--accent)"
+              : "color-mix(in oklch,var(--accent) 30%,var(--surface2))",
             borderRadius: "3px 3px 0 0",
             minHeight: 3,
             transition: "height 0.3s",
@@ -1321,6 +1357,8 @@ export interface ProgressScreenProps {
   plannedPerWeek: number;
   plannedPerDay: number;
   exNames: Record<string, string>;
+  /** Weight unit for progression rows (defaults to "kg"). */
+  weightUnit?: string;
   tab: "calendar" | "weekly";
   onTab: (t: "calendar" | "weekly") => void;
   onOpenChart: (index: number) => void;
@@ -1333,6 +1371,7 @@ export function ProgressScreen(p: ProgressScreenProps): JSX.Element {
     plannedPerWeek,
     plannedPerDay,
     exNames,
+    weightUnit = "kg",
     tab,
     onTab,
     onOpenChart,
@@ -1344,7 +1383,7 @@ export function ProgressScreen(p: ProgressScreenProps): JSX.Element {
   const completion = buildCompletion(history, plannedPerDay, now);
   const timeOfDayData = buildTimeOfDay(history);
   const segments = buildTriggerMix(history);
-  const progressionRows = buildProgression(history, exNames);
+  const progressionRows = buildProgression(history, exNames, weightUnit);
 
   return React.createElement(
     "div",

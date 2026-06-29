@@ -3,8 +3,8 @@
 
 import React from "react";
 import type { ReactNode } from "react";
-import type { ActiveSession, Slot, Settings, Theme } from "@nabd/domain";
-import { MUSCLE_NAMES, GLASS_OPACITY } from "@nabd/domain";
+import type { ActiveSession, Slot, Settings, Theme, WeightUnit } from "@nabd/domain";
+import { MUSCLE_NAMES, GLASS_OPACITY, displayWeight } from "@nabd/domain";
 import { trendPoints } from "@nabd/progression";
 import { Stepper, Segmented, Toggle, Button, Icon, Dropdown } from "@nabd/design-system";
 
@@ -102,6 +102,8 @@ export interface SessionModalProps {
   list: SessionExerciseRow[];
   /** "Set X of Y" for the active exercise. */
   setOfLabel: string;
+  /** Weight display/input unit (weights stored in kg). */
+  weightUnit: WeightUnit;
   onPick: (slotId: string) => void;
   onStepReps: (d: number) => void;
   onStepWeight: (d: number) => void;
@@ -116,6 +118,7 @@ export function SessionModal(_p: SessionModalProps): JSX.Element {
     session,
     list,
     setOfLabel,
+    weightUnit,
     onPick,
     onStepReps,
     onStepWeight,
@@ -376,10 +379,10 @@ export function SessionModal(_p: SessionModalProps): JSX.Element {
               fontFamily: "'JetBrains Mono', monospace",
             },
           },
-          "Weight",
+          `Weight (${weightUnit})`,
         ),
         React.createElement(Stepper, {
-          value: session.weight,
+          value: displayWeight(session.weight, weightUnit),
           onDec: () => onStepWeight(-1),
           onInc: () => onStepWeight(1),
           onSet: onSetWeight,
@@ -1473,8 +1476,12 @@ export interface SettingsModalProps {
   theme: Theme;
   /** Whether the glass (translucent) mode is active. */
   glass: boolean;
+  /** Weight display/input unit (weights stored in kg). */
+  weightUnit: WeightUnit;
   onClose: () => void;
   onTheme: (t: Theme) => void;
+  /** Change the weight unit. */
+  onWeightUnit: (u: WeightUnit) => void;
   /** Toggle the glass overlay on/off. */
   onToggleGlass: () => void;
   onOpacity: (d: number) => void;
@@ -1491,8 +1498,10 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
     settings,
     theme,
     glass,
+    weightUnit,
     onClose,
     onTheme,
+    onWeightUnit,
     onToggleGlass,
     onOpacity,
     onToggleStartup,
@@ -1506,6 +1515,11 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
   const themeOptions = [
     { k: "light", label: "Light" },
     { k: "dark", label: "Dark" },
+  ];
+
+  const weightUnitOptions = [
+    { k: "kg", label: "kg" },
+    { k: "lb", label: "lb" },
   ];
 
   const sectionLabel = (text: string) =>
@@ -1819,6 +1833,23 @@ export function SettingsModal(_p: SettingsModalProps): JSX.Element {
             () => onIdleNudge(-1),
             () => onIdleNudge(1),
             true,
+          ),
+        ),
+
+        // UNITS
+        React.createElement(
+          "div",
+          null,
+          sectionLabel("UNITS"),
+          React.createElement(
+            "div",
+            { "data-units-row": "Weight unit", style: rowStyle },
+            rowLabelBlock("Weight unit", "Show and enter weights in this unit."),
+            React.createElement(Segmented, {
+              options: weightUnitOptions,
+              value: weightUnit,
+              onChange: (k: string) => onWeightUnit(k as WeightUnit),
+            }),
           ),
         ),
 

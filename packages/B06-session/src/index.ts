@@ -9,8 +9,16 @@ import type {
   Coverage,
   MuscleKey,
   SessionReceiptItem,
+  WeightUnit,
 } from "@nabd/domain";
-import { DEFAULTS, WEIGHTED_TRACKS, TIME_TRACKS } from "@nabd/domain";
+import {
+  DEFAULTS,
+  WEIGHTED_TRACKS,
+  TIME_TRACKS,
+  weightStepKg,
+  weightStepLabel,
+  formatWeight,
+} from "@nabd/domain";
 
 /** History lookup keyed by exercise id, for suggestions. */
 export type HistoryLookup = (exId: string) => import("@nabd/progression").LastResult | null;
@@ -37,7 +45,7 @@ interface LastResult {
  * Inline suggest: no-history → defaults; weighted-with-history → +2.5 kg.
  * Only the two branches tested by the suite are implemented.
  */
-function suggest(last: LastResult | null): Suggestion {
+function suggest(last: LastResult | null, unit: WeightUnit = "kg"): Suggestion {
   if (last === null) {
     return {
       sets: 3,
@@ -48,12 +56,12 @@ function suggest(last: LastResult | null): Suggestion {
     };
   }
 
-  // weighted with history: bump weight
+  // weighted with history: bump weight by the unit's step (stored in kg)
   return {
     sets: 3,
     reps: last.reps,
-    weight: (last.weight as number) + 2.5,
-    note: "+2.5 kg over last session",
+    weight: (last.weight as number) + weightStepKg(unit),
+    note: `+${weightStepLabel(unit)} ${unit} over last session`,
     up: true,
   };
 }
@@ -62,9 +70,15 @@ function suggest(last: LastResult | null): Suggestion {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Build setStr for a logged set. */
-function buildSetStr(unit: string, weighted: boolean, reps: number, weight: number): string {
-  if (weighted) return `${reps} · ${weight}kg`;
+/** Build setStr for a logged set. Weight is kg; weightUnit controls display. */
+function buildSetStr(
+  unit: string,
+  weighted: boolean,
+  reps: number,
+  weight: number,
+  weightUnit: WeightUnit,
+): string {
+  if (weighted) return `${reps} · ${formatWeight(weight, weightUnit)}`;
   if (unit === "sec") return `${reps}s`;
   return `${reps} reps`;
 }
@@ -81,6 +95,7 @@ function buildSession(
   last: LastResult | null,
   logged: SessionReceiptItem[],
   allDone: boolean,
+  weightUnit: WeightUnit = "kg",
 ): ActiveSession {
   // Weighted/unit come from the exercise's tracking type (so a fresh weighted
   // exercise with no history still shows the weight field). Fall back to history
@@ -89,7 +104,7 @@ function buildSession(
     ? WEIGHTED_TRACKS.has(slot.tracking)
     : last !== null && last.weight !== null;
   const unit: "reps" | "sec" = slot.tracking && TIME_TRACKS.has(slot.tracking) ? "sec" : "reps";
-  const sugg = suggest(last);
+  const sugg = suggest(last, weightUnit);
   // The reps/weight FIELDS reflect the user's own history (last session's actual
   // values); the suggestion (e.g. "+2.5 kg over last session") lives only in the
   // suggestion line, never auto-populated into the fields. No history → defaults.
@@ -117,9 +132,13 @@ function buildSession(
 // ---------------------------------------------------------------------------
 
 /** Open a session focused on a slot. */
-export function openSession(slot: Slot, history: HistoryLookup): ActiveSession {
+export function openSession(
+  slot: Slot,
+  history: HistoryLookup,
+  unit: WeightUnit = "kg",
+): ActiveSession {
   const last = history(slot.exId) as LastResult | null;
-  return buildSession(slot, last, [], false);
+  return buildSession(slot, last, [], false, unit);
 }
 
 export interface LogResult {
@@ -136,11 +155,16 @@ export interface LogResult {
 }
 
 /** Log exactly one set of the session's current exercise. */
-export function logSet(session: ActiveSession, slots: Slot[], history: HistoryLookup): LogResult {
-  const { slotId, exercise, group, muscles, unit, weighted, reps, weight } = session;
+export function logSet(
+  session: ActiveSession,
+  slots: Slot[],
+  history: HistoryLookup,
+  unit: WeightUnit = "kg",
+): LogResult {
+  const { slotId, exercise, group, muscles, unit: repUnit, weighted, reps, weight } = session;
 
   // Build the receipt item and the persisted record for this set
-  const setStr = buildSetStr(unit, weighted, reps, weight);
+  const setStr = buildSetStr(repUnit, weighted, reps, weight, unit);
   const receiptItem: SessionReceiptItem = { exercise, group, setStr };
   const currentSlot = slots.find((s) => s.id === slotId)!;
   const loggedRecord: Omit<LoggedSet, "id" | "ts" | "date"> = {
@@ -193,7 +217,7 @@ export function logSet(session: ActiveSession, slots: Slot[], history: HistoryLo
     } else {
       // Advance to the next pending slot
       const last = history(nextSlot.exId) as LastResult | null;
-      nextSession = buildSession(nextSlot, last, newLogged, false);
+      nextSession = buildSession(nextSlot, last, newLogged, false, unit);
     }
   }
 
@@ -212,10 +236,11 @@ export function switchExercise(
   slots: Slot[],
   slotId: string,
   history: HistoryLookup,
+  unit: WeightUnit = "kg",
 ): ActiveSession {
   const targetSlot = slots.find((s) => s.id === slotId)!;
   const last = history(targetSlot.exId) as LastResult | null;
-  return buildSession(targetSlot, last, session.logged, false);
+  return buildSession(targetSlot, last, session.logged, false, unit);
 }
 
 /** Step the reps/seconds value (time-based steps by 5). */
@@ -225,9 +250,13 @@ export function stepReps(session: ActiveSession, delta: number): ActiveSession {
   return { ...session, reps };
 }
 
-/** Step the weight value by 2.5 kg increments, clamped at 0. */
-export function stepWeight(session: ActiveSession, delta: number): ActiveSession {
-  const raw = session.weight + delta * 2.5;
+/** Step the weight value by the given kg increment (default 2.5 kg), clamped at 0. */
+export function stepWeight(
+  session: ActiveSession,
+  delta: number,
+  stepKg: number = 2.5,
+): ActiveSession {
+  const raw = session.weight + delta * stepKg;
   const weight = Math.max(0, Math.round(raw * 10) / 10);
   return { ...session, weight };
 }

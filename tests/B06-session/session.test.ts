@@ -290,6 +290,15 @@ describe("openSession", () => {
     const sess = openSession(slotA, withBenchHistory);
     expect(sess.last).toEqual({ sets: 3, reps: 8, weight: 60 });
   });
+
+  it("lb unit: suggestion note + bump use the lb step", () => {
+    const sess = openSession(weightedSlot, withBenchHistory, "lb");
+    // bump is +5 lb in kg ≈ 2.268 added to 60kg history
+    expect(sess.sugg.weight).toBeCloseTo(62.268, 3);
+    expect(sess.sugg.note).toBe("+5 lb over last session");
+    // the field still shows the stored kg history value
+    expect(sess.weight).toBe(60);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -658,7 +667,7 @@ describe("logSet — setStr formatting", () => {
     expect(receiptItem.setStr).toBe("45s");
   });
 
-  it("weighted: setStr is '<v> · <w>kg'", () => {
+  it("weighted: setStr is '<v> · <w> kg' (default kg unit)", () => {
     const sess = makeWeightedSession({
       slotId: "slot-w",
       reps: 8,
@@ -669,7 +678,7 @@ describe("logSet — setStr formatting", () => {
     const slots = [{ ...weightedSlot }];
 
     const { receiptItem } = logSet(sess, slots, noHistory);
-    expect(receiptItem.setStr).toBe("8 · 60kg");
+    expect(receiptItem.setStr).toBe("8 · 60 kg");
   });
 
   it("weight value in setStr has no trailing decimal when whole number", () => {
@@ -683,7 +692,22 @@ describe("logSet — setStr formatting", () => {
     const slots = [{ ...weightedSlot }];
 
     const { receiptItem } = logSet(sess, slots, noHistory);
-    expect(receiptItem.setStr).toBe("5 · 100kg");
+    expect(receiptItem.setStr).toBe("5 · 100 kg");
+  });
+
+  it("weighted with lb unit: setStr converts kg → lb", () => {
+    const sess = makeWeightedSession({
+      slotId: "slot-w",
+      reps: 8,
+      weight: 60,
+      weighted: true,
+      unit: "reps",
+    });
+    const slots = [{ ...weightedSlot }];
+
+    const { receiptItem } = logSet(sess, slots, noHistory, "lb");
+    expect(receiptItem.setStr).toContain("lb");
+    expect(receiptItem.setStr).toBe("8 · 132.3 lb");
   });
 });
 
@@ -813,6 +837,13 @@ describe("switchExercise", () => {
     const nextSession = switchExercise(session, slots, "slot-b", noHistory);
     expect(nextSession.logged).toHaveLength(2);
   });
+
+  it("threads the weight unit into the switched-to suggestion", () => {
+    const session = makeWeightedSession({ slotId: "slot-w", logged: [] });
+    const slots = [{ ...weightedSlot }, { ...slotB }];
+    const nextSession = switchExercise(session, slots, "slot-w", withBenchHistory, "lb");
+    expect(nextSession.sugg.note).toBe("+5 lb over last session");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -937,6 +968,12 @@ describe("stepWeight", () => {
     const session = makeWeightedSession({ weight: 5 });
     const next = stepWeight(session, -100);
     expect(next.weight).toBe(0);
+  });
+
+  it("uses an explicit stepKg (e.g. lb step ≈ 2.268 kg)", () => {
+    const session = makeWeightedSession({ weight: 60 });
+    const next = stepWeight(session, 1, 2.268);
+    expect(next.weight).toBeCloseTo(62.3, 1);
   });
 });
 

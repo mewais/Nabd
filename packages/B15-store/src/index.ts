@@ -19,8 +19,16 @@ import type {
   RotationState,
   LoggedSet,
   Trigger,
+  WeightUnit,
 } from "@nabd/domain";
-import { DEFAULT_SETTINGS, DEFAULTS, GLASS_OPACITY, MUSCLE_PRIMARY_GROUP } from "@nabd/domain";
+import {
+  DEFAULT_SETTINGS,
+  DEFAULTS,
+  GLASS_OPACITY,
+  MUSCLE_PRIMARY_GROUP,
+  weightStepKg,
+  kgFromDisplay,
+} from "@nabd/domain";
 import type { IpcClient } from "@nabd/ipc-client";
 import type { Library } from "@nabd/dataset";
 import type { Notif } from "@nabd/nudge";
@@ -155,6 +163,7 @@ export interface NabdActions {
   setWallpaper: (w: Wallpaper) => void;
   setInterval: (d: number) => void;
   setIdleNudge: (d: number) => void;
+  setWeightUnit: (u: WeightUnit) => void;
   exportData: () => Promise<string>;
   importData: (json: string) => Promise<void>;
   // planner (delegate to @nabd/program-editor, then persist)
@@ -407,6 +416,13 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       void client.saveSingleton("settings", settings);
     },
 
+    setWeightUnit: (u: WeightUnit) => {
+      const state = get();
+      const settings = { ...state.settings, weightUnit: u };
+      set({ settings });
+      void client.saveSingleton("settings", settings);
+    },
+
     // -------------------------------------------------------------------------
     // Settings UI
     // -------------------------------------------------------------------------
@@ -517,14 +533,20 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       const state = get();
       const slot = state.slots.find((s) => s.id === slotId)!;
       const histLookup = makeHistoryLookup(state.history);
-      const session = openSession(slot, histLookup);
+      const session = openSession(slot, histLookup, state.settings.weightUnit);
       set({ activeSession: session });
     },
 
     switchExercise: (slotId: string) => {
       const state = get();
       const histLookup = makeHistoryLookup(state.history);
-      const session = sessionSwitchExercise(state.activeSession!, state.slots, slotId, histLookup);
+      const session = sessionSwitchExercise(
+        state.activeSession!,
+        state.slots,
+        slotId,
+        histLookup,
+        state.settings.weightUnit,
+      );
       set({ activeSession: session });
     },
 
@@ -536,7 +558,11 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
 
     stepWeight: (d: number) => {
       const state = get();
-      const session = sessionStepWeight(state.activeSession!, d);
+      const session = sessionStepWeight(
+        state.activeSession!,
+        d,
+        weightStepKg(state.settings.weightUnit),
+      );
       set({ activeSession: session });
     },
 
@@ -547,7 +573,13 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
 
     setWeight: (v: number) => {
       const state = get();
-      set({ activeSession: sessionSetWeight(state.activeSession!, v) });
+      // v is a DISPLAY-unit value from the modal; convert to canonical kg.
+      set({
+        activeSession: sessionSetWeight(
+          state.activeSession!,
+          kgFromDisplay(v, state.settings.weightUnit),
+        ),
+      });
     },
 
     logSet: async (trigger: Trigger = "manual") => {
@@ -555,7 +587,12 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       if (state.activeSession === null) return;
 
       const histLookup = makeHistoryLookup(state.history);
-      const result = sessionLogSet(state.activeSession, state.slots, histLookup);
+      const result = sessionLogSet(
+        state.activeSession,
+        state.slots,
+        histLookup,
+        state.settings.weightUnit,
+      );
 
       const nowDate = now();
       const ts = nowDate.toISOString();

@@ -4,6 +4,39 @@ import { z } from "zod";
 export const ThemeSchema = z.enum(["light", "dark"]);
 export type Theme = z.infer<typeof ThemeSchema>;
 
+/** Weight unit. Weights are stored canonically in kg; this controls display + input. */
+export const WeightUnitSchema = z.enum(["kg", "lb"]);
+export type WeightUnit = z.infer<typeof WeightUnitSchema>;
+
+const LB_PER_KG = 2.2046226218;
+
+/** Convert a canonical kg weight to the display unit, rounded to 1 decimal. */
+export function displayWeight(kg: number, unit: WeightUnit): number {
+  const v = unit === "lb" ? kg * LB_PER_KG : kg;
+  return Math.round(v * 10) / 10;
+}
+
+/** Convert a value typed in the display unit back to canonical kg. */
+export function kgFromDisplay(value: number, unit: WeightUnit): number {
+  const kg = unit === "lb" ? value / LB_PER_KG : value;
+  return Math.round(kg * 1000) / 1000;
+}
+
+/** The +/- step size, in kg, for the given unit (2.5 kg or 5 lb). */
+export function weightStepKg(unit: WeightUnit): number {
+  return unit === "lb" ? 5 / LB_PER_KG : 2.5;
+}
+
+/** The +/- step size as shown to the user (2.5 for kg, 5 for lb). */
+export function weightStepLabel(unit: WeightUnit): number {
+  return unit === "lb" ? 5 : 2.5;
+}
+
+/** Format a canonical kg weight for display, e.g. "60 kg" / "132.3 lb". */
+export function formatWeight(kg: number, unit: WeightUnit): string {
+  return `${displayWeight(kg, unit)} ${unit}`;
+}
+
 /** Preview wallpapers (used behind the glass material). */
 export const WallpaperSchema = z.enum([
   "aurora",
@@ -29,6 +62,8 @@ export const SettingsSchema = z.object({
   interval: z.number().int().min(5).max(180),
   /** Seconds of idle before a nudge. */
   idleNudge: z.number().int().min(5).max(600),
+  /** Weight unit for display + input (weights are stored canonically in kg). */
+  weightUnit: WeightUnitSchema,
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 
@@ -41,6 +76,7 @@ export const DEFAULT_SETTINGS: Settings = {
   minimizedByDefault: false,
   interval: 50,
   idleNudge: 30,
+  weightUnit: "kg",
 };
 
 /** Per-theme glass opacity bounds (floors relaxed — user controls legibility). */

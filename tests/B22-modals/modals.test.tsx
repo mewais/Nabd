@@ -78,6 +78,7 @@ const makeSettings = (overrides: Partial<Settings> = {}): Settings => ({
   minimizedByDefault: false,
   interval: 50,
   idleNudge: 30,
+  weightUnit: "kg",
   ...overrides,
 });
 
@@ -301,6 +302,7 @@ describe("SessionModal", () => {
     session: defaultSession,
     list: defaultList,
     setOfLabel: "Set 2 of 4",
+    weightUnit: "kg",
     onPick,
     onStepReps,
     onStepWeight,
@@ -344,6 +346,18 @@ describe("SessionModal", () => {
   it("shows Weight stepper when session is weighted", () => {
     render(<SessionModal {...defaultProps} />);
     expect(screen.getByText(/weight/i)).toBeInTheDocument();
+  });
+
+  it("weight card label shows the configured unit (kg)", () => {
+    render(<SessionModal {...defaultProps} />);
+    expect(screen.getByText("Weight (kg)")).toBeInTheDocument();
+  });
+
+  it("weight card label + value reflect the lb unit (kg → lb display)", () => {
+    render(<SessionModal {...defaultProps} weightUnit="lb" />);
+    expect(screen.getByText("Weight (lb)")).toBeInTheDocument();
+    // session.weight is 20 kg → ~44.1 lb in the input
+    expect(screen.getByLabelText("Weight")).toHaveValue(44.1);
   });
 
   it("clicking Weight stepper '+' calls onStepWeight(+1)", () => {
@@ -512,6 +526,7 @@ describe("SessionModal", () => {
         session={plankSession}
         list={[]}
         setOfLabel="Set 1 of 3"
+        weightUnit="kg"
         onPick={onPick}
         onStepReps={onStepReps}
         onStepWeight={onStepWeight}
@@ -976,6 +991,7 @@ describe("SettingsModal", () => {
   const onExport = vi.fn();
   const onImport = vi.fn();
   const onToggleGlass = vi.fn();
+  const onWeightUnit = vi.fn();
 
   beforeEach(() => {
     [
@@ -989,6 +1005,7 @@ describe("SettingsModal", () => {
       onExport,
       onImport,
       onToggleGlass,
+      onWeightUnit,
     ].forEach((fn) => fn.mockReset());
   });
 
@@ -1004,8 +1021,10 @@ describe("SettingsModal", () => {
     }),
     theme: "dark",
     glass: false,
+    weightUnit: "kg",
     onClose,
     onTheme,
+    onWeightUnit,
     onOpacity,
     onToggleStartup,
     onToggleMinimized,
@@ -1062,6 +1081,21 @@ describe("SettingsModal", () => {
     render(<SettingsModal {...lightNoGlassProps} />);
     fireEvent.click(screen.getByText(/^dark$/i));
     expect(onTheme).toHaveBeenCalledWith("dark");
+  });
+
+  // ---- Weight unit Segmented (kg/lb) ----
+
+  it("renders a Weight unit row with kg and lb options", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
+    expect(screen.getByText("Weight unit")).toBeInTheDocument();
+    expect(screen.getByText(/^kg$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^lb$/i)).toBeInTheDocument();
+  });
+
+  it("choosing 'lb' calls onWeightUnit('lb')", () => {
+    render(<SettingsModal {...darkNoGlassProps} />);
+    fireEvent.click(screen.getByText(/^lb$/i));
+    expect(onWeightUnit).toHaveBeenCalledWith("lb");
   });
 
   // ---- Segmented data-segmented attribute ----

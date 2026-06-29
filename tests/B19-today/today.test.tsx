@@ -1008,6 +1008,16 @@ describe("StatTiles", () => {
     render(<StatTiles streak="5" weekSets="30" volume="10,000 kg" />);
     expect(screen.getByText("10,000 kg")).toBeInTheDocument();
   });
+
+  it("defaults the volume label to 'kg volume'", () => {
+    render(<StatTiles {...stats} />);
+    expect(screen.getByText("kg volume")).toBeInTheDocument();
+  });
+
+  it("renders the configured unit in the volume label (lb)", () => {
+    render(<StatTiles {...stats} weightUnit="lb" />);
+    expect(screen.getByText("lb volume")).toBeInTheDocument();
+  });
 });
 
 // =============================================================================
@@ -1099,6 +1109,11 @@ describe("TodayScreen", () => {
       />,
     );
     expect(screen.getByText("12")).toBeInTheDocument();
+  });
+
+  it("threads weightUnit into the volume tile label", () => {
+    render(<TodayScreen {...defaultScreenProps} weightUnit="lb" />);
+    expect(screen.getByText("lb volume")).toBeInTheDocument();
   });
 
   it("renders weekSets stat value", () => {
