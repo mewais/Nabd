@@ -1339,6 +1339,58 @@ describe("tick — timer fires notif when secondsToNext reaches 0", () => {
   });
 });
 
+describe("tick — live clock + day rollover", () => {
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  it("advances the wall clock (state.now) on each tick", async () => {
+    let cur = new Date("2026-06-24T10:00:00Z");
+    const client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    const store = makeStore({ client, library: makeLibrary(), now: () => cur, newId });
+    await get(store).hydrate();
+    cur = new Date("2026-06-24T10:00:05Z"); // 5s later, same day
+    get(store).tick();
+    expect(get(store).now.toISOString()).toBe("2026-06-24T10:00:05.000Z");
+  });
+
+  it("rebuilds today (re-hydrates) when the calendar day changes", async () => {
+    let cur = new Date("2026-06-24T10:00:00Z");
+    const client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    const store = makeStore({ client, library: makeLibrary(), now: () => cur, newId });
+    await get(store).hydrate();
+    const before = (client.loadAll as ReturnType<typeof vi.fn>).mock.calls.length;
+    cur = new Date("2026-06-25T09:00:00Z"); // next day
+    get(store).tick();
+    await flush();
+    expect((client.loadAll as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(before);
+  });
+
+  it("does NOT rebuild mid-session on day change", async () => {
+    let cur = new Date("2026-06-24T10:00:00Z");
+    const client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    const store = makeStore({ client, library: makeLibrary(), now: () => cur, newId });
+    await get(store).hydrate();
+    get(store).startNext();
+    const before = (client.loadAll as ReturnType<typeof vi.fn>).mock.calls.length;
+    cur = new Date("2026-06-25T09:00:00Z");
+    get(store).tick();
+    await flush();
+    expect((client.loadAll as ReturnType<typeof vi.fn>).mock.calls.length).toBe(before);
+  });
+
+  it("does NOT rebuild when a nudge is pending on day change", async () => {
+    let cur = new Date("2026-06-24T10:00:00Z");
+    const client = makeFakeClient(BOOT_SNAPSHOT_FULL);
+    const store = makeStore({ client, library: makeLibrary(), now: () => cur, newId });
+    await get(store).hydrate();
+    store.setState({ notif: { slot: get(store).slots[0], reason: "timer", label: "x" } });
+    const before = (client.loadAll as ReturnType<typeof vi.fn>).mock.calls.length;
+    cur = new Date("2026-06-25T09:00:00Z");
+    get(store).tick();
+    await flush();
+    expect((client.loadAll as ReturnType<typeof vi.fn>).mock.calls.length).toBe(before);
+  });
+});
+
 describe("tick — idle notif when idleSeconds >= idleNudge", () => {
   let store: StoreApi<NabdStore>;
 

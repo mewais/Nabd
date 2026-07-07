@@ -339,6 +339,7 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
       const coverage = coverageFrom7dHistory(history, nowDate);
 
       set({
+        now: nowDate,
         program,
         settings,
         theme,
@@ -454,11 +455,20 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
         notif: state.notif,
       };
       const next = nudgeTick({ state: nudgeState, currentSlot: cs });
+      // Advance the wall clock so the top-bar time, date and greeting stay live.
+      const nowDate = now();
+      const dayChanged = nowDate.toDateString() !== state.now.toDateString();
       set({
+        now: nowDate,
         secondsToNext: next.secondsToNext,
         idleSeconds: next.idleSeconds,
         notif: next.notif,
       });
+      // Day rollover: rebuild today's schedule when the calendar day changes,
+      // unless the user is mid-set or mid-nudge (don't clobber active state).
+      if (dayChanged && state.activeSession === null && state.notif === null) {
+        void get().hydrate();
+      }
     },
 
     resetIdle: () => {
