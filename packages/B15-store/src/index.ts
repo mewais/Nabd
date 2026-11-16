@@ -13,5 +13,6 @@ export type {
   LibraryTarget,
   ExerciseDraft,
   Notice,
+  LoadProblem,
 } from "./state";
 export * from "./selectors";

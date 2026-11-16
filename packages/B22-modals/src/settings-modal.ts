@@ -14,6 +14,12 @@ export interface SettingsModalProps {
   onExport: () => void;
   onImport: () => void;
   onClose: () => void;
+  /** Whether this platform can make the window translucent (default yes); if not, its rows are hidden. */
+  glassAvailable?: boolean;
+  /** Raise a sample OS notification; the row is only shown when given. */
+  onTestNotification?: () => void;
+  /** Exit the app; the button is only shown when given. */
+  onQuit?: () => void;
 }
 
 const THEME_OPTIONS = [
@@ -79,7 +85,7 @@ function Row(p: { title: string; hint: string; children?: ReactNode }): JSX.Elem
 }
 
 export function SettingsModal(p: SettingsModalProps): JSX.Element {
-  const { settings, onChange } = p;
+  const { settings, onChange, glassAvailable = true } = p;
 
   /** A +/- control over one numeric setting. */
   const stepper = (key: NumericSetting, step: number, show: (value: number) => string) =>
@@ -166,6 +172,20 @@ export function SettingsModal(p: SettingsModalProps): JSX.Element {
           },
           stepper("idleNudge", 5, (v) => `${v} sec`),
         ),
+        p.onTestNotification
+          ? React.createElement(
+              Row,
+              {
+                title: "Notifications",
+                hint: "A set due while Nabd is in the background is announced by your desktop.",
+              },
+              React.createElement(
+                Button,
+                { variant: "ghost", onClick: p.onTestNotification },
+                "Send test notification",
+              ),
+            )
+          : null,
       ),
 
       React.createElement(
@@ -228,12 +248,17 @@ export function SettingsModal(p: SettingsModalProps): JSX.Element {
             onChange: (k: string) => onChange({ theme: k as Theme }),
           }),
         ),
-        React.createElement(
-          Row,
-          { title: "Translucent window", hint: "Frost the panels so your desktop shows through." },
-          toggle("glass"),
-        ),
-        settings.glass
+        glassAvailable
+          ? React.createElement(
+              Row,
+              {
+                title: "Translucent window",
+                hint: "Frost the panels so your desktop shows through.",
+              },
+              toggle("glass"),
+            )
+          : null,
+        glassAvailable && settings.glass
           ? React.createElement(
               Row,
               { title: "Background opacity", hint: "Higher = more solid." },
@@ -292,6 +317,14 @@ export function SettingsModal(p: SettingsModalProps): JSX.Element {
             )
           : null,
       ),
+
+      p.onQuit
+        ? React.createElement(
+            Button,
+            { variant: "ghost", onClick: p.onQuit, style: DATA_BUTTON },
+            "Quit Nabd",
+          )
+        : null,
     ),
   );
 }

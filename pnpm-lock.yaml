@@ -194,12 +194,21 @@ importers:
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
+      '@nabd/session':
+        specifier: workspace:*
+        version: link:../B06-session
       react:
         specifier: ^18.3.1
         version: 18.3.1
 
   packages/B17-bodymap:
     dependencies:
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../B03-coverage
+      '@nabd/design-system':
+        specifier: workspace:*
+        version: link:../B16-design-system
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
@@ -227,6 +236,9 @@ importers:
       '@nabd/bodymap':
         specifier: workspace:*
         version: link:../B17-bodymap
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../B03-coverage
       '@nabd/design-system':
         specifier: workspace:*
         version: link:../B16-design-system

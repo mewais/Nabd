@@ -21,6 +21,11 @@
         font-family: "Hanken Grotesk", system-ui, sans-serif;
         overflow: hidden;
       }
+      /* Until React has rendered, show the dark theme's background instead of a
+         blank frame. Not on html/body: Glass needs those to stay transparent. */
+      #root:empty {
+        background: oklch(0.21 0.014 265);
+      }
       ::-webkit-scrollbar {
         width: 10px;
         height: 10px;

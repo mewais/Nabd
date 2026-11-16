@@ -17,6 +17,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 thiserror = "1"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 
 # ── Tauri binary crate ───────────────────────────────────────────────────────
 [package]
@@ -45,22 +46,43 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-notification = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
+chrono = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
 rusqlite = { workspace = true }
+thiserror = { workspace = true }
 nabd-persistence = { path = "crates/B11-persistence" }
 nabd-native = { path = "crates/B12-native" }
 nabd-ipc = { path = "crates/B13-ipc" }
-window-vibrancy = "0.6"
 
-# Idle detection: Linux uses the dbus backend (avoids the libxss build dep);
-# Windows/macOS use the crate's native backend (GetLastInputInfo / IOKit).
-[target.'cfg(unix)'.dependencies]
-user-idle = { version = "0.6", default-features = false, features = ["dbus"] }
+# Linux idle time and tray-host detection speak D-Bus, X11 and Wayland directly.
+# All four are pure Rust (zbus and gtk are already in the tree through Tauri),
+# so no extra system library is linked: no libXss, no libwayland.
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = "5"
+gtk = "0.18"
+x11rb = { version = "0.13", features = ["screensaver"] }
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
 
 [target.'cfg(windows)'.dependencies]
-user-idle = "0.6"
+windows-version = "0.1"
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_SystemInformation",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
 
 [features]
 # default tauri custom-protocol for production builds
 custom-protocol = ["tauri/custom-protocol"]
+
+# Small, self-contained release binary. `panic = "abort"` also means a panic on
+# a background thread (the clock) ends the app instead of leaving it running
+# without nudges.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

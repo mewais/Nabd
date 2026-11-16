@@ -341,6 +341,8 @@ export interface TopBarProps {
   onTogglePause: () => void;
   theme: Theme;
   onTheme: (t: Theme) => void;
+  /** Whether this platform can make the window translucent; the Glass button is hidden if not. */
+  glassAvailable: boolean;
   /** Whether the glass/translucency mode is currently on. */
   glass: boolean;
   /** Called when the Glass toggle button is clicked. */
@@ -384,6 +386,7 @@ export function TopBar(p: TopBarProps): JSX.Element {
     onTogglePause,
     theme,
     onTheme,
+    glassAvailable,
     glass,
     onToggleGlass,
     onOpenSettings,
@@ -491,31 +494,33 @@ export function TopBar(p: TopBarProps): JSX.Element {
         },
         paused ? "Resume" : "Pause",
       ),
-      React.createElement(
-        "button",
-        {
-          onClick: onToggleGlass,
-          title: "Translucent window",
-          "data-glass-active": glass ? "true" : "false",
-          style: pillToggle(glass),
-        },
-        React.createElement(
-          "svg",
-          {
-            width: 14,
-            height: 14,
-            viewBox: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            strokeWidth: 1.7,
-            strokeLinecap: "round",
-            strokeLinejoin: "round",
-          },
-          React.createElement("rect", { x: 3, y: 3, width: 18, height: 18, rx: 3 }),
-          React.createElement("path", { d: "M3 9h18M9 21V9" }),
-        ),
-        "Glass",
-      ),
+      glassAvailable
+        ? React.createElement(
+            "button",
+            {
+              onClick: onToggleGlass,
+              title: "Translucent window",
+              "data-glass-active": glass ? "true" : "false",
+              style: pillToggle(glass),
+            },
+            React.createElement(
+              "svg",
+              {
+                width: 14,
+                height: 14,
+                viewBox: "0 0 24 24",
+                fill: "none",
+                stroke: "currentColor",
+                strokeWidth: 1.7,
+                strokeLinecap: "round",
+                strokeLinejoin: "round",
+              },
+              React.createElement("rect", { x: 3, y: 3, width: 18, height: 18, rx: 3 }),
+              React.createElement("path", { d: "M3 9h18M9 21V9" }),
+            ),
+            "Glass",
+          )
+        : null,
       // Settings gear button
       React.createElement(
         "button",

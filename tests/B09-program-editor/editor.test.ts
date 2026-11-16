@@ -21,6 +21,9 @@ function apply(program: Program, ...edits: ProgramEdit[]): Program {
   );
 }
 
+/** Types an edit where it cannot be inferred (spread into `apply`). */
+const edit = (change: ProgramEdit): ProgramEdit => change;
+
 const oneDay = apply(EMPTY_PROGRAM, (e) => e.addDay(1));
 const DAY = oneDay.days[0]!.id;
 const withBench = apply(oneDay, (e) => e.addExercise(DAY, bench.id));
@@ -73,6 +76,41 @@ describe("ProgramEditor — program and days", () => {
     expect(apply(placed, (e) => e.setSchedule("floating")).days.map((d) => d.weekday)).toEqual([
       1, 2, 3,
     ]);
+  });
+
+  it("a weekday schedule takes at most one day per weekday", () => {
+    const week = apply(
+      EMPTY_PROGRAM,
+      ...[1, 2, 3, 4, 5, 6, 0].map((wd) => edit((e) => e.addDay(wd))),
+    );
+    expect(week.days).toHaveLength(7);
+    expect(apply(week, (e) => e.addDay(null))).toBe(week);
+
+    const floating = apply(week, (e) => e.setSchedule("floating"));
+    expect(apply(floating, (e) => e.addDay(null)).days).toHaveLength(8);
+  });
+
+  it("refuses a weekday schedule for a plan with more days than a week", () => {
+    const eight = apply(
+      { ...EMPTY_PROGRAM, schedule: "floating" },
+      ...Array.from({ length: 8 }, () => edit((e) => e.addDay(null))),
+    );
+    expect(apply(eight, (e) => e.setSchedule("weekday"))).toBe(eight);
+    const seven = apply(eight, (e) => e.removeDay(eight.days[7]!.id));
+    expect(apply(seven, (e) => e.setSchedule("weekday")).days.map((d) => d.weekday)).toEqual([
+      1, 2, 3, 4, 5, 6, 0,
+    ]);
+  });
+
+  it("going floating orders the days as they ran through the week, Monday first", () => {
+    const weekdays = apply(
+      EMPTY_PROGRAM,
+      (e) => e.addDay(0),
+      (e) => e.addDay(5),
+      (e) => e.addDay(1),
+    );
+    const floating = apply(weekdays, (e) => e.setSchedule("floating"));
+    expect(floating.days.map((d) => d.weekday)).toEqual([1, 5, 0]);
   });
 
   it("moves a day within the order, ignoring moves off either end", () => {
@@ -206,19 +244,32 @@ describe("ProgramEditor — prescriptions", () => {
     expect(sets(floor)[0]!.a).toBe(1);
   });
 
-  it("switching rep mode adds or drops the top of the range; time steps by five seconds", () => {
+  it("switching between rep modes adds or drops the top of the range", () => {
     const fixed = apply(withBench, (e) => e.setRepMode(DAY, BENCH, "fixed"));
     expect(sets(fixed)[0]).toEqual({ type: "working", a: 8 });
     expect(sets(apply(fixed, (e) => e.setRepMode(DAY, BENCH, "range")))[0]).toMatchObject({
       a: 8,
       b: 10,
     });
-    const timed = apply(
-      fixed,
-      (e) => e.setRepMode(DAY, BENCH, "time"),
-      (e) => e.stepRep(DAY, BENCH, 0, "a", 1),
-    );
-    expect(sets(timed)[0]!.a).toBe(13);
+    const unchanged = apply(withBench, (e) => e.setRepMode(DAY, BENCH, "range"));
+    expect(sets(unchanged)[0]).toEqual({ type: "working", a: 8, b: 12 });
+  });
+
+  it("switching between time and reps starts from that mode's defaults", () => {
+    const timed = apply(withBench, (e) => e.setRepMode(DAY, BENCH, "time"));
+    expect(sets(timed)).toEqual(Array(3).fill({ type: "working", a: 45 }));
+    expect(sets(apply(timed, (e) => e.stepRep(DAY, BENCH, 0, "a", 1)))[0]!.a).toBe(50);
+
+    // 45 seconds must not come back as 45 reps.
+    expect(sets(apply(timed, (e) => e.setRepMode(DAY, BENCH, "range")))[0]).toEqual({
+      type: "working",
+      a: 8,
+      b: 12,
+    });
+    expect(sets(apply(timed, (e) => e.setRepMode(DAY, BENCH, "fixed")))[0]).toEqual({
+      type: "working",
+      a: 8,
+    });
   });
 
   it("intensity gets a starting value, steps within its bounds, and clears", () => {

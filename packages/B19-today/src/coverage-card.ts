@@ -1,4 +1,5 @@
 import React from "react";
+import { recommendation } from "@nabd/coverage";
 import type { Coverage, MuscleKey } from "@nabd/domain";
 import type { MapStyle } from "@nabd/bodymap";
 import { BodyMap, MuscleBar } from "@nabd/bodymap";
@@ -104,13 +105,13 @@ export function CoverageCard(p: CoverageCardProps): JSX.Element {
         options: viewOptions,
         value: mapView,
         onChange: (v) => onMapView(v as CoverageView),
-        small: true,
+        size: "sm",
       }),
       React.createElement(Segmented, {
         options: styleOptions,
         value: mapStyle,
         onChange: (s) => onMapStyle(s as MapStyle),
-        small: true,
+        size: "sm",
       }),
     ),
     // body map(s)
@@ -147,7 +148,7 @@ export function CoverageCard(p: CoverageCardProps): JSX.Element {
               },
               "FRONT",
             ),
-            React.createElement(BodyMap, { side: "front", coverage, style: mapStyle }),
+            React.createElement(BodyMap, { side: "front", coverage, mapStyle }),
           )
         : null,
       showBack
@@ -173,7 +174,7 @@ export function CoverageCard(p: CoverageCardProps): JSX.Element {
               },
               "BACK",
             ),
-            React.createElement(BodyMap, { side: "back", coverage, style: mapStyle }),
+            React.createElement(BodyMap, { side: "back", coverage, mapStyle }),
           )
         : null,
     ),
@@ -192,7 +193,7 @@ export function CoverageCard(p: CoverageCardProps): JSX.Element {
           key: muscle,
           muscle,
           pct: coverage[muscle],
-          showRec: true,
+          recommendation: recommendation(coverage[muscle]),
         }),
       ),
     ),

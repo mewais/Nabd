@@ -92,7 +92,7 @@ export function progressVM(
 ): ProgressVM {
   return buildProgressVM({
     stats: new TrainingStats(sets, log, now),
-    trends: exerciseTrends(sets, "kg", () => false),
+    trends: exerciseTrends(sets, "kg", () => undefined),
     exerciseName,
     now,
   });

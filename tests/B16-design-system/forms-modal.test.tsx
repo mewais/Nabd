@@ -1,0 +1,143 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { Dropdown, FormRow, FormSection, ModalShell, Toggle } from "@nabd/design-system";
+import { click, press } from "./render";
+
+describe("FormSection", () => {
+  it("groups its rows under a title", () => {
+    render(<FormSection title="Workday">rows</FormSection>);
+    const section = screen.getByRole("region", { name: "Workday" });
+    expect(section).toHaveTextContent("Workday");
+    expect(section).toHaveTextContent("rows");
+  });
+});
+
+describe("FormRow", () => {
+  it("shows the setting's name and hint next to its control", () => {
+    render(
+      <FormRow title="Start minimized" hint="Sit quietly in the tray.">
+        <Toggle on={false} onChange={vi.fn()} />
+      </FormRow>,
+    );
+    const row = screen.getByRole("group", { name: "Start minimized" });
+    expect(row).toHaveTextContent("Sit quietly in the tray.");
+    expect(row).toContainElement(screen.getByRole("switch"));
+  });
+
+  it("puts a wide control under the text when stacked", () => {
+    render(
+      <FormRow title="My equipment" hint="What you own." stacked>
+        chips
+      </FormRow>,
+    );
+    expect(screen.getByRole("group", { name: "My equipment" }).style.flexDirection).toBe("column");
+  });
+});
+
+describe("ModalShell", () => {
+  const setup = (): ReturnType<typeof vi.fn> => {
+    const onClose = vi.fn();
+    render(
+      <ModalShell
+        title="Settings"
+        eyebrow="Preferences"
+        subtitle="Saved as you go"
+        width={540}
+        onClose={onClose}
+      >
+        <button>Inside</button>
+      </ModalShell>,
+    );
+    return onClose;
+  };
+  const backdrop = (): Element => document.querySelector("[data-modal-backdrop]") as Element;
+
+  it("is a modal dialog named by its title", () => {
+    setup();
+    const dialog = screen.getByRole("dialog", { name: "Settings" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toHaveTextContent("Preferences");
+    expect(dialog).toHaveTextContent("Saved as you go");
+    expect(dialog).toContainElement(screen.getByRole("button", { name: "Inside" }));
+  });
+
+  it("closes from its close button", () => {
+    const onClose = setup();
+    click("Close");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes on Escape", () => {
+    const onClose = setup();
+    press("Escape");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores other keys", () => {
+    const onClose = setup();
+    press("Enter");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closes on a click on the backdrop, but not on a click inside the panel", () => {
+    const onClose = setup();
+    click("Inside");
+    fireEvent.click(screen.getByRole("dialog"));
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(backdrop());
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops listening for Escape once it is gone", () => {
+    const onClose = vi.fn();
+    const { unmount } = render(<ModalShell title="Gone" width={300} onClose={onClose} />);
+    unmount();
+    press("Escape");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("stacks above the layer it was opened from", () => {
+    render(<ModalShell title="Below" width={300} onClose={vi.fn()} />);
+    render(<ModalShell title="Above" width={300} layer="modalOver" onClose={vi.fn()} />);
+    const [below, above] = [...document.querySelectorAll<HTMLElement>("[data-modal-backdrop]")];
+    expect(Number(above?.style.zIndex)).toBeGreaterThan(Number(below?.style.zIndex));
+  });
+
+  it("gives Escape to the modal on top only", () => {
+    const closeBelow = vi.fn();
+    const closeAbove = vi.fn();
+    render(<ModalShell title="Below" width={300} onClose={closeBelow} />);
+    const above = render(
+      <ModalShell title="Above" width={300} layer="modalOver" onClose={closeAbove} />,
+    );
+
+    press("Escape");
+    expect(closeAbove).toHaveBeenCalledTimes(1);
+    expect(closeBelow).not.toHaveBeenCalled();
+
+    above.unmount();
+    press("Escape");
+    expect(closeBelow).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets an open dropdown inside it take Escape first", () => {
+    const onClose = vi.fn();
+    render(
+      <ModalShell title="New exercise" width={560} onClose={onClose}>
+        <Dropdown
+          options={[{ k: "a", label: "Alpha" }]}
+          value="a"
+          onChange={vi.fn()}
+          ariaLabel="Equipment"
+        />
+      </ModalShell>,
+    );
+    click("Equipment");
+
+    press("Escape");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+
+    press("Escape");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});

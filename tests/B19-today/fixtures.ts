@@ -18,6 +18,7 @@ export function nudgeAt(
   return new NudgePolicy(DEFAULT_SETTINGS).evaluate({
     now,
     lastSetAt: ctx.lastSetAt ?? null,
+    activeSince: null,
     snoozedUntil: null,
     idleSeconds: 0,
     paused: ctx.paused ?? false,

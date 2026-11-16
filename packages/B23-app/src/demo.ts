@@ -175,6 +175,7 @@ function sampleProgram(): Program {
   };
 }
 
+const TICK_MS = 1000;
 const HISTORY_DAYS = 14;
 const SETS_PER_EXERCISE = 3;
 
@@ -239,11 +240,20 @@ export function createDemoClient(): IpcClient {
     importData: async (imported) => {
       Object.assign(data, imported);
     },
+    // The page itself can be translucent; there is no tray and no OS idle time.
+    platformCapabilities: async () => ({ tray: false, glass: true, idle: false }),
     notify: async () => {},
+    sendTestNotification: async () => {},
+    setGlass: async () => {},
     setVibrancy: async () => {},
     setAutostart: async () => {},
     updateTray: async () => {},
-    getIdleSeconds: async () => 0,
+    quit: async () => {},
+    // The browser stands in for the backend clock. A visible tab's timers run on time.
+    onTick: async (handler) => {
+      const timer = window.setInterval(() => handler({ idleSeconds: null }), TICK_MS);
+      return () => window.clearInterval(timer);
+    },
     onTrayAction: async () => () => {},
   };
 }

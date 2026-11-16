@@ -97,12 +97,16 @@ describe("HeroCard", () => {
   });
 
   it("explains a rest day, and points to the Plan screen when there is no program", () => {
-    const rest = render(<HeroCard vm={{ kind: "rest", hasProgram: true }} {...handlers()} />);
+    const rest = render(
+      <HeroCard vm={{ kind: "rest", hasProgram: true, allSkipped: false }} {...handlers()} />,
+    );
     expect(screen.getByText("Rest day")).toBeInTheDocument();
     expect(screen.getByText(/Nothing is planned for today/)).toBeInTheDocument();
     rest.unmount();
 
-    render(<HeroCard vm={{ kind: "rest", hasProgram: false }} {...handlers()} />);
+    render(
+      <HeroCard vm={{ kind: "rest", hasProgram: false, allSkipped: false }} {...handlers()} />,
+    );
     expect(screen.getByText("No plan yet")).toBeInTheDocument();
     expect(screen.getByText(/Plan screen/)).toBeInTheDocument();
     expect(screen.queryByText("Rest day")).toBeNull();

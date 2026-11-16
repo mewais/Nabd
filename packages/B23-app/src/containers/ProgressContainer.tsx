@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { isTimeBased } from "@nabd/domain";
+import { parseDateKey } from "@nabd/domain";
 import { exerciseTrends } from "@nabd/progression";
 import type { ExerciseTrend } from "@nabd/progression";
 import { FullHistoryChartModal, buildChartVM } from "@nabd/modals";
@@ -16,15 +16,12 @@ export function ProgressContainer(): JSX.Element {
   const library = useNabd(selectLibrary);
   const tab = useNabd((s) => s.progressTab);
   const chartExercise = useNabd((s) => s.chartExercise);
-  // The clock only matters here to the day: re-read it when the stats change.
-  const now = useMemo(() => new Date(), [stats]);
+  // The clock only matters here to the day.
+  const today = useNabd((s) => s.dayState.date);
+  const now = useMemo(() => parseDateKey(today), [today]);
 
   const trends = useMemo(
-    () =>
-      exerciseTrends(history, unit, (exId) => {
-        const exercise = library.byId(exId);
-        return exercise !== undefined && isTimeBased(exercise.tracking);
-      }),
+    () => exerciseTrends(history, unit, (exId) => library.byId(exId)?.tracking),
     [history, unit, library],
   );
   // A deleted custom exercise still has history: fall back to its logged name.

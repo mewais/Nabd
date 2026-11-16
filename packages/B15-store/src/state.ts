@@ -11,7 +11,9 @@ import type {
   Settings,
   TrackingType,
 } from "@nabd/domain";
-import { DEFAULT_SETTINGS, EMPTY_PROGRAM, dateKey } from "@nabd/domain";
+import { DEFAULT_SETTINGS, EMPTY_PROGRAM, freshDayState } from "@nabd/domain";
+import type { Singletons } from "@nabd/ipc-client";
+import type { PendingNudge } from "@nabd/nudge";
 import type { LogSession } from "@nabd/session";
 
 export type Screen = "today" | "planner" | "progress";
@@ -54,10 +56,21 @@ export interface LibraryState {
   draft: ExerciseDraft | null;
 }
 
-/** A short message about the last import/export. */
+/** A short message for the user. */
 export interface Notice {
   kind: "info" | "error";
   text: string;
+}
+
+/**
+ * Something stored that could not be read at boot. The app runs on a default
+ * in its place, but never saves over the stored copy: an unreadable value may
+ * still be recoverable, and overwriting it with a default would destroy it.
+ */
+export interface LoadProblem {
+  /** One stored value, rows of the set history, or everything (the load itself failed). */
+  source: keyof Singletons | "history" | "everything";
+  detail: string;
 }
 
 export interface NabdState {
@@ -70,11 +83,18 @@ export interface NabdState {
   dayState: DayState;
   dayLog: DayRecord[];
   history: LoggedSet[];
+  /** What could not be read at boot; saving is blocked for each of these (see LoadProblem). */
+  loadProblems: LoadProblem[];
   // clock + nudging
   now: Date;
   idleSeconds: number;
+  /** Mirrors `dayState.paused`, which is the persisted copy. */
   paused: boolean;
   snoozedUntil: Date | null;
+  /** Since when there has been work to nudge about (see NudgeContext.activeSince). */
+  activeSince: Date | null;
+  /** The nudge waiting for an answer; a new object each time one fires. */
+  pendingNudge: PendingNudge | null;
   // logging
   session: LogSession | null;
   // view state
@@ -82,20 +102,16 @@ export interface NabdState {
   mapView: MapView;
   mapStyle: MapStyle;
   settingsOpen: boolean;
+  /** The outcome of the last import/export, shown in Settings. */
   notice: Notice | null;
+  /** Something the user must know wherever they are: unreadable data, a failed save. */
+  appNotice: Notice | null;
   planEditDay: string | null;
   library: LibraryState;
   progressTab: ProgressTab;
   /** Exercise whose full-history chart is open. */
   chartExercise: string | null;
 }
-
-export const freshDayState = (now: Date): DayState => ({
-  date: dateKey(now),
-  floatingIndex: 0,
-  skipped: [],
-  extras: [],
-});
 
 export function initialState(now: Date): NabdState {
   return {
@@ -107,16 +123,20 @@ export function initialState(now: Date): NabdState {
     dayState: freshDayState(now),
     dayLog: [],
     history: [],
+    loadProblems: [],
     now,
     idleSeconds: 0,
     paused: false,
     snoozedUntil: null,
+    activeSince: null,
+    pendingNudge: null,
     session: null,
     screen: "today",
     mapView: "both",
     mapStyle: "heat",
     settingsOpen: false,
     notice: null,
+    appNotice: null,
     planEditDay: null,
     library: { target: null, search: "", group: null, draft: null },
     progressTab: "calendar",

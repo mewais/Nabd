@@ -134,7 +134,7 @@ export function ConsistencyCard(p: ConsistencyCardProps): JSX.Element {
     ],
     value: tab,
     onChange: (k: string) => onTab(k as "calendar" | "weekly"),
-    small: true,
+    size: "sm",
   });
 
   let content: JSX.Element;

@@ -37,10 +37,10 @@ describe("buildSessionVM", () => {
     expect(vm.notes).toBe("Pause at the chest");
     expect(vm.muscleNames).toEqual(["Chest", "Triceps", "Front Delts"]);
     expect(vm.advice).toBeNull();
-    // The last working set of last week was 7 × 60 kg.
+    // Last week's first working set — the one the first working set is compared against.
     expect(vm).toMatchObject({
       repsLabel: "Reps",
-      reps: 7,
+      reps: 8,
       weight: 60,
       weightLabel: "Weight (kg)",
     });

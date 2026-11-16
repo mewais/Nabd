@@ -5,7 +5,7 @@
 
 // React must be in scope: the tests are compiled with the classic JSX transform.
 import React from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { DEFAULT_SETTINGS } from "@nabd/domain";
 import type { Settings } from "@nabd/domain";
 import { SettingsModal } from "@nabd/modals";
@@ -178,5 +178,34 @@ describe("SettingsModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(props.onClose).toHaveBeenCalledTimes(1);
     expect(props.onChange).not.toHaveBeenCalled();
+  });
+
+  it("hides the translucency rows where the window cannot be translucent", () => {
+    const { container } = setup({ glass: true }, { glassAvailable: false });
+    expect(container.querySelector('[data-setting="Translucent window"]')).toBeNull();
+    expect(container.querySelector('[data-setting="Background opacity"]')).toBeNull();
+    expect(container.querySelector('[data-setting="Theme"]')).not.toBeNull();
+  });
+
+  it("sends a test notification on request, and only offers it when it can", () => {
+    const onTestNotification = vi.fn();
+    setup({}, { onTestNotification });
+    fireEvent.click(screen.getByRole("button", { name: "Send test notification" }));
+    expect(onTestNotification).toHaveBeenCalledTimes(1);
+
+    cleanup();
+    setup();
+    expect(screen.queryByRole("button", { name: "Send test notification" })).toBeNull();
+  });
+
+  it("quits from the bottom of the dialog, and only offers it when it can", () => {
+    const onQuit = vi.fn();
+    setup({}, { onQuit });
+    fireEvent.click(screen.getByRole("button", { name: "Quit Nabd" }));
+    expect(onQuit).toHaveBeenCalledTimes(1);
+
+    cleanup();
+    setup();
+    expect(screen.queryByRole("button", { name: "Quit Nabd" })).toBeNull();
   });
 });

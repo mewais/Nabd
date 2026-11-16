@@ -450,7 +450,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
         options: repModeOptions,
         value: repMode,
         onChange: (k) => cb.onEdit((e) => e.setRepMode(dayId, refTarget, k as RepMode)),
-        small: true,
+        size: "sm",
       }),
     ),
     // LOAD intensity
@@ -472,7 +472,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
         options: intensityOptions,
         value: intensity,
         onChange: (k) => cb.onEdit((e) => e.setIntensity(dayId, refTarget, k as Intensity)),
-        small: true,
+        size: "sm",
       }),
     ),
     // REST stepper — last so lastPlus/lastMinus point here

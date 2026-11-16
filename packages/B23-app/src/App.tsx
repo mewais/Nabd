@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 import type { StoreApi } from "zustand";
 import { formatClock } from "@nabd/domain";
-import type { IpcClient } from "@nabd/ipc-client";
+import type { IpcClient, PlatformCapabilities } from "@nabd/ipc-client";
 import { describeNudge } from "@nabd/nudge";
 import { AppLayout, Sidebar, TopBar, formatDate, greeting } from "@nabd/shell";
 import type { NabdStore } from "@nabd/store";
@@ -20,8 +21,27 @@ const SCREENS = {
   progress: ProgressContainer,
 };
 
+/** Until the backend has answered, nothing platform-dependent is offered. */
+const UNKNOWN_CAPABILITIES: PlatformCapabilities = { tray: false, glass: false, idle: false };
+
+/** What this machine can do (asked once; it does not change while the app runs). */
+function useCapabilities(client: IpcClient): PlatformCapabilities {
+  const [capabilities, setCapabilities] = useState(UNKNOWN_CAPABILITIES);
+  useEffect(() => {
+    let current = true;
+    void client.platformCapabilities().then((answer) => {
+      if (current) setCapabilities(answer);
+    });
+    return () => {
+      current = false;
+    };
+  }, [client]);
+  return capabilities;
+}
+
 function Shell({ store, client }: AppProps): JSX.Element {
   useAppLoop(store, client);
+  const capabilities = useCapabilities(client);
   const actions = useActions();
   const screen = useNabd((s) => s.screen);
   const settings = useNabd((s) => s.settings);
@@ -31,12 +51,15 @@ function Shell({ store, client }: AppProps): JSX.Element {
   const nudge = useNabd(selectNudgeStatus);
 
   const setsDone = plan.setsPlanned - plan.setsRemaining;
+  // A stored "glass on" (say, data imported from another machine) must not
+  // leave the panels see-through where the window itself cannot be.
+  const glass = settings.glass && capabilities.glass;
   const Screen = SCREENS[screen];
 
   return (
     <AppLayout
       theme={settings.theme}
-      glass={settings.glass}
+      glass={glass}
       opacity={settings.opacity}
       sidebar={
         <Sidebar
@@ -58,7 +81,8 @@ function Shell({ store, client }: AppProps): JSX.Element {
           onTogglePause={actions.togglePause}
           theme={settings.theme}
           onTheme={(theme) => actions.updateSettings({ theme })}
-          glass={settings.glass}
+          glassAvailable={capabilities.glass}
+          glass={glass}
           onToggleGlass={() => actions.updateSettings({ glass: !settings.glass })}
           onOpenSettings={() => actions.setSettingsOpen(true)}
         />

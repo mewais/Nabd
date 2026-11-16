@@ -1,5 +1,5 @@
 import { APPDATA_VERSION, DEFAULT_SETTINGS } from "@nabd/domain";
-import { parseImport } from "@nabd/serialization";
+import { parseImport, upgradeDayState } from "@nabd/serialization";
 
 const doc = (fields: object): string => JSON.stringify({ app: "Nabd", version: 2, ...fields });
 
@@ -42,6 +42,30 @@ describe("parseImport", () => {
       ok: true,
       data: { settings: { theme: "dark" } },
     });
+  });
+
+  it("refuses a file from a newer version instead of dropping what it cannot read", () => {
+    const result = parseImport(JSON.stringify({ app: "Nabd", version: APPDATA_VERSION + 1 }));
+    expect(result).toEqual({
+      ok: false,
+      errors: ["This file was exported by a newer version of Nabd. Update the app to import it."],
+    });
+  });
+
+  it("turns an old floating position into the id of the day it pointed at", () => {
+    const day = (id: string) => ({ id, name: id, weekday: null, exercises: [], slots: [] });
+    const program = { name: "P", type: "fixed", schedule: "floating", days: [day("a"), day("b")] };
+    const result = parseImport(
+      doc({ program, dayState: { date: "2026-11-16", floatingIndex: 3 } }),
+    );
+    expect(result).toMatchObject({ ok: true, data: { dayState: { dayId: "b" } } });
+
+    expect(upgradeDayState({ date: "2026-11-16", floatingIndex: 1 }, null)).toMatchObject({
+      dayId: null,
+    });
+    const current = { date: "2026-11-16", dayId: "a" };
+    expect(upgradeDayState(current, program)).toBe(current);
+    expect(upgradeDayState("garbage", program)).toBe("garbage");
   });
 
   it("drops fields it does not know", () => {

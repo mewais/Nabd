@@ -1,21 +1,22 @@
 import { createStore } from "zustand/vanilla";
 import type { StoreApi } from "zustand";
-import type { Exercise, LoggedSet, Settings, Trigger } from "@nabd/domain";
+import type { Exercise, LoggedSet, Settings } from "@nabd/domain";
 import { MUSCLE_PRIMARY_GROUP, SettingsSchema, dateKey, kgFromDisplay } from "@nabd/domain";
 import type { IpcClient, Singletons } from "@nabd/ipc-client";
 import { NudgePolicy } from "@nabd/nudge";
 import { ProgramEditor, type ProgramEdit } from "@nabd/program-editor";
-import { rollOver } from "@nabd/scheduling";
+import { dayIdAfterEdit, rollOver, type PlanItem } from "@nabd/scheduling";
 import { parseImport } from "@nabd/serialization";
 import { LogSession } from "@nabd/session";
-import { readSnapshot } from "./hydration";
-import { selectCoach, selectLibrary, selectNudgeStatus, selectTodayPlan } from "./selectors";
+import { STORED_NAMES, loadNotice, readSnapshot } from "./hydration";
+import { selectCoach, selectLibrary, selectPolicyStatus, selectTodayPlan } from "./selectors";
 import {
   EMPTY_DRAFT,
   initialState,
   type ExerciseDraft,
   type LibraryState,
   type LibraryTarget,
+  type LoadProblem,
   type MapStyle,
   type MapView,
   type NabdState,
@@ -27,9 +28,9 @@ import {
 const DAY_LOG_LIMIT = 400;
 
 export interface NabdActions {
-  /** Load persisted state from the backend and open today. */
+  /** Load persisted state from the backend and open today. Never rejects (see `loadProblems`). */
   hydrate: () => Promise<void>;
-  /** Advance the clock: new time, latest idle reading, day rollover. */
+  /** Advance the clock: new time, latest idle reading, day rollover, nudge latch. */
   tick: (idleSeconds: number) => void;
 
   // nudging
@@ -37,10 +38,11 @@ export interface NabdActions {
   togglePause: () => void;
 
   // logging
-  /** Open the logger on an exercise (default: the next one due). */
-  openSession: (itemId?: string, trigger?: Trigger) => void;
-  /** Open the logger for the nudge that is currently due. */
-  acceptNudge: () => void;
+  /**
+   * Open the logger on an exercise (default: the next one due). This answers a
+   * pending nudge: the sets logged in the session are attributed to it.
+   */
+  openSession: (itemId?: string) => void;
   closeSession: () => void;
   focusItem: (itemId: string) => void;
   stepReps: (direction: number) => void;
@@ -84,6 +86,8 @@ export interface NabdActions {
   setSettingsOpen: (open: boolean) => void;
   setProgressTab: (tab: ProgressTab) => void;
   setChartExercise: (exId: string | null) => void;
+  /** Dismiss the app-level notice. */
+  dismissNotice: () => void;
 }
 
 export type NabdStore = NabdState & NabdActions;
@@ -99,11 +103,38 @@ const errorText = (e: unknown): string => (e instanceof Error ? e.message : Stri
 /** Create the app store: state + actions, persisting through `deps.client`. */
 export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<NabdStore> {
   return createStore<NabdStore>((set, get) => {
+    /**
+     * The one path to the backend for anything that can fail: a failure never
+     * throws into the UI, it becomes the app-level notice. Resolves to whether
+     * the call worked.
+     */
+    async function attempt(what: string, call: () => Promise<unknown>): Promise<boolean> {
+      try {
+        await call();
+        return true;
+      } catch (e) {
+        set({ appNotice: { kind: "error", text: `Could not ${what}: ${errorText(e)}` } });
+        return false;
+      }
+    }
+
+    /** Write a singleton to the backend — unless its stored copy could not be read (see LoadProblem). */
+    function persist<K extends keyof Singletons>(key: K, value: Singletons[K]): void {
+      const unreadable = (p: LoadProblem): boolean => p.source === key || p.source === "everything";
+      if (get().loadProblems.some(unreadable)) return;
+      void attempt(`save ${STORED_NAMES[key]}`, () => client.save(key, value));
+    }
+
     /** Update one persisted singleton in state and in the backend. */
     function save<K extends keyof Singletons>(key: K, value: Singletons[K]): void {
       set({ [key]: value } as Pick<NabdState, K>);
-      void client.save(key, value);
+      persist(key, value);
     }
+
+    const applyAutostart = (enabled: boolean): void =>
+      void attempt("change start at login", () => client.setAutostart(enabled));
+    const applyVibrancy = (opacity: number): void =>
+      void attempt("apply the translucent window", () => client.setVibrancy(opacity));
 
     /** Apply a change to the open session, if there is one. */
     function editSession(change: (session: LogSession) => LogSession): void {
@@ -117,13 +148,17 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
       return session ? (selectTodayPlan(get()).item(session.itemId) ?? null) : null;
     }
 
-    /** Close out a finished day and open today, if the calendar day has changed. */
-    function beginDay(): void {
+    /**
+     * Close out a finished day and open today, if the calendar day has changed;
+     * returns whether it had. Every action that reads or writes "today" starts
+     * here, so none of them can act on a day that is already over.
+     */
+    function beginDay(): boolean {
       const s = get();
       const today = now();
-      if (s.dayState.date === dateKey(today)) return;
+      if (s.dayState.date === dateKey(today)) return false;
       const library = selectLibrary(s);
-      const { dayState, rotation, record } = rollOver({
+      const { dayState, rotation, records } = rollOver({
         program: s.program,
         dayState: s.dayState,
         rotation: s.rotationState,
@@ -131,51 +166,140 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
         date: today,
         lookup: (id) => library.byId(id),
       });
-      save("dayState", dayState);
-      save("rotationState", rotation);
-      if (record) save("dayLog", [...s.dayLog, record].slice(-DAY_LOG_LIMIT));
-      set({ session: null, paused: false, snoozedUntil: null });
+      const closed = new Set(records.map((record) => record.date));
+      const dayLog = [...s.dayLog.filter((r) => !closed.has(r.date)), ...records].slice(
+        -DAY_LOG_LIMIT,
+      );
+      set({
+        dayState,
+        rotationState: rotation,
+        dayLog,
+        session: null,
+        paused: dayState.paused,
+        snoozedUntil: null,
+        activeSince: null,
+        pendingNudge: null,
+      });
+      // The backend takes these as three writes, so a crash can fall between
+      // them. The order makes that harmless: the day log first (a repeated
+      // rollover replaces its records by date), then the day state, which is
+      // what marks the rollover as done, and the rotation last — losing it only
+      // repeats a pool's exercise once, whereas writing it before the day state
+      // would advance every pool twice when the rollover is redone.
+      persist("dayLog", dayLog);
+      persist("dayState", dayState);
+      persist("rotationState", rotation);
+      return true;
     }
 
-    function openSession(itemId?: string, trigger: Trigger = "manual"): void {
-      const plan = selectTodayPlan(get());
+    /** Keep the nudge bookkeeping in step with the clock and the plan. */
+    function watchNudge(): void {
+      const s = get();
+      const hasWork = selectTodayPlan(s).setsRemaining > 0;
+      const activeSince = hasWork ? (s.activeSince ?? s.now) : null;
+      const status = selectPolicyStatus({ ...s, activeSince });
+      // An open logger is already the answer; nothing new fires over it.
+      const pendingNudge =
+        s.session === null ? NudgePolicy.latch(s.pendingNudge, status, s.now) : s.pendingNudge;
+      if (activeSince !== s.activeSince || pendingNudge !== s.pendingNudge) {
+        set({ activeSince, pendingNudge });
+      }
+    }
+
+    function openSession(itemId?: string): void {
+      beginDay();
+      const s = get();
+      const plan = selectTodayPlan(s);
       const item = (itemId === undefined ? plan.nextItem : plan.item(itemId)) ?? plan.items[0];
       if (!item) return;
-      set({ session: LogSession.open(item, selectCoach(get()).startFor(item), trigger) });
+      const nudge = s.pendingNudge;
+      set({
+        session: LogSession.open(item, selectCoach(s).startFor(item), nudge?.reason ?? "manual"),
+        pendingNudge: null,
+        // An answered nudge goes quiet like a snoozed one, so closing the logger
+        // without logging does not bring it straight back.
+        snoozedUntil: nudge ? NudgePolicy.snoozeUntil(now()) : s.snoozedUntil,
+      });
+    }
+
+    /** Add an exercise to today outside the plan; returns its item in today's queue. */
+    function addExtra(exId: string): PlanItem | undefined {
+      const { dayState } = get();
+      const extra = { id: newId(), exId };
+      save("dayState", { ...dayState, extras: [...dayState.extras, extra] });
+      return selectTodayPlan(get()).item(extra.id);
+    }
+
+    /**
+     * The open session and its exercise, on today's plan. If midnight passed
+     * with the logger open, the day is rolled over first and the draft moves to
+     * today's queue (as an extra when today does not plan that exercise), so a
+     * set is never stamped with one day's date and another day's plan item.
+     */
+    function sessionForLogging(): { session: LogSession; item: PlanItem } | null {
+      const { session } = get();
+      const item = sessionItem();
+      if (!session || !item) return null;
+      if (!beginDay()) return { session, item };
+
+      const plan = selectTodayPlan(get());
+      const exId = item.exercise.id;
+      const target =
+        plan.item(item.id) ?? plan.items.find((i) => i.exercise.id === exId) ?? addExtra(exId);
+      if (!target) return null;
+      const moved = session.focus(target, { reps: session.reps, weight: session.weight });
+      set({ session: moved });
+      return { session: moved, item: target };
     }
 
     return {
       ...initialState(now()),
 
       hydrate: async () => {
-        const persisted = readSnapshot(await client.loadAll(), now());
-        set({ ...persisted, now: now(), booted: true });
-        beginDay();
+        let snapshot;
+        try {
+          snapshot = await client.loadAll();
+        } catch (e) {
+          const loadProblems: LoadProblem[] = [{ source: "everything", detail: errorText(e) }];
+          set({ loadProblems, appNotice: loadNotice(loadProblems), booted: true });
+          return;
+        }
+        const { state, problems } = readSnapshot(snapshot, now());
+        set({
+          ...state,
+          paused: state.dayState.paused,
+          loadProblems: problems,
+          appNotice: loadNotice(problems),
+          now: now(),
+          booted: true,
+        });
         // Make sure the day we are on is on record, so the next launch can roll it over.
-        void client.save("dayState", get().dayState);
+        if (!beginDay()) persist("dayState", get().dayState);
+        watchNudge();
         // Bring the OS in line with the stored settings.
-        void client.setAutostart(persisted.settings.openAtStartup);
-        if (persisted.settings.glass) void client.setVibrancy(persisted.settings.opacity);
+        applyAutostart(state.settings.openAtStartup);
+        if (state.settings.glass) applyVibrancy(state.settings.opacity);
       },
 
       tick: (idleSeconds) => {
         set({ now: now(), idleSeconds });
         beginDay();
+        watchNudge();
       },
 
       // ----- nudging -----
 
-      snooze: () => set({ snoozedUntil: NudgePolicy.snoozeUntil(now()) }),
-      togglePause: () => set((s) => ({ paused: !s.paused })),
+      snooze: () => set({ snoozedUntil: NudgePolicy.snoozeUntil(now()), pendingNudge: null }),
+
+      togglePause: () => {
+        const paused = !get().paused;
+        set({ paused, pendingNudge: null });
+        save("dayState", { ...get().dayState, paused });
+      },
 
       // ----- logging -----
 
       openSession,
-
-      acceptNudge: () => {
-        const status = selectNudgeStatus(get());
-        openSession(undefined, status.state === "due" ? status.reason : "manual");
-      },
 
       closeSession: () => set({ session: null }),
 
@@ -206,9 +330,9 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
       },
 
       logSet: async () => {
-        const { session, history } = get();
-        const item = sessionItem();
-        if (!session || !item) return;
+        const entry = sessionForLogging();
+        if (!entry) return;
+        const { session, item } = entry;
 
         const at = now();
         const { reps, weight } = session.performance(item);
@@ -227,7 +351,7 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
           setType: item.nextSet?.type ?? "working",
         };
         // Show the set first; saving must never be able to stall the logger.
-        set({ history: [...history, logged], snoozedUntil: null });
+        set((s) => ({ history: [...s.history, logged], snoozedUntil: null, pendingNudge: null }));
 
         const next = selectTodayPlan(get()).focusAfter(item.id);
         const rested = session.resting(at, item.prescription?.rest ?? 0);
@@ -238,16 +362,14 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
               : rested,
         });
 
-        try {
-          await client.appendSet(logged);
-        } catch (e) {
-          set({ notice: { kind: "error", text: `That set could not be saved: ${errorText(e)}` } });
-        }
+        await attempt("save that set", () => client.appendSet(logged));
       },
 
+      // The backend goes first: a set that could not be deleted stays on screen.
       undoSet: async (setId) => {
-        set((s) => ({ history: s.history.filter((h) => h.id !== setId) }));
-        await client.deleteSet(setId);
+        if (await attempt("undo that set", () => client.deleteSet(setId))) {
+          set((s) => ({ history: s.history.filter((h) => h.id !== setId) }));
+        }
       },
 
       toggleSkip: (itemId) => {
@@ -267,8 +389,13 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
       // ----- plan -----
 
       editProgram: (edit) => {
+        const { program, dayState } = get();
         const library = selectLibrary(get());
-        save("program", edit(new ProgramEditor(get().program, newId, (id) => library.byId(id))));
+        const edited = edit(new ProgramEditor(program, newId, (id) => library.byId(id)));
+        // A floating plan stays on the day it is on, however the days around it change.
+        const dayId = dayIdAfterEdit(program, edited, dayState.dayId);
+        if (dayId !== dayState.dayId) save("dayState", { ...dayState, dayId });
+        save("program", edited);
       },
       selectPlanDay: (dayId) => set({ planEditDay: dayId }),
 
@@ -321,8 +448,7 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
       },
 
       pickExercise: (exId) => {
-        const { library, dayState } = get();
-        const target = library.target;
+        const target = get().library.target;
         if (target === null) return;
         if (target.kind === "pool") {
           // Stay open: a pool usually takes several exercises.
@@ -332,9 +458,7 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
         if (target.kind === "exercise") {
           get().editProgram((e) => e.addExercise(target.dayId, exId));
         } else {
-          const extra = { id: newId(), exId };
-          save("dayState", { ...dayState, extras: [...dayState.extras, extra] });
-          openSession(extra.id);
+          openSession(addExtra(exId)?.id);
         }
         get().closeLibrary();
       },
@@ -357,10 +481,10 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
         const settings = parsed.data;
         save("settings", settings);
         if (settings.openAtStartup !== before.openAtStartup) {
-          void client.setAutostart(settings.openAtStartup);
+          applyAutostart(settings.openAtStartup);
         }
         if (settings.glass && (!before.glass || settings.opacity !== before.opacity)) {
-          void client.setVibrancy(settings.opacity);
+          applyVibrancy(settings.opacity);
         }
       },
 
@@ -378,8 +502,13 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
           set({ notice: { kind: "error", text: `Import failed — ${result.errors[0]}` } });
           return;
         }
+        // The file replaces what it contains; settings it does not mention keep their values.
+        const { settings } = result.data;
+        const data = settings
+          ? { ...result.data, settings: { ...get().settings, ...settings } }
+          : result.data;
         try {
-          await client.importData(result.data);
+          await client.importData(data);
           await get().hydrate();
           set({ notice: { kind: "info", text: "Import complete." } });
         } catch (e) {
@@ -395,6 +524,7 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
       setSettingsOpen: (settingsOpen) => set({ settingsOpen, notice: null }),
       setProgressTab: (progressTab) => set({ progressTab }),
       setChartExercise: (chartExercise) => set({ chartExercise }),
+      dismissNotice: () => set({ appNotice: null }),
     };
   });
 }

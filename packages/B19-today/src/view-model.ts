@@ -28,8 +28,13 @@ export type HeroVM =
       nudgeLine: string;
     }
   | { kind: "complete"; setsDone: number }
-  /** Nothing is planned today. */
-  | { kind: "rest"; hasProgram: boolean };
+  /** Nothing is left to do without anything having been done. */
+  | {
+      kind: "rest";
+      hasProgram: boolean;
+      /** Today does have a plan, but every exercise in it was skipped. */
+      allSkipped: boolean;
+    };
 
 export interface QueueRowVM {
   id: string;
@@ -49,6 +54,8 @@ export interface TodayVM {
   hero: HeroVM;
   dayName: string | null;
   queue: QueueRowVM[];
+  /** Cycled muscle targets left out of the queue because their pool is empty; null when none. */
+  emptySlotsNote: string | null;
   stats: { streak: number; weekSets: number; volume: number; unit: WeightUnit };
 }
 
@@ -66,7 +73,7 @@ function buildHero(
   if (item === null) {
     return plan.isComplete
       ? { kind: "complete", setsDone: plan.setsDone }
-      : { kind: "rest", hasProgram };
+      : { kind: "rest", hasProgram, allSkipped: plan.isAllSkipped };
   }
   const spec = item.nextSet;
   return {
@@ -121,6 +128,14 @@ function buildQueue(plan: TodayPlan): QueueRowVM[] {
   });
 }
 
+/** "2 muscle targets have no exercises yet: Chest, Lats". */
+function emptySlotsNote(plan: TodayPlan): string | null {
+  const muscles = plan.emptySlots.map((m) => MUSCLE_NAMES[m]);
+  if (muscles.length === 0) return null;
+  const count = plural(muscles.length, "muscle target");
+  return `${count} ${muscles.length === 1 ? "has" : "have"} no exercises yet: ${muscles.join(", ")}`;
+}
+
 /** Total load moved today (reps × weight), in the display unit. */
 function volumeToday(plan: TodayPlan, unit: WeightUnit): number {
   const kg = plan.items
@@ -142,6 +157,7 @@ export function buildTodayVM(input: {
     hero: buildHero(plan, coach, nudge, unit, hasProgram),
     dayName: plan.dayName,
     queue: buildQueue(plan),
+    emptySlotsNote: emptySlotsNote(plan),
     stats: {
       streak: stats.streak(),
       weekSets: stats.setsThisWeek(),

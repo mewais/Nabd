@@ -311,12 +311,13 @@ export class ProgramEditor {
    */
   setRepMode(dayId: string, ref: EditRef, mode: RepMode): Program {
     return this.editPrescription(dayId, ref, (p) => {
-      const fresh = (p.repMode === "time") !== (mode === "time") ? defaultSet(mode === "time") : null;
+      const fresh =
+        (p.repMode === "time") !== (mode === "time") ? defaultSet(mode === "time") : null;
       p.repMode = mode;
       for (const set of p.sets) {
         if (fresh) set.a = fresh.a;
         if (fresh || mode !== "range") delete set.b;
-        if (mode === "range") set.b = fresh?.b ?? set.a + 2;
+        if (mode === "range") set.b ??= fresh?.b ?? set.a + 2;
       }
     });
   }

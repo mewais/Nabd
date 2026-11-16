@@ -11,7 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@nabd/domain": "workspace:*"
+    "@nabd/domain": "workspace:*",
+    "@nabd/session": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.3.1"

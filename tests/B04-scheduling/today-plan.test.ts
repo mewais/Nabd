@@ -1,6 +1,6 @@
 import type { DayState, Exercise, LoggedSet, Program } from "@nabd/domain";
-import { dateKey } from "@nabd/domain";
-import { TodayPlan, resolveDay, rollOver, rotatedExercise } from "@nabd/scheduling";
+import { dateKey, freshDayState } from "@nabd/domain";
+import { TodayPlan, dayIdAfterEdit, resolveDay, rollOver, rotatedExercise } from "@nabd/scheduling";
 import { exercise, logged, nov, row, working } from "../support/domain-factories";
 
 const bench = exercise({ name: "Bench" });
@@ -26,11 +26,10 @@ const fixedProgram: Program = {
   ],
 };
 
+const floating: Program = { ...fixedProgram, schedule: "floating" };
+
 const dayState = (date: Date, overrides: Partial<DayState> = {}): DayState => ({
-  date: dateKey(date),
-  floatingIndex: 0,
-  skipped: [],
-  extras: [],
+  ...freshDayState(date),
   ...overrides,
 });
 
@@ -48,17 +47,36 @@ const benchSet = (hour: number, overrides: Partial<LoggedSet> = {}): LoggedSet =
 
 describe("resolving the day", () => {
   it("weekday schedule picks the day pinned to that weekday, or none", () => {
-    expect(resolveDay(fixedProgram, MONDAY, 0)?.id).toBe("mon");
-    expect(resolveDay(fixedProgram, nov(17), 0)).toBeNull();
-    expect(resolveDay(fixedProgram, nov(18), 5)?.id).toBe("wed");
+    expect(resolveDay(fixedProgram, MONDAY, null)?.id).toBe("mon");
+    expect(resolveDay(fixedProgram, nov(17), null)).toBeNull();
+    expect(resolveDay(fixedProgram, nov(18), "mon")?.id).toBe("wed");
   });
 
-  it("floating schedule walks the days in order and wraps", () => {
-    const floating: Program = { ...fixedProgram, schedule: "floating" };
-    expect(resolveDay(floating, MONDAY, 0)?.id).toBe("mon");
-    expect(resolveDay(floating, MONDAY, 1)?.id).toBe("wed");
-    expect(resolveDay(floating, MONDAY, 2)?.id).toBe("mon");
-    expect(resolveDay({ ...floating, days: [] }, MONDAY, 3)).toBeNull();
+  it("floating schedule is on the day it remembers, or the first one", () => {
+    expect(resolveDay(floating, MONDAY, null)?.id).toBe("mon");
+    expect(resolveDay(floating, MONDAY, "wed")?.id).toBe("wed");
+    expect(resolveDay(floating, MONDAY, "deleted")?.id).toBe("mon");
+    expect(resolveDay({ ...floating, days: [] }, MONDAY, "wed")).toBeNull();
+  });
+
+  it("a floating plan stays on its day when the days around it are edited", () => {
+    const [mon, wed] = floating.days as [Program["days"][0], Program["days"][0]];
+    const extra = { ...wed, id: "new" };
+    const reordered: Program = { ...floating, days: [extra, wed, mon] };
+    expect(resolveDay(reordered, MONDAY, dayIdAfterEdit(floating, reordered, null))?.id).toBe(
+      "mon",
+    );
+    expect(dayIdAfterEdit(floating, reordered, "wed")).toBe("wed");
+  });
+
+  it("removing the current floating day lands on the day that took its place", () => {
+    expect(dayIdAfterEdit(floating, { ...floating, days: [floating.days[1]!] }, "mon")).toBe("wed");
+    expect(dayIdAfterEdit(floating, { ...floating, days: [floating.days[0]!] }, "wed")).toBe("mon");
+    expect(dayIdAfterEdit(floating, { ...floating, days: [] }, "wed")).toBeNull();
+  });
+
+  it("a weekday plan's edits leave the remembered floating day alone", () => {
+    expect(dayIdAfterEdit(fixedProgram, { ...fixedProgram, days: [] }, "wed")).toBe("wed");
   });
 
   it("a rotation pointer walks its pool and wraps; an empty pool yields nothing", () => {
@@ -219,19 +237,66 @@ describe("cycled days and rollover", () => {
     });
     expect(result.rotation).toEqual({ chest: 1 });
     expect(result.dayState).toEqual(dayState(MONDAY));
-    expect(result.record).toEqual({ date: dateKey(nov(15)), planned: 6, done: 1 });
+    expect(result.records).toEqual([{ date: dateKey(nov(15)), planned: 6, done: 1 }]);
   });
 
-  it("a floating plan moves on only after a completed day", () => {
-    const sunday = dayState(nov(15), { skipped: ["delts"], extras: [{ id: "x", exId: dip.id }] });
+  it("a floating plan moves on once the day owes nothing, clearing skips, extras and pause", () => {
+    const sunday = dayState(nov(15), {
+      dayId: "a",
+      skipped: ["delts"],
+      extras: [{ id: "x", exId: dip.id }],
+      paused: true,
+    });
     const done = [10, 11, 12].map((h) =>
       logged(bench, nov(15, h), 10, 40, { planItemId: "chest" }),
     );
     const args = { program: cycled, dayState: sunday, rotation: {}, lookup, date: MONDAY };
-    expect(rollOver({ ...args, history: done }).dayState).toEqual(
-      dayState(MONDAY, { floatingIndex: 1 }),
+    expect(rollOver({ ...args, history: done }).dayState).toEqual(dayState(MONDAY, { dayId: "b" }));
+    expect(rollOver({ ...args, history: done.slice(1) }).dayState.dayId).toBe("a");
+  });
+
+  it("a floating plan wraps from its last day back to the first", () => {
+    const onB = dayState(nov(15), { dayId: "b" });
+    const result = rollOver({
+      program: cycled,
+      dayState: onB,
+      rotation: {},
+      history: [],
+      lookup,
+      date: MONDAY,
+    });
+    expect(result.dayState.dayId).toBe("a");
+  });
+
+  it("a floating day with nothing plannable does not hold the plan up", () => {
+    const args = { program: cycled, rotation: {}, history: [], lookup, date: MONDAY };
+    // Day B is empty.
+    expect(rollOver({ ...args, dayState: dayState(nov(15), { dayId: "b" }) }).dayState.dayId).toBe(
+      "a",
     );
-    expect(rollOver({ ...args, history: done.slice(1) }).dayState.floatingIndex).toBe(0);
+    // Every exercise of day A was skipped.
+    const skippedAll = dayState(nov(15), { dayId: "a", skipped: ["chest", "delts"] });
+    expect(rollOver({ ...args, dayState: skippedAll }).dayState.dayId).toBe("b");
+    // Every pool of day A is empty.
+    const noPools: Program = {
+      ...cycled,
+      days: cycled.days.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s, pool: [] })) })),
+    };
+    const onA = dayState(nov(15), { dayId: "a" });
+    expect(rollOver({ ...args, program: noPools, dayState: onA }).dayState.dayId).toBe("b");
+  });
+
+  it("an untouched floating day with work on it comes back the next day", () => {
+    const onA = dayState(nov(15), { dayId: "a" });
+    const result = rollOver({
+      program: cycled,
+      dayState: onA,
+      rotation: {},
+      history: [],
+      lookup,
+      date: MONDAY,
+    });
+    expect(result.dayState.dayId).toBe("a");
   });
 
   it("records nothing for a day with no plan and no sets", () => {
@@ -244,8 +309,135 @@ describe("cycled days and rollover", () => {
       lookup,
       date: nov(18),
     });
-    expect(result.record).toBeNull();
+    expect(result.records).toEqual([]);
     expect(result.rotation).toEqual({});
+  });
+});
+
+describe("the completion record", () => {
+  it("counts only planned sets, each exercise capped at its prescription", () => {
+    const history = [
+      // Five bench sets against four prescribed, and an extra exercise on top.
+      ...[9, 10, 11, 12, 13].map((h) => benchSet(h)),
+      logged(dip, nov(16, 15), 12, null, { planItemId: "x1" }),
+    ];
+    const plan = build(history, dayState(MONDAY, { extras: [{ id: "x1", exId: dip.id }] }));
+    expect(plan.setsDone).toBe(6);
+    expect(plan.record).toEqual({ date: dateKey(MONDAY), planned: 10, done: 4 });
+  });
+
+  it("a skipped exercise still counts as planned; a day without a plan has no record", () => {
+    const skipped = build([], dayState(MONDAY, { skipped: [flyRow.id] }));
+    expect(skipped.record).toEqual({ date: dateKey(MONDAY), planned: 10, done: 0 });
+    const tuesday = TodayPlan.build({ ...input(), date: nov(17), dayState: dayState(nov(17)) });
+    expect(tuesday.record).toBeNull();
+  });
+
+  it("rollover records every planned weekday the app was not running for", () => {
+    // Last opened on Monday 16th; next opened on Thursday 26th.
+    const history = [benchSet(10)];
+    const result = rollOver({ ...input(), history, date: nov(26) });
+    expect(result.records).toEqual([
+      { date: dateKey(nov(16)), planned: 10, done: 1 },
+      { date: dateKey(nov(18)), planned: 3, done: 0 },
+      { date: dateKey(nov(23)), planned: 10, done: 0 },
+      { date: dateKey(nov(25)), planned: 3, done: 0 },
+    ]);
+  });
+
+  it("a floating plan has no missed days: it waits for the user", () => {
+    const result = rollOver({ ...input(), program: floating, date: nov(26) });
+    expect(result.records).toEqual([{ date: dateKey(nov(16)), planned: 10, done: 0 }]);
+  });
+});
+
+describe("sets whose plan item no longer exists", () => {
+  const orphan = (ex: Exercise, hour: number, planItemId: string | null = "gone") =>
+    logged(ex, nov(16, hour), 10, 40, { planItemId });
+
+  it("count toward an untouched item of the same exercise", () => {
+    // Bench was removed from the plan and added back: a new row id.
+    const plan = build([orphan(bench, 9), orphan(bench, 10)]);
+    expect(plan.item(benchRow.id)!.done).toBe(2);
+    expect(plan.setsRemaining).toBe(8);
+    expect(plan.items).toHaveLength(3);
+  });
+
+  it("do not pile onto an item that has sets of its own", () => {
+    const plan = build([benchSet(9), orphan(bench, 10)]);
+    expect(plan.item(benchRow.id)!.done).toBe(1);
+    const unplanned = plan.items.at(-1)!;
+    expect(unplanned).toMatchObject({ isExtra: true, done: 1, exercise: bench });
+    expect(plan.setsDone).toBe(2);
+  });
+
+  it("are listed as an unplanned exercise when the plan no longer has it", () => {
+    const plan = build([orphan(dip, 9), orphan(dip, 10, null)]);
+    const unplanned = plan.items.at(-1)!;
+    expect(unplanned).toMatchObject({ isExtra: true, done: 2, exercise: dip });
+    expect(plan.setsDone).toBe(2);
+    expect(plan.setsRemaining).toBe(10);
+  });
+
+  it("further sets logged on the unplanned exercise stay with it", () => {
+    const first = build([orphan(dip, 9)]).items.at(-1)!;
+    const plan = build([orphan(dip, 9), orphan(dip, 10, first.id)]);
+    expect(plan.item(first.id)!.done).toBe(2);
+    expect(plan.items).toHaveLength(4);
+  });
+
+  it("survive a switch of plan type", () => {
+    const history = [benchSet(9), benchSet(10)];
+    const slot = { id: "chest", muscle: "chest" as const, pool: [fly.id, bench.id], ...sets() };
+    const cycledNow: Program = {
+      ...fixedProgram,
+      type: "cycled",
+      days: [{ ...fixedProgram.days[0]!, slots: [slot] }],
+    };
+    const plan = build(history, dayState(MONDAY), cycledNow);
+    expect(plan.setsDone).toBe(2);
+    expect(plan.item("chest")!.exercise).toBe(fly);
+    expect(plan.items.at(-1)).toMatchObject({ isExtra: true, exercise: bench, done: 2 });
+  });
+});
+
+describe("cycled slots during the day", () => {
+  const slot = { id: "chest", muscle: "chest" as const, pool: [bench.id, fly.id], ...sets() };
+  const withPool = (pool: string[]): Program => ({
+    ...fixedProgram,
+    type: "cycled",
+    days: [{ ...fixedProgram.days[0]!, slots: [{ ...slot, pool }] }],
+  });
+
+  it("a slot trained today stays on that exercise when its pool is edited", () => {
+    const history = [logged(bench, nov(16, 9), 10, 40, { planItemId: "chest" })];
+    for (const pool of [[fly.id, bench.id], [fly.id], []]) {
+      const item = build(history, dayState(MONDAY), withPool(pool)).item("chest")!;
+      expect(item.exercise).toBe(bench);
+      expect(item.done).toBe(1);
+    }
+  });
+
+  it("an untrained slot follows its pool", () => {
+    expect(build([], dayState(MONDAY), withPool([fly.id, bench.id])).item("chest")!.exercise).toBe(
+      fly,
+    );
+  });
+
+  it("slots with an empty pool are reported instead of vanishing", () => {
+    const plan = build([], dayState(MONDAY), withPool([]));
+    expect(plan.items).toEqual([]);
+    expect(plan.emptySlots).toEqual(["chest"]);
+    expect(build().emptySlots).toEqual([]);
+  });
+});
+
+describe("a day where everything was skipped", () => {
+  it("is told apart from a rest day and from a finished day", () => {
+    const allSkipped = dayState(MONDAY, { skipped: [benchRow.id, flyRow.id, raiseRow.id] });
+    expect(build([], allSkipped).isAllSkipped).toBe(true);
+    expect(build([], dayState(MONDAY, { skipped: [benchRow.id] })).isAllSkipped).toBe(false);
+    expect(TodayPlan.build({ ...input(), date: nov(17) }).isAllSkipped).toBe(false);
   });
 });
 

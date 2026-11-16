@@ -10,6 +10,7 @@ function at(hour: number, minute: number, overrides: Partial<NudgeContext> = {})
   return policy.evaluate({
     now: nov(16, hour, minute),
     lastSetAt: null,
+    activeSince: null,
     snoozedUntil: null,
     idleSeconds: 0,
     paused: false,
@@ -28,6 +29,23 @@ describe("NudgePolicy", () => {
   it("the timer counts from the start of the workday until a set is logged", () => {
     expect(at(9, 10)).toEqual({ state: "waiting", at: nov(16, 9, 50), idleFrom: nov(16, 9, 15) });
     expect(at(9, 50)).toEqual({ state: "due", reason: "timer" });
+  });
+
+  it("counting starts no earlier than the app (or the plan) was there to count", () => {
+    // Launched at 14:00: no nudge is owed for the morning.
+    const activeSince = nov(16, 14, 0);
+    expect(at(14, 0, { activeSince, idleSeconds: 600 })).toEqual({
+      state: "waiting",
+      at: nov(16, 14, 50),
+      idleFrom: nov(16, 14, 15),
+    });
+    expect(at(14, 50, { activeSince })).toEqual({ state: "due", reason: "timer" });
+    // Launched before work: the workday start still rules.
+    expect(at(9, 10, { activeSince: nov(16, 7, 0) })).toMatchObject({ at: nov(16, 9, 50) });
+    // Once a set is logged, it is the anchor.
+    expect(at(14, 30, { activeSince, lastSetAt: nov(16, 14, 20) })).toMatchObject({
+      at: nov(16, 15, 10),
+    });
   });
 
   it("the timer counts from the last set", () => {
@@ -72,12 +90,44 @@ describe("NudgePolicy", () => {
     const status = eager.evaluate({
       now: nov(16, 9, 10),
       lastSetAt: null,
+      activeSince: null,
       snoozedUntil: null,
       idleSeconds: 0,
       paused: false,
       hasWork: true,
     });
     expect(status).toEqual({ state: "due", reason: "timer" });
+  });
+});
+
+describe("a pending nudge", () => {
+  const idle = { state: "due", reason: "idle" } as const;
+  const waiting = { state: "waiting", at: nov(16, 11), idleFrom: nov(16, 10, 30) } as const;
+  const pending = NudgePolicy.latch(null, idle, nov(16, 10, 40));
+
+  it("starts when a set becomes due", () => {
+    expect(pending).toEqual({ reason: "idle", since: nov(16, 10, 40) });
+    expect(NudgePolicy.latch(null, waiting, nov(16, 10, 40))).toBeNull();
+  });
+
+  it("survives the user touching the mouse to answer it", () => {
+    expect(NudgePolicy.latch(pending, waiting, nov(16, 10, 41))).toBe(pending);
+  });
+
+  it("keeps its first reason when the timer also comes due", () => {
+    expect(NudgePolicy.latch(pending, { state: "due", reason: "timer" }, nov(16, 11))).toBe(
+      pending,
+    );
+  });
+
+  it("is withdrawn when nudging is not allowed any more", () => {
+    for (const status of [
+      { state: "paused" },
+      { state: "nothing_left" },
+      { state: "off_hours", at: nov(17, 9) },
+    ] as const) {
+      expect(NudgePolicy.latch(pending, status, nov(16, 18))).toBeNull();
+    }
   });
 });
 

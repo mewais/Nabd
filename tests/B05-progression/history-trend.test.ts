@@ -1,6 +1,7 @@
 import { dateKey } from "@nabd/domain";
 import {
   ExerciseHistory,
+  assistedScore,
   exerciseTrends,
   formatAmount,
   formatGain,
@@ -36,18 +37,24 @@ describe("ExerciseHistory", () => {
     expect(history.sessionsBefore(dateKey(nov(9)), 2)).toEqual([]);
   });
 
-  it("knows the latest set, and when there is none", () => {
-    expect(history.latest()).toEqual({ reps: 8, weight: 60 });
+  it("is empty for an exercise that was never logged", () => {
     const empty = new ExerciseHistory(sets, "unknown");
     expect(empty.isEmpty).toBe(true);
-    expect(empty.latest()).toBeNull();
+    expect(empty.on(dateKey(nov(9)))).toEqual([]);
   });
 
   it("scores loaded sets by estimated 1RM and unloaded ones by reps", () => {
     expect(strengthScore({ reps: 30, weight: 100 })).toBe(200);
     expect(strengthScore({ reps: 12, weight: null })).toBe(12);
     expect(strengthScore({ reps: 12, weight: 0 })).toBe(12);
-    expect(history.bestPerSession()).toEqual([50 * (1 + 9 / 30), 60 * (1 + 8 / 30)]);
+    expect(history.bestPerSession(strengthScore)).toEqual([50 * (1 + 9 / 30), 60 * (1 + 8 / 30)]);
+  });
+
+  it("scores assisted sets higher the less assistance they took", () => {
+    const heavyHelp = assistedScore({ reps: 8, weight: 30 });
+    const lightHelp = assistedScore({ reps: 8, weight: 10 });
+    expect(lightHelp).toBeGreaterThan(heavyHelp);
+    expect(assistedScore({ reps: 8, weight: 0 })).toBeGreaterThan(lightHelp);
   });
 });
 
@@ -60,9 +67,10 @@ describe("exerciseTrends", () => {
     logged(bench, nov(12), 30, 60),
     logged(pushUp, nov(12), 14, null),
   ];
+  const trackingOf = (exId: string) => [bench, pushUp].find((e) => e.id === exId)?.tracking;
 
   it("gives one trend per exercise in order of first appearance", () => {
-    const [first, second] = exerciseTrends(history, "kg", () => false);
+    const [first, second] = exerciseTrends(history, "kg", trackingOf);
     expect(first).toMatchObject({
       exId: bench.id,
       series: [100, 120],
@@ -76,19 +84,45 @@ describe("exerciseTrends", () => {
   });
 
   it("converts loaded trends to the display unit", () => {
-    const [benchTrend] = exerciseTrends(history, "lb", () => false);
+    const [benchTrend] = exerciseTrends(history, "lb", trackingOf);
     expect(benchTrend!.unit).toBe("lb e1RM");
     expect(benchTrend!.series[0]).toBeCloseTo(220.5, 1);
   });
 
   it("measures unloaded timed exercises in seconds", () => {
-    const [, hold] = exerciseTrends(history, "kg", (exId) => exId === pushUp.id);
+    const [, hold] = exerciseTrends(history, "kg", (exId) =>
+      exId === pushUp.id ? "duration" : "weight_reps",
+    );
     expect(hold!.unit).toBe("s");
+  });
+
+  it("an assisted exercise trends up as the assistance comes off", () => {
+    const pullUp = exercise({ name: "Assisted Pull-Up", tracking: "assisted_bodyweight" });
+    const sessions = [
+      logged(pullUp, nov(9), 8, 30),
+      logged(pullUp, nov(12), 8, 20),
+      logged(pullUp, nov(12), 6, 25),
+      logged(pullUp, nov(16), 8, 10),
+    ];
+    const [trend] = exerciseTrends(sessions, "kg", () => "assisted_bodyweight");
+    expect(trend).toMatchObject({
+      series: [-30, -20, -10],
+      unit: "kg vs bodyweight",
+      best: -10,
+      current: -10,
+      gain: 20,
+    });
+  });
+
+  it("falls back to the logged values for an exercise no longer in the library", () => {
+    const [benchTrend, pushUpTrend] = exerciseTrends(history, "kg", () => undefined);
+    expect(benchTrend!.unit).toBe("kg e1RM");
+    expect(pushUpTrend!.unit).toBe("reps");
   });
 
   it("skips exercises that only have warm-ups", () => {
     const onlyWarmups = [logged(bench, nov(9), 10, 20, { setType: "warmup" })];
-    expect(exerciseTrends(onlyWarmups, "kg", () => false)).toEqual([]);
+    expect(exerciseTrends(onlyWarmups, "kg", trackingOf)).toEqual([]);
   });
 });
 

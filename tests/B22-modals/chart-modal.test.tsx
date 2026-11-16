@@ -6,7 +6,7 @@
 // React must be in scope: the tests are compiled with the classic JSX transform.
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { dateKey, isTimeBased } from "@nabd/domain";
+import { dateKey } from "@nabd/domain";
 import type { LoggedSet } from "@nabd/domain";
 import { exerciseTrends } from "@nabd/progression";
 import type { ExerciseTrend } from "@nabd/progression";
@@ -15,11 +15,9 @@ import { LIBRARY, did } from "../support/plan-fixtures";
 import { nov } from "../support/domain-factories";
 
 function trendOf(history: LoggedSet[], exId: string, unit: "kg" | "lb" = "kg"): ExerciseTrend {
-  const isTimed = (id: string): boolean => {
-    const exercise = LIBRARY.byId(id);
-    return exercise !== undefined && isTimeBased(exercise.tracking);
-  };
-  const trend = exerciseTrends(history, unit, isTimed).find((t) => t.exId === exId);
+  const trend = exerciseTrends(history, unit, (id) => LIBRARY.byId(id)?.tracking).find(
+    (t) => t.exId === exId,
+  );
   if (!trend) throw new Error(`no trend for "${exId}"`);
   return trend;
 }

@@ -1,6 +1,6 @@
 import { DEFAULT_SETTINGS } from "@nabd/domain";
 import { createIpcClient, isTauri } from "@nabd/ipc-client";
-import type { Invoke, Listen, TrayAction } from "@nabd/ipc-client";
+import type { Invoke, Listen, Tick, TrayAction } from "@nabd/ipc-client";
 import { exercise, logged, nov } from "../support/domain-factories";
 
 function setup(result: unknown = undefined) {
@@ -36,20 +36,41 @@ describe("ipc client", () => {
   it("forwards the native commands", async () => {
     const { client, invoke } = setup();
     const tray = { nextExercise: "Bench", done: 1, total: 9, paused: false };
+    await client.platformCapabilities();
     await client.notify("idle", "Bench");
-    await client.setVibrancy(0.7);
+    await client.sendTestNotification();
+    await client.setGlass(false);
     await client.setAutostart(true);
     await client.updateTray(tray);
     await client.exportData();
-    await client.getIdleSeconds();
+    await client.quit();
     expect(invoke.mock.calls).toEqual([
+      ["platform_capabilities"],
       ["notify", { reason: "idle", exercise: "Bench" }],
-      ["set_vibrancy", { opacity: 0.7 }],
+      ["send_test_notification"],
+      ["set_glass", { enabled: false }],
       ["set_autostart", { enabled: true }],
       ["update_tray", { state: tray }],
       ["export_data"],
-      ["get_idle_seconds"],
+      ["quit"],
     ]);
+  });
+
+  it("the deprecated setVibrancy turns glass on", async () => {
+    const { client, invoke } = setup();
+    await client.setVibrancy(0.7);
+    expect(invoke.mock.calls).toEqual([["set_glass", { enabled: true }]]);
+  });
+
+  it("sends the tray only whole, non-negative set counts", async () => {
+    const { client, invoke } = setup();
+    const send = async (done: number, total: number) => {
+      await client.updateTray({ nextExercise: null, done, total, paused: true });
+      const [, args] = invoke.mock.calls.at(-1) as unknown as [string, { state: unknown }];
+      return args.state;
+    };
+    expect(await send(-1, 2.6)).toEqual({ nextExercise: null, done: 0, total: 3, paused: true });
+    expect(await send(Number.NaN, Number.POSITIVE_INFINITY)).toMatchObject({ done: 0, total: 0 });
   });
 
   it("passes backend failures through", async () => {
@@ -65,6 +86,14 @@ describe("ipc client", () => {
     const handler = vi.fn<(a: TrayAction) => void>();
     const unsubscribe = await client.onTrayAction(handler);
     expect(listen).toHaveBeenCalledWith("tray-action", handler);
+    expect(unsubscribe).toBe(unlisten);
+  });
+
+  it("subscribes to the backend clock", async () => {
+    const { client, listen, unlisten } = setup();
+    const handler = vi.fn<(t: Tick) => void>();
+    const unsubscribe = await client.onTick(handler);
+    expect(listen).toHaveBeenCalledWith("tick", handler);
     expect(unsubscribe).toBe(unlisten);
   });
 

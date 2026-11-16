@@ -1,5 +1,5 @@
 import type { LoggedSet, Program } from "@nabd/domain";
-import { DEFAULT_SETTINGS, dateKey } from "@nabd/domain";
+import { DEFAULT_SETTINGS, dateKey, freshDayState } from "@nabd/domain";
 import type { BootSnapshot, IpcClient, Singletons } from "@nabd/ipc-client";
 import {
   createNabdStore,
@@ -7,6 +7,7 @@ import {
   selectCoverage,
   selectLibrary,
   selectNudgeStatus,
+  selectPendingNudge,
   selectStats,
   selectTodayPlan,
 } from "@nabd/store";
@@ -58,18 +59,26 @@ function fakeBackend(initial: Partial<BootSnapshot> = {}) {
       Object.assign(data, imported);
     }),
     notify: vi.fn(async () => {}),
+    platformCapabilities: async () => ({ tray: true, glass: true, idle: true }),
+    sendTestNotification: vi.fn(async () => {}),
+    setGlass: vi.fn(async () => {}),
     setVibrancy: vi.fn(async () => {}),
     setAutostart: vi.fn(async () => {}),
     updateTray: vi.fn(async () => {}),
-    getIdleSeconds: async () => 0,
+    quit: vi.fn(async () => {}),
+    onTick: async () => () => {},
     onTrayAction: async () => () => {},
   };
   return { client, data };
 }
 
-/** A booted store on Monday 16 Nov 2026, 10:00, with a clock the test controls. */
-async function boot(initial: Partial<BootSnapshot> = { program }, backend = fakeBackend(initial)) {
-  const clock = { now: nov(16, 10) };
+/** A booted store on Monday 16 Nov 2026 (10:00 unless told otherwise), with a clock the test controls. */
+async function boot(
+  initial: Partial<BootSnapshot> = { program },
+  backend = fakeBackend(initial),
+  startAt = nov(16, 10),
+) {
+  const clock = { now: startAt };
   let id = 0;
   const store = createNabdStore({
     client: backend.client,
@@ -89,6 +98,8 @@ async function boot(initial: Partial<BootSnapshot> = { program }, backend = fake
       clock.now = date;
       get().tick(idleSeconds);
     },
+    /** The keys written to the backend, in order. */
+    savedKeys: () => vi.mocked(backend.client.save).mock.calls.map(([key]) => key),
     /** Open the logger on an item and log `count` sets as they stand. */
     log: async (itemId: string, count: number) => {
       get().openSession(itemId);
@@ -110,17 +121,143 @@ describe("booting", () => {
     expect(app.get().settings).toEqual({ ...DEFAULT_SETTINGS, theme: "light", interval: 30 });
   });
 
-  it("survives corrupt stored data by falling back to defaults", async () => {
-    const app = await boot({ program: { nonsense: true }, settings: "??", history: [{ id: 1 }] });
-    expect(app.get().program.days).toEqual([]);
-    expect(app.get().settings).toEqual(DEFAULT_SETTINGS);
-    expect(app.get().history).toEqual([]);
+  it("reads a day state stored before floating days were tracked by id", async () => {
+    const app = await boot({ program, dayState: { date: dateKey(nov(16)), floatingIndex: 1 } });
+    expect(app.plan().dayName).toBe("Pull");
+    expect(app.get().loadProblems).toEqual([]);
   });
 
   it("brings the OS in line with the stored autostart and translucency settings", async () => {
     const app = await boot({ settings: { ...DEFAULT_SETTINGS, glass: true, opacity: 0.5 } });
     expect(app.client.setVibrancy).toHaveBeenCalledWith(0.5);
     expect(app.client.setAutostart).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("stored data that cannot be read", () => {
+  const goodSet = (id: string): LoggedSet => ({
+    id,
+    exId: BENCH,
+    exercise: "Barbell Bench Press",
+    group: "Chest",
+    muscles: ["chest"],
+    value: 8,
+    weight: 40,
+    ts: nov(16, 9, 30).toISOString(),
+    date: dateKey(nov(16)),
+    trigger: "manual",
+    planItemId: benchRow.id,
+    setType: "working",
+  });
+
+  it("an unreadable value runs on a default, is reported, and is never saved over", async () => {
+    const stored = { nonsense: true };
+    const app = await boot({ program: stored, settings: "??" });
+    expect(app.get().program.days).toEqual([]);
+    expect(app.get().settings).toEqual(DEFAULT_SETTINGS);
+    expect(app.get().loadProblems.map((p) => p.source)).toEqual(["settings", "program"]);
+    expect(app.get().appNotice).toMatchObject({ kind: "error" });
+    expect(app.get().appNotice!.text).toContain("your plan");
+
+    app.get().editProgram((e) => e.addDay(1));
+    app.get().updateSettings({ interval: 30 });
+    expect(app.get().program.days).toHaveLength(1);
+    expect(app.data.program).toEqual(stored);
+    expect(app.data.settings).toBe("??");
+    expect(app.savedKeys()).not.toContain("program");
+    expect(app.savedKeys()).not.toContain("settings");
+  });
+
+  it("what could be read keeps saving as usual", async () => {
+    const app = await boot({ program, settings: "??" });
+    app.get().editProgram((e) => e.rename("Renamed"));
+    expect((app.data.program as Program).name).toBe("Renamed");
+  });
+
+  it("one bad history row is left out without losing the others", async () => {
+    const app = await boot({ program, history: [goodSet("a"), { id: 1 }, goodSet("b")] });
+    expect(app.get().history.map((set) => set.id)).toEqual(["a", "b"]);
+    expect(app.plan().item(benchRow.id)!.done).toBe(2);
+    expect(app.get().loadProblems).toEqual([{ source: "history", detail: "1 set left out" }]);
+
+    await app.log(benchRow.id, 1);
+    expect(app.client.appendSet).toHaveBeenCalledTimes(1);
+  });
+
+  it("a load that fails outright is reported, and nothing is saved over the unread data", async () => {
+    const backend = fakeBackend({ program });
+    backend.client.loadAll = async () => Promise.reject(new Error("database is locked"));
+    const app = await boot({}, backend);
+    expect(app.get().booted).toBe(true);
+    expect(app.get().loadProblems).toEqual([
+      { source: "everything", detail: "database is locked" },
+    ]);
+    expect(app.get().appNotice!.text).toContain("database is locked");
+
+    app.get().editProgram((e) => e.addDay(1));
+    app.get().togglePause();
+    app.advanceTo(nov(17, 9));
+    expect(app.client.save).not.toHaveBeenCalled();
+    expect(app.data.program).toEqual(program);
+  });
+
+  it("importing a backup replaces the unreadable data and lifts the block", async () => {
+    const app = await boot({ program: { nonsense: true } });
+    await app.get().importData(JSON.stringify({ app: "Nabd", version: 2, program }));
+    expect(app.get().loadProblems).toEqual([]);
+    expect(app.get().appNotice).toBeNull();
+    app.get().editProgram((e) => e.rename("Recovered"));
+    expect((app.data.program as Program).name).toBe("Recovered");
+  });
+
+  it("fresh installs have nothing to report", async () => {
+    const app = await boot({});
+    expect(app.get().loadProblems).toEqual([]);
+    expect(app.get().appNotice).toBeNull();
+  });
+});
+
+describe("failed saves", () => {
+  it("a singleton that cannot be saved is reported app-wide", async () => {
+    const app = await boot();
+    app.get().editProgram((e) => e.rename("Saved"));
+    vi.mocked(app.client.save).mockRejectedValueOnce(new Error("disk full"));
+    app.get().editProgram((e) => e.rename("Unsaved"));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(app.get().appNotice).toEqual({
+      kind: "error",
+      text: "Could not save your plan: disk full",
+    });
+  });
+
+  it("the notice outlives the Settings dialog and goes when dismissed", async () => {
+    const app = await boot();
+    vi.mocked(app.client.appendSet).mockRejectedValueOnce(new Error("disk full"));
+    await app.log(benchRow.id, 1);
+    app.get().setSettingsOpen(true);
+    app.get().setSettingsOpen(false);
+    expect(app.get().appNotice).not.toBeNull();
+    app.get().dismissNotice();
+    expect(app.get().appNotice).toBeNull();
+  });
+
+  it("an undo that fails leaves the set where it was, and says so", async () => {
+    const app = await boot();
+    await app.log(benchRow.id, 1);
+    vi.mocked(app.client.deleteSet).mockRejectedValueOnce(new Error("busy"));
+    await app.get().undoSet(app.get().history[0]!.id);
+    expect(app.get().history).toHaveLength(1);
+    expect(app.get().appNotice).toEqual({ kind: "error", text: "Could not undo that set: busy" });
+  });
+
+  it("an OS call that fails is reported too, never thrown", async () => {
+    const app = await boot();
+    vi.mocked(app.client.setAutostart).mockRejectedValueOnce(new Error("not permitted"));
+    app.get().updateSettings({ openAtStartup: false });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(app.get().appNotice!.text).toBe("Could not change start at login: not permitted");
   });
 });
 
@@ -277,15 +414,6 @@ describe("logging sets", () => {
     expect(app.get().session).toMatchObject({ reps: 8, weight: 42.5 });
   });
 
-  it("a set logged from a nudge remembers what prompted it", async () => {
-    const app = await boot();
-    app.advanceTo(nov(16, 10, 0));
-    expect(selectNudgeStatus(app.get())).toEqual({ state: "due", reason: "timer" });
-    app.get().acceptNudge();
-    await app.get().logSet();
-    expect(app.get().history[0]!.trigger).toBe("timer");
-  });
-
   it("undo removes the set everywhere", async () => {
     const app = await boot();
     await app.log(benchRow.id, 2);
@@ -299,9 +427,9 @@ describe("logging sets", () => {
     vi.mocked(app.client.appendSet).mockRejectedValueOnce(new Error("disk full"));
     await app.log(benchRow.id, 1);
     expect(app.get().history).toHaveLength(1);
-    expect(app.get().notice).toEqual({
+    expect(app.get().appNotice).toEqual({
       kind: "error",
-      text: "That set could not be saved: disk full",
+      text: "Could not save that set: disk full",
     });
   });
 
@@ -366,12 +494,7 @@ describe("across restarts and days", () => {
 
     expect(app.plan().dayName).toBe("Push");
     expect(app.plan().setsDone).toBe(0);
-    expect(app.get().dayState).toEqual({
-      date: dateKey(nov(17)),
-      floatingIndex: 0,
-      skipped: [],
-      extras: [],
-    });
+    expect(app.get().dayState).toEqual(freshDayState(nov(17)));
     expect(app.get().dayLog).toEqual([{ date: dateKey(nov(16)), planned: 6, done: 2 }]);
     expect(app.get().session).toBeNull();
   });
@@ -382,7 +505,7 @@ describe("across restarts and days", () => {
     await app.log(flyRow.id, 3);
     app.advanceTo(nov(17, 9, 30));
     expect(app.plan().dayName).toBe("Pull");
-    expect(app.data.dayState).toMatchObject({ floatingIndex: 1 });
+    expect(app.data.dayState).toMatchObject({ dayId: "pull" });
   });
 
   it("cycled pools rotate after a day they were trained", async () => {
@@ -396,6 +519,143 @@ describe("across restarts and days", () => {
     app.advanceTo(nov(17, 9, 30));
     expect(app.get().rotationState).toEqual({ [slot.id]: 1 });
     expect(app.plan().items[0]!.exercise.id).toBe(FLY);
+  });
+
+  it("a floating plan is not held up by a day that was skipped outright", async () => {
+    const app = await boot();
+    app.get().toggleSkip(benchRow.id);
+    app.get().toggleSkip(flyRow.id);
+    app.advanceTo(nov(17, 9, 30));
+    expect(app.plan().dayName).toBe("Pull");
+  });
+
+  it("editing a floating plan does not change which day today is", async () => {
+    const app = await boot();
+    await app.log(benchRow.id, 3);
+    await app.log(flyRow.id, 3);
+    app.advanceTo(nov(17, 9, 30));
+    expect(app.plan().dayName).toBe("Pull");
+
+    app.get().editProgram((e) => e.addDay(null));
+    app.get().editProgram((e) => e.moveDay("pull", -1));
+    expect(app.plan().dayName).toBe("Pull");
+    app.get().editProgram((e) => e.removeDay("push"));
+    expect(app.plan().dayName).toBe("Pull");
+    expect(app.data.dayState).toMatchObject({ dayId: "pull" });
+
+    // Finishing Pull moves on to the day after it in the new order.
+    await app.log(app.plan().items[0]!.id, 3);
+    app.advanceTo(nov(18, 9, 30));
+    expect(app.plan().dayName).toBe("New day");
+  });
+
+  it("removing today's floating day moves today to the day that took its place", async () => {
+    const app = await boot();
+    app.get().editProgram((e) => e.removeDay("push"));
+    expect(app.plan().dayName).toBe("Pull");
+  });
+
+  it("sets logged today still count after their exercise leaves the plan", async () => {
+    const app = await boot();
+    await app.log(benchRow.id, 2);
+    app.get().editProgram((e) => e.removeExercise("push", benchRow.id));
+    expect(app.plan().setsDone).toBe(2);
+    expect(app.plan().items.at(-1)).toMatchObject({ isExtra: true, done: 2 });
+
+    app.get().editProgram((e) => e.addExercise("push", BENCH));
+    expect(app.plan().items.at(-1)).toMatchObject({ isExtra: false, done: 2, planned: 3 });
+    expect(app.plan().items).toHaveLength(2);
+  });
+
+  it("sets logged today still count after the plan type is switched", async () => {
+    const app = await boot();
+    await app.log(flyRow.id, 2);
+    app.get().editProgram((e) => e.setType("cycled"));
+    expect(app.plan().setsDone).toBe(2);
+    app.advanceTo(nov(17, 9, 30));
+    expect(app.get().dayLog).toEqual([{ date: dateKey(nov(16)), planned: 3, done: 0 }]);
+  });
+
+  it("a set logged just after midnight belongs to the new day, plan item included", async () => {
+    const app = await boot();
+    app.get().openSession(benchRow.id);
+    app.get().setReps(11);
+    app.clock.now = nov(17, 0, 5);
+    await app.get().logSet();
+
+    const [set] = app.get().history;
+    expect(app.get().dayState.date).toBe(dateKey(nov(17)));
+    expect(set).toMatchObject({ date: dateKey(nov(17)), value: 11, planItemId: benchRow.id });
+    expect(app.plan().item(benchRow.id)!.done).toBe(1);
+    expect(app.get().dayLog).toEqual([{ date: dateKey(nov(16)), planned: 6, done: 0 }]);
+  });
+
+  it("after midnight, a set of an exercise the new day does not plan is logged as an extra", async () => {
+    const mondayOnly: Program = {
+      ...program,
+      schedule: "weekday",
+      days: [{ ...program.days[0]!, weekday: 1 }],
+    };
+    const app = await boot({ program: mondayOnly });
+    app.get().openSession(benchRow.id);
+    app.clock.now = nov(17, 0, 5);
+    await app.get().logSet();
+
+    const [set] = app.get().history;
+    const item = app.plan().item(set!.planItemId!)!;
+    expect(set!.date).toBe(dateKey(nov(17)));
+    expect(item).toMatchObject({ isExtra: true, done: 1 });
+    expect(item.exercise.id).toBe(BENCH);
+    expect(app.get().session!.itemId).toBe(item.id);
+  });
+
+  it("opening the logger after midnight opens it on the new day", async () => {
+    const app = await boot();
+    await app.log(benchRow.id, 3);
+    await app.log(flyRow.id, 3);
+    app.get().closeSession();
+    app.clock.now = nov(17, 0, 5);
+    app.get().openSession();
+    expect(app.get().dayState.date).toBe(dateKey(nov(17)));
+    expect(app.plan().item(app.get().session!.itemId)!.exercise.id).toBe(ROW);
+  });
+
+  it("planned weekdays the app was not running for are on record as missed", async () => {
+    const weekdays: Program = {
+      ...program,
+      schedule: "weekday",
+      days: [
+        { ...program.days[0]!, weekday: 1 },
+        { ...program.days[1]!, weekday: 3 },
+      ],
+    };
+    const first = await boot({ program: weekdays });
+    await first.log(benchRow.id, 2);
+    const later = await boot({}, { client: first.client, data: first.data }, nov(24, 9));
+    expect(later.get().dayLog).toEqual([
+      { date: dateKey(nov(16)), planned: 6, done: 2 },
+      { date: dateKey(nov(18)), planned: 3, done: 0 },
+      { date: dateKey(nov(23)), planned: 6, done: 0 },
+    ]);
+  });
+
+  it("extras and sets beyond the plan do not inflate completion", async () => {
+    const app = await boot();
+    // Five bench sets against three planned (the logger moves on, so reopen it each time).
+    for (let i = 0; i < 5; i++) await app.log(benchRow.id, 1);
+    app.get().openLibrary({ kind: "extra" });
+    app.get().pickExercise(ROW);
+    await app.get().logSet();
+    expect(app.plan().setsDone).toBe(6);
+    expect(selectStats(app.get()).completionThisWeek()).toBe(50);
+  });
+
+  it("rollover saves the day log, then the day state, then the rotation", async () => {
+    const app = await boot();
+    await app.log(benchRow.id, 1);
+    vi.mocked(app.client.save).mockClear();
+    app.advanceTo(nov(17, 9, 30));
+    expect(app.savedKeys()).toEqual(["dayLog", "dayState", "rotationState"]);
   });
 
   it("the day rolls over on boot too, if the app was closed overnight", async () => {
@@ -414,9 +674,12 @@ describe("across restarts and days", () => {
 });
 
 describe("nudging", () => {
+  // Workday 09:00–18:00, timer 50 min, minimum gap 15 min, idle after 30 s.
+  const bootAt = (hour: number, minute = 0, initial: Partial<BootSnapshot> = { program }) =>
+    boot(initial, fakeBackend(initial), nov(16, hour, minute));
+
   it("is quiet before work, counts down, nudges on the timer, and resets after a set", async () => {
-    const app = await boot();
-    app.advanceTo(nov(16, 8));
+    const app = await bootAt(8);
     expect(selectNudgeStatus(app.get()).state).toBe("off_hours");
     app.advanceTo(nov(16, 9, 30));
     expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 9, 50) });
@@ -426,22 +689,128 @@ describe("nudging", () => {
     expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 10, 40) });
   });
 
+  it("launching mid-day does not owe a nudge for the hours before", async () => {
+    const app = await bootAt(14);
+    expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 14, 50) });
+    app.advanceTo(nov(16, 14, 10), 600);
+    expect(selectPendingNudge(app.get())).toBeNull();
+    app.advanceTo(nov(16, 14, 50));
+    expect(selectNudgeStatus(app.get())).toEqual({ state: "due", reason: "timer" });
+  });
+
+  it("building a plan mid-day starts the count from then", async () => {
+    const app = await bootAt(9, 0, {});
+    app.advanceTo(nov(16, 15));
+    expect(selectNudgeStatus(app.get()).state).toBe("nothing_left");
+    app.get().editProgram((e) => e.addDay(1));
+    app.get().editProgram((e) => e.addExercise(app.get().program.days[0]!.id, BENCH));
+    app.advanceTo(nov(16, 15, 1));
+    expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 15, 51) });
+  });
+
   it("an idle moment nudges early once the minimum gap has passed", async () => {
-    const app = await boot();
+    const app = await bootAt(9);
     app.advanceTo(nov(16, 9, 5), 300);
     expect(selectNudgeStatus(app.get()).state).toBe("waiting");
     app.advanceTo(nov(16, 9, 20), 45);
     expect(selectNudgeStatus(app.get())).toEqual({ state: "due", reason: "idle" });
   });
 
-  it("snooze and pause silence it", async () => {
-    const app = await boot();
+  it("an idle nudge stays put when the user reaches for the mouse, and is recorded as idle", async () => {
+    const app = await bootAt(9);
+    app.advanceTo(nov(16, 9, 20), 45);
+    const fired = selectPendingNudge(app.get());
+    expect(fired).toEqual({ reason: "idle", since: nov(16, 9, 20) });
+
+    app.advanceTo(nov(16, 9, 21), 0);
+    expect(selectNudgeStatus(app.get())).toEqual({ state: "due", reason: "idle" });
+    expect(selectPendingNudge(app.get())).toBe(fired);
+
+    app.get().openSession();
+    expect(selectPendingNudge(app.get())).toBeNull();
+    await app.get().logSet();
+    expect(app.get().history[0]!.trigger).toBe("idle");
+  });
+
+  it("starting any exercise from the Today screen answers the pending nudge too", async () => {
+    const app = await bootAt(9);
+    app.advanceTo(nov(16, 9, 50));
+    app.get().openSession(flyRow.id);
+    await app.get().logSet();
+    expect(app.get().history[0]).toMatchObject({ exId: FLY, trigger: "timer" });
+  });
+
+  it("a session opened with no nudge pending is manual", async () => {
+    const app = await bootAt(9);
+    app.advanceTo(nov(16, 9, 30));
+    await app.log(benchRow.id, 1);
+    expect(app.get().history[0]!.trigger).toBe("manual");
+  });
+
+  it("each nudge is a new pending object; the same nudge never is", async () => {
+    const app = await bootAt(9);
+    app.advanceTo(nov(16, 9, 50));
+    const first = selectPendingNudge(app.get());
+    app.advanceTo(nov(16, 9, 51));
+    expect(selectPendingNudge(app.get())).toBe(first);
+
     app.get().snooze();
-    expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 10, 5) });
+    expect(selectPendingNudge(app.get())).toBeNull();
+    expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 9, 56) });
+    app.advanceTo(nov(16, 9, 56));
+    const second = selectPendingNudge(app.get());
+    expect(second).toEqual({ reason: "timer", since: nov(16, 9, 56) });
+    expect(second).not.toBe(first);
+  });
+
+  it("closing the logger without logging does not bring the nudge straight back", async () => {
+    const app = await bootAt(9);
+    app.advanceTo(nov(16, 9, 50));
+    app.get().openSession();
+    app.get().closeSession();
+    app.advanceTo(nov(16, 9, 51));
+    expect(selectPendingNudge(app.get())).toBeNull();
+    app.advanceTo(nov(16, 9, 55));
+    expect(selectPendingNudge(app.get())).toMatchObject({ reason: "timer" });
+  });
+
+  it("nothing fires over an open logger", async () => {
+    const app = await bootAt(9);
+    app.get().openSession();
+    app.advanceTo(nov(16, 9, 50));
+    expect(selectPendingNudge(app.get())).toBeNull();
+    expect(app.get().session!.trigger).toBe("manual");
+  });
+
+  it("pausing, logging and the end of the workday withdraw a pending nudge", async () => {
+    const paused = await bootAt(9);
+    paused.advanceTo(nov(16, 9, 50));
+    paused.get().togglePause();
+    expect(selectPendingNudge(paused.get())).toBeNull();
+    expect(selectNudgeStatus(paused.get()).state).toBe("paused");
+
+    const evening = await bootAt(9);
+    evening.advanceTo(nov(16, 17, 59));
+    expect(selectPendingNudge(evening.get())).not.toBeNull();
+    evening.advanceTo(nov(16, 18));
+    expect(selectPendingNudge(evening.get())).toBeNull();
+    expect(selectNudgeStatus(evening.get()).state).toBe("off_hours");
+
+    const overnight = await bootAt(9);
+    overnight.advanceTo(nov(16, 9, 50));
+    overnight.clock.now = nov(17, 0, 1);
+    overnight.get().tick(0);
+    expect(selectPendingNudge(overnight.get())).toBeNull();
+  });
+
+  it("snooze and pause silence it", async () => {
+    const app = await bootAt(9, 50);
+    app.get().snooze();
+    expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 10, 40) });
     app.get().togglePause();
     expect(selectNudgeStatus(app.get()).state).toBe("paused");
     app.get().togglePause();
-    app.advanceTo(nov(16, 10, 5));
+    app.advanceTo(nov(16, 10, 40));
     expect(selectNudgeStatus(app.get()).state).toBe("due");
   });
 
@@ -450,6 +819,20 @@ describe("nudging", () => {
     await app.log(benchRow.id, 3);
     await app.log(flyRow.id, 3);
     expect(selectNudgeStatus(app.get()).state).toBe("nothing_left");
+  });
+
+  it("a pause survives a restart on the same day and ends with the day", async () => {
+    const first = await boot();
+    first.get().togglePause();
+    expect(first.data.dayState).toMatchObject({ paused: true });
+
+    const sameDay = await boot({}, { client: first.client, data: first.data });
+    expect(sameDay.get().paused).toBe(true);
+    expect(selectNudgeStatus(sameDay.get()).state).toBe("paused");
+
+    sameDay.advanceTo(nov(17, 9, 30));
+    expect(sameDay.get().paused).toBe(false);
+    expect(sameDay.data.dayState).toMatchObject({ paused: false });
   });
 });
 
@@ -497,6 +880,28 @@ describe("settings and data", () => {
     await app.get().importData(JSON.stringify({ app: "Nabd", version: 2, program: imported }));
     expect(app.get().program.name).toBe("Imported plan");
     expect(app.get().notice).toEqual({ kind: "info", text: "Import complete." });
+  });
+
+  it("an import only changes the settings its file contains", async () => {
+    const app = await boot();
+    app.get().updateSettings({ weightUnit: "lb", weightIncrement: 5 });
+    const file = { app: "Nabd", version: 2, settings: { interval: 30 } };
+    await app.get().importData(JSON.stringify(file));
+    expect(app.get().settings).toEqual({
+      ...DEFAULT_SETTINGS,
+      weightUnit: "lb",
+      weightIncrement: 5,
+      interval: 30,
+    });
+    expect(app.data.settings).toEqual(app.get().settings);
+  });
+
+  it("an import from a newer version of the app is refused", async () => {
+    const app = await boot();
+    await app.get().importData(JSON.stringify({ app: "Nabd", version: 3, program }));
+    expect(app.get().notice).toMatchObject({ kind: "error" });
+    expect(app.get().notice!.text).toContain("newer version");
+    expect(app.client.importData).not.toHaveBeenCalled();
   });
 
   it("opening or closing settings clears the last notice", async () => {

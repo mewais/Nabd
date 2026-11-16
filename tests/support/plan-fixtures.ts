@@ -10,7 +10,7 @@ import type {
   Program,
   SetSpec,
 } from "@nabd/domain";
-import { dateKey } from "@nabd/domain";
+import { dateKey, freshDayState } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
 import { TodayPlan } from "@nabd/scheduling";
 import { ProgressionAdvisor } from "@nabd/progression";
@@ -171,7 +171,7 @@ export function buildWorld(input: WorldInput) {
   const plan = TodayPlan.build({
     program,
     date: now,
-    dayState: { date: today, floatingIndex: 0, skipped, extras },
+    dayState: { ...freshDayState(now), skipped, extras },
     rotation: {},
     history,
     lookup: (exId) => LIBRARY.byId(exId),

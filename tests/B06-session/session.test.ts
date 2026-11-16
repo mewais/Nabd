@@ -1,5 +1,5 @@
 import type { Exercise, LoggedSet, Program } from "@nabd/domain";
-import { dateKey } from "@nabd/domain";
+import { dateKey, freshDayState } from "@nabd/domain";
 import { ProgressionAdvisor } from "@nabd/progression";
 import { TodayPlan } from "@nabd/scheduling";
 import type { PlanItem } from "@nabd/scheduling";
@@ -30,7 +30,7 @@ function itemsFor(history: LoggedSet[]): { curlItem: PlanItem; plankItem: PlanIt
   const plan = TodayPlan.build({
     program,
     date: TODAY,
-    dayState: { date: dateKey(TODAY), floatingIndex: 0, skipped: [], extras: [] },
+    dayState: freshDayState(TODAY),
     rotation: {},
     history,
     lookup: (id): Exercise | undefined => [curl, plank].find((e) => e.id === id),
@@ -64,11 +64,19 @@ describe("Coach", () => {
     expect(second?.basis).toEqual({ reps: 7, weight: 25 });
   });
 
-  it("pre-fills the form with what the user last actually did, today included", () => {
-    expect(coachFor(lastWeek).startFor(itemsFor(lastWeek).curlItem)).toEqual({
-      reps: 7,
-      weight: 25,
-    });
+  it("pre-fills the form with the very set the advice compares against", () => {
+    const warmedUp = [
+      ...lastWeek,
+      logged(curl, nov(16, 9), 15, 10, { planItemId: curlRow.id, setType: "warmup" }),
+    ];
+    const item = itemsFor(warmedUp).curlItem;
+    const coach = coachFor(warmedUp);
+    // Last week went 8 then 7: the first working set is compared against the 8.
+    expect(coach.startFor(item)).toEqual({ reps: 8, weight: 25 });
+    expect(coach.startFor(item)).toEqual(coach.adviceFor(item)!.basis);
+  });
+
+  it("pre-fills with the previous set once the exercise has one today", () => {
     const today = [...lastWeek, logged(curl, nov(16, 10), 10, 27.5, { planItemId: curlRow.id })];
     expect(coachFor(today).startFor(itemsFor(today).curlItem)).toEqual({ reps: 10, weight: 27.5 });
   });
@@ -162,6 +170,29 @@ describe("wording", () => {
       basis: "Last time: 8 × 25 kg",
     });
     expect(describeAdvice(null, "weight_reps", "kg")).toBeNull();
+  });
+
+  it("counts a single rep as one rep", () => {
+    expect(formatPerformance({ reps: 1, weight: null }, "bodyweight_reps", "kg")).toBe("1 rep");
+    expect(formatTarget({ type: "working", a: 1 }, prescription([]))).toBe("Working set · 1 rep");
+    expect(formatTarget({ type: "working", a: 1, b: 3 }, prescription([]))).toBe(
+      "Working set · 1–3 reps",
+    );
+  });
+
+  it("asks for a starting weight instead of suggesting zero the first time", () => {
+    const first = new ProgressionAdvisor(2.5).startingPoint("weight_reps", working(8, 12));
+    expect(describeAdvice(first, "weight_reps", "kg")).toMatchObject({
+      primary: "8 reps — pick a starting weight",
+      basis: null,
+    });
+    const hold = new ProgressionAdvisor(2.5).startingPoint("weight_duration", working(30));
+    expect(describeAdvice(hold, "weight_duration", "kg")!.primary).toBe(
+      "30 s — pick a starting weight",
+    );
+    // An unweighted first time has nothing to pick.
+    const reps = new ProgressionAdvisor(2.5).startingPoint("bodyweight_reps", working(8, 12));
+    expect(describeAdvice(reps, "bodyweight_reps", "kg")!.primary).toBe("8 reps");
   });
 
   it("formats durations as M:SS", () => {

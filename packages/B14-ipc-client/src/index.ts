@@ -40,6 +40,22 @@ export interface TrayState {
 /** Tray menu actions the backend forwards to the frontend. */
 export type TrayAction = "start" | "pause";
 
+/** What this machine can do; features it lacks are not offered. */
+export interface PlatformCapabilities {
+  /** A tray icon exists, so closing the window hides it there instead of quitting. */
+  tray: boolean;
+  /** The window can be translucent ("Glass"). */
+  glass: boolean;
+  /** The OS reports system-wide idle time. */
+  idle: boolean;
+}
+
+/** One beat of the backend's one-second clock. */
+export interface Tick {
+  /** Seconds since the last keyboard/mouse input anywhere; null when the OS cannot tell. */
+  idleSeconds: number | null;
+}
+
 export interface IpcClient {
   loadAll(): Promise<BootSnapshot>;
   save<K extends keyof Singletons>(key: K, value: Singletons[K]): Promise<void>;
@@ -48,12 +64,21 @@ export interface IpcClient {
   /** Write the export file; resolves to where it was saved. */
   exportData(): Promise<string>;
   importData(data: AppData): Promise<void>;
+  platformCapabilities(): Promise<PlatformCapabilities>;
+  /** Raise the OS notification for a due set (and un-hide a window hidden in the tray). */
   notify(reason: NudgeReason, exercise: string): Promise<void>;
+  sendTestNotification(): Promise<void>;
+  /** Put the native backdrop effect behind the window, or take it off again. */
+  setGlass(enabled: boolean): Promise<void>;
+  /** @deprecated Only until the store calls `setGlass`; then delete. */
   setVibrancy(opacity: number): Promise<void>;
+  /** Create or remove the login entry; safe to repeat at every boot. */
   setAutostart(enabled: boolean): Promise<void>;
   updateTray(state: TrayState): Promise<void>;
-  /** Seconds since the last OS-wide keyboard/mouse input. */
-  getIdleSeconds(): Promise<number>;
+  /** Exit the app (closing the window only hides it while there is a tray). */
+  quit(): Promise<void>;
+  /** Subscribe to the one-second clock; resolves to an unsubscribe function. */
+  onTick(handler: (tick: Tick) => void): Promise<() => void>;
   /** Subscribe to tray menu actions; resolves to an unsubscribe function. */
   onTrayAction(handler: (action: TrayAction) => void): Promise<() => void>;
 }
@@ -61,8 +86,12 @@ export interface IpcClient {
 /** Subscribes to a backend event; resolves to an unsubscribe function. */
 export type Listen = <T>(event: string, handler: (payload: T) => void) => Promise<() => void>;
 
+/** The backend counts sets in unsigned integers; anything else would fail the whole call. */
+const setCount = (n: number): number => (Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
+
 /** Build a client over the given transport. */
 export function createIpcClient(invoke: Invoke, listen: Listen): IpcClient {
+  const setGlass = (enabled: boolean): Promise<void> => invoke("set_glass", { enabled });
   return {
     async loadAll() {
       return JSON.parse(await invoke<string>("load_all")) as BootSnapshot;
@@ -72,11 +101,18 @@ export function createIpcClient(invoke: Invoke, listen: Listen): IpcClient {
     deleteSet: (id) => invoke("delete_set", { id }),
     exportData: () => invoke("export_data"),
     importData: (data) => invoke("import_data", { json: JSON.stringify(data) }),
+    platformCapabilities: () => invoke("platform_capabilities"),
     notify: (reason, exercise) => invoke("notify", { reason, exercise }),
-    setVibrancy: (opacity) => invoke("set_vibrancy", { opacity }),
+    sendTestNotification: () => invoke("send_test_notification"),
+    setGlass,
+    setVibrancy: () => setGlass(true),
     setAutostart: (enabled) => invoke("set_autostart", { enabled }),
-    updateTray: (state) => invoke("update_tray", { state }),
-    getIdleSeconds: () => invoke("get_idle_seconds"),
+    updateTray: (state) =>
+      invoke("update_tray", {
+        state: { ...state, done: setCount(state.done), total: setCount(state.total) },
+      }),
+    quit: () => invoke("quit"),
+    onTick: (handler) => listen<Tick>("tick", handler),
     onTrayAction: (handler) => listen<TrayAction>("tray-action", handler),
   };
 }

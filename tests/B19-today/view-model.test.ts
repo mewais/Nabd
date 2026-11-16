@@ -168,13 +168,22 @@ describe("buildTodayVM · hero", () => {
     const tuesday = nov(17, 10, 30);
     const vm = todayVM({ program: pushDay(), now: tuesday, history: lastWeek() });
 
-    expect(vm.hero).toEqual({ kind: "rest", hasProgram: true });
+    expect(vm.hero).toEqual({ kind: "rest", hasProgram: true, allSkipped: false });
     expect(vm.dayName).toBeNull();
     expect(vm.queue).toEqual([]);
   });
 
+  it("tells a day that was skipped outright apart from a rest day", () => {
+    const vm = todayVM({ program: pushDay(), skipped: ["p-bench", "p-row", "p-plank"] });
+    expect(vm.hero).toEqual({ kind: "rest", hasProgram: true, allSkipped: true });
+  });
+
   it("tells a rest day apart from having no program at all", () => {
-    expect(todayVM({ program: EMPTY_PROGRAM }).hero).toEqual({ kind: "rest", hasProgram: false });
+    expect(todayVM({ program: EMPTY_PROGRAM }).hero).toEqual({
+      kind: "rest",
+      hasProgram: false,
+      allSkipped: false,
+    });
   });
 });
 
@@ -263,6 +272,45 @@ describe("buildTodayVM · queue", () => {
 
   it("an extra with logged sets is done and can no longer be removed", () => {
     expect(row("x-pullup")).toMatchObject({ state: "done", badge: "2 sets", skipLabel: null });
+  });
+});
+
+describe("buildTodayVM · muscle targets without exercises", () => {
+  const slot = (id: string, muscle: "chest" | "lats" | "abs", pool: string[]) => ({
+    id,
+    muscle,
+    pool,
+    repMode: "range" as const,
+    intensity: "none" as const,
+    rest: 90,
+    sets: [work(8, 12)],
+  });
+  const cycled = (slots: ReturnType<typeof slot>[]) => ({
+    ...mondayProgram([]),
+    type: "cycled" as const,
+    days: [{ id: "mon", name: "Full body", weekday: 1, exercises: [], slots }],
+  });
+
+  it("says which cycled targets were left out because their pool is empty", () => {
+    const vm = todayVM({
+      program: cycled([
+        slot("s1", "chest", ["bench"]),
+        slot("s2", "lats", []),
+        slot("s3", "abs", []),
+      ]),
+    });
+    expect(vm.queue.map((row) => row.exercise)).toEqual(["Bench Press"]);
+    expect(vm.emptySlotsNote).toBe("2 muscle targets have no exercises yet: Lats, Abs");
+
+    const one = todayVM({ program: cycled([slot("s2", "lats", [])]) });
+    expect(one.emptySlotsNote).toBe("1 muscle target has no exercises yet: Lats");
+  });
+
+  it("says nothing when every target has an exercise", () => {
+    expect(
+      todayVM({ program: cycled([slot("s1", "chest", ["bench"])]) }).emptySlotsNote,
+    ).toBeNull();
+    expect(todayVM({ program: pushDay() }).emptySlotsNote).toBeNull();
   });
 });
 

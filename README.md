@@ -12,16 +12,21 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
 
 - **The plan** (Plan screen) is either _fixed_ — specific exercises per day — or
   _cycled_ — each day targets muscles, and each muscle rotates through a pool of
-  exercises. Days are pinned to weekdays, or _floating_ (Day 1, 2, 3 … advancing only
-  when a day is completed).
+  exercises. Days are pinned to weekdays, or _floating_ (Day 1, 2, 3 … moving on once
+  a day owes nothing more: completed, skipped, or empty — an unfinished day comes back).
 - **Today** is derived, never stored: the plan for the day, plus the sets logged today.
   Edit the plan and Today changes immediately; restart the app and nothing is lost.
 - **Nudges** follow four rules:
   1. never outside the workday (Settings → Workday), while paused, or with nothing left;
-  2. the timer nudges _interval_ minutes after your last set;
+  2. the timer nudges _interval_ minutes after your last set (before the first one: after
+     the workday started, the app was launched, or the plan got work — whichever is latest);
   3. an idle moment (no keyboard/mouse) nudges earlier — but never sooner than the
      _minimum gap_ after a set;
   4. Snooze silences both for five minutes.
+
+  A nudge that has fired waits for an answer — Start, Snooze, a logged set or Pause —
+  and the set you then log is recorded as prompted by it.
+
 - **A nudge is an invitation, not a limit.** The logger lists all of today's exercises;
   log one set or as many as you have time for, in any order. Supersets alternate, rest
   between back-to-back sets is counted down, any exercise can be skipped, and anything

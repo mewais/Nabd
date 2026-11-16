@@ -35,7 +35,8 @@ function scaleFor(tracking: TrackingType | undefined, loaded: boolean, unit: Wei
       score: (set) => displayWeight(assistedScore(set), unit),
     };
   }
-  if (loaded) return { unit: `${unit} e1RM`, score: (set) => displayWeight(strengthScore(set), unit) };
+  if (loaded)
+    return { unit: `${unit} e1RM`, score: (set) => displayWeight(strengthScore(set), unit) };
   const timed = tracking !== undefined && isTimeBased(tracking);
   return { unit: timed ? "s" : "reps", score: strengthScore };
 }

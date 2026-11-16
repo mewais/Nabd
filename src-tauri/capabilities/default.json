@@ -1,13 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability for the Nabd main window",
+  "description": "The main window: invoke the app's own commands and listen to its events (tick, tray-action). Notifications and autostart are only driven from Rust.",
   "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "notification:default",
-    "autostart:allow-enable",
-    "autostart:allow-disable",
-    "autostart:allow-is-enabled"
-  ]
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
 }

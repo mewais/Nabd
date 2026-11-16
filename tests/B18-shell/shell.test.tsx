@@ -5,7 +5,6 @@
 // React must be in scope: the tests are compiled with the classic JSX transform.
 import React from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { glassTint } from "@nabd/domain";
 import { AppLayout, Sidebar, TopBar, formatDate, greeting } from "@nabd/shell";
 import type { SidebarProps, TopBarProps } from "@nabd/shell";
 
@@ -94,6 +93,7 @@ describe("TopBar", () => {
     onTogglePause: vi.fn(),
     theme: "dark",
     onTheme: vi.fn(),
+    glassAvailable: true,
     glass: false,
     onToggleGlass: vi.fn(),
     onOpenSettings: vi.fn(),
@@ -150,6 +150,12 @@ describe("TopBar", () => {
     expect(onTheme).toHaveBeenLastCalledWith("light");
     fireEvent.click(screen.getByRole("button", { name: "Dark" }));
     expect(onTheme).toHaveBeenLastCalledWith("dark");
+  });
+
+  it("offers no Glass button where the window cannot be translucent", () => {
+    render(<TopBar {...props({ glassAvailable: false })} />);
+    expect(screen.queryByRole("button", { name: "Glass" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
   });
 
   it("the Glass button reflects the translucency mode and toggles it", () => {
@@ -214,7 +220,7 @@ describe("AppLayout", () => {
 
     const glass = layout(true, "dark", 0.8);
     const glassRoot = glass.container.querySelector<HTMLElement>("[data-theme]");
-    expect(glassRoot?.style.background.replace(/\s/g, "")).toBe(glassTint("dark", 0.8));
+    expect(glassRoot?.style.background.replace(/\s/g, "")).toBe("rgba(15,17,24,0.8)");
     expect(screen.getByText("CONTENT")).toBeInTheDocument();
   });
 });

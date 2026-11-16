@@ -125,7 +125,12 @@ export class TodayPlan {
       if (entry.logged.length === 0) entry.logged = sets.ofExercise(entry.exId);
     }
     for (const exId of sets.unclaimedExercises) {
-      entries.push({ id: UNPLANNED + exId, exId, prescription: null, logged: sets.ofExercise(exId) });
+      entries.push({
+        id: UNPLANNED + exId,
+        exId,
+        prescription: null,
+        logged: sets.ofExercise(exId),
+      });
     }
 
     const items = entries.flatMap(({ exId, label, ...entry }) => {

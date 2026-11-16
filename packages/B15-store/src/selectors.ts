@@ -7,7 +7,7 @@ import { ExerciseLibrary } from "@nabd/dataset";
 import { TodayPlan } from "@nabd/scheduling";
 import { ProgressionAdvisor } from "@nabd/progression";
 import { Coach } from "@nabd/session";
-import { NudgePolicy, type NudgeStatus } from "@nabd/nudge";
+import { NudgePolicy, type NudgeStatus, type PendingNudge } from "@nabd/nudge";
 import { MuscleVolume } from "@nabd/coverage";
 import { TrainingStats } from "@nabd/analytics";
 import type { NabdState } from "./state";
@@ -65,28 +65,46 @@ const selectLastSetAt = memoize(
   },
 );
 
-/** Whether a set is due, and if not, when it will be. */
-export const selectNudgeStatus = memoize(
+/** What the nudge rules say at this very moment (the store latches it; see selectNudgeStatus). */
+export const selectPolicyStatus = memoize(
   (s) =>
     [
       s.settings,
       s.now,
       selectLastSetAt(s),
+      s.activeSince,
       s.snoozedUntil,
       s.idleSeconds,
       s.paused,
       selectTodayPlan(s).setsRemaining > 0,
     ] as const,
-  (settings, now, lastSetAt, snoozedUntil, idleSeconds, paused, hasWork): NudgeStatus =>
+  (settings, now, lastSetAt, activeSince, snoozedUntil, idleSeconds, paused, hasWork) =>
     new NudgePolicy(settings).evaluate({
       now,
       lastSetAt,
+      activeSince,
       snoozedUntil,
       idleSeconds,
       paused,
       hasWork,
     }),
 );
+
+/**
+ * Whether a set is due, and if not, when it will be. A nudge that has fired
+ * stays due until it is answered, whatever the rules say a second later.
+ */
+export const selectNudgeStatus = memoize(
+  (s) => [s.pendingNudge, selectPolicyStatus(s)] as const,
+  (pending, status): NudgeStatus =>
+    pending === null ? status : { state: "due", reason: pending.reason },
+);
+
+/**
+ * The nudge waiting for an answer, or null. Its identity changes exactly once
+ * per nudge, so "a nudge just fired" is "this became a new non-null object".
+ */
+export const selectPendingNudge = (s: NabdState): PendingNudge | null => s.pendingNudge;
 
 /** What the plan trains over one pass through the program. */
 export const selectPlannedVolume = memoize(
@@ -106,10 +124,7 @@ export const selectCoverage = memoize(
 /** Today's completion so far, in the same shape as the finished days in the log. */
 const selectTodayRecord = memoize(
   (s) => [selectTodayPlan(s)] as const,
-  (plan): DayRecord[] => {
-    const planned = plan.items.reduce((n, i) => n + i.planned, 0);
-    return planned > 0 ? [{ date: plan.date, planned, done: plan.setsDone }] : [];
-  },
+  (plan): DayRecord[] => (plan.record === null ? [] : [plan.record]),
 );
 
 export const selectStats = memoize(

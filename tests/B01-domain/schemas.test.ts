@@ -10,12 +10,9 @@ import {
   MUSCLE_PRIMARY_GROUP,
   MUSCLES,
   SettingsSchema,
-  THEMES,
   displayWeight,
   formatWeight,
-  glassTint,
   kgFromDisplay,
-  materialKey,
 } from "@nabd/domain";
 
 describe("muscle taxonomy", () => {
@@ -68,21 +65,6 @@ describe("weights", () => {
   });
 });
 
-describe("themes", () => {
-  it("defines the same tokens for all four materials", () => {
-    const tokens = Object.keys(THEMES.light).sort();
-    for (const material of ["dark", "lightGlass", "darkGlass"] as const) {
-      expect(Object.keys(THEMES[material]).sort(), material).toEqual(tokens);
-    }
-  });
-
-  it("picks the glass material and tint for a theme", () => {
-    expect(materialKey("dark", false)).toBe("dark");
-    expect(materialKey("light", true)).toBe("lightGlass");
-    expect(glassTint("dark", 0.7)).toBe("rgba(15,17,24,0.7)");
-  });
-});
-
 describe("persisted shapes tolerate older data", () => {
   const oldSet = {
     id: "s1",
@@ -103,13 +85,20 @@ describe("persisted shapes tolerate older data", () => {
     expect(LoggedSetSchema.safeParse({ ...oldSet, muscles: ["wings"] }).success).toBe(false);
   });
 
-  it("an old day state (with stored slots) reads as a clean day", () => {
-    expect(DayStateSchema.parse({ date: "2026-11-16", floatingIndex: 2, slots: [{}] })).toEqual({
+  it("an old day state (with stored slots) reads as a clean, unpaused day", () => {
+    expect(DayStateSchema.parse({ date: "2026-11-16", slots: [{}] })).toEqual({
       date: "2026-11-16",
-      floatingIndex: 2,
+      dayId: null,
       skipped: [],
       extras: [],
+      paused: false,
     });
+  });
+
+  it("the weight increment goes down to a quarter, for micro-plates", () => {
+    const increment = SettingsSchema.shape.weightIncrement;
+    expect(increment.safeParse(0.25).success).toBe(true);
+    expect(increment.safeParse(0).success).toBe(false);
   });
 
   it("an exercise needs a name and at least one primary muscle", () => {

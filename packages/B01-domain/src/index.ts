@@ -8,7 +8,6 @@ export * from "./exercise";
 export * from "./program";
 export * from "./runtime";
 export * from "./settings";
-export * from "./theme-tokens";
 export * from "./regions";
 export * from "./appdata";
 export * from "./dates";

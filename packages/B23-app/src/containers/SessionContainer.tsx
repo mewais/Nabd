@@ -3,7 +3,7 @@ import { NotificationToast, SessionModal, buildSessionVM } from "@nabd/modals";
 import { selectCoach, selectNudgeStatus, selectTodayPlan } from "@nabd/store";
 import { useActions, useNabd } from "../store-context";
 
-/** The logger while a session is open; otherwise the nudge toast when a set is due. */
+/** The logger while a session is open; otherwise the nudge toast while a nudge is unanswered. */
 export function SessionContainer(): JSX.Element | null {
   const actions = useActions();
   const session = useNabd((s) => s.session);
@@ -39,7 +39,7 @@ export function SessionContainer(): JSX.Element | null {
       reasonLabel={describeNudge(nudge)}
       exercise={next.exercise.name}
       sub={`${next.label} · set ${next.done + 1} of ${next.planned}`}
-      onConfirm={actions.acceptNudge}
+      onConfirm={() => actions.openSession()}
       onSnooze={actions.snooze}
     />
   );
