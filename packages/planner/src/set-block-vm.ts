@@ -3,6 +3,7 @@
 import type { Intensity, Prescription, SetSpec, SetType } from "@nabd/domain";
 import { INTENSITY_NAMES, SET_TYPE_NAMES, formatDuration } from "@nabd/domain";
 import type { RepStyle } from "@nabd/program-editor";
+import { COMMON_WORDS } from "@nabd/design-system";
 
 export interface SetRowVM {
   index: number;
@@ -73,7 +74,7 @@ export function buildSetBlockVM(prescription: Prescription): SetBlockVM {
     rows,
     repStyle: repMode === "time" ? null : repMode,
     intensity,
-    repHeader: repMode === "time" ? "Time" : "Reps",
+    repHeader: repMode === "time" ? "Time" : COMMON_WORDS.reps,
     intensityHeader,
     rest: formatDuration(rest),
     notes: notes ?? "",

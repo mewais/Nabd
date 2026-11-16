@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { Badge, CardButton, Chip, Segmented, StatTile, TitleInput } from "@nabd/design-system";
+import { CardButton, Chip, Segmented, StatTile, TitleInput } from "@nabd/design-system";
 import { click } from "./render";
 
 describe("StatTile", () => {
@@ -21,14 +21,6 @@ describe("StatTile", () => {
     expect(screen.getByRole("region", { name: "Personal best" })).toHaveTextContent(
       "Personal best76 kg e1RM",
     );
-  });
-});
-
-describe("Badge", () => {
-  it("is a plain marker, with its tooltip", () => {
-    render(<Badge title="Warm-up">W</Badge>);
-    expect(screen.getByText("W")).toHaveAttribute("title", "Warm-up");
-    expect(screen.queryByRole("button")).toBeNull();
   });
 });
 

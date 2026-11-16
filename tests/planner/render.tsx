@@ -61,16 +61,15 @@ export const card = (name: string) => within(screen.getByRole("region", { name }
 export const stepper = (scope: ReturnType<typeof within>, name: string) =>
   within(scope.getByRole("group", { name }));
 
-/** The n-th option (a radio of a radio group) with this accessible name on the whole screen. */
-export const radio = (name: string | RegExp, index = 0): HTMLElement => {
-  const found = screen.getAllByRole("radio", { name })[index];
-  if (!found) throw new Error(`no option "${name}" at ${index}`);
+/** The n-th element of `role` with this accessible name on the whole screen. */
+function nth(role: "radio" | "button", name: string | RegExp, index: number): HTMLElement {
+  const found = screen.getAllByRole(role, { name })[index];
+  if (!found) throw new Error(`no ${role} "${name}" at ${index}`);
   return found;
-};
+}
+
+/** The n-th option (a radio of a radio group) with this accessible name on the whole screen. */
+export const radio = (name: string | RegExp, index = 0): HTMLElement => nth("radio", name, index);
 
 /** The n-th button with this accessible name on the whole screen. */
-export const button = (name: string | RegExp, index = 0): HTMLElement => {
-  const found = screen.getAllByRole("button", { name })[index];
-  if (!found) throw new Error(`no button "${name}" at ${index}`);
-  return found;
-};
+export const button = (name: string | RegExp, index = 0): HTMLElement => nth("button", name, index);

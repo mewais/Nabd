@@ -121,6 +121,15 @@ export const cycledPlan: Program = plan(
   { name: "C", type: "cycled" },
 );
 
+/** `program` with the pool of its "chest" slot set to `pool`. */
+export const withChestPool = (program: Program, pool: string[]): Program => ({
+  ...program,
+  days: program.days.map((day) => ({
+    ...day,
+    slots: day.slots.map((slot) => (slot.id === "chest" ? { ...slot, pool } : slot)),
+  })),
+});
+
 /** The rows of {@link catalogPushPull}'s Push day. */
 export const catalogBenchRow = row(CATALOG.bench, workingSets(3));
 export const catalogFlyRow = row(CATALOG.fly, workingSets(3));

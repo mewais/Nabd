@@ -7,6 +7,11 @@ export function roundTo(value: number, decimals: number): number {
   return Math.round(value * scale) / scale;
 }
 
+/** `part` as a whole percentage of `whole`: 0 when there is no whole. */
+export function percentOf(part: number, whole: number): number {
+  return whole === 0 ? 0 : Math.round((part / whole) * 100);
+}
+
 /** `value` held within `min`–`max`. */
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));

@@ -1,6 +1,7 @@
 import { Button, Card, CheckMark, Stack, Text } from "@nabd/design-system";
 import type { HeroNoticeVM } from "./hero-vm";
 import type { TodayActions } from "./today-actions";
+import { WORDS } from "./wording";
 
 interface HeroNoticeProps {
   vm: HeroNoticeVM;
@@ -23,7 +24,7 @@ export function HeroNotice({ vm, actions }: HeroNoticeProps): JSX.Element {
         </Stack>
         {vm.offersLogOther && (
           <Button variant="ghost" size="md" onClick={actions.logOther}>
-            Log something else
+            {WORDS.logSomethingElse}
           </Button>
         )}
       </Stack>

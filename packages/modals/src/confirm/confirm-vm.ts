@@ -1,5 +1,6 @@
 import type { ExerciseLookup, Program } from "@nabd/domain";
 import type { Confirmation } from "@nabd/view";
+import { COMMON_WORDS } from "@nabd/design-system";
 
 interface ConfirmInput {
   confirmation: Confirmation;
@@ -35,7 +36,7 @@ export function buildConfirmVM({ confirmation, program, lookup }: ConfirmInput):
       return {
         title: `Delete ${name}?`,
         text: `The day and everything planned on it leave your plan. ${KEEPS_HISTORY}`,
-        confirmLabel: "Delete day",
+        confirmLabel: COMMON_WORDS.deleteDay,
       };
     }
     case "deleteExercise":

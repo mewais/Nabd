@@ -1,6 +1,7 @@
 import type { Weekday } from "@nabd/domain";
 import { Segmented } from "@nabd/design-system";
 import { WEEKDAY_INITIAL_OPTIONS } from "./options";
+import { WORDS } from "./wording";
 
 interface WeekdayPickerProps {
   /** Null while the day is on no weekday. */
@@ -13,7 +14,7 @@ export function WeekdayPicker({ weekday, onPick }: WeekdayPickerProps): JSX.Elem
   return (
     <Segmented
       size="sm"
-      ariaLabel="Weekday"
+      ariaLabel={WORDS.weekday}
       options={WEEKDAY_INITIAL_OPTIONS}
       value={weekday}
       onChange={onPick}

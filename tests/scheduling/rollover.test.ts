@@ -4,7 +4,14 @@ import { rollOver } from "@nabd/scheduling";
 import type { TodayPlanInput } from "@nabd/scheduling";
 import { carry, logged, nov, visit } from "../support/builders";
 import { EX } from "../support/exercises";
-import { benchRow, cycledPlan, floatingPushPull, flyRow, raiseRow } from "../support/programs";
+import {
+  benchRow,
+  cycledPlan,
+  floatingPushPull,
+  flyRow,
+  raiseRow,
+  withChestPool,
+} from "../support/programs";
 import { MONDAY, benchSet, dayState, input } from "./fixtures";
 
 const TUESDAY = nov(17);
@@ -42,13 +49,7 @@ describe("rolling over to a new day", () => {
       pool: string[],
     ) =>
       roll({
-        program: {
-          ...weekdayCycled,
-          days: weekdayCycled.days.map((day) => ({
-            ...day,
-            slots: day.slots.map((slot) => (slot.id === "chest" ? { ...slot, pool } : slot)),
-          })),
-        },
+        program: withChestPool(weekdayCycled, pool),
         dayState: dayState(nov(15)),
         rotation,
         history: [logged(exercise, nov(15), 10, 40, { planItemId: "chest" })],

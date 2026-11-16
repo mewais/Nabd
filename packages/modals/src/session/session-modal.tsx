@@ -3,6 +3,7 @@ import { ExerciseList } from "./exercise-list";
 import type { SessionActions } from "./session-actions";
 import type { SessionVM } from "./session-vm";
 import { SetForm } from "./set-form";
+import { WORDS } from "../wording";
 
 interface SessionModalProps {
   vm: SessionVM;
@@ -15,14 +16,14 @@ export function SessionModal({ vm, actions }: SessionModalProps): JSX.Element {
     <>
       <Text variant="hint">{vm.footer}</Text>
       <Button tone="success" onClick={actions.close}>
-        Done
+        {WORDS.done}
       </Button>
     </>
   );
   return (
     <ModalShell
-      eyebrow="Log sets"
-      title="This break"
+      eyebrow={WORDS.logSets}
+      title={WORDS.thisBreak}
       subtitle={vm.subtitle}
       onClose={actions.close}
       width="lg"

@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { PageRegion } from "./region";
 
-export type Screen = "Today" | "Plan" | "Progress";
+type Screen = "Today" | "Plan" | "Progress";
 
 /** The app chrome — sidebar, top bar, and the nudge toast that floats over every screen; its buttons are the top bar's. */
 export class Shell extends PageRegion {

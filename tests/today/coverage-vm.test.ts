@@ -1,15 +1,10 @@
 /** @nabd/today — buildTodayVM, the week's coverage and what stands out in it. */
 
 import { EMPTY_PROGRAM, MUSCLES } from "@nabd/domain";
-import { nov } from "../support/builders";
-import { did, mondayProgram, pushDay } from "../support/programs";
-import { todayVM } from "./fixtures";
+import { mondayProgram, pushDay } from "../support/programs";
+import { benchWeek, todayVM } from "./fixtures";
 
 describe("buildTodayVM · coverage and insight", () => {
-  /** Twelve chest sets this week: chest is well covered, the rest of the plan lags. */
-  const benchWeek = () =>
-    Array.from({ length: 12 }, (unused, i) => did(null, "bench", 8, 60, { at: nov(13, 12, i) }));
-
   it("carries the map's view and style through", () => {
     const vm = todayVM({ program: pushDay() }, { mapView: "back", mapStyle: "outline" });
     expect(vm.coverage).toMatchObject({ view: "back", mapStyle: "outline" });

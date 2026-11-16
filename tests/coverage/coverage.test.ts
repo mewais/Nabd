@@ -1,5 +1,4 @@
 import type { Program } from "@nabd/domain";
-import { MUSCLES } from "@nabd/domain";
 import { CoverageReport, MuscleVolume } from "@nabd/coverage";
 
 /** Sixteen sets a week cover a muscle in full. */
@@ -116,10 +115,9 @@ describe("recent history", () => {
     volume.add("chest", FULL_COVERAGE_SETS / 2);
     volume.add("biceps", FULL_COVERAGE_SETS * 3);
     const coverage = volume.toCoverage();
-    expect(coverage.chest).toBe(50);
-    expect(coverage.biceps).toBe(100);
-    expect(coverage.calves).toBe(0);
-    expect(Object.keys(coverage)).toHaveLength(MUSCLES.length);
+    expect(coverage("chest")).toBe(50);
+    expect(coverage("biceps")).toBe(100);
+    expect(coverage("calves")).toBe(0);
   });
 });
 

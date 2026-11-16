@@ -10,6 +10,7 @@ import {
 import { EQUIPMENT_OPTIONS, TRACKING_OPTIONS } from "../options";
 import type { LibraryActions } from "./library-actions";
 import type { ExerciseFormVM } from "./library-vm";
+import { WORDS } from "../wording";
 
 interface ExerciseFormProps {
   vm: ExerciseFormVM;
@@ -21,38 +22,38 @@ export function ExerciseForm({ vm, actions }: ExerciseFormProps): JSX.Element {
   const { patchDraft } = actions;
   return (
     <Stack gap="lg" padding="xl">
-      <FormSection title="Exercise name">
+      <FormSection title={WORDS.exerciseName}>
         <TextInput
           value={vm.name}
           onChange={(name) => patchDraft({ name })}
-          placeholder="Exercise name"
-          ariaLabel="Exercise name"
+          placeholder={WORDS.exerciseName}
+          ariaLabel={WORDS.exerciseName}
         />
       </FormSection>
-      <FormSection title="Primary muscles">
+      <FormSection title={WORDS.primaryMuscles}>
         <ChipGroup
           options={vm.primary.chips}
           selected={vm.primary.selected}
           onToggle={(chip) => patchDraft(chip.toggle)}
         />
       </FormSection>
-      <FormSection title="How to track it">
+      <FormSection title={WORDS.tracking}>
         <Dropdown
-          ariaLabel="How to track it"
+          ariaLabel={WORDS.tracking}
           value={vm.tracking}
           options={TRACKING_OPTIONS}
           onChange={(tracking) => patchDraft({ tracking })}
         />
       </FormSection>
-      <FormSection title="Equipment">
+      <FormSection title={WORDS.equipment}>
         <Dropdown
-          ariaLabel="Equipment"
+          ariaLabel={WORDS.equipment}
           value={vm.equipment}
           options={EQUIPMENT_OPTIONS}
           onChange={(equipment) => patchDraft({ equipment })}
         />
       </FormSection>
-      <FormSection title="Secondary muscles">
+      <FormSection title={WORDS.secondaryMuscles}>
         <ChipGroup
           options={vm.secondary.chips}
           selected={vm.secondary.selected}
@@ -61,10 +62,10 @@ export function ExerciseForm({ vm, actions }: ExerciseFormProps): JSX.Element {
       </FormSection>
       <Row gap="sm">
         <Button disabled={!vm.canCreate} onClick={actions.saveDraft} grow>
-          Create
+          {WORDS.create}
         </Button>
         <Button variant="ghost" onClick={actions.cancelDraft}>
-          Back
+          {WORDS.back}
         </Button>
       </Row>
     </Stack>

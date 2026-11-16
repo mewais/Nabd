@@ -2,6 +2,7 @@ import { Card, Row, Stack, Text } from "@nabd/design-system";
 import type { SupersetVM } from "./editor-vm";
 import { ExerciseCard } from "./exercise-card";
 import type { PlannerActions } from "./planner-actions";
+import { WORDS } from "./wording";
 
 interface SupersetGroupProps {
   vm: SupersetVM;
@@ -19,9 +20,9 @@ export function SupersetGroup({ vm, dayId, actions }: SupersetGroupProps): JSX.E
       <Stack gap="sm">
         <Row gap="sm" align="baseline" paddingX="xs">
           <Text variant="eyebrow" tone="success">
-            Superset
+            {WORDS.superset}
           </Text>
-          <Text variant="hint">Moves as one. Move an exercise past its edge to unlink it.</Text>
+          <Text variant="hint">{WORDS.supersetHint}</Text>
         </Row>
         {vm.members.map((member) => (
           <ExerciseCard key={member.id} vm={member} dayId={dayId} actions={actions} />

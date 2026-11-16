@@ -1,27 +1,24 @@
-import { useMemo } from "react";
 import { ConfirmModal, buildConfirmVM } from "@nabd/modals";
 import type { ConfirmActions } from "@nabd/modals";
+import type { NabdActions } from "@nabd/store";
 import { selectLibrary } from "@nabd/store";
-import { useActions, useNabd } from "../store-context";
+import { useNabd } from "../store-context";
+import { useBoundActions, useViewModel } from "./wiring";
+
+const bind = (store: NabdActions): ConfirmActions => ({
+  confirm: () => void store.answer(true),
+  cancel: () => void store.answer(false),
+});
 
 /** The confirmation of a destructive action, while one is being asked. */
 export function ConfirmContainer(): JSX.Element | null {
-  const store = useActions();
   const confirmation = useNabd((s) => s.confirmation);
   const program = useNabd((s) => s.program);
   const { lookup } = useNabd(selectLibrary);
-
-  const vm = useMemo(
-    () => confirmation && buildConfirmVM({ confirmation, program, lookup }),
-    [confirmation, program, lookup],
+  const vm = useViewModel(
+    (input) => input.confirmation && buildConfirmVM({ ...input, confirmation: input.confirmation }),
+    { confirmation, program, lookup },
   );
-  const actions = useMemo(
-    (): ConfirmActions => ({
-      confirm: () => void store.answer(true),
-      cancel: () => void store.answer(false),
-    }),
-    [store],
-  );
-
+  const actions = useBoundActions(bind);
   return vm && <ConfirmModal vm={vm} actions={actions} />;
 }

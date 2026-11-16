@@ -10,6 +10,7 @@ import { COLOR, HAIRLINE, RADIUS, SHADOW, SPACE, Z } from "./tokens";
 import type { ModalLayer, Size } from "./tokens";
 import { useEscapeKey } from "./use-escape-key";
 import { useFocusTrap } from "./use-focus-trap";
+import { WORDS } from "./wording";
 
 interface ModalShellProps {
   title: ReactNode;
@@ -112,7 +113,7 @@ export function ModalShell(props: ModalShellProps): JSX.Element {
               </Text>
             )}
           </Stack>
-          <IconButton icon="close" ariaLabel="Close" onClick={onClose} />
+          <IconButton icon="close" ariaLabel={WORDS.close} onClick={onClose} />
         </Row>
         <div style={BODY}>{props.children}</div>
         {footer !== undefined && (

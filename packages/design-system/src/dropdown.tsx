@@ -6,6 +6,7 @@ import { Icon } from "./icon";
 import type { Option, OptionValue } from "./option";
 import { COLOR, QUIET_BOX, RADIUS, SPACE, TEXT } from "./tokens";
 import { useEscapeKey } from "./use-escape-key";
+import { CENTERED_ROW } from "./styles";
 
 interface DropdownProps<V extends OptionValue = string> {
   value: V;
@@ -19,8 +20,7 @@ const TRIGGER: CSSProperties = {
   ...QUIET_BOX,
   ...TEXT.controlLg,
   width: "100%",
-  display: "flex",
-  alignItems: "center",
+  ...CENTERED_ROW,
   justifyContent: "space-between",
   borderRadius: RADIUS.control,
   padding: SPACE.md,

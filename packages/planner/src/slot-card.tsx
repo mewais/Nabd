@@ -4,6 +4,7 @@ import { MoveButtons } from "./move-buttons";
 import type { PlannerActions } from "./planner-actions";
 import { PoolChips } from "./pool-chips";
 import { SetTable } from "./set-table";
+import { WORDS } from "./wording";
 
 interface SlotCardProps {
   vm: SlotCardVM;
@@ -24,7 +25,7 @@ export function SlotCard({ vm, dayId, actions }: SlotCardProps): JSX.Element {
           <IconButton
             icon="close"
             variant="plain"
-            ariaLabel="Remove slot"
+            ariaLabel={WORDS.removeSlot}
             onClick={() => edit((e) => e.removeSlot(dayId, slotId))}
           />
         </Row>
@@ -38,8 +39,8 @@ export function SlotCard({ vm, dayId, actions }: SlotCardProps): JSX.Element {
         </Stack>
         <Divider />
         <Stack gap="xxs">
-          <Text variant="eyebrow">Prescription</Text>
-          <Text variant="caption">Applies to whichever exercise rotates in</Text>
+          <Text variant="eyebrow">{WORDS.prescription}</Text>
+          <Text variant="caption">{WORDS.prescriptionHint}</Text>
         </Stack>
         <SetTable
           vm={vm.block}

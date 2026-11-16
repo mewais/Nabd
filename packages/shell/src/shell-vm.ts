@@ -1,5 +1,5 @@
 import type { PlatformCapabilities, Settings, Theme } from "@nabd/domain";
-import { formatClock, glassInEffect, plural } from "@nabd/domain";
+import { formatClock, glassInEffect, percentOf, plural } from "@nabd/domain";
 import { summarizeNudge } from "@nabd/nudge";
 import type { NudgeStatus, NudgeSummary } from "@nabd/nudge";
 import type { Notice, Screen } from "@nabd/view";
@@ -78,7 +78,7 @@ function buildDayProgressVM({ done, planned }: ShellInput["sets"]): DayProgressV
   return {
     done,
     totalLabel,
-    pct: planned > 0 ? Math.round((done / planned) * 100) : 0,
+    pct: percentOf(done, planned),
     ariaLabel: `${done} ${totalLabel} done today`,
   };
 }

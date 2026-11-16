@@ -13,9 +13,13 @@ import { beginDay } from "./rollover";
 import { selectCoach, selectTodayPlan } from "./selectors";
 import type { LoggingSlice } from "./slices";
 
-export function loggingSlice(ctx: StoreContext): LoggingSlice {
-  const { get, set, client, now, newId, attempt, save, saveSet } = ctx;
+type Actions<K extends keyof LoggingSlice> = Pick<LoggingSlice, K>;
 
+/** Opening and closing the logger, and moving it between exercises. */
+function openingActions(
+  ctx: StoreContext,
+): Actions<"openSession" | "openSessionOn" | "closeSession" | "focusItem"> {
+  const { get, set, now } = ctx;
   return {
     openSession: (itemId) => {
       beginDay(ctx);
@@ -45,29 +49,41 @@ export function loggingSlice(ctx: StoreContext): LoggingSlice {
       const item = selectTodayPlan(get()).item(itemId);
       if (item) editSession(ctx, (s) => s.focus(item, selectCoach(get()).startFor(item)));
     },
+  };
+}
 
+/** The numbers of the set being entered: stepped, typed, or taken from the advice. */
+function formActions(
+  ctx: StoreContext,
+): Actions<"stepReps" | "stepWeight" | "setReps" | "setWeight" | "applyAdvice"> {
+  const { get } = ctx;
+  const stepKg = (): number => loadStepKg(get().settings);
+  return {
     stepReps: (direction) => editSession(ctx, (s) => s.stepReps(direction)),
 
-    stepWeight: (direction) =>
-      editSession(ctx, (s) => s.stepWeight(direction, loadStepKg(get().settings))),
+    stepWeight: (direction) => editSession(ctx, (s) => s.stepWeight(direction, stepKg())),
 
     setReps: (reps) => editSession(ctx, (s) => s.withReps(reps)),
 
     setWeight: (displayValue) => {
-      const { settings } = get();
-      const kg = kgFromDisplay(displayValue, settings.weightUnit);
-      editSession(ctx, (s) => s.withWeight(kg, loadStepKg(settings)));
+      const kg = kgFromDisplay(displayValue, get().settings.weightUnit);
+      editSession(ctx, (s) => s.withWeight(kg, stepKg()));
     },
 
     applyAdvice: (which) => {
       const item = sessionItem(ctx);
       const target = item && selectCoach(get()).adviceFor(item)?.[which];
-      const stepKg = loadStepKg(get().settings);
       if (target) {
-        editSession(ctx, (s) => s.withReps(target.reps).withWeight(target.weight ?? 0, stepKg));
+        editSession(ctx, (s) => s.withReps(target.reps).withWeight(target.weight ?? 0, stepKg()));
       }
     },
+  };
+}
 
+/** What today records: a set logged or undone, an exercise skipped or restored. */
+function recordActions(ctx: StoreContext): Actions<"logSet" | "undoSet" | "toggleSkip"> {
+  const { get, set, client, now, newId, attempt, save, saveSet } = ctx;
+  return {
     logSet: async () => {
       const entry = sessionForLogging(ctx);
       if (!entry) return;
@@ -100,4 +116,8 @@ export function loggingSlice(ctx: StoreContext): LoggingSlice {
       save("dayState", { ...dayState, skipped: toggled(dayState.skipped, itemId) });
     },
   };
+}
+
+export function loggingSlice(ctx: StoreContext): LoggingSlice {
+  return { ...openingActions(ctx), ...formActions(ctx), ...recordActions(ctx) };
 }

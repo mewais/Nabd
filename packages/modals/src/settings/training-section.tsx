@@ -4,6 +4,7 @@ import { ChipsRow } from "./chips-row";
 import type { SettingsActions } from "./settings-actions";
 import { StepperRow } from "./stepper-row";
 import type { TrainingVM } from "./training-vm";
+import { WORDS } from "../wording";
 
 interface TrainingSectionProps {
   vm: TrainingVM;
@@ -13,8 +14,8 @@ interface TrainingSectionProps {
 /** How loads are shown and stepped, the user's body weight, and what equipment the library may offer. */
 export function TrainingSection({ vm, actions }: TrainingSectionProps): JSX.Element {
   return (
-    <FormSection title="Training">
-      <FormRow title="Weight unit" hint="Show and enter weights in this unit.">
+    <FormSection title={WORDS.training}>
+      <FormRow title={WORDS.weightUnit} hint={WORDS.weightUnitHint}>
         <Segmented
           options={WEIGHT_UNIT_OPTIONS}
           value={vm.unit}
@@ -22,9 +23,9 @@ export function TrainingSection({ vm, actions }: TrainingSectionProps): JSX.Elem
         />
       </FormRow>
       <StepperRow vm={vm.increment} actions={actions} />
-      <FormRow title="Body weight" hint={vm.bodyWeight.hint}>
+      <FormRow title={WORDS.bodyWeight} hint={vm.bodyWeight.hint}>
         <NumberField
-          ariaLabel="Body weight"
+          ariaLabel={WORDS.bodyWeight}
           placeholder={vm.unit}
           value={vm.bodyWeight.value}
           onSet={actions.setBodyWeight}

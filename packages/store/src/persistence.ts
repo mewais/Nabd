@@ -2,21 +2,9 @@ import type { LoggedSet } from "@nabd/domain";
 import type { Singletons } from "@nabd/ipc-client";
 import type { Notice } from "@nabd/view";
 import type { StoreCore } from "./context";
-import type { LoadProblem, NoticePlace } from "./state";
-
-/** How each stored thing is named to the user. */
-export const STORED_NAMES: Record<LoadProblem["source"], string> = {
-  program: "your plan",
-  settings: "your settings",
-  customExercises: "your custom exercises",
-  rotationState: "your exercise rotation",
-  dayState: "today's progress",
-  dayLog: "your completion log",
-  history: "your logged sets",
-  everything: "your data",
-};
-
-export const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+import { STORED_NAMES, errorText } from "./state";
+import type { NoticePlace } from "./state";
+import { setSaver } from "./unsaved-sets";
 
 /** How a backend call went: with what it resolved to, or not at all. */
 type Attempt<T> = { ok: true; value: T } | { ok: false };
@@ -46,79 +34,45 @@ export interface Persistence {
   flushSets: () => Promise<boolean>;
 }
 
-export function createPersistence({ set, get, client }: StoreCore): Persistence {
-  const notify: Persistence["notify"] = (kind, text, place = "appNotice") => {
+export type Notify = Persistence["notify"];
+export type Try = Persistence["attempt"];
+
+/** Notices to the user: in the banner, or in the Settings dialog's own place. */
+function noticesFor({ set }: StoreCore): Notify {
+  return (kind, text, place = "appNotice") => {
     const notice = { kind, text };
     set(place === "appNotice" ? { appNotice: notice } : { dataNotice: notice });
   };
+}
 
-  const stopWaiting = (setId: string): void =>
-    set((s) => ({ unsavedSets: s.unsavedSets.filter((id) => id !== setId) }));
-
-  /**
-   * One pass over the waiting sets, oldest first, stopping at the first that
-   * still cannot be saved. A set undone while it waited is simply forgotten;
-   * one undone while it was being saved is taken back out of the backend.
-   */
-  async function saveWaitingSets(): Promise<boolean> {
-    let saved = 0;
-    for (const setId of get().unsavedSets) {
-      const waiting = get().history.find((logged) => logged.id === setId);
-      if (waiting) {
-        try {
-          await client.appendSet(waiting);
-        } catch {
-          return false;
-        }
-      }
-      const undone = !get().history.some((logged) => logged.id === setId);
-      stopWaiting(setId);
-      if (waiting && undone) await attempt("undo that set", () => client.deleteSet(setId));
-      else if (waiting) saved += 1;
-    }
-    if (saved > 0) notify("info", "The sets that were waiting are saved now.");
-    return true;
-  }
-
-  let flushing: Promise<boolean> | null = null;
-  const flushSets: Persistence["flushSets"] = () => {
-    flushing ??= saveWaitingSets().finally(() => {
-      flushing = null;
-    });
-    return flushing;
-  };
-
-  /** The backend just answered: a good moment to try the waiting sets again. */
-  const backendWorked = (): void => {
-    if (get().unsavedSets.length > 0) void flushSets();
-  };
-
-  const attempt: Persistence["attempt"] = async (what, call, place) => {
+/** Backend calls that report their failure instead of throwing; `worked` hears of each success. */
+function attemptsFor(notify: Notify, worked: () => void): Try {
+  return async (what, call, place) => {
     try {
       const value = await call();
-      backendWorked();
+      worked();
       return { ok: true, value };
     } catch (e) {
       notify("error", `Could not ${what}: ${errorText(e)}`, place);
       return { ok: false };
     }
   };
+}
 
-  /** Not if its stored copy could not be read: that copy must not be overwritten (see LoadProblem). */
-  function writable(key: string): boolean {
-    const unreadable = (p: LoadProblem): boolean => p.source === key || p.source === "everything";
-    return !get().loadProblems.some(unreadable);
-  }
+/** The persisted singletons, written unless their stored copy could not be read (see LoadProblem). */
+function singletonWriter(
+  { set, get, client }: StoreCore,
+  attempt: Try,
+): Pick<Persistence, "save" | "persist" | "persistTogether"> {
+  const writable = (key: string): boolean =>
+    !get().loadProblems.some((p) => p.source === key || p.source === "everything");
 
   const persist: Persistence["persist"] = (key, value) => {
     if (writable(key)) void attempt(`save ${STORED_NAMES[key]}`, () => client.save(key, value));
   };
 
   return {
-    notify,
-    attempt,
     persist,
-    flushSets,
     save: (key, value) => {
       set((state) => ({ ...state, [key]: value }));
       persist(key, value);
@@ -128,19 +82,20 @@ export function createPersistence({ set, get, client }: StoreCore): Persistence 
       if (entries.length === 0) return;
       void attempt(`save ${what}`, () => client.saveMany(Object.fromEntries(entries)));
     },
-    saveSet: async (logged) => {
-      try {
-        await client.appendSet(logged);
-      } catch (e) {
-        set((s) => ({ unsavedSets: [...s.unsavedSets, logged.id] }));
-        notify(
-          "error",
-          `Could not save that set: ${errorText(e)}. ` +
-            "It is kept, marked as not saved yet, and will be saved as soon as that works again.",
-        );
-        return;
-      }
-      backendWorked();
-    },
+  };
+}
+
+export function createPersistence(core: StoreCore): Persistence {
+  const notify = noticesFor(core);
+  // Each call that works is a good moment to retry the waiting sets, and retrying is itself
+  // made of attempts: the two refer to each other.
+  const attempt = attemptsFor(notify, () => sets.retry());
+  const sets = setSaver(core, notify, attempt);
+  return {
+    notify,
+    attempt,
+    saveSet: sets.saveSet,
+    flushSets: sets.flushSets,
+    ...singletonWriter(core, attempt),
   };
 }

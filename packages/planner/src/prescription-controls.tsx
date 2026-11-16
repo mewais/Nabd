@@ -1,8 +1,9 @@
-import { Row, Segmented, Spacer, Stepper } from "@nabd/design-system";
+import { COMMON_WORDS, Row, Segmented, Spacer, Stepper } from "@nabd/design-system";
 import type { PrescriptionEdit } from "@nabd/program-editor";
 import { Labelled } from "./labelled";
 import { INTENSITY_OPTIONS, REP_STYLE_OPTIONS } from "./options";
 import type { SetBlockVM } from "./set-block-vm";
+import { WORDS } from "./wording";
 
 interface PrescriptionControlsProps {
   vm: SetBlockVM;
@@ -14,30 +15,30 @@ export function PrescriptionControls({ vm, onEdit }: PrescriptionControlsProps):
   return (
     <Row gap="lg" wrap>
       {vm.repStyle !== null && (
-        <Labelled label="Reps">
+        <Labelled label={COMMON_WORDS.reps}>
           <Segmented
             size="sm"
-            ariaLabel="Rep mode"
+            ariaLabel={WORDS.repMode}
             options={REP_STYLE_OPTIONS}
             value={vm.repStyle}
             onChange={(style) => onEdit((p) => p.setRepStyle(style))}
           />
         </Labelled>
       )}
-      <Labelled label="Load">
+      <Labelled label={WORDS.load}>
         <Segmented
           size="sm"
-          ariaLabel="Load mode"
+          ariaLabel={WORDS.loadMode}
           options={INTENSITY_OPTIONS}
           value={vm.intensity}
           onChange={(mode) => onEdit((p) => p.setIntensity(mode))}
         />
       </Labelled>
       <Spacer />
-      <Labelled label="Rest">
+      <Labelled label={WORDS.rest}>
         <Stepper
           size="sm"
-          ariaLabel="Rest"
+          ariaLabel={WORDS.rest}
           value={vm.rest}
           onStep={(direction) => onEdit((p) => p.stepRest(direction))}
         />

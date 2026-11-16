@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { ButtonBase } from "./button-base";
-import { pad } from "./styles";
+import { CENTERED_ROW, pad } from "./styles";
 import {
   COLOR,
   DIMMED_OPACITY,
@@ -57,8 +57,7 @@ function variantStyle(variant: RowButtonVariant, selected: boolean): CSSProperti
     case "nav":
       return {
         ...TEXT.controlLg,
-        display: "flex",
-        alignItems: "center",
+        ...CENTERED_ROW,
         gap: SPACE.md,
         padding: pad("md", "lg"),
         background: selected ? COLOR.surfaceAlt : COLOR.none,

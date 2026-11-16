@@ -1,5 +1,6 @@
 import { Button, Chip, Row } from "@nabd/design-system";
 import type { PoolEntryVM } from "./editor-vm";
+import { WORDS } from "./wording";
 
 interface PoolChipsProps {
   vm: PoolEntryVM[];
@@ -22,7 +23,7 @@ export function PoolChips({ vm, onRemove, onAdd }: PoolChipsProps): JSX.Element 
         </Chip>
       ))}
       <Button variant="add" size="sm" tone="accent" onClick={onAdd}>
-        + Add exercise
+        {WORDS.addExercise}
       </Button>
     </Row>
   );

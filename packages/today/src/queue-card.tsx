@@ -2,6 +2,7 @@ import { Card, Stack, Text } from "@nabd/design-system";
 import { QueueRow } from "./queue-row";
 import type { QueueVM } from "./queue-vm";
 import type { TodayActions } from "./today-actions";
+import { WORDS } from "./wording";
 
 interface QueueCardProps {
   vm: QueueVM;
@@ -12,7 +13,7 @@ interface QueueCardProps {
 export function QueueCard({ vm, actions }: QueueCardProps): JSX.Element {
   return (
     <Card
-      title="Today's rhythm"
+      title={WORDS.rhythm}
       action={vm.dayName === null ? undefined : <Text variant="hint">{vm.dayName}</Text>}
       flush
     >

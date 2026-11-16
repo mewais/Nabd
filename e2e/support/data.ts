@@ -26,12 +26,17 @@ import { at } from "./time";
 
 export { workingSets };
 
-type Catalog = typeof CATALOG;
+/** A catalog exercise a spec uses — one of the kit's `CATALOG` — by its id and the name the UI shows. */
+interface SpecExercise {
+  id: string;
+  name: string;
+}
 
-/** The catalog exercises the specs use — those of the kit's `CATALOG` — with the name the UI shows. */
-export const EXERCISE = Object.fromEntries(
-  Object.entries(CATALOG).map(([key, id]) => [key, { id, name: catalogExercise(id).name }]),
-) as { [K in keyof Catalog]: { id: Catalog[K]; name: string } };
+/** The exercise `key` of the kit's `CATALOG`, with the name the UI shows. */
+export function exercise(key: keyof typeof CATALOG): SpecExercise {
+  const id = CATALOG[key];
+  return { id, name: catalogExercise(id).name };
+}
 
 /** A row of a fixed day: two working sets of 8–12 unless `more` says otherwise; its id is the exercise's. */
 export function planned(

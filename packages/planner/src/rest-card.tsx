@@ -1,6 +1,7 @@
 import { Button, Card, Spacer, Stack, Text } from "@nabd/design-system";
 import type { RestColumnVM } from "./board-vm";
 import type { PlannerActions } from "./planner-actions";
+import { WORDS } from "./wording";
 
 interface RestCardProps {
   vm: RestColumnVM;
@@ -14,7 +15,7 @@ export function RestCard({ vm, actions }: RestCardProps): JSX.Element {
       <Stack gap="xs">
         <Text variant="eyebrow">{vm.label}</Text>
         <Text variant="label" tone="faint">
-          Rest
+          {WORDS.restDay}
         </Text>
       </Stack>
       <Spacer />
@@ -25,7 +26,7 @@ export function RestCard({ vm, actions }: RestCardProps): JSX.Element {
         ariaLabel={vm.addLabel}
         onClick={() => actions.edit((e) => e.addDay(vm.weekday))}
       >
-        + Add day
+        {WORDS.addAnotherDay}
       </Button>
     </Card>
   );

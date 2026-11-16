@@ -3,12 +3,6 @@
 
 export { LogSession } from "./log-session";
 export { Coach } from "./coach";
-export {
-  describeAdvice,
-  describeSetPosition,
-  formatPerformance,
-  formatSetTally,
-  formatTarget,
-} from "./wording";
+export { describeSetPosition, formatPerformance, formatSetTally } from "./wording";
 export { describeNextSet } from "./next-set";
 export type { NextSetWording } from "./next-set";

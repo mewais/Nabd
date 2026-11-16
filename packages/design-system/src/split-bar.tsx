@@ -1,5 +1,6 @@
 import { COLOR, RADIUS, SPACE, toneColor } from "./tokens";
 import type { Tone } from "./tokens";
+import { ROW } from "./styles";
 
 /** One share of the whole. */
 interface SplitSegment {
@@ -25,7 +26,7 @@ export function SplitBar({ segments }: SplitBarProps): JSX.Element {
     <div
       aria-hidden
       style={{
-        display: "flex",
+        ...ROW,
         gap: SPACE.xxs,
         height: HEIGHT,
         borderRadius: RADIUS.chip,

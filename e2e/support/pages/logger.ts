@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { DialogObject } from "./region";
 
 /** What to type into the set form before logging; a field left out keeps what the form shows. */
-export interface SetEntry {
+interface SetEntry {
   reps?: number;
   weight?: number;
 }

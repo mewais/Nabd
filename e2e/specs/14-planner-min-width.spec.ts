@@ -1,10 +1,13 @@
 import type { SetSpec } from "@nabd/domain";
 import { overlappingControls } from "../support/pages/controls";
-import { EXERCISE, day, plan, planned, slot } from "../support/data";
+import { exercise, day, plan, planned, slot } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
-const { dumbbellBench, gobletSquat, curl, hammerCurl } = EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
+const gobletSquat = exercise("gobletSquat");
+const curl = exercise("curl");
+const hammerCurl = exercise("hammerCurl");
 
 /** The window's own minimum size (src-tauri/src/window.rs). */
 const SMALLEST_WINDOW = { width: 980, height: 640 };

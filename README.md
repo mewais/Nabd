@@ -25,7 +25,11 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   that has since moved on from that exercise owes its new one in full. Such a day is one
   visit, and one session, however many calendar days it takes: its sets are compared
   with the session before the visit, not with each other (see Suggestions), and the
-  logger says which day it continues ("Continuing Monday's Push"). A skip is for its
+  logger says which day it continues ("Continuing Monday's Push"). A set logged while a
+  visit continues belongs to its session, and any other set — on a weekday plan, or on a
+  floating day begun that day — to its own date's, whatever else that day logged or a
+  switch of schedule left behind; an edit that leaves the plan on the visit's day keeps
+  the visit, even when it takes away all the visit carried. A skip is for its
   calendar day only, so a skipped exercise is owed again; the one exception is that a
   day owing nothing moves on. Each calendar day puts on record what it owed and what it
   did, so a day that came back for two sets and did them is 100%; a day it merely waited
@@ -93,7 +97,9 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   exercise). A set beyond an exercise's prescription keeps the form on that exercise.
   Reps and weight can be stepped (− / +, or ↑ / ↓ in the field: one rep, five seconds,
   one weight increment) or typed — a field can be emptied and retyped, and goes back to
-  its last number if left empty — and Enter logs the set. A weight reads exactly as it
+  its last number if left empty — and Enter logs the set. A number typed finer than its
+  field holds (whole reps, a weight to two decimals) is taken as its rounded value, and
+  the same single Enter logs it. A weight reads exactly as it
   was entered, to two decimals, so quarter steps read exactly; shown in the other unit
   it is a conversion, rounded to one decimal (20 kg is "44.1 lb"). The form's own
   field always holds two decimals, so it can be stepped by the finest increment.
@@ -250,12 +256,13 @@ pnpm lint:rust          # rustfmt + clippy, over the whole Cargo workspace
 pnpm check              # all of the above
 ```
 
-Besides the usual rules, ESLint enforces three things about this code base
+Besides the usual rules, ESLint enforces four things about this code base
 (`eslint.config.js`, `scripts/eslint/`, with their own tests in `tests/scripts/`):
 
 - the dependency direction between packages described under [Layout](#layout), and
   that a package — or a test — reaches another only through its entry point
-  `@nabd/<name>`, never a file inside it, by alias or by relative path; the end-to-end
+  `@nabd/<name>`, never a file inside it, by alias or by relative path (a plain-data
+  JSON file the package publishes in its `exports` aside); the end-to-end
   specs may use only what does not draw (`scripts/eslint/layers.js`);
 - one import style: types come in their own `import type { … }` statement, and a module
   is imported once per kind;
@@ -267,6 +274,10 @@ Besides the usual rules, ESLint enforces three things about this code base
   weight or position of a style property, however its key is written; no number for a
   sizing attribute (`size={14}`, `width={540}`); and no raw `<button>`, `<input>`,
   `<select>` or `<textarea>`, nor any other element made clickable with `onClick`.
+- that a component writes no words of its own (`scripts/eslint/wording.js`): in the
+  packages that draw (the design system, the body map, the screens) no JSX text, and no
+  string given to a prop that labels (`title`, `ariaLabel`, `placeholder`, `hint`…), has a
+  letter in it — the words come from the package's `wording.ts` or its view-model.
 
 A genuine one-off is disabled on its line, with the reason.
 
@@ -274,8 +285,8 @@ The app's version is written in `package.json` (which `tauri.conf.json` and the 
 read) and in `src-tauri/Cargo.toml`; `src-tauri/build.rs` refuses to build when the
 two differ. The same build script takes the window's title from the page's `<title>`,
 and the window's background before the page has painted from the design system's
-theme (its dark background, `DARK_BACKGROUND` in `theme.ts`, which the page's own
-prepaint uses too).
+`prepaint.json` — the dark theme's background, which the theme, the page's own prepaint
+(Vite, through `@nabd/design-system/prepaint.json`) and the build script all read.
 
 ## End-to-end tests
 
@@ -334,7 +345,8 @@ idle time, autostart, and everything Windows- or macOS-specific.
 `pnpm visual` (`e2e/visual/`) photographs every screen, modal and overlay state in both
 themes, on the e2e fixture and its fake clock, into `e2e/visual/shots/` (`OUT=<dir>` for
 elsewhere, `URL=<app>` for an app already being served) — for comparing two builds by
-eye; `pnpm e2e` does not run it. `scripts/visual/make-icon.mjs` renders the app icon's
+eye; `pnpm e2e` does not run it. The same capture, as its own project
+(`pnpm exec playwright test --config e2e/visual --project icon`), renders the app icon's
 source image (`src-tauri/icons/source.png`) from the in-app logo, from which
 `pnpm tauri icon` makes the icons the bundle uses.
 
@@ -377,7 +389,9 @@ packages/
                   presentational primitive: layout (Row, Stack, Grid, WithSide,
                   Divider…), Text, Card, ButtonBase under every button and
                   InputBase under every field; one prop vocabulary for all of them
-                  (the CONVENTIONS at the top of its index.ts)
+                  (the CONVENTIONS at the top of its index.ts); the words its
+                  primitives say, and those the screens share (wording.ts); the
+                  window's pre-paint colour (prepaint.json)
   bodymap         the anatomical SVG map (its vendored drawing in src/drawing/), the
                   per-muscle meter, and the muscles as the options of a picker
   shell           the app chrome: sidebar, top bar, notice banner
@@ -404,9 +418,10 @@ tests/                 tests/<package>/, tests/rust/<crate>/, tests/scripts/ (th
                        kit — builders, exercises, programs — and world, dom) and
                        tests/rust/common/
 e2e/                   Playwright specs of the whole UI, with their page objects and
-                       shared config, and the screenshot capture (visual/)
-scripts/               the Vitest setup file, the local ESLint rules, the icon script
-                       and the Linux smoke test
+                       shared config, and the screenshot capture (visual/: the screens,
+                       and the app icon's source image)
+scripts/               the Vitest setup file, the local ESLint rules and the Linux
+                       smoke test
 ```
 
 **Dependencies only point one way**, and ESLint refuses an import that does not
@@ -450,7 +465,11 @@ same shape:
   group offers), built with `optionsOf(keys, names)` — the names a domain table or a
   naming function — or, where the labels are the screen's own, written out; a picker
   more than one screen offers lives below them (the muscles in `bodymap`, the themes in
-  `design-system`). `wording.ts` holds any text helpers.
+  `design-system`). `wording.ts` holds every word a component shows that its view-model
+  does not carry (headings, button and field labels: its `WORDS`) and any text helpers;
+  it is the package's one wording module, and a component writes no words of its own.
+  Words two screens say of the same thing are written once, below them
+  (`COMMON_WORDS` and `SCREEN_NAMES` in `design-system`).
 - Components are one per file, named after the file, each with a `<Name>Props`
   interface, and take their props by one rule:
   - **`vm`** — the view-model, or the part of it, that the component draws. Anything
@@ -466,13 +485,15 @@ same shape:
 In the planner every change to the program is a `ProgramEdit` — `(editor) =>
 editor.moveDay(id, 1)` — handed to the one `edit` action; a change to a prescription is a
 `PrescriptionEdit` handed to `editor.editPrescription`. Each operation is declared once,
-on `ProgramEditor` or `PrescriptionEditor`, and written out where the user triggers it.
+on `ProgramEditor` or `PrescriptionEditor`, and written out where the user triggers it;
+both work alike: a method returns a new program (or prescription) and leaves the one it
+was given untouched.
 
 In the store, the actions are grouped as slices (`DaySlice`, `LoggingSlice`, … in
 `slices.ts`, one file each). A slice never imports another slice: what it needs of
 another it asks for through `get().action()`, and what two of them share lives in a
-helper module (`state`, `context`, `persistence`, `hydration`, `rollover`,
-`open-session`, `os`, `selectors`, `settle`).
+helper module (`state`, `context`, `persistence`, `unsaved-sets`, `hydration`,
+`rollover`, `open-session`, `os`, `selectors`, `settle`).
 
 ## Credits
 

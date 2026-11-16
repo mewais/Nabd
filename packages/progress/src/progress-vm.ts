@@ -74,7 +74,7 @@ interface ProgressInput {
 }
 
 function buildHeatmapVM(coverage: Coverage, planned: MuscleVolume): HeatmapVM {
-  const trained = MUSCLES.filter((muscle) => coverage[muscle] > 0);
+  const trained = MUSCLES.filter((muscle) => coverage(muscle) > 0);
   const ranked = new CoverageReport(coverage, planned)
     .standings(trained)
     .sort((a, b) => b.pct - a.pct);

@@ -1,8 +1,8 @@
-import { EXERCISE, day, loggedSet, plan, planned } from "../support/data";
+import { exercise, day, loggedSet, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { dumbbellBench } = EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
 
 const program = plan([day("Push", [planned(dumbbellBench.id)])]);
 

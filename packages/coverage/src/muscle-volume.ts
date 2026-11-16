@@ -8,7 +8,7 @@ import type {
   MuscleKey,
   Program,
 } from "@nabd/domain";
-import { DAYS_PER_WEEK, MUSCLES, exerciseOfSet, isWarmup, workingSets } from "@nabd/domain";
+import { DAYS_PER_WEEK, exerciseOfSet, isWarmup, workingSets } from "@nabd/domain";
 
 /** Weekly sets that count as fully covering a muscle. */
 const FULL_COVERAGE_SETS = 16;
@@ -45,10 +45,7 @@ export class MuscleVolume {
 
   /** 0–100 per muscle, saturating at {@link FULL_COVERAGE_SETS}. */
   toCoverage(): Coverage {
-    // Every muscle gets an entry, which is what makes the record a Coverage.
-    return Object.fromEntries(
-      MUSCLES.map((m) => [m, Math.min(100, (this.of(m) / FULL_COVERAGE_SETS) * 100)]),
-    ) as Coverage;
+    return (muscle) => Math.min(100, (this.of(muscle) / FULL_COVERAGE_SETS) * 100);
   }
 
   /**

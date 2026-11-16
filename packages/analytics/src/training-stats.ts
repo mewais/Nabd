@@ -7,6 +7,7 @@ import {
   dateKey,
   isWorkday,
   startOfDay,
+  percentOf,
   startOfWeek,
   sum,
 } from "@nabd/domain";
@@ -47,9 +48,6 @@ function calendarLevel(sets: number): CalendarLevel {
   if (sets <= LIGHT_DAY_SETS) return "light";
   return sets <= MEDIUM_DAY_SETS ? "medium" : "full";
 }
-
-const percent = (done: number, planned: number): number =>
-  Math.round(Math.min(1, done / planned) * 100);
 
 /**
  * Read-only statistics over the set history and the per-day completion log.
@@ -124,7 +122,7 @@ export class TrainingStats {
     const records = this.weekOf(this.today).map((day) => this.recordsByDate.get(dateKey(day)));
     const planned = sum(records, (record) => record?.planned ?? 0);
     const done = sum(records, (record) => Math.min(record?.done ?? 0, record?.planned ?? 0));
-    return planned === 0 ? 0 : percent(done, planned);
+    return percentOf(done, planned);
   }
 
   /** Completion for each of the last 7 days, oldest first. */
@@ -132,7 +130,10 @@ export class TrainingStats {
     return Array.from({ length: DAYS_PER_WEEK }, (_, i) => {
       const date = addDays(this.today, i - (DAYS_PER_WEEK - 1));
       const record = this.recordsByDate.get(dateKey(date));
-      const pct = record && record.planned > 0 ? percent(record.done, record.planned) : null;
+      const pct =
+        record && record.planned > 0
+          ? percentOf(Math.min(record.done, record.planned), record.planned)
+          : null;
       return { date, pct };
     });
   }
@@ -172,13 +173,8 @@ export class TrainingStats {
 
   /** Percentage of sets prompted by each trigger. */
   triggerMix(): Record<Trigger, number> {
-    const counts: Record<Trigger, number> = { idle: 0, timer: 0, manual: 0 };
-    for (const set of this.history) counts[set.trigger]++;
-    const total = Math.max(1, this.history.length);
-    return {
-      idle: Math.round((counts.idle / total) * 100),
-      timer: Math.round((counts.timer / total) * 100),
-      manual: Math.round((counts.manual / total) * 100),
-    };
+    const share = (trigger: Trigger): number =>
+      percentOf(this.history.filter((set) => set.trigger === trigger).length, this.history.length);
+    return { idle: share("idle"), timer: share("timer"), manual: share("manual") };
   }
 }

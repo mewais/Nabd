@@ -1,9 +1,11 @@
-import type { TrackingType } from "@nabd/domain";
-import { dateKey } from "@nabd/domain";
-import { ExerciseHistory, ProgressionAdvisor } from "@nabd/progression";
-import { describeAdvice, formatPerformance, formatTarget } from "@nabd/session";
-import { exercise, logged, nov, prescription, working } from "../support/builders";
-import { TODAY, curl, curlRow, plankRow, itemsFor, coachFor } from "./fixtures";
+import type { Prescription, SetSpec, TrackingType } from "@nabd/domain";
+import { describeNextSet, formatPerformance } from "@nabd/session";
+import { exercise, logged, nov, prescription, warmup, working } from "../support/builders";
+import { curl, curlRow, plank, itemsFor, coachFor, wordedNextSet } from "./fixtures";
+
+/** What a set prescribed as `spec` (in `prescribed`'s way) asks for, in words. */
+const targetOf = (spec: SetSpec, overrides: Partial<Prescription> = {}, ex = curl) =>
+  wordedNextSet(ex, prescription([spec], overrides)).target;
 
 describe("wording", () => {
   it("describes a performed set for each way of tracking", () => {
@@ -31,20 +33,10 @@ describe("wording", () => {
   });
 
   it("advises an unloaded bodyweight exercise in reps first, then in added weight", () => {
-    const advisor = new ProgressionAdvisor(2.5);
     const pullUp = exercise({ name: "Pull-Up", tracking: "weighted_bodyweight" });
     const advice = (reps: number) =>
-      describeAdvice(
-        advisor.advise({
-          tracking: pullUp.tracking,
-          prescription: prescription([working(8, 12)]),
-          setIndex: 0,
-          history: new ExerciseHistory([logged(pullUp, nov(9), reps, 0)], pullUp.id),
-          session: dateKey(TODAY),
-        }),
-        pullUp.tracking,
-        "kg",
-      );
+      wordedNextSet(pullUp, prescription([working(8, 12)]), [logged(pullUp, nov(9), reps, 0)])
+        .advice;
     expect(advice(10)).toMatchObject({ primary: "11 reps", basis: "Last time: 10 reps" });
     expect(advice(12)).toMatchObject({
       primary: "8 + 2.5 kg",
@@ -54,30 +46,30 @@ describe("wording", () => {
   });
 
   it("describes what a prescribed set asks for", () => {
-    const ranged = prescription([working(8, 12)], { intensity: "rpe" });
-    expect(formatTarget({ type: "working", amount: 8, upTo: 12, intensity: 8 }, ranged)).toBe(
-      "Working set · 8–12 reps · RPE 8",
-    );
-    expect(formatTarget({ type: "warmup", amount: 12 }, ranged)).toBe("Warm-up · 12 reps");
-    const pct = prescription([working(5)], { repMode: "fixed", intensity: "pct" });
-    expect(formatTarget({ type: "drop", amount: 5, intensity: 70 }, pct)).toBe(
-      "Drop set · 5 reps · 70% 1RM",
-    );
-    expect(formatTarget({ type: "working", amount: 45 }, plankRow)).toBe("Working set · 45 s");
+    expect(
+      targetOf({ type: "working", amount: 8, upTo: 12, intensity: 8 }, { intensity: "rpe" }),
+    ).toBe("Working set · 8–12 reps · RPE 8");
+    expect(targetOf(warmup(12), { intensity: "rpe" })).toBe("Warm-up · 12 reps");
+    expect(
+      targetOf({ type: "drop", amount: 5, intensity: 70 }, { repMode: "fixed", intensity: "pct" }),
+    ).toBe("Drop set · 5 reps · 70% 1RM");
+    expect(targetOf(working(45), { repMode: "time" }, plank)).toBe("Working set · 45 s");
   });
 
   it("puts advice into words, with the alternative and what it was based on", () => {
     const history = [logged(curl, nov(9), 8, 25)];
     const warmUp = logged(curl, nov(16, 9), 15, 10, { planItemId: curlRow.id, setType: "warmup" });
     const all = [...history, warmUp];
-    const real = coachFor(all).adviceFor(itemsFor(all).curlItem);
-    expect(describeAdvice(real, "weight_reps", "kg")).toEqual({
+    const advice = (sets: typeof all) =>
+      describeNextSet(itemsFor(sets).curlItem, coachFor(sets), "kg").advice;
+    expect(advice(all)).toEqual({
       primary: "9 × 25 kg",
       alternative: "8 × 27.5 kg",
       reason: "Inside your range — beat last time.",
       basis: "Last time: 8 × 25 kg",
     });
-    expect(describeAdvice(null, "weight_reps", "kg")).toBeNull();
+    // The warm-up comes first, which is not something to progress on.
+    expect(advice(history)).toBeNull();
   });
 
   describe("when the plan prescribes an intensity", () => {
@@ -89,17 +81,11 @@ describe("wording", () => {
       sessions = history,
       tracking: TrackingType = "weight_reps",
     ) =>
-      describeAdvice(
-        new ProgressionAdvisor(2.5).advise({
-          tracking,
-          prescription: prescription([working(8, 12, value)], { intensity }),
-          setIndex: 0,
-          history: new ExerciseHistory(sessions, curl.id),
-          session: dateKey(TODAY),
-        }),
-        tracking,
-        "kg",
-      )!;
+      wordedNextSet(
+        { ...curl, tracking },
+        prescription([working(8, 12, value)], { intensity }),
+        sessions,
+      ).advice!;
 
     it("says a %1RM load is that share of the estimated max", () => {
       expect(wording("pct", 70)).toEqual({
@@ -120,14 +106,8 @@ describe("wording", () => {
     });
 
     it("shows the weight in the user's unit", () => {
-      const advice = new ProgressionAdvisor(2.5).advise({
-        tracking: "weight_reps",
-        prescription: prescription([working(8, 12, 70)], { intensity: "pct" }),
-        setIndex: 0,
-        history: new ExerciseHistory(history, curl.id),
-        session: dateKey(TODAY),
-      });
-      expect(describeAdvice(advice, "weight_reps", "lb")!.reason).toBe(
+      const prescribed = prescription([working(8, 12, 70)], { intensity: "pct" });
+      expect(wordedNextSet(curl, prescribed, history, "lb").advice!.reason).toBe(
         "70% of your estimated max (167.6 lb).",
       );
     });
@@ -162,31 +142,27 @@ describe("wording", () => {
 
   it("counts a single rep as one rep", () => {
     expect(formatPerformance({ reps: 1, weight: null }, "bodyweight_reps", "kg")).toBe("1 rep");
-    expect(formatTarget({ type: "working", amount: 1 }, prescription([]))).toBe(
-      "Working set · 1 rep",
-    );
-    expect(formatTarget({ type: "working", amount: 1, upTo: 3 }, prescription([]))).toBe(
-      "Working set · 1–3 reps",
-    );
+    expect(targetOf(working(1))).toBe("Working set · 1 rep");
+    expect(targetOf(working(1, 3))).toBe("Working set · 1–3 reps");
   });
 
   it("asks for a starting weight instead of suggesting zero the first time", () => {
-    const first = new ProgressionAdvisor(2.5).startingPoint("weight_reps", working(8, 12));
-    expect(describeAdvice(first, "weight_reps", "kg")).toMatchObject({
+    const first = (tracking: TrackingType, sets = [working(8, 12)]) =>
+      wordedNextSet({ ...curl, tracking }, prescription(sets)).advice!;
+    expect(first("weight_reps")).toMatchObject({
       primary: "8 reps — pick a starting weight",
       basis: null,
     });
-    const hold = new ProgressionAdvisor(2.5).startingPoint("weight_duration", working(30));
-    expect(describeAdvice(hold, "weight_duration", "kg")!.primary).toBe(
-      "30 s — pick a starting weight",
+    const hold = wordedNextSet(
+      { ...plank, tracking: "weight_duration" },
+      prescription([working(30)], { repMode: "time" }),
     );
+    expect(hold.advice!.primary).toBe("30 s — pick a starting weight");
     // An unweighted first time has nothing to pick.
-    const reps = new ProgressionAdvisor(2.5).startingPoint("bodyweight_reps", working(8, 12));
-    expect(describeAdvice(reps, "bodyweight_reps", "kg")!.primary).toBe("8 reps");
+    expect(first("bodyweight_reps").primary).toBe("8 reps");
     // Nor does a bodyweight exercise that can take weight: it starts without any.
     for (const tracking of ["weighted_bodyweight", "assisted_bodyweight"] as const) {
-      const start = new ProgressionAdvisor(2.5).startingPoint(tracking, working(8, 12));
-      expect(describeAdvice(start, tracking, "kg")!.primary).toBe("8 reps");
+      expect(first(tracking).primary).toBe("8 reps");
     }
   });
 });

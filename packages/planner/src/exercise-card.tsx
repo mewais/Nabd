@@ -4,6 +4,7 @@ import { MoveButtons } from "./move-buttons";
 import type { PlannerActions } from "./planner-actions";
 import { SetTable } from "./set-table";
 import { SupersetToggle } from "./superset-toggle";
+import { WORDS } from "./wording";
 
 interface ExerciseCardProps {
   vm: ExerciseCardVM;
@@ -32,7 +33,7 @@ export function ExerciseCard({ vm, dayId, actions }: ExerciseCardProps): JSX.Ele
           <IconButton
             icon="close"
             variant="plain"
-            ariaLabel="Remove exercise"
+            ariaLabel={WORDS.removeExercise}
             onClick={() => edit((e) => e.removeExercise(dayId, rowId))}
           />
         </Row>

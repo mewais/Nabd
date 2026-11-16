@@ -42,8 +42,13 @@ describe("coverage rail view-model", () => {
 
     // Bench 3 working sets + OHP 3: front delts are secondary to one, primary to the other.
     const chest = bars.find((bar) => bar.muscle === "chest");
-    expect(chest).toEqual({ muscle: "chest", name: "Chest", pct: coverage.chest, value: "3 sets" });
-    expect(coverage.chest).toBeCloseTo((3 / 16) * 100);
+    expect(chest).toEqual({
+      muscle: "chest",
+      name: "Chest",
+      pct: coverage("chest"),
+      value: "3 sets",
+    });
+    expect(coverage("chest")).toBeCloseTo((3 / 16) * 100);
     expect(bars.map((bar) => bar.pct)).toEqual(
       [...bars.map((bar) => bar.pct)].sort((a, b) => b - a),
     );

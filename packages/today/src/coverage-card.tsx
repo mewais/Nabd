@@ -3,6 +3,7 @@ import { Card, Divider, Row, Segmented, Stack, Text } from "@nabd/design-system"
 import type { CoverageVM } from "./coverage-vm";
 import { MAP_STYLE_OPTIONS, MAP_VIEW_OPTIONS } from "./options";
 import type { TodayActions } from "./today-actions";
+import { WORDS } from "./wording";
 
 interface CoverageCardProps {
   vm: CoverageVM;
@@ -12,7 +13,7 @@ interface CoverageCardProps {
 /** The week's muscle coverage: on the body map, then muscle by muscle. */
 export function CoverageCard({ vm, actions }: CoverageCardProps): JSX.Element {
   return (
-    <Card title="Muscle coverage" action={<Text variant="eyebrow">7-day</Text>}>
+    <Card title={WORDS.coverage} action={<Text variant="eyebrow">{WORDS.coverageSpan}</Text>}>
       <Stack gap="lg">
         <Row gap="sm" wrap>
           <Segmented
@@ -20,14 +21,14 @@ export function CoverageCard({ vm, actions }: CoverageCardProps): JSX.Element {
             value={vm.view}
             onChange={actions.setMapView}
             size="sm"
-            ariaLabel="Body side"
+            ariaLabel={WORDS.bodySide}
           />
           <Segmented
             options={MAP_STYLE_OPTIONS}
             value={vm.mapStyle}
             onChange={actions.setMapStyle}
             size="sm"
-            ariaLabel="Map style"
+            ariaLabel={WORDS.mapStyle}
           />
         </Row>
         <BodyMapPair coverage={vm.coverage} mapStyle={vm.mapStyle} view={vm.view} />

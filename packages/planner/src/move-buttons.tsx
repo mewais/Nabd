@@ -1,5 +1,6 @@
 import type { Direction } from "@nabd/domain";
 import { IconButton, Row } from "@nabd/design-system";
+import { WORDS } from "./wording";
 
 interface MoveButtonsProps {
   /** Earlier (-1) or later (+1). */
@@ -15,13 +16,13 @@ export function MoveButtons({ onMove, horizontal = false }: MoveButtonsProps): J
       <IconButton
         size="sm"
         icon={horizontal ? "chevron-left" : "chevron-up"}
-        ariaLabel="Move earlier"
+        ariaLabel={WORDS.moveEarlier}
         onClick={() => onMove(-1)}
       />
       <IconButton
         size="sm"
         icon={horizontal ? "chevron-right" : "chevron-down"}
-        ariaLabel="Move later"
+        ariaLabel={WORDS.moveLater}
         onClick={() => onMove(1)}
       />
     </Row>

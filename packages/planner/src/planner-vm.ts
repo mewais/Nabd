@@ -73,7 +73,7 @@ function buildRailVM(volume: MuscleVolume): RailVM {
     bars: volume.ranked().map(({ muscle, sets }) => ({
       muscle,
       name: MUSCLE_NAMES[muscle],
-      pct: coverage[muscle],
+      pct: coverage(muscle),
       value: plural(sets, "set"),
     })),
   };

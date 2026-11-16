@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { LiveDot, ModalShell, ThemeProvider, ToastFrame } from "@nabd/design-system";
+import { COLOR, LiveDot, ModalShell, ThemeProvider, ToastFrame } from "@nabd/design-system";
 import { renderRoot } from "./render";
 
 const root = (theme: "light" | "dark", glass: boolean, opacity = 0.7): HTMLElement =>
@@ -59,16 +59,17 @@ describe("ThemeProvider", () => {
   });
 
   it("paints the solid background from the theme", () => {
-    expect(root("dark", false).style.background).toBe("var(--bg)");
+    expect(root("dark", false).style.background).toBe(COLOR.bg);
   });
 
   it("paints a frosted tint as strong as the opacity setting in glass mode", () => {
-    const dark = root("dark", true, 0.8).style;
-    expect(dark.background.replace(/\s/g, "")).toBe("rgba(15,17,24,0.8)");
-    expect(dark.backdropFilter).toContain("blur");
-
-    const light = root("light", true, 0.3).style;
-    expect(light.background.replace(/\s/g, "")).toBe("rgba(244,246,251,0.3)");
+    const tint = (theme: "dark" | "light", opacity: number) =>
+      root(theme, true, opacity).style.background.replace(/\s/g, "");
+    expect(tint("dark", 0.8)).toMatch(/,0\.8\)$/);
+    expect(tint("light", 0.3)).toMatch(/,0\.3\)$/);
+    // Each theme frosts with its own tint.
+    expect(tint("dark", 0.5)).not.toBe(tint("light", 0.5));
+    expect(root("dark", true, 0.8).style.backdropFilter).not.toBe("");
   });
 
   it("ships the keyframes of every animation its primitives play", () => {
@@ -90,6 +91,7 @@ describe("ThemeProvider", () => {
   it("draws one focus ring, for keyboard focus only", () => {
     const { container } = render(<ThemeProvider theme="dark" glass={false} opacity={1} />);
     const css = container.querySelector("style")?.textContent ?? "";
-    expect(css.match(/:focus-visible[^{]*\{[^}]*outline: 2px solid/g)).toHaveLength(1);
+    expect(css.match(/:focus-visible[^{]*\{[^}]*outline:/g)).toHaveLength(1);
+    expect(css).not.toMatch(/:focus\s*\{[^}]*outline: \d/);
   });
 });

@@ -1,4 +1,4 @@
-import { monthName, monthShort } from "@nabd/domain";
+import { monthAndDay, monthName } from "@nabd/domain";
 
 describe("month labels", () => {
   it("names a month the way Date.getMonth() numbers it", () => {
@@ -7,8 +7,8 @@ describe("month labels", () => {
     expect(monthName(11)).toBe("December");
   });
 
-  it("shortens a name to three letters", () => {
-    expect(monthShort(8)).toBe("Sep");
+  it("writes a date as its month, shortened to three letters, and its day", () => {
+    expect(monthAndDay(new Date(2026, 8, 7))).toBe("Sep 7");
   });
 
   it("refuses a number that is not a month", () => {

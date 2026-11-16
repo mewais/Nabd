@@ -1,8 +1,9 @@
-import { EXERCISE, day, loggedSet, plan, planned, workingSets } from "../support/data";
+import { exercise, day, loggedSet, plan, planned, workingSets } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { dumbbellBench, pullUp } = EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
+const pullUp = exercise("pullUp");
 
 const LAST_FRIDAY = dayAfter(MONDAY, -3);
 const TUESDAY = dayAfter(MONDAY);

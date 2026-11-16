@@ -1,9 +1,14 @@
 import { step } from "../support/pages/controls";
-import { EXERCISE, day, plan, planned } from "../support/data";
+import { exercise, day, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { dumbbellBench, raise, curl, gobletSquat, plank, pushUp } = EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
+const raise = exercise("raise");
+const curl = exercise("curl");
+const gobletSquat = exercise("gobletSquat");
+const plank = exercise("plank");
+const pushUp = exercise("pushUp");
 
 const TUESDAY = dayAfter(MONDAY);
 const WEDNESDAY = dayAfter(MONDAY, 2);

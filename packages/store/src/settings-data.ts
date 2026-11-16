@@ -1,3 +1,4 @@
+import type { AppData } from "@nabd/domain";
 import {
   SettingsSchema,
   hasWorkingHours,
@@ -10,20 +11,28 @@ import type { StoreContext } from "./context";
 import { applyAutostart, applyGlass } from "./os";
 import type { SettingsDataSlice } from "./slices";
 
-/** The settings and the data behind them: the Settings dialog's side of the store. */
-export function settingsDataSlice(ctx: StoreContext): SettingsDataSlice {
-  const { get, set, client, save, flushSets, attempt, notify } = ctx;
+/** What an export leaves out, for the notice that reports it; empty when it is complete. */
+function exportGaps({ get }: StoreContext, allSaved: boolean): string {
+  const unsaved = allSaved ? [] : [`${plural(get().unsavedSets.length, "set")} not saved yet`];
+  const unreadable = get()
+    .loadProblems.filter((problem) => problem.source === "history")
+    .map((problem) => `${problem.detail} that could not be read`);
+  const gaps = [...unsaved, ...unreadable];
+  return gaps.length === 0 ? "" : ` — without ${gaps.join(", or ")}`;
+}
 
-  /** What an export leaves out, for the notice that reports it; empty when it is complete. */
-  function exportGaps(allSaved: boolean): string {
-    const unsaved = allSaved ? [] : [`${plural(get().unsavedSets.length, "set")} not saved yet`];
-    const unreadable = get()
-      .loadProblems.filter((problem) => problem.source === "history")
-      .map((problem) => `${problem.detail} that could not be read`);
-    const gaps = [...unsaved, ...unreadable];
-    return gaps.length === 0 ? "" : ` — without ${gaps.join(", or ")}`;
-  }
+/** Back up what is stored, then replace it with `data`; resolves to where the backup went. */
+async function backUpAndImport({ client }: StoreContext, data: AppData): Promise<string> {
+  const backup = await client.exportData("before_import");
+  await client.importData(data);
+  return backup;
+}
 
+/** The settings themselves, and the dialog they are changed in. */
+function settingsActions(
+  ctx: StoreContext,
+): Pick<SettingsDataSlice, "updateSettings" | "setBodyWeight" | "openSettings" | "closeSettings"> {
+  const { get, set, save } = ctx;
   return {
     updateSettings: (patch) => {
       const before = get().settings;
@@ -52,18 +61,27 @@ export function settingsDataSlice(ctx: StoreContext): SettingsDataSlice {
     openSettings: () => set({ settingsOpen: true }),
     // The import/export notice belongs to one visit of the Settings dialog.
     closeSettings: () => set({ settingsOpen: false, dataNotice: null }),
+  };
+}
 
+/** Export and import: the data behind the settings, reported in the dialog's own notice. */
+function dataActions(
+  ctx: StoreContext,
+): Pick<SettingsDataSlice, "exportData" | "importData" | "replaceData"> {
+  const { get, set, client, flushSets, attempt } = ctx;
+  const report = (kind: "info" | "error", text: string): void =>
+    ctx.notify(kind, text, "dataNotice");
+  return {
     exportData: async () => {
       const allSaved = await flushSets();
       const exported = await attempt("export", () => client.exportData("manual"), "dataNotice");
-      if (!exported.ok) return;
-      notify("info", `Exported to ${exported.value}${exportGaps(allSaved)}`, "dataNotice");
+      if (exported.ok) report("info", `Exported to ${exported.value}${exportGaps(ctx, allSaved)}`);
     },
 
     importData: (json) => {
       const result = parseImport(json);
       if (result.ok) set({ confirmation: { kind: "import", data: result.data } });
-      else notify("error", `Could not import: ${result.errors[0]}`, "dataNotice");
+      else report("error", `Could not import: ${result.errors[0]}`);
     },
 
     replaceData: async (imported) => {
@@ -74,26 +92,18 @@ export function settingsDataSlice(ctx: StoreContext): SettingsDataSlice {
         : imported;
       // What the import replaces is kept: saved in full, then written to a backup file.
       if (!(await flushSets())) {
-        const why = "some logged sets are not saved yet. Try again shortly.";
-        notify("error", `Could not import: ${why}`, "dataNotice");
+        report("error", "Could not import: some logged sets are not saved yet. Try again shortly.");
         return;
       }
-      const imports = await attempt(
-        "import",
-        async () => {
-          const backup = await client.exportData("before_import");
-          await client.importData(data);
-          return backup;
-        },
-        "dataNotice",
-      );
+      const imports = await attempt("import", () => backUpAndImport(ctx, data), "dataNotice");
       if (!imports.ok) return;
       await get().hydrate();
-      notify(
-        "info",
-        `Import complete. What it replaced was first saved to ${imports.value}`,
-        "dataNotice",
-      );
+      report("info", `Import complete. What it replaced was first saved to ${imports.value}`);
     },
   };
+}
+
+/** The settings and the data behind them: the Settings dialog's side of the store. */
+export function settingsDataSlice(ctx: StoreContext): SettingsDataSlice {
+  return { ...settingsActions(ctx), ...dataActions(ctx) };
 }

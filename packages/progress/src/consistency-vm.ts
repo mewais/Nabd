@@ -1,9 +1,8 @@
 import type { CalendarCell, TrainingStats } from "@nabd/analytics";
 import type { BarDatum } from "@nabd/design-system";
-import { WEEKDAYS, monthName, parseDateKey, weekdayInitial } from "@nabd/domain";
+import { WEEKDAYS, monthAndDay, monthName, parseDateKey, weekdayInitial } from "@nabd/domain";
 import type { ProgressTab } from "@nabd/view";
 import { relativeHeights } from "./bars";
-import { monthAndDay } from "./wording";
 
 export interface CalendarVM {
   /** "November 2026". */

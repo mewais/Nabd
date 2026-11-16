@@ -7,6 +7,7 @@ import { buildTrainingVM } from "./training-vm";
 import type { TrainingVM } from "./training-vm";
 import { buildWorkdayVM } from "./workday-vm";
 import type { WorkdayVM } from "./workday-vm";
+import { COMMON_WORDS } from "@nabd/design-system";
 
 export interface SettingsVM {
   workday: WorkdayVM;
@@ -67,7 +68,7 @@ export function buildSettingsVM({ settings, capabilities, notice }: SettingsInpu
       theme: settings.theme,
       glass: capabilities.glass
         ? rows.toggle("glass", {
-            title: "Translucent window",
+            title: COMMON_WORDS.translucentWindow,
             hint: "Frost the panels so your desktop shows through.",
           })
         : null,

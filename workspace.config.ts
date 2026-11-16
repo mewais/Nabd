@@ -16,11 +16,3 @@ export const workspaceAliases: Record<string, string> = Object.fromEntries(
     entries.map((entry) => [withoutWildcard(name), fromRoot(withoutWildcard(entry))]),
   ),
 );
-
-/**
- * What the window shows before the app has painted (the dark theme's
- * background), for the build to put into index.html. Build tooling reads it
- * from the design system's source here, beside the map of where packages
- * live, so that no package reaches into another past its entry point.
- */
-export { PREPAINT_BACKGROUND } from "./packages/design-system/src/theme";

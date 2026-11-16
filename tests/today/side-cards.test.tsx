@@ -7,13 +7,9 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import { EMPTY_PROGRAM } from "@nabd/domain";
 import { nov } from "../support/builders";
 import { did, pushDay } from "../support/programs";
-import { todayVM } from "./fixtures";
+import { benchWeek, todayVM } from "./fixtures";
 import type { TodayOptions } from "./fixtures";
 import { renderToday } from "./render";
-
-/** Twelve chest sets last Friday: chest is well covered, the rest of the plan lags. */
-const benchWeek = () =>
-  Array.from({ length: 12 }, (unused, i) => did(null, "bench", 8, 60, { at: nov(13, 12, i) }));
 
 const chestDay = (options: TodayOptions = {}) =>
   renderToday(todayVM({ program: pushDay(), history: benchWeek() }, options));

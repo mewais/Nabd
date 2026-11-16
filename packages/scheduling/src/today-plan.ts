@@ -39,7 +39,7 @@ export class TodayPlan {
      * today's visit began today (and always on a weekday plan).
      */
     readonly continuesFrom: string | null,
-    /** The session today's sets belong to (see `LoggedSet.session`). */
+    /** The session a set logged now belongs to (see `LoggedSet.session`). */
     readonly session: string,
     /** The program day that applies today; null on a rest day or with no plan. */
     private readonly day: Day | null,
@@ -94,10 +94,9 @@ export class TodayPlan {
       return [new PlanItem(init)];
     });
     const continuesFrom = visit?.startedOn ?? null;
-    // Today's sets belong to the session an unfinished floating day began on an earlier day,
-    // else to today's own; once a set is logged, the rest of the day's join it whatever the
-    // schedule has since become, so a day's sets never split across two sessions.
-    const session = logged[0]?.session ?? continuesFrom ?? today;
+    // A set logged while a floating visit continues belongs to the session it began in; any
+    // other — on a weekday plan, or on a floating day begun today — to today's own.
+    const session = continuesFrom ?? today;
     const calendar = { floating, workday: isWorkday({ workDays }, date) };
     return new TodayPlan(today, continuesFrom, session, day, items, emptySlots, calendar);
   }

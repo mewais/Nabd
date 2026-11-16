@@ -12,6 +12,8 @@ export interface TypedStepperProps {
   /** Enter was pressed on a number that had been taken. */
   onEnter?: () => void;
   size?: StepperSize;
+  /** The decimals the field holds (see {@link NumberField}). */
+  decimals?: number;
   /** Names the field, and its − and + after it ("Decrease reps"). */
   ariaLabel: string;
 }
@@ -22,7 +24,7 @@ export interface TypedStepperProps {
  * stepping lets go of whatever was half typed.
  */
 export function TypedStepper(props: TypedStepperProps): JSX.Element {
-  const { value, onStep, onSet, onEnter, ariaLabel, size = "md" } = props;
+  const { value, onStep, onSet, onEnter, ariaLabel, decimals, size = "md" } = props;
   // A fresh field after each press of − or +: what was half typed is dropped.
   const [presses, setPresses] = useState(0);
   const step = (direction: Direction): void => {
@@ -38,6 +40,7 @@ export function TypedStepper(props: TypedStepperProps): JSX.Element {
         onStep={onStep}
         onEnter={onEnter}
         ariaLabel={ariaLabel}
+        decimals={decimals}
       />
     </StepperFrame>
   );

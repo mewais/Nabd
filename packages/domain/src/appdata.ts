@@ -2,7 +2,11 @@ import { z } from "zod";
 import { ProgramSchema } from "./program";
 import { CustomExercisesSchema } from "./exercise";
 import { SettingsSchema } from "./settings";
-import { LoggedSetSchema, RotationStateSchema, DayStateSchema, DayLogSchema } from "./runtime";
+import { DayLogSchema, DayStateSchema, RotationStateSchema } from "./day-state";
+import { LoggedSetSchema } from "./history";
+
+/** The app's name, in Latin letters: what an export file says it comes from. */
+export const APP_NAME = "Nabd";
 
 /** Current export/import envelope version. */
 export const APPDATA_VERSION = 5;
@@ -12,7 +16,7 @@ export const APPDATA_VERSION = 5;
  * older documents still apply cleanly (@nabd/serialization migrates them first).
  */
 export const AppDataSchema = z.object({
-  app: z.literal("Nabd"),
+  app: z.literal(APP_NAME),
   version: z.number().int().positive(),
   exportedAt: z.string().optional(),
   program: ProgramSchema.optional(),

@@ -2,10 +2,10 @@ import { NudgePolicy } from "@nabd/nudge";
 import type { StoreContext } from "./context";
 import { loadNotice, readSnapshot } from "./hydration";
 import { applyAutostart, applyGlass } from "./os";
-import { errorText } from "./persistence";
 import { beginDay } from "./rollover";
 import { selectPlannerDayToOpen, selectPolicyStatus } from "./selectors";
 import type { DaySlice } from "./slices";
+import { errorText } from "./state";
 import type { LoadProblem } from "./state";
 
 /** Start, keep, renew or withdraw the pending nudge, as the clock and the plan now stand. */

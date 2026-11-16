@@ -1,8 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 import { IconButton } from "./icon-button";
-import { pad } from "./styles";
+import { CENTERED_ROW, pad } from "./styles";
 import { COLOR, ELLIPSIS, QUIET_BOX, RADIUS, SPACE, TEXT, tint, toneColor } from "./tokens";
 import type { Tone } from "./tokens";
+import { WORDS } from "./wording";
 
 /**
  * - `pill` (default): a rounded label.
@@ -38,8 +39,7 @@ function variantStyle(variant: ChipVariant, color: string | null): CSSProperties
     case "entry":
       return {
         ...TEXT.controlSm,
-        display: "flex",
-        alignItems: "center",
+        ...CENTERED_ROW,
         gap: SPACE.xs,
         minWidth: 0,
         color: color ?? COLOR.textMuted,
@@ -65,7 +65,7 @@ export function Chip({
   variant = "pill",
   tone = "neutral",
   onRemove,
-  removeAriaLabel = "Remove",
+  removeAriaLabel = WORDS.remove,
 }: ChipProps): JSX.Element {
   return (
     <span style={variantStyle(variant, toneColor(tone))}>

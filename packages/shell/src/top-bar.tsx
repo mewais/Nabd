@@ -1,5 +1,6 @@
 import {
   Button,
+  COMMON_WORDS,
   Icon,
   IconButton,
   Row,
@@ -11,6 +12,7 @@ import {
 import type { ShellActions } from "./shell-actions";
 import type { TopBarVM } from "./shell-vm";
 import { StatusPill } from "./status-pill";
+import { WORDS } from "./wording";
 
 interface TopBarProps {
   vm: TopBarVM;
@@ -26,7 +28,7 @@ export function TopBar({ vm, actions }: TopBarProps): JSX.Element {
       <Spacer />
       <Row gap="md">
         <Segmented
-          ariaLabel="Theme"
+          ariaLabel={COMMON_WORDS.theme}
           options={THEME_OPTIONS}
           value={vm.theme}
           onChange={actions.setTheme}
@@ -43,15 +45,19 @@ export function TopBar({ vm, actions }: TopBarProps): JSX.Element {
           <Button
             variant={vm.glass ? "primary" : "secondary"}
             size="sm"
-            title="Translucent window"
+            title={COMMON_WORDS.translucentWindow}
             on={vm.glass}
             onClick={() => actions.setGlass(!vm.glass)}
           >
             <Icon name="glass" size="sm" weight="thin" />
-            Glass
+            {WORDS.glass}
           </Button>
         )}
-        <IconButton icon="settings" ariaLabel="Settings" onClick={actions.openSettings} />
+        <IconButton
+          icon="settings"
+          ariaLabel={COMMON_WORDS.settings}
+          onClick={actions.openSettings}
+        />
       </Row>
     </Row>
   );

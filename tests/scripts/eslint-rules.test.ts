@@ -13,6 +13,7 @@ import {
 } from "../../scripts/eslint/layers.js";
 import { oneImportPerModule } from "../../scripts/eslint/one-import-per-module.js";
 import { stylingRestrictions } from "../../scripts/eslint/styling.js";
+import { noLiteralWording } from "../../scripts/eslint/wording.js";
 
 const tester = new RuleTester({
   languageOptions: {
@@ -69,6 +70,31 @@ describe("styling (no-restricted-syntax outside the design system)", () => {
   });
 });
 
+describe("no-literal-wording (in the packages that draw)", () => {
+  const refused = (code: string) => ({ code, errors: 1 });
+  tester.run("no-literal-wording", noLiteralWording, {
+    valid: [
+      "const a = <Button onClick={go}>{WORDS.startSet}</Button>;",
+      'const b = <Card title={WORDS.coverage} padding="lg" />;',
+      'const c = <Icon name="plus" size="sm" />;',
+      "const d = <Text>{vm.label} · {vm.detail}</Text>;",
+      'const e = <Row>{" "}·{" "}−</Row>;',
+      "const f = <Stepper ariaLabel={stepLabel(1, name)} />;",
+      'const g = { title: "Rest 1:30" };',
+    ],
+    invalid: [
+      refused("const a = <Button>Start set</Button>;"),
+      refused('const a = <Text>{"Let\'s go"}</Text>;'),
+      refused('const a = <Card title="Weekly coverage" />;'),
+      refused('const a = <TextInput placeholder="Search…" />;'),
+      refused('const a = <IconButton ariaLabel="Close" />;'),
+      refused('const a = <div aria-label="Nabd" />;'),
+      refused("const a = <Stepper ariaLabel={`Decrease ${name}`} />;"),
+      refused('const a = <Button title={on ? "Pause" : vm.title} />;'),
+    ],
+  });
+});
+
 describe("layers (no-restricted-imports per package)", () => {
   const options = (name: string) => [
     { paths: restrictionsOf(name), patterns: PAST_THE_ENTRY_POINT },
@@ -83,6 +109,7 @@ describe("layers (no-restricted-imports per package)", () => {
       from("modals", 'import { x } from "../options";'),
       from("store", 'import { x } from "@nabd/scheduling";'),
       from("app", 'import { x } from "@nabd/store";'),
+      from("app", 'import prepaint from "@nabd/design-system/prepaint.json";'),
     ],
     invalid: [
       refusedFrom("today", 'import { x } from "@nabd/store";'),

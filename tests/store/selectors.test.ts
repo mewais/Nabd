@@ -7,9 +7,9 @@ import { benchSet, boot } from "./fixtures";
 describe("derived data", () => {
   it("coverage, stats and the library follow the state", async () => {
     const app = await boot();
-    expect(selectCoverage(app.get()).chest).toBe(0);
+    expect(selectCoverage(app.get())("chest")).toBe(0);
     await app.log(catalogBenchRow.id, 2);
-    expect(selectCoverage(app.get()).chest).toBe(12.5);
+    expect(selectCoverage(app.get())("chest")).toBe(12.5);
     expect(selectStats(app.get()).setsThisWeek()).toBe(2);
     expect(selectStats(app.get()).completionThisWeek()).toBe(33);
     expect(selectLibrary(app.get()).byId(CATALOG.bench)?.name).toBe("Barbell Bench Press");

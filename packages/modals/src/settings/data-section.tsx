@@ -1,6 +1,7 @@
 import { Button, FormSection, Icon, Row, Stack, Text } from "@nabd/design-system";
 import type { Notice } from "@nabd/view";
 import type { SettingsActions } from "./settings-actions";
+import { WORDS } from "../wording";
 
 interface DataSectionProps {
   /** The outcome of the last import or export. */
@@ -11,16 +12,16 @@ interface DataSectionProps {
 /** Back up everything to a file, or load a backup; the outcome is reported underneath. */
 export function DataSection({ vm, actions }: DataSectionProps): JSX.Element {
   return (
-    <FormSection title="Data">
+    <FormSection title={WORDS.data}>
       <Stack gap="sm">
         <Row gap="sm">
           <Button variant="secondary" onClick={actions.exportData} grow>
             <Icon name="download" />
-            Export data
+            {WORDS.exportData}
           </Button>
           <Button variant="secondary" onClick={actions.importData} grow>
             <Icon name="upload" />
-            Import data
+            {WORDS.importData}
           </Button>
         </Row>
         {vm !== null && (

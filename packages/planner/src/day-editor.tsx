@@ -1,4 +1,13 @@
-import { Button, Card, Row, Spacer, Stack, Text, TitleInput } from "@nabd/design-system";
+import {
+  Button,
+  COMMON_WORDS,
+  Card,
+  Row,
+  Spacer,
+  Stack,
+  Text,
+  TitleInput,
+} from "@nabd/design-system";
 import { DayPlacement } from "./day-placement";
 import type { EditorRowVM, EditorVM } from "./editor-vm";
 import { ExerciseCard } from "./exercise-card";
@@ -6,6 +15,7 @@ import { MusclePicker } from "./muscle-picker";
 import type { PlannerActions } from "./planner-actions";
 import { SlotCard } from "./slot-card";
 import { SupersetGroup } from "./superset-group";
+import { WORDS } from "./wording";
 
 interface DayEditorProps {
   vm: EditorVM;
@@ -29,7 +39,7 @@ export function DayEditor({ vm, actions }: DayEditorProps): JSX.Element {
     <Row gap="lg" wrap>
       <TitleInput
         size="md"
-        ariaLabel="Day name"
+        ariaLabel={WORDS.dayName}
         value={vm.name}
         onChange={(name) => actions.edit((e) => e.renameDay(dayId, name))}
       />
@@ -37,12 +47,12 @@ export function DayEditor({ vm, actions }: DayEditorProps): JSX.Element {
       <Text variant="caption">{vm.summary}</Text>
       <Spacer />
       <Button variant="ghost" size="sm" onClick={() => actions.removeDay(dayId)}>
-        Delete day
+        {COMMON_WORDS.deleteDay}
       </Button>
     </Row>
   );
   return (
-    <Card ariaLabel="Day editor" header={header} padding="lg" flush divided grow>
+    <Card ariaLabel={WORDS.dayEditor} header={header} padding="lg" flush divided grow>
       <Stack gap="md" padding="lg">
         {vm.rows.map(row)}
         {vm.type === "fixed" ? (
@@ -53,7 +63,7 @@ export function DayEditor({ vm, actions }: DayEditorProps): JSX.Element {
             block
             onClick={() => actions.addExercise(dayId)}
           >
-            + Add exercise
+            {WORDS.addExercise}
           </Button>
         ) : (
           <MusclePicker onPick={(muscle) => actions.edit((e) => e.addSlot(dayId, muscle))} />

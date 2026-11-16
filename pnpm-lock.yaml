@@ -14,6 +14,9 @@ importers:
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
+      '@tauri-apps/api':
+        specifier: ^2.0.0
+        version: 2.11.1
       '@tauri-apps/cli':
         specifier: ^2.0.0
         version: 2.11.3
@@ -53,9 +56,6 @@ importers:
       happy-dom:
         specifier: ^15.7.4
         version: 15.11.7
-      playwright:
-        specifier: 1.63.0
-        version: 1.63.0
       prettier:
         specifier: ^3.3.3
         version: 3.8.4
@@ -83,6 +83,9 @@ importers:
       '@nabd/dataset':
         specifier: workspace:*
         version: link:../dataset
+      '@nabd/design-system':
+        specifier: workspace:*
+        version: link:../design-system
       '@nabd/domain':
         specifier: workspace:*
         version: link:../domain

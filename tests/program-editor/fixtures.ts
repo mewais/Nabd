@@ -22,10 +22,10 @@ export const hollow = exercise({
 });
 export const lookup = lookupIn([bench, fly, row, plank, crunch, hollow]);
 
-export let counter = 0;
+let counter = 0;
 
 /** A Wednesday on which the plan is on no day in particular (so, on its first). */
-export const WEDNESDAY: PlanToday = { weekday: 3, dayId: null };
+const WEDNESDAY: PlanToday = { weekday: 3, dayId: null };
 
 /** Apply edits in order on a day that stands as `today`, generating ids n1, n2, … that never repeat. */
 export function applyOn(today: PlanToday, program: Program, ...edits: ProgramEdit[]): Program {

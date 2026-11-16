@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { statTile } from "./controls";
 import { ScreenObject } from "./region";
 
-export type QueueAction = "Start" | "More" | "Skip" | "Restore" | "Remove";
+type QueueAction = "Start" | "More" | "Skip" | "Restore" | "Remove";
 
 /** The Today screen: the headline card, the day's queue and the day's figures. */
 export class Today extends ScreenObject {

@@ -31,8 +31,11 @@ export function boundedLoad(kg: number, tracking: TrackingType, stepKg: number):
 
 /** The finest weight increment, in either unit (micro-plates). */
 const FINEST_STEP = 0.25;
-/** Decimals of a weight shown in the unit it was entered in: enough for the finest increment. */
-const ENTERED_DECIMALS = 2;
+/**
+ * Decimals of a weight shown in the unit it was entered in, and of a weight
+ * field: enough for the finest increment.
+ */
+export const ENTERED_DECIMALS = 2;
 /** Decimals of a weight shown in the other unit: 20 kg reads "44.1 lb", not "44.09 lb". */
 const CONVERTED_DECIMALS = 1;
 /** How far a stored weight can be from what was entered: kg are kept to the gram. */

@@ -34,23 +34,22 @@ function alignMeasures(day: Day, lookup: ExerciseLookup): void {
     const exercise = lookup(exId);
     return exercise ? measureOf(exercise.tracking) : null;
   };
-  for (const row of day.exercises) {
+  day.exercises = day.exercises.map((row) => {
     const measure = measureOfExercise(row.exId);
-    if (measure !== null) new PrescriptionEditor(row).countIn(measure);
-  }
-  for (const slot of day.slots) {
+    return measure === null ? row : new PrescriptionEditor(row).countIn(measure);
+  });
+  day.slots = day.slots.map((slot) => {
     const measure = poolMeasure(slot.pool, lookup);
-    if (measure === null) continue;
-    slot.pool = slot.pool.filter((exId) => (measureOfExercise(exId) ?? measure) === measure);
-    new PrescriptionEditor(slot).countIn(measure);
-  }
+    if (measure === null) return slot;
+    const pool = slot.pool.filter((exId) => (measureOfExercise(exId) ?? measure) === measure);
+    return new PrescriptionEditor({ ...slot, pool }).countIn(measure);
+  });
 }
 
 /** An RPE or a %1RM is only ever a value of its scale (a stored "RPE 50" is RPE 10). */
 function keepIntensitiesOnScale(day: Day): void {
-  for (const prescription of [...day.exercises, ...day.slots]) {
-    new PrescriptionEditor(prescription).keepIntensitiesOnScale();
-  }
+  day.exercises = day.exercises.map((row) => new PrescriptionEditor(row).keepIntensitiesOnScale());
+  day.slots = day.slots.map((slot) => new PrescriptionEditor(slot).keepIntensitiesOnScale());
 }
 
 /** Apply the rules to `program`, in place. */

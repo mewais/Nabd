@@ -1,6 +1,7 @@
 import { Button, LiveDot, Row, Spacer, Stack, Text, ToastFrame } from "@nabd/design-system";
 import type { ToastActions } from "./toast-actions";
 import type { ToastVM } from "./toast-vm";
+import { WORDS } from "../wording";
 
 interface ToastProps {
   vm: ToastVM;
@@ -30,10 +31,10 @@ export function Toast({ vm, actions }: ToastProps): JSX.Element {
         </Stack>
         <Row gap="sm">
           <Button size="md" onClick={actions.start} grow>
-            {"Let's go"}
+            {WORDS.letsGo}
           </Button>
           <Button variant="ghost" size="md" onClick={actions.snooze}>
-            Snooze
+            {WORDS.snooze}
           </Button>
         </Row>
       </Stack>

@@ -1,16 +1,17 @@
 import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { PREPAINT_BACKGROUND, workspaceAliases } from "../../workspace.config";
+import prepaint from "@nabd/design-system/prepaint.json" with { type: "json" };
+import { workspaceAliases } from "../../workspace.config";
 
-/** index.html paints the theme's own background until React has rendered. */
-const prepaint: Plugin = {
+/** index.html paints the theme's own background (the design system's prepaint.json) until React has rendered. */
+const paintsPrepaint: Plugin = {
   name: "nabd-prepaint",
-  transformIndexHtml: (html) => html.replaceAll("%PREPAINT_BACKGROUND%", PREPAINT_BACKGROUND),
+  transformIndexHtml: (html) => html.replaceAll("%PREPAINT_BACKGROUND%", prepaint.background),
 };
 
 export default defineConfig({
-  plugins: [react(), prepaint],
+  plugins: [react(), paintsPrepaint],
   // Bundle workspace packages straight from source.
   resolve: { alias: workspaceAliases },
   // Tauri expects a fixed port + relative base.

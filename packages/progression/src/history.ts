@@ -101,5 +101,5 @@ export class ExerciseHistory {
  * must score higher; an unassisted set scores 0.
  */
 export function assistedScore({ weight }: Performance): number {
-  return -(weight ?? 0);
+  return 0 - (weight ?? 0);
 }

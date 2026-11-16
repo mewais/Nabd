@@ -2,6 +2,7 @@ import { BarChart, Card, EmptyNote, Row, Spacer, Stack, Text } from "@nabd/desig
 import { isEmpty } from "./empty-vm";
 import type { EmptyVM } from "./empty-vm";
 import type { CompletionVM } from "./completion-vm";
+import { WORDS } from "./wording";
 
 interface CompletionCardProps {
   vm: CompletionVM | EmptyVM;
@@ -10,7 +11,7 @@ interface CompletionCardProps {
 /** The share of planned sets that got done: this week, and day by day. */
 export function CompletionCard({ vm }: CompletionCardProps): JSX.Element {
   return (
-    <Card title="Completion rate" subtitle="Planned sets actually done">
+    <Card title={WORDS.completion} subtitle={WORDS.completionHint}>
       {isEmpty(vm) ? (
         <EmptyNote>{vm.empty}</EmptyNote>
       ) : (
@@ -20,13 +21,13 @@ export function CompletionCard({ vm }: CompletionCardProps): JSX.Element {
               {vm.weekPct}
             </Text>
             <Text as="span" variant="hint">
-              this week
+              {WORDS.thisWeek}
             </Text>
           </Row>
           <Spacer />
           <Stack gap="sm">
-            <Text variant="eyebrow">Last 7 days</Text>
-            <BarChart bars={vm.days} size="sm" tone="success" ariaLabel="Completion by day" />
+            <Text variant="eyebrow">{WORDS.lastSevenDays}</Text>
+            <BarChart bars={vm.days} size="sm" tone="success" ariaLabel={WORDS.completionByDay} />
           </Stack>
         </Stack>
       )}

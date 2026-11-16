@@ -6,5 +6,5 @@ export type { EditRef, ProgramEdit } from "./editor";
 export { fitsWeekdaySchedule } from "./schedule";
 export type { PlanToday } from "./schedule";
 export { normalized } from "./normalize";
-export { initialPrescription } from "./prescription-editor";
+export { initialPrescription } from "./defaults";
 export type { PrescriptionEdit, RepStyle } from "./prescription-editor";

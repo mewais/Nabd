@@ -1,5 +1,6 @@
 import { BarChart, Stack, Text } from "@nabd/design-system";
 import type { BarDatum } from "@nabd/design-system";
+import { WORDS } from "./wording";
 
 interface WeeklyViewProps {
   vm: readonly BarDatum[];
@@ -10,9 +11,9 @@ export function WeeklyView({ vm }: WeeklyViewProps): JSX.Element {
   return (
     <Stack gap="md">
       <Text variant="mono" tone="faint">
-        Sets per week · last 8 weeks
+        {WORDS.weekly}
       </Text>
-      <BarChart bars={vm} size="lg" ariaLabel="Sets per week" />
+      <BarChart bars={vm} size="lg" ariaLabel={WORDS.setsPerWeek} />
     </Stack>
   );
 }

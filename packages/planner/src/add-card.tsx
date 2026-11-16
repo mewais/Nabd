@@ -1,5 +1,6 @@
 import { Button, Icon, Stack, Text } from "@nabd/design-system";
 import type { PlannerActions } from "./planner-actions";
+import { WORDS } from "./wording";
 
 interface AddCardProps {
   actions: Pick<PlannerActions, "edit">;
@@ -12,7 +13,7 @@ export function AddCard({ actions }: AddCardProps): JSX.Element {
       <Stack as="span" align="center" gap="sm">
         <Icon name="plus" size="xl" />
         <Text as="span" variant="label">
-          Add day
+          {WORDS.addDay}
         </Text>
       </Stack>
     </Button>

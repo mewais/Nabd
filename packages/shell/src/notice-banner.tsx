@@ -1,6 +1,7 @@
 import { Button, Card, Row, Text } from "@nabd/design-system";
 import type { Notice } from "@nabd/view";
 import type { ShellActions } from "./shell-actions";
+import { WORDS } from "./wording";
 
 interface NoticeBannerProps {
   vm: Notice;
@@ -17,7 +18,7 @@ export function NoticeBanner({ vm, actions }: NoticeBannerProps): JSX.Element {
           {vm.text}
         </Text>
         <Button variant="link" tone="neutral" size="sm" onClick={actions.dismissNotice}>
-          Dismiss
+          {WORDS.dismiss}
         </Button>
       </Row>
     </Card>

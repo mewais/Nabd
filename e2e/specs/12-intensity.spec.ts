@@ -1,9 +1,11 @@
 import type { SetSpec } from "@nabd/domain";
-import { EXERCISE, day, loggedSet, plan, planned } from "../support/data";
+import { exercise, day, loggedSet, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { dumbbellBench, gobletSquat, curl } = EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
+const gobletSquat = exercise("gobletSquat");
+const curl = exercise("curl");
 
 /** A working set of 8–12 reps asked at an RPE or a %1RM of `intensity`. */
 const asked = (intensity: number): SetSpec => ({

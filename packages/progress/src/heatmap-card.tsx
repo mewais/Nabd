@@ -2,6 +2,7 @@ import { BodyMapPair, MuscleBar } from "@nabd/bodymap";
 import { Card, Columns, EmptyNote, Grid } from "@nabd/design-system";
 import { isEmpty } from "./empty-vm";
 import type { HeatmapVM } from "./progress-vm";
+import { WORDS } from "./wording";
 
 interface HeatmapCardProps {
   vm: HeatmapVM;
@@ -11,7 +12,7 @@ interface HeatmapCardProps {
 export function HeatmapCard({ vm }: HeatmapCardProps): JSX.Element {
   const { coverage, muscles } = vm;
   return (
-    <Card title="Sets per muscle" subtitle="7-day coverage">
+    <Card title={WORDS.heatmap} subtitle={WORDS.heatmapHint}>
       <Grid columns={["fit", 1]} gap="xxl" align="center">
         <BodyMapPair coverage={coverage} />
         {isEmpty(muscles) ? (

@@ -1,14 +1,17 @@
 use std::fs;
 
+/// A JSON file of the frontend, which the build follows: it reruns when the file changes.
+fn read_json(path: &str) -> serde_json::Value {
+    println!("cargo:rerun-if-changed={path}");
+    let text = fs::read_to_string(path).unwrap_or_else(|e| panic!("{path} is not readable: {e}"));
+    serde_json::from_str(&text).unwrap_or_else(|e| panic!("{path} is not JSON: {e}"))
+}
+
 /// The app's version is written twice — `package.json` (which `tauri.conf.json`
 /// reads) and this workspace's `Cargo.toml` — and Cargo cannot read the former,
 /// so the build refuses to go on when the two differ.
 fn assert_versions_agree() {
-    const PACKAGE_JSON: &str = "../package.json";
-    println!("cargo:rerun-if-changed={PACKAGE_JSON}");
-    let manifest = fs::read_to_string(PACKAGE_JSON).expect("package.json is readable");
-    let manifest: serde_json::Value =
-        serde_json::from_str(&manifest).expect("package.json is JSON");
+    let manifest = read_json("../package.json");
     let cargo = env!("CARGO_PKG_VERSION");
     let package = manifest["version"]
         .as_str()
@@ -33,25 +36,23 @@ fn export_window_title() {
     println!("cargo:rustc-env=NABD_WINDOW_TITLE={title}");
 }
 
-/// The window's background before the page has painted is the dark theme's:
-/// `DARK_BACKGROUND` in the design system's theme.ts, an OKLCH colour, written
-/// out as the sRGB the window API takes in `background.rs` (see window.rs).
+/// The window's background before the page has painted is the dark theme's,
+/// which the design system writes in its `prepaint.json` as an OKLCH colour:
+/// here it is written out as the sRGB the window API takes, in `background.rs`
+/// (see window.rs).
 fn export_window_background() {
-    const THEME: &str = "../packages/design-system/src/theme.ts";
-    const DECLARATION: &str = "const DARK_BACKGROUND = \"oklch(";
-    println!("cargo:rerun-if-changed={THEME}");
-    let theme = fs::read_to_string(THEME).expect("theme.ts is readable");
-    let lch: Vec<f64> = theme
-        .split_once(DECLARATION)
-        .and_then(|(_, rest)| rest.split_once(')'))
-        .map(|(args, _)| {
+    let prepaint = read_json("../packages/design-system/prepaint.json");
+    let lch: Vec<f64> = prepaint["background"]
+        .as_str()
+        .and_then(|colour| colour.strip_prefix("oklch(")?.strip_suffix(')'))
+        .map(|args| {
             args.split_whitespace()
                 .map(|n| n.parse().expect("a number"))
                 .collect()
         })
-        .expect("theme.ts declares DARK_BACKGROUND as an oklch() literal");
+        .expect("prepaint.json has a background, an oklch() colour");
     let [lightness, chroma, hue] = lch[..] else {
-        panic!("DARK_BACKGROUND is oklch(L C H)");
+        panic!("the prepaint background is oklch(L C H)");
     };
     let [r, g, b] = srgb_of_oklch(lightness, chroma, hue);
     let out = std::path::Path::new(&std::env::var("OUT_DIR").expect("cargo sets OUT_DIR"))

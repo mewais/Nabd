@@ -3,6 +3,7 @@ import { ChipsRow } from "./chips-row";
 import type { SettingsActions } from "./settings-actions";
 import { StepperRow } from "./stepper-row";
 import type { WorkdayVM } from "./workday-vm";
+import { WORDS } from "../wording";
 
 interface WorkdaySectionProps {
   vm: WorkdayVM;
@@ -12,7 +13,7 @@ interface WorkdaySectionProps {
 /** The hours Nabd nudges in, and the weekdays it does so on. */
 export function WorkdaySection({ vm, actions }: WorkdaySectionProps): JSX.Element {
   return (
-    <FormSection title="Workday">
+    <FormSection title={WORDS.workday}>
       {vm.hours.map((row) => (
         <StepperRow key={row.title} vm={row} actions={actions} />
       ))}

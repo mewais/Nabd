@@ -8,6 +8,7 @@ import type {
   CarriedItem,
   CarriedItems,
   CarriedVisit,
+  Coverage,
   CycledSlot,
   Day,
   DayRecord,
@@ -138,3 +139,9 @@ export const dayRecord = (date: Date, planned: number, done: number): DayRecord 
   planned,
   done,
 });
+
+/** Coverage of 0 for every muscle except the ones given. */
+export const coverageOf =
+  (trained: Partial<Record<MuscleKey, number>> = {}): Coverage =>
+  (muscle) =>
+    trained[muscle] ?? 0;

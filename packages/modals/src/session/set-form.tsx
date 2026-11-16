@@ -3,6 +3,7 @@ import { LoggedSets } from "./logged-sets";
 import type { SessionActions } from "./session-actions";
 import type { SetFormVM } from "./session-vm";
 import { StepperCard } from "./stepper-card";
+import { WORDS } from "../wording";
 
 interface SetFormProps {
   vm: SetFormVM;
@@ -27,6 +28,7 @@ export function SetForm({ vm, actions }: SetFormProps): JSX.Element {
           <StepperCard
             label={vm.repsLabel}
             value={vm.reps}
+            decimals={vm.repsDecimals}
             onStep={actions.stepReps}
             onSet={actions.setReps}
             onEnter={actions.logSet}
@@ -35,6 +37,7 @@ export function SetForm({ vm, actions }: SetFormProps): JSX.Element {
             <StepperCard
               label={vm.weightLabel}
               value={vm.weight}
+              decimals={vm.weightDecimals}
               onStep={actions.stepWeight}
               onSet={actions.setWeight}
               onEnter={actions.logSet}
@@ -43,7 +46,7 @@ export function SetForm({ vm, actions }: SetFormProps): JSX.Element {
         </Row>
         <Stack gap="sm">
           <Button block onClick={actions.logSet}>
-            Log this set
+            {WORDS.logThisSet}
           </Button>
           {vm.restLabel !== null && (
             <Text role="timer" variant="mono" tone="success" align="center">

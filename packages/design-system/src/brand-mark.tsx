@@ -1,5 +1,6 @@
 import { CENTERED } from "./styles";
 import { COLOR, RADIUS } from "./tokens";
+import { APP_NAME } from "@nabd/domain";
 
 const ACCENT = COLOR.accent;
 
@@ -21,7 +22,7 @@ export function BrandMark(): JSX.Element {
   return (
     <div
       role="img"
-      aria-label="Nabd"
+      aria-label={APP_NAME}
       style={{
         ...CENTERED,
         width: SIZE,

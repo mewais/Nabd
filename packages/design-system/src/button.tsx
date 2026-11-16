@@ -1,8 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
-import { badgeStyle } from "./badge";
 import { ButtonBase } from "./button-base";
 import { CENTERED, dashed, pad } from "./styles";
-import { COLOR, FONT_WEIGHT, QUIET_BOX, RADIUS, SPACE, TEXT, toneColor } from "./tokens";
+import { COLOR, FONT_WEIGHT, QUIET_BOX, RADIUS, SPACE, TEXT, tint, toneColor } from "./tokens";
 import type { Size, Tone } from "./tokens";
 
 /**
@@ -11,10 +10,28 @@ import type { Size, Tone } from "./tokens";
  * - `ghost`: outline only.
  * - `link`: bare coloured text, for inline actions.
  * - `add`: a dashed outline, for "add another".
- * - `badge`: a small square mono marker that can be pressed (see `Badge`).
+ * - `badge`: a small square mono marker, tinted by its tone (a set's kind in a table).
  */
 type ButtonVariant = "primary" | "secondary" | "ghost" | "link" | "add" | "badge";
 type ButtonSize = Extract<Size, "sm" | "md" | "lg">;
+
+/** The side of a badge, in px. */
+const BADGE_SIZE = 24;
+
+/** The look of a badge: a small square mono marker, tinted by its tone. */
+function badgeStyle(tone: Tone): CSSProperties {
+  const color = toneColor(tone);
+  return {
+    ...TEXT.monoCaption,
+    ...CENTERED,
+    width: BADGE_SIZE,
+    height: BADGE_SIZE,
+    borderRadius: RADIUS.chip,
+    fontWeight: FONT_WEIGHT.bold,
+    background: color === null ? COLOR.surfaceAlt : tint(color, "soft"),
+    color: color ?? COLOR.textFaint,
+  };
+}
 
 interface ButtonProps {
   children?: ReactNode;

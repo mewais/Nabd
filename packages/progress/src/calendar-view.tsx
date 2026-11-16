@@ -3,6 +3,7 @@ import { DAYS_PER_WEEK } from "@nabd/domain";
 import { Grid, HeatCell, Row, Stack, Text } from "@nabd/design-system";
 import type { HeatLevel } from "@nabd/design-system";
 import type { CalendarVM } from "./consistency-vm";
+import { WORDS } from "./wording";
 
 /** How warm each level of training is drawn; a day still to come is left blank. */
 const LEVEL_HEAT: Record<CalendarLevel, HeatLevel | null> = {
@@ -43,13 +44,13 @@ export function CalendarView({ vm }: CalendarViewProps): JSX.Element {
       </Grid>
       <Row gap="sm">
         <Text as="span" variant="caption">
-          Less
+          {WORDS.less}
         </Text>
         {LEGEND.map((level) => (
           <HeatCell key={level} level={level} variant="key" />
         ))}
         <Text as="span" variant="caption">
-          More
+          {WORDS.more}
         </Text>
       </Row>
     </Stack>

@@ -1,8 +1,10 @@
-import { EXERCISE, day, plan, planned } from "../support/data";
+import { exercise, day, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
-const { dumbbellBench, curl, pushUp } = EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
+const curl = exercise("curl");
+const pushUp = exercise("pushUp");
 
 /** Two exercises of two sets each. */
 const program = plan([day("Push", [planned(dumbbellBench.id), planned(curl.id)])]);
@@ -147,5 +149,13 @@ test("a number in the set form can be deleted and typed afresh", async ({ app })
   await test.step("Enter logs the set as the form shows it", async () => {
     await logger.reps.press("Enter");
     await expect(logger.loggedSets).toHaveText([/13 × 21.25 kg/]);
+  });
+
+  await test.step("a weight typed finer than two decimals is logged rounded, with one Enter", async () => {
+    await logger.weight.fill("21.257");
+    await logger.weight.press("Enter");
+    // That was the exercise's last set: the logger has moved on to the next one.
+    await logger.listRow(dumbbellBench.name).click();
+    await expect(logger.loggedSets).toHaveText([/13 × 21.25 kg/, /13 × 21.26 kg/]);
   });
 });

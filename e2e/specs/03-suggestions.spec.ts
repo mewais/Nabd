@@ -1,8 +1,9 @@
-import { EXERCISE, day, plan, loggedSet, planned, workingSets } from "../support/data";
+import { exercise, day, plan, loggedSet, planned, workingSets } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { curl, gobletSquat } = EXERCISE;
+const curl = exercise("curl");
+const gobletSquat = exercise("gobletSquat");
 
 const LB_PER_KG = 2.2046226218;
 const lb = (pounds: number): number => pounds / LB_PER_KG;

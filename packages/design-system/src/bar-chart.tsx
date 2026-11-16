@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { COLUMN, GROW } from "./styles";
+import { COLUMN, GROW, ROW } from "./styles";
 import { COLOR, RADIUS, SPACE, TEXT, shade } from "./tokens";
 import type { Size, Tone } from "./tokens";
 
@@ -63,7 +63,7 @@ export function BarChart({
     <div
       role="list"
       aria-label={ariaLabel}
-      style={{ display: "flex", alignItems: "flex-end", height: HEIGHT[size], gap: SPACE.xs }}
+      style={{ ...ROW, alignItems: "flex-end", height: HEIGHT[size], gap: SPACE.xs }}
     >
       {bars.map((bar, index) => (
         <div

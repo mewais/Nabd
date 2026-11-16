@@ -1,5 +1,5 @@
 import type { Settings, Weekday } from "@nabd/domain";
-import { formatMinuteOfDay } from "@nabd/domain";
+import { APP_NAME, formatMinuteOfDay } from "@nabd/domain";
 import { WORKDAY_OPTIONS } from "../options";
 import type { ChipsRowVM, SettingsRows, StepperRowVM } from "./rows-vm";
 
@@ -14,13 +14,13 @@ export function buildWorkdayVM(settings: Settings, rows: SettingsRows): WorkdayV
     hours: [
       rows.stepper("workStart", formatMinuteOfDay, {
         title: "Starts",
-        hint: "Nabd stays silent before this.",
+        hint: `${APP_NAME} stays silent before this.`,
       }),
       rows.stepper("workEnd", formatMinuteOfDay, { title: "Ends", hint: "…and after this." }),
     ],
     days: rows.chips(WORKDAY_OPTIONS, settings.workDays, (workDays) => ({ workDays }), {
       title: "Working days",
-      hint: "Nabd stays quiet on the others, though you can still log. At least one stays on.",
+      hint: `${APP_NAME} stays quiet on the others, though you can still log. At least one stays on.`,
     }),
   };
 }

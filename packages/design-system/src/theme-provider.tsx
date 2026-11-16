@@ -3,6 +3,7 @@ import type { Theme } from "@nabd/domain";
 import { GlobalStyles } from "./global-styles";
 import { themeStyle } from "./theme";
 import { COLOR, FONT } from "./tokens";
+import { ROW } from "./styles";
 
 interface ThemeProviderProps {
   theme: Theme;
@@ -29,7 +30,7 @@ export function ThemeProvider({
       data-glass={glass ? "on" : "off"}
       style={{
         ...themeStyle(theme, glass, opacity),
-        display: "flex",
+        ...ROW,
         height: "100vh",
         width: "100%",
         overflow: "hidden",

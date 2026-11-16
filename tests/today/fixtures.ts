@@ -7,7 +7,9 @@ import { NudgePolicy } from "@nabd/nudge";
 import type { NudgeStatus } from "@nabd/nudge";
 import { buildTodayVM } from "@nabd/today";
 import type { TodayVM } from "@nabd/today";
+import { nov } from "../support/builders";
 import { LIBRARY } from "../support/exercises";
+import { did } from "../support/programs";
 import { NOW, buildWorld } from "../support/world";
 import type { WorldInput } from "../support/world";
 
@@ -26,6 +28,10 @@ export function nudgeAt(
     hasWork: ctx.hasWork ?? true,
   });
 }
+
+/** Twelve chest sets last Friday: chest is well covered, the rest of the plan lags. */
+export const benchWeek = () =>
+  Array.from({ length: 12 }, (unused, i) => did(null, "bench", 8, 60, { at: nov(13, 12, i) }));
 
 export interface TodayOptions {
   unit?: "kg" | "lb";

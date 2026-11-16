@@ -1,6 +1,7 @@
 import { Chip, Icon, IconButton, Row, RowButton, TitleBlock } from "@nabd/design-system";
 import type { LibraryActions } from "./library-actions";
 import type { LibraryRowVM } from "./library-vm";
+import { WORDS } from "../wording";
 
 interface LibraryRowProps {
   vm: LibraryRowVM;
@@ -11,7 +12,7 @@ interface LibraryRowProps {
 export function LibraryRow({ vm, actions }: LibraryRowProps): JSX.Element {
   const customTag = (
     <Chip variant="tag" tone="accent">
-      CUSTOM
+      {WORDS.custom}
     </Chip>
   );
   return (
@@ -31,14 +32,14 @@ export function LibraryRow({ vm, actions }: LibraryRowProps): JSX.Element {
       </RowButton>
       <IconButton
         icon="copy"
-        ariaLabel="Duplicate & edit"
+        ariaLabel={WORDS.duplicate}
         onClick={() => actions.startDraft(vm.id)}
       />
       {vm.custom && (
         <IconButton
           icon="trash"
           tone="danger"
-          ariaLabel="Delete custom exercise"
+          ariaLabel={WORDS.deleteCustom}
           onClick={() => actions.deleteCustom(vm.id)}
         />
       )}

@@ -1,9 +1,12 @@
 import { step } from "../support/pages/controls";
-import { EXERCISE } from "../support/data";
+import { exercise } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
-const { dumbbellBench, raise, curl, pullUp } = EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
+const raise = exercise("raise");
+const curl = exercise("curl");
+const pullUp = exercise("pullUp");
 
 test("a first run goes from no plan to a queue on Today, built in the planner", async ({ app }) => {
   const { shell, today, planner, library } = app;

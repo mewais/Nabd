@@ -1,16 +1,7 @@
 import { ExerciseLibrary } from "@nabd/dataset";
 import type { ProgressVM } from "@nabd/progress";
-import {
-  BENCH,
-  NEW_USER,
-  NO_COVERAGE,
-  PLANK,
-  PULL_UP,
-  history,
-  loggedSet,
-  progressVM,
-  shown,
-} from "./fixtures";
+import { BENCH, NEW_USER, PLANK, PULL_UP, history, loggedSet, progressVM, shown } from "./fixtures";
+import { coverageOf } from "../support/builders";
 
 const progressionRow = (vm: ProgressVM, exId: string) =>
   shown(vm.progression.rows).find((row) => row.exId === exId);
@@ -212,7 +203,7 @@ describe("buildProgressVM — triggers", () => {
 
 describe("buildProgressVM — muscle coverage", () => {
   it("lists the trained muscles, most covered first, with what each needs", () => {
-    const coverage = { ...NO_COVERAGE, lats: 40, chest: 80, triceps: 25, forearms: 10 };
+    const coverage = coverageOf({ lats: 40, chest: 80, triceps: 25, forearms: 10 });
 
     const { heatmap } = progressVM({ coverage, targets: ["chest", "lats", "triceps"] });
 

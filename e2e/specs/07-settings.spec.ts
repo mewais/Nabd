@@ -1,10 +1,12 @@
 import { APPDATA_VERSION } from "@nabd/domain";
 import { step } from "../support/pages/controls";
-import { EXERCISE, day, plan, loggedSet, planned } from "../support/data";
+import { exercise, day, plan, loggedSet, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { dumbbellBench, bench, gobletSquat } = EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
+const bench = exercise("bench");
+const gobletSquat = exercise("gobletSquat");
 
 const program = plan([day("Push", [planned(dumbbellBench.id)])]);
 /** Last session: 8 × 20 kg, inside the plan's 8–12. */

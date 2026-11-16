@@ -37,23 +37,23 @@ export class CoverageReport {
    * needs to be told to push a muscle they never meant to train.
    */
   recommendation(muscle: MuscleKey): Recommendation {
-    if (this.actual[muscle] >= REST_AT_PCT) return "rest";
-    return this.actual[muscle] <= PUSH_AT_PCT && this.planned.of(muscle) > 0 ? "push" : "none";
+    if (this.actual(muscle) >= REST_AT_PCT) return "rest";
+    return this.actual(muscle) <= PUSH_AT_PCT && this.planned.of(muscle) > 0 ? "push" : "none";
   }
 
   /** The standing of each of `muscles`, in the order given. */
   standings(muscles: readonly MuscleKey[]): MuscleStanding[] {
     return muscles.map((muscle) => ({
       muscle,
-      pct: this.actual[muscle],
+      pct: this.actual(muscle),
       recommendation: this.recommendation(muscle),
     }));
   }
 
   /** The most over- and under-trained muscles ({@link recommendation}). */
   insight(): VolumeInsight {
-    const most = [...MUSCLES].sort((a, b) => this.actual[b] - this.actual[a]);
-    const least = [...MUSCLES].sort((a, b) => this.actual[a] - this.actual[b]);
+    const most = [...MUSCLES].sort((a, b) => this.actual(b) - this.actual(a));
+    const least = [...MUSCLES].sort((a, b) => this.actual(a) - this.actual(b));
     const advised = (advice: Recommendation) => (muscle: MuscleKey) =>
       this.recommendation(muscle) === advice;
     return {

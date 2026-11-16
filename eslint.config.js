@@ -6,6 +6,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import { layerRules } from "./scripts/eslint/layers.js";
 import { oneImportPerModule } from "./scripts/eslint/one-import-per-module.js";
 import { stylingRules } from "./scripts/eslint/styling.js";
+import { wordingRules } from "./scripts/eslint/wording.js";
 
 /** Refused in every file: a type imported inline. */
 const RESTRICTED_SYNTAX = [
@@ -69,6 +70,8 @@ export default [
   ...layerRules,
   // Styling lives in the design system (README, "Layout").
   stylingRules(RESTRICTED_SYNTAX),
+  // Words live in wording modules and view-models, not in components (README, "Layout").
+  wordingRules,
   {
     // Node scripts.
     files: ["scripts/**/*.mjs"],

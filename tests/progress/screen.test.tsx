@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { ProgressScreen } from "@nabd/progress";
-import { BENCH, NEW_USER, NO_COVERAGE, PLANK, PULL_UP, progressVM } from "./fixtures";
+import { coverageOf } from "../support/builders";
+import { BENCH, NEW_USER, PLANK, PULL_UP, progressVM } from "./fixtures";
 import type { Scenario } from "./fixtures";
 
 function renderScreen(scenario: Scenario = {}) {
@@ -112,7 +113,7 @@ describe("ProgressScreen — triggers", () => {
 
 describe("ProgressScreen — muscle coverage", () => {
   it("shows both body maps and a meter for each trained muscle", () => {
-    renderScreen({ coverage: { ...NO_COVERAGE, chest: 80, lats: 40 } });
+    renderScreen({ coverage: coverageOf({ chest: 80, lats: 40 }) });
 
     expect(screen.getByText("Sets per muscle")).toBeInTheDocument();
     expect(screen.getByText("front")).toBeInTheDocument();

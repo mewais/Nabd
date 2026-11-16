@@ -1,5 +1,6 @@
 import type { WeightUnit } from "@nabd/domain";
 import {
+  ENTERED_DECIMALS,
   editableWeight,
   formatDuration,
   isAssisted,
@@ -12,7 +13,8 @@ import {
 import type { PlanItem, TodayPlan } from "@nabd/scheduling";
 import type { Coach, LogSession, NextSetWording } from "@nabd/session";
 import { describeNextSet, formatPerformance, formatSetTally } from "@nabd/session";
-import { sessionSubtitle } from "./wording";
+import { sessionSubtitle } from "../wording";
+import { COMMON_WORDS } from "@nabd/design-system";
 
 export interface SessionListRowVM {
   itemId: string;
@@ -45,11 +47,14 @@ export interface SetFormVM {
   set: NextSetWording;
   /** "Set 2 of 4 · Working set · 8–10 reps · RPE 8": where the set sits and what the plan asks for. */
   setLine: string;
-  repsLabel: "Reps" | "Sec";
+  repsLabel: string;
   reps: number;
   /** Load in the display unit, as the field holds it; null for unweighted exercises. */
   weight: number | null;
   weightLabel: string;
+  /** The decimals each field holds: a number typed finer is taken rounded to them. */
+  repsDecimals: number;
+  weightDecimals: number;
   /** "Rest 1:20" while resting after the previous set; null otherwise. */
   restLabel: string | null;
   /** This exercise's sets logged today, oldest first. */
@@ -106,10 +111,12 @@ function buildSetFormVM(item: PlanItem, input: SessionInput): SetFormVM {
   return {
     set,
     setLine: [set.position, set.target].filter((part) => part !== null).join(" · "),
-    repsLabel: isTimeBased(tracking) ? "Sec" : "Reps",
+    repsLabel: isTimeBased(tracking) ? "Sec" : COMMON_WORDS.reps,
     reps: session.reps,
     weight: isWeighted(tracking) ? editableWeight(session.weight, unit) : null,
     weightLabel: weightLabel(item, unit),
+    repsDecimals: 0,
+    weightDecimals: ENTERED_DECIMALS,
     restLabel: rest > 0 ? `Rest ${formatDuration(rest)}` : null,
     logged: buildLoggedSetsVM(item, input),
   };

@@ -1,4 +1,4 @@
-import { Grid, Page, Row, StatTile, Text } from "@nabd/design-system";
+import { Grid, Page, Row, SCREEN_NAMES, StatTile, Text } from "@nabd/design-system";
 import { CompletionCard } from "./completion-card";
 import { ConsistencyCard } from "./consistency-card";
 import { HeatmapCard } from "./heatmap-card";
@@ -21,7 +21,7 @@ export function ProgressScreen({ vm, actions }: ProgressScreenProps): JSX.Elemen
   return (
     <Page width="sm">
       <Text as="h1" variant="title">
-        Progress
+        {SCREEN_NAMES.progress}
       </Text>
       <Row gap="lg" align="stretch">
         {vm.kpis.map((kpi) => (

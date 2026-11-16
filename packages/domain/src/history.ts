@@ -1,6 +1,8 @@
+// The record of what was done: one row per set logged, and what prompted it.
+
 import { z } from "zod";
 import { MUSCLE_PRIMARY_GROUP, MuscleKeySchema } from "./muscles";
-import { SetCountsSchema, SetTypeSchema } from "./program";
+import { SetTypeSchema } from "./prescription";
 import { dateKey } from "./dates";
 import { isRecord } from "./json";
 import type { Exercise } from "./exercise";
@@ -112,88 +114,3 @@ export function exerciseOfSet(set: LoggedSet): Exercise | null {
 
 /** A warm-up says nothing about volume or progress, so most counts leave it out. */
 export const isWarmup = (set: Pick<LoggedSet, "setType">): boolean => set.setType === "warmup";
-
-/**
- * Where each cycled pool stands: the id of the exercise that is up next, keyed
- * by cycled-slot id. An exercise id rather than a position in the pool, so
- * editing the pool never skips or repeats an exercise; a slot without an entry
- * (or whose entry has left the pool) starts from the pool's first exercise.
- */
-export const RotationStateSchema = z.record(z.string(), z.string());
-export type RotationState = z.infer<typeof RotationStateSchema>;
-
-/** An unplanned exercise the user added to a single day. */
-const ExtraItemSchema = z.object({ id: z.string(), exId: z.string() });
-export type ExtraItem = z.infer<typeof ExtraItemSchema>;
-
-/**
- * What one plan item already did on earlier days: how many of its prescribed
- * sets of each kind, and of which exercise — what a cycled slot gave that
- * day. The sets count only while the item is still on that exercise.
- */
-const CarriedItemSchema = z.object({ exId: z.string(), sets: SetCountsSchema });
-export type CarriedItem = z.infer<typeof CarriedItemSchema>;
-
-/** What each plan item of a day already did, by plan-item id. */
-export type CarriedItems = Record<string, CarriedItem>;
-
-/**
- * An unfinished floating day that came back: the date its visit began — the
- * session all of its sets belong to — and what each plan item already did on
- * the days before (only items with something done are listed).
- */
-const CarriedVisitSchema = z.object({
-  startedOn: z.string(),
-  items: z.record(z.string(), CarriedItemSchema),
-});
-export type CarriedVisit = z.infer<typeof CarriedVisitSchema>;
-
-/**
- * The per-day bookkeeping that is not derivable from program + history: which
- * floating day we are on and what it already got done on earlier days, what
- * was skipped, what was added ad hoc, and whether nudges are paused for the day.
- */
-export const DayStateSchema = z.object({
-  date: z.string(),
-  /**
-   * Floating plans: the id of the program day we are on (null = the first day).
-   * An id, not a position, so reordering or removing other days never changes
-   * which day is today.
-   */
-  dayId: z.string().nullable().default(null),
-  /**
-   * What an unfinished floating day already has behind it: it comes back with
-   * only the rest. Null when the visit began today. Kept, unused, while the
-   * plan is on weekdays, so a same-day switch back finds it; the next day of
-   * a weekday plan starts without it.
-   */
-  carried: CarriedVisitSchema.nullable().default(null),
-  skipped: z.array(z.string()).default([]),
-  extras: z.array(ExtraItemSchema).default([]),
-  /** Nudges are paused until the day ends. */
-  paused: z.boolean().default(false),
-});
-export type DayState = z.infer<typeof DayStateSchema>;
-
-/** A day with nothing skipped, added or paused, on floating day `dayId` (continuing `carried`). */
-export const freshDayState = (
-  date: Date,
-  dayId: string | null = null,
-  carried: CarriedVisit | null = null,
-): DayState => ({
-  date: dateKey(date),
-  dayId,
-  carried,
-  skipped: [],
-  extras: [],
-  paused: false,
-});
-
-/** How a finished training day went (drives completion analytics). */
-const DayRecordSchema = z.object({
-  date: z.string(),
-  planned: z.number().int().nonnegative(),
-  done: z.number().int().nonnegative(),
-});
-export type DayRecord = z.infer<typeof DayRecordSchema>;
-export const DayLogSchema = z.array(DayRecordSchema);

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@nabd/dataset": "workspace:*",
+    "@nabd/design-system": "workspace:*",
     "@nabd/domain": "workspace:*",
     "@nabd/ipc-client": "workspace:*",
     "@nabd/modals": "workspace:*",

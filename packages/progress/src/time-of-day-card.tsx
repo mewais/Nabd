@@ -2,6 +2,7 @@ import { BarChart, Card, Chip, EmptyNote } from "@nabd/design-system";
 import { isEmpty } from "./empty-vm";
 import type { EmptyVM } from "./empty-vm";
 import type { TimeOfDayVM } from "./time-of-day-vm";
+import { WORDS } from "./wording";
 
 interface TimeOfDayCardProps {
   vm: TimeOfDayVM | EmptyVM;
@@ -12,14 +13,14 @@ export function TimeOfDayCard({ vm }: TimeOfDayCardProps): JSX.Element {
   const empty = isEmpty(vm);
   return (
     <Card
-      title="Time of day"
-      subtitle="When you fit sets into the workday"
+      title={WORDS.timeOfDay}
+      subtitle={WORDS.timeOfDayHint}
       action={empty ? undefined : <Chip>{vm.peak}</Chip>}
     >
       {empty ? (
         <EmptyNote>{vm.empty}</EmptyNote>
       ) : (
-        <BarChart bars={vm.bars} tone="accent" ariaLabel="Sets by hour" />
+        <BarChart bars={vm.bars} tone="accent" ariaLabel={WORDS.setsByHour} />
       )}
     </Card>
   );

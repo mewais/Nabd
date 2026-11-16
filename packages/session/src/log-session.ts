@@ -21,19 +21,24 @@ type Draft = Pick<LogSession, "itemId" | "tracking" | "reps" | "weight" | "trigg
  */
 export class LogSession {
   /** The plan item being logged against. */
-  declare readonly itemId: string;
+  readonly itemId: string;
   /** How that item's exercise is tracked: what the numbers below mean. */
-  declare readonly tracking: TrackingType;
+  readonly tracking: TrackingType;
   /** Reps, or seconds for time-based exercises. */
-  declare readonly reps: number;
+  readonly reps: number;
   /** Load in kg (ignored for unweighted exercises). */
-  declare readonly weight: number;
-  declare readonly trigger: Trigger;
+  readonly weight: number;
+  readonly trigger: Trigger;
   /** Rest after the previous set runs until this time. */
-  declare readonly restUntil: Date | null;
+  readonly restUntil: Date | null;
 
   private constructor(draft: Draft) {
-    Object.assign(this, draft);
+    this.itemId = draft.itemId;
+    this.tracking = draft.tracking;
+    this.reps = draft.reps;
+    this.weight = draft.weight;
+    this.trigger = draft.trigger;
+    this.restUntil = draft.restUntil;
   }
 
   private with(patch: Partial<Draft>): LogSession {

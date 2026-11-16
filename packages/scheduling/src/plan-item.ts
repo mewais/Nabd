@@ -11,25 +11,32 @@ type PlanItemInit = Pick<
 
 /** One exercise in today's queue, with what is prescribed and what has been logged. */
 export class PlanItem {
-  declare readonly id: string;
-  declare readonly exercise: Exercise;
+  readonly id: string;
+  readonly exercise: Exercise;
   /** Heading shown beside the exercise: its group, or the cycled slot's target muscle. */
-  declare readonly label: string;
+  readonly label: string;
   /** Null for an unplanned extra, which has no set target. */
-  declare readonly prescription: Prescription | null;
-  declare readonly supersetId?: string | undefined;
+  readonly prescription: Prescription | null;
+  readonly supersetId?: string | undefined;
   /** The sets logged today. */
-  declare readonly logged: readonly LoggedSet[];
+  readonly logged: readonly LoggedSet[];
   /**
    * How many prescribed sets of each kind earlier days of this floating day
    * already did (none on a weekday plan). Counted by kind, not by place, so
    * a plan edit after the fact cannot turn a working set done into a warm-up.
    */
-  declare readonly carried: SetCounts;
-  declare readonly skipped: boolean;
+  readonly carried: SetCounts;
+  readonly skipped: boolean;
 
   constructor(init: PlanItemInit) {
-    Object.assign(this, init);
+    this.id = init.id;
+    this.exercise = init.exercise;
+    this.label = init.label;
+    this.prescription = init.prescription;
+    this.supersetId = init.supersetId;
+    this.logged = init.logged;
+    this.carried = init.carried;
+    this.skipped = init.skipped;
   }
 
   /** True for an unplanned exercise added just for today. */

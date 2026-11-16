@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import type { Theme } from "@nabd/domain";
 import { COLOR } from "./tokens";
+import prepaint from "../prepaint.json";
 
 type ThemeToken =
   | "--bg"
@@ -23,11 +24,12 @@ type Material = Record<ThemeToken, string>;
 
 /**
  * The dark theme's background: also what the window shows before the app has
- * painted, so a launch does not flash white. The build reads it from this
- * line — the page's prepaint (packages/app/vite.config.ts) and the native
- * window's background (src-tauri/build.rs) — so keep it a one-line literal.
+ * painted, so a launch does not flash white. It is written in prepaint.json,
+ * beside this package's manifest, which the build reads as well: for the
+ * page's prepaint (packages/app/vite.config.ts) and the native window's
+ * background (src-tauri/build.rs).
  */
-const DARK_BACKGROUND = "oklch(0.21 0.014 265)";
+const DARK_BACKGROUND = prepaint.background;
 
 /**
  * Each theme comes as a solid material and a glass one. Glass re-specifies the
@@ -103,9 +105,6 @@ const MATERIALS: Record<
     glassTintRgb: "15,17,24",
   },
 };
-
-/** What the window shows before the app has painted (see {@link DARK_BACKGROUND}). */
-export const PREPAINT_BACKGROUND = DARK_BACKGROUND;
 
 const GLASS_FROST = "blur(34px) saturate(1.7)";
 

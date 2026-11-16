@@ -9,6 +9,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 import { CENTERED } from "./styles";
 import { COLOR, FONT_WEIGHT, RADIUS, TEXT } from "./tokens";
+import { WORDS } from "./wording";
 
 interface AdviceCardProps {
   advice: AdviceWording;
@@ -38,7 +39,7 @@ const ICON_TILE: CSSProperties = {
 export function AdviceCard({ advice, onApply }: AdviceCardProps): JSX.Element {
   const target = (which: AdviceChoice, text: string): JSX.Element =>
     onApply ? (
-      <ButtonBase title="Use this" onClick={() => onApply(which)} style={APPLY}>
+      <ButtonBase title={WORDS.useThis} onClick={() => onApply(which)} style={APPLY}>
         {text}
       </ButtonBase>
     ) : (
@@ -53,8 +54,14 @@ export function AdviceCard({ advice, onApply }: AdviceCardProps): JSX.Element {
         </span>
         <Stack gap="xxs">
           <Text tone="muted">
-            Try {target("primary", advice.primary)}
-            {advice.alternative !== null && <> or {target("alternative", advice.alternative)}</>}
+            {`${WORDS.try} `}
+            {target("primary", advice.primary)}
+            {advice.alternative !== null && (
+              <>
+                {` ${WORDS.or} `}
+                {target("alternative", advice.alternative)}
+              </>
+            )}
           </Text>
           <Text variant="hint">
             {[advice.basis, advice.reason].filter((line) => line !== null).join(" · ")}

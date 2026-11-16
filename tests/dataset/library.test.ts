@@ -1,10 +1,15 @@
 import { EQUIPMENT_KEYS, ExerciseSchema, MUSCLE_PRIMARY_GROUP, isTimeBased } from "@nabd/domain";
-import { ExerciseLibrary, compose } from "@nabd/dataset";
-import type { Movement } from "@nabd/dataset";
+import { ExerciseLibrary } from "@nabd/dataset";
 import { exercise } from "../support/builders";
 import { CATALOG, catalogLookup } from "../support/exercises";
 
 const catalog = ExerciseLibrary.catalog;
+/** The ids of the catalog's exercises of `movement`, in catalog order. */
+const idsOf = (movement: string): string[] =>
+  catalog
+    .find({})
+    .map((e) => e.id)
+    .filter((id) => id.startsWith(`${movement}__`));
 
 describe("the built-in catalog", () => {
   it("contains only valid exercises with unique ids", () => {
@@ -30,83 +35,55 @@ describe("the built-in catalog", () => {
   });
 });
 
-describe("compose", () => {
-  const base: Movement = {
-    id: "press",
-    name: "Press",
-    primary: ["chest"],
-    secondary: ["triceps", "triceps"],
-    equipment: ["bodyweight", "dumbbell"],
-    laterality: ["bilateral", "unilateral"],
-  };
-
-  it("expands a movement over its equipment and laterality", () => {
-    const names = compose([{ ...base, equipment: ["dumbbell"] }]).map((e) => [e.id, e.name]);
-    expect(names).toEqual([
-      ["press__dumbbell", "Dumbbell Press"],
-      ["press__dumbbell__uni", "Single-Arm Dumbbell Press"],
+describe("how the catalog's movements become exercises", () => {
+  it("expands a movement over its equipment and laterality, naming each variant", () => {
+    expect(idsOf("overhead_press").slice(0, 3)).toEqual([
+      "overhead_press__barbell",
+      "overhead_press__dumbbell",
+      "overhead_press__dumbbell__uni",
     ]);
+    expect(catalog.byId("overhead_press__dumbbell")?.name).toBe("Dumbbell Overhead Press");
+    expect(catalog.byId("overhead_press__dumbbell__uni")?.name).toBe(
+      "Single-Arm Dumbbell Overhead Press",
+    );
+    expect(catalog.byId("calf_raise__dumbbell__uni")?.name).toBe("Single-Leg Dumbbell Calf Raise");
   });
 
-  it("applies name overrides, leg naming, tracking defaults and de-duplicates secondaries", () => {
-    const [pushUp] = compose([
-      {
-        ...base,
-        equipment: ["bodyweight"],
-        laterality: ["bilateral"],
-        nameOverride: { bodyweight: "Push-Up" },
-      },
-    ]);
-    expect(pushUp).toMatchObject({
+  it("applies name overrides and tracking defaults, and lists each secondary muscle once", () => {
+    expect(catalog.byId("curl__machine")?.name).toBe("Preacher Curl");
+    expect(catalog.byId("push_up__bodyweight")).toMatchObject({
       name: "Push-Up",
       tracking: "weighted_bodyweight",
-      secondary: ["triceps"],
     });
-    const [, legUni] = compose([{ ...base, primary: ["quads"], equipment: ["dumbbell"] }]);
-    expect(legUni!.name).toBe("Single-Leg Dumbbell Press");
-    const [hold] = compose([
-      { ...base, equipment: ["bodyweight"], laterality: ["bilateral"], tracking: "duration" },
-    ]);
-    expect(hold!.tracking).toBe("duration");
+    for (const ex of catalog.find({})) {
+      expect(new Set(ex.secondary).size, ex.id).toBe(ex.secondary.length);
+    }
   });
 
-  it("drops the bodyweight variant when a same-named equipped variant exists", () => {
-    const sameName = compose([
-      {
-        ...base,
-        laterality: ["bilateral"],
-        nameOverride: { bodyweight: "Press", dumbbell: "Press" },
-      },
-    ]);
-    expect(sameName.map((e) => e.equipment)).toEqual(["dumbbell"]);
+  it("never offers two exercises under one name: a bodyweight one gives way to its equipped twin", () => {
+    const names = catalog.find({}).map((e) => e.name);
+    expect(new Set(names).size).toBe(names.length);
   });
 });
 
 describe("one-sided variants", () => {
-  const curl: Movement = {
-    id: "curl",
-    name: "Curl",
-    primary: ["biceps"],
-    secondary: [],
-    equipment: ["barbell", "ezbar", "smith", "dumbbell", "cable"],
-    laterality: ["bilateral", "unilateral"],
-  };
-
   it("are never offered for a bar that takes both hands", () => {
-    expect(compose([curl]).map((e) => e.id)).toEqual([
+    expect(idsOf("curl")).toEqual([
       "curl__barbell",
-      "curl__ezbar",
-      "curl__smith",
       "curl__dumbbell",
       "curl__dumbbell__uni",
       "curl__cable",
       "curl__cable__uni",
+      "curl__bands",
+      "curl__bands__uni",
+      "curl__machine",
+      "curl__machine__uni",
+      "curl__ezbar",
     ]);
   });
 
   it("are kept for the legs, which a bar on the back or in the hands still leaves free", () => {
-    const calfRaise: Movement = { ...curl, id: "calf_raise", primary: ["calves"] };
-    expect(compose([calfRaise]).map((e) => e.name)).toContain("Single-Leg Barbell Curl");
+    expect(catalog.byId("calf_raise__barbell__uni")?.name).toBe("Single-Leg Barbell Calf Raise");
   });
 
   it("the catalog has no single-arm barbell, EZ-bar or Smith-machine exercise", () => {

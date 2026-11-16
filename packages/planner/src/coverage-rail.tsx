@@ -1,6 +1,7 @@
 import { BodyMapPair } from "@nabd/bodymap";
 import { Card, Divider, MeterBar, Stack } from "@nabd/design-system";
 import type { RailVM } from "./planner-vm";
+import { WORDS } from "./wording";
 
 interface CoverageRailProps {
   vm: RailVM;
@@ -9,7 +10,7 @@ interface CoverageRailProps {
 /** What the plan trains: the body map, and sets per muscle against full weekly coverage. */
 export function CoverageRail({ vm }: CoverageRailProps): JSX.Element {
   return (
-    <Card title="Weekly coverage" subtitle="Sets per muscle across the plan" padding="lg">
+    <Card title={WORDS.coverage} subtitle={WORDS.coverageHint} padding="lg">
       <Stack gap="md">
         <BodyMapPair coverage={vm.coverage} />
         <Divider />

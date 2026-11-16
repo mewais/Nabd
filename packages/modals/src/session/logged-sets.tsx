@@ -1,6 +1,7 @@
 import { Card, Chip, IconButton, Row, Spacer, Stack, Text } from "@nabd/design-system";
 import type { SessionActions } from "./session-actions";
 import type { LoggedSetVM } from "./session-vm";
+import { WORDS } from "../wording";
 
 interface LoggedSetsProps {
   vm: LoggedSetVM[];
@@ -10,8 +11,8 @@ interface LoggedSetsProps {
 /** The sets of this exercise logged today, each of which can be deleted. */
 export function LoggedSets({ vm, actions }: LoggedSetsProps): JSX.Element {
   return (
-    <Stack as="section" ariaLabel="Logged today" gap="sm">
-      <Text variant="eyebrow">Logged today</Text>
+    <Stack as="section" ariaLabel={WORDS.loggedToday} gap="sm">
+      <Text variant="eyebrow">{WORDS.loggedToday}</Text>
       <Stack as="ul" gap="xs">
         {vm.map((set) => (
           <Card as="li" key={set.id} variant="inset" padding="sm">
@@ -21,7 +22,7 @@ export function LoggedSets({ vm, actions }: LoggedSetsProps): JSX.Element {
               </Text>
               {set.unsaved && (
                 <Chip variant="tag" tone="accent">
-                  NOT SAVED YET
+                  {WORDS.notSavedYet}
                 </Chip>
               )}
               <Spacer />

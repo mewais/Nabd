@@ -1,4 +1,4 @@
-// Reordering and removing the things a program lists: days, exercise rows, slots.
+// Reordering and removing the things a program lists, in place: days, exercise rows, slots.
 
 import type { Direction } from "@nabd/domain";
 
@@ -24,5 +24,13 @@ export function shiftById<T extends Identified>(list: T[], id: string, direction
   );
 }
 
-export const without = <T extends Identified>(list: T[], id: string): T[] =>
-  list.filter((element) => element.id !== id);
+/** Remove the element called `id` from `list`, if it is there. */
+export function removeById<T extends Identified>(list: T[], id: string): void {
+  const index = list.findIndex((element) => element.id === id);
+  if (index !== -1) list.splice(index, 1);
+}
+
+/** Remove every `value` from `list`. */
+export function removeAll<T>(list: T[], value: T): void {
+  list.splice(0, list.length, ...list.filter((element) => element !== value));
+}

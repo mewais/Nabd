@@ -1,4 +1,5 @@
 import type {
+  CycledSlot,
   Day,
   Direction,
   ExerciseLookup,
@@ -12,9 +13,10 @@ import type {
 import { isFloating, measureOf, poolMeasure } from "@nabd/domain";
 import { deriveSlots } from "./derive-slots";
 import { normalize } from "./normalize";
-import { PrescriptionEditor, initialPrescription } from "./prescription-editor";
+import { initialPrescription } from "./defaults";
+import { PrescriptionEditor } from "./prescription-editor";
 import type { PrescriptionEdit } from "./prescription-editor";
-import { shiftById, without } from "./reorder";
+import { removeAll, removeById, shiftById } from "./reorder";
 import type { Identified } from "./reorder";
 import { fitsWeekdaySchedule, reschedule } from "./schedule";
 import type { PlanToday } from "./schedule";
@@ -56,21 +58,26 @@ export class ProgramEditor {
     });
   }
 
+  private editSlot(dayId: string, slotId: string, change: (slot: CycledSlot) => void): Program {
+    return this.editDay(dayId, (day) => {
+      const slot = day.slots.find((s) => s.id === slotId);
+      if (slot) change(slot);
+    });
+  }
+
   /** Change the prescription `ref` points at (see {@link PrescriptionEditor} for the changes). */
   editPrescription(dayId: string, ref: EditRef, edit: PrescriptionEdit): Program {
     return this.editDay(dayId, (day) => {
       const list: (Prescription & Identified)[] = ref.kind === "slot" ? day.slots : day.exercises;
       const prescription = list.find((p) => p.id === ref.id);
-      if (prescription) edit(new PrescriptionEditor(prescription));
+      if (prescription) Object.assign(prescription, edit(new PrescriptionEditor(prescription)));
     });
   }
 
   // ----- Program -----
 
   rename(name: string): Program {
-    return this.edit((draft) => {
-      draft.name = name;
-    });
+    return this.edit((draft) => Object.assign(draft, { name }));
   }
 
   /** Switch plan type; going cycled derives slots for days that have none yet. */
@@ -106,15 +113,11 @@ export class ProgramEditor {
   }
 
   removeDay(dayId: string): Program {
-    return this.edit((draft) => {
-      draft.days = without(draft.days, dayId);
-    });
+    return this.edit((draft) => removeById(draft.days, dayId));
   }
 
   renameDay(dayId: string, name: string): Program {
-    return this.editDay(dayId, (day) => {
-      day.name = name;
-    });
+    return this.editDay(dayId, (day) => Object.assign(day, { name }));
   }
 
   /** Put a day on a weekday; a day already there swaps places with it. */
@@ -146,9 +149,7 @@ export class ProgramEditor {
   }
 
   removeExercise(dayId: string, rowId: string): Program {
-    return this.editDay(dayId, (day) => {
-      day.exercises = without(day.exercises, rowId);
-    });
+    return this.editDay(dayId, (day) => removeById(day.exercises, rowId));
   }
 
   /** Move an exercise earlier (-1) or later (+1) in its day, superset by superset (see {@link moveRow}). */
@@ -166,7 +167,7 @@ export class ProgramEditor {
     return this.edit((draft) => {
       for (const day of draft.days) {
         day.exercises = day.exercises.filter((e) => e.exId !== exId);
-        for (const slot of day.slots) slot.pool = slot.pool.filter((id) => id !== exId);
+        for (const slot of day.slots) removeAll(slot.pool, exId);
       }
     });
   }
@@ -180,9 +181,7 @@ export class ProgramEditor {
   }
 
   removeSlot(dayId: string, slotId: string): Program {
-    return this.editDay(dayId, (day) => {
-      day.slots = without(day.slots, slotId);
-    });
+    return this.editDay(dayId, (day) => removeById(day.slots, slotId));
   }
 
   /** Move a slot earlier (-1) or later (+1) in its day. */
@@ -199,18 +198,14 @@ export class ProgramEditor {
   addPoolExercise(dayId: string, slotId: string, exId: string): Program {
     const exercise = this.lookup(exId);
     if (!exercise) return this.program;
-    return this.editDay(dayId, (day) => {
-      const slot = day.slots.find((s) => s.id === slotId);
-      if (!slot || slot.pool.includes(exId)) return;
+    return this.editSlot(dayId, slotId, (slot) => {
       const kind = poolMeasure(slot.pool, this.lookup);
-      if (kind === null || kind === measureOf(exercise.tracking)) slot.pool.push(exId);
+      const fits = kind === null || kind === measureOf(exercise.tracking);
+      if (fits && !slot.pool.includes(exId)) slot.pool.push(exId);
     });
   }
 
   removePoolExercise(dayId: string, slotId: string, exId: string): Program {
-    return this.editDay(dayId, (day) => {
-      const slot = day.slots.find((s) => s.id === slotId);
-      if (slot) slot.pool = slot.pool.filter((id) => id !== exId);
-    });
+    return this.editSlot(dayId, slotId, (slot) => removeAll(slot.pool, exId));
   }
 }

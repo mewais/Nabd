@@ -1,12 +1,6 @@
 import { dateKey } from "@nabd/domain";
 import type { ExerciseLookup, LoggedSet, WeightUnit } from "@nabd/domain";
-import {
-  ExerciseHistory,
-  ExerciseProgress,
-  assistedScore,
-  estimatedMax,
-  trendIn,
-} from "@nabd/progression";
+import { ExerciseHistory, ExerciseProgress, trendIn } from "@nabd/progression";
 import { exercise, logged, lookupIn, nov } from "../support/builders";
 
 describe("ExerciseHistory", () => {
@@ -42,19 +36,26 @@ describe("ExerciseHistory", () => {
     expect(empty.on(dateKey(nov(9)))).toEqual([]);
   });
 
+  /** The estimated max of a single set of `reps` × `weight`, logged before Monday. */
+  const estimateOf = (reps: number, weight: number | null) =>
+    new ExerciseHistory([logged(squat, nov(9), reps, weight)], squat.id).estimateBefore(
+      dateKey(nov(16)),
+    );
+
   it("estimates a one-rep max from loaded sets, and nothing from a set without load", () => {
-    expect(estimatedMax({ reps: 15, weight: 100 })).toBe(150);
+    expect(estimateOf(15, 100)).toBe(150);
     // Reps are not kilograms: an unloaded set must never score its rep count.
-    expect(estimatedMax({ reps: 12, weight: null })).toBe(0);
-    expect(estimatedMax({ reps: 12, weight: 0 })).toBe(0);
-    expect(history.bestPerSession(estimatedMax)).toEqual([50 * (1 + 9 / 30), 60 * (1 + 8 / 30)]);
+    expect(estimateOf(12, null)).toBeUndefined();
+    expect(estimateOf(12, 0)).toBeUndefined();
   });
 
   it("reads no more than 15 reps from a set, so a slip of the keyboard cannot inflate the estimate", () => {
-    expect(estimatedMax({ reps: 999, weight: 60 })).toBe(estimatedMax({ reps: 15, weight: 60 }));
-    expect(estimatedMax({ reps: 16, weight: 60 })).toBe(90);
-    const slip = new ExerciseHistory([logged(squat, nov(9), 999, 60)], squat.id);
-    expect(slip.estimateBefore(dateKey(nov(16)))).toBe(90);
+    expect(estimateOf(999, 60)).toBe(estimateOf(15, 60));
+    expect(estimateOf(16, 60)).toBe(90);
+  });
+
+  it("measures each session's best set by the score it is given", () => {
+    expect(history.bestPerSession((set) => set.reps)).toEqual([9, 8]);
   });
 
   it("estimates the max from the best set of the latest session before a date", () => {
@@ -81,13 +82,6 @@ describe("ExerciseHistory", () => {
       logged(pushUp, nov(9, 9), 10, 5, { setType: "warmup" }),
     ];
     expect(new ExerciseHistory(unloaded, pushUp.id).hasLoad).toBe(false);
-  });
-
-  it("scores assisted sets higher the less assistance they took", () => {
-    const heavyHelp = assistedScore({ reps: 8, weight: 30 });
-    const lightHelp = assistedScore({ reps: 8, weight: 10 });
-    expect(lightHelp).toBeGreaterThan(heavyHelp);
-    expect(assistedScore({ reps: 8, weight: 0 })).toBeGreaterThan(lightHelp);
   });
 });
 
@@ -178,6 +172,9 @@ describe("ExerciseProgress", () => {
       current: -10,
       gain: 20,
     });
+    // No assistance at all scores best of all.
+    const unassisted = [...sessions, logged(pullUp, nov(17), 8, 0)];
+    expect(trends(unassisted, "kg", lookupIn([pullUp]))[0]!.series.at(-1)).toBe(0);
   });
 
   it("falls back to the logged values for an exercise no longer in the library", () => {

@@ -16,7 +16,7 @@ import type { BootSnapshot, Singletons } from "@nabd/ipc-client";
 import { normalized } from "@nabd/program-editor";
 import { upgradeStored } from "@nabd/serialization";
 import type { Notice } from "@nabd/view";
-import { STORED_NAMES } from "./persistence";
+import { STORED_NAMES } from "./state";
 import type { LoadProblem, NabdState } from "./state";
 
 type Persisted = Pick<NabdState, keyof Singletons | "history">;

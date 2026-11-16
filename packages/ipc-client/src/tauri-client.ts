@@ -1,20 +1,19 @@
-// The client over Tauri's IPC. The transport (`invoke`, `listen`) is injected,
-// so the command mapping can be exercised without a Tauri runtime.
+// The client over Tauri's IPC: each call mapped to its backend command.
 
 import { APPDATA_VERSION } from "@nabd/domain";
 import type { BootSnapshot, IpcClient, Tick, TrayAction } from "./client";
 
 /** The Tauri invoke signature (command name + args → result). */
-export type Invoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
+type Invoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 
 /** Subscribes to a backend event; resolves to an unsubscribe function. */
-export type Listen = <T>(event: string, handler: (payload: T) => void) => Promise<() => void>;
+type Listen = <T>(event: string, handler: (payload: T) => void) => Promise<() => void>;
 
 /** The backend counts sets in unsigned integers; anything else would fail the whole call. */
 const setCount = (n: number): number => (Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
 
-/** Build a client over the given transport. */
-export function createIpcClient(invoke: Invoke, listen: Listen): IpcClient {
+/** The client over the given transport. */
+function clientOver(invoke: Invoke, listen: Listen): IpcClient {
   return {
     async loadAll(): Promise<BootSnapshot> {
       return JSON.parse(await invoke<string>("load_all"));
@@ -54,5 +53,5 @@ export function tauriClient(): IpcClient {
     import("@tauri-apps/api/core").then((api) => api.invoke(cmd, args));
   const listen: Listen = <T>(event: string, handler: (payload: T) => void) =>
     import("@tauri-apps/api/event").then((api) => api.listen<T>(event, (e) => handler(e.payload)));
-  return createIpcClient(invoke, listen);
+  return clientOver(invoke, listen);
 }

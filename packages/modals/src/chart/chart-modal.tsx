@@ -1,6 +1,7 @@
 import { Card, LineChart, ModalShell, Row, Stack, StatTile, Text } from "@nabd/design-system";
 import type { ChartActions } from "./chart-actions";
 import type { ChartVM } from "./chart-vm";
+import { WORDS } from "../wording";
 
 interface ChartModalProps {
   vm: ChartVM;
@@ -11,7 +12,7 @@ interface ChartModalProps {
 export function ChartModal({ vm, actions }: ChartModalProps): JSX.Element {
   return (
     <ModalShell
-      eyebrow="Full history"
+      eyebrow={WORDS.fullHistory}
       title={vm.exercise}
       subtitle={vm.subtitle}
       onClose={actions.close}

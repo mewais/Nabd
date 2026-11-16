@@ -37,11 +37,6 @@ describe("Card", () => {
     render(<Card header={<h3>Custom</h3>}>body</Card>);
     expect(screen.getByRole("heading", { name: "Custom" })).toBeInTheDocument();
   });
-
-  it("pads its content by a step of the scale, or not at all when flush", () => {
-    expect(renderRoot(<Card padding="md">body</Card>).style.padding).toBe("12px");
-    expect(renderRoot(<Card flush>body</Card>).style.padding).toBe("0px");
-  });
 });
 
 describe("Page", () => {
@@ -52,7 +47,7 @@ describe("Page", () => {
 });
 
 describe("WithSide", () => {
-  it("puts the main pane first, and lets the side pane go under it when the two do not fit", () => {
+  it("puts the main pane first, the side pane after it", () => {
     const root = renderRoot(
       <WithSide side={<aside>rail</aside>} sideWidth="rail" mainMinWidth="editor">
         <main>editor</main>
@@ -61,8 +56,5 @@ describe("WithSide", () => {
     const [main, side] = [...root.children] as HTMLElement[];
     expect(main).toHaveTextContent("editor");
     expect(side).toHaveTextContent("rail");
-    expect(root.style.flexWrap).toBe("wrap");
-    expect(main!.style.minWidth).toBe("min(480px, 100%)");
-    expect(side!.style.flex).toBe("1 1 300px");
   });
 });

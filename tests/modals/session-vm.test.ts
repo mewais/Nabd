@@ -38,6 +38,8 @@ describe("buildSessionVM", () => {
       reps: 10,
       weight: 40,
       weightLabel: "Weight (kg)",
+      repsDecimals: 0,
+      weightDecimals: 2,
     });
     expect(form.logged).toEqual([]);
     expect(form.restLabel).toBeNull();

@@ -1,4 +1,4 @@
-import { clamp, roundTo, sum } from "@nabd/domain";
+import { clamp, percentOf, roundTo, sum } from "@nabd/domain";
 
 describe("roundTo", () => {
   it("rounds to the given number of decimals", () => {
@@ -25,5 +25,13 @@ describe("sum", () => {
   it("totals what each element amounts to, and is zero for none", () => {
     expect(sum([{ n: 2 }, { n: 3 }], (e) => e.n)).toBe(5);
     expect(sum([], () => 1)).toBe(0);
+  });
+});
+
+describe("percentOf", () => {
+  it("is a whole percentage, and 0 when there is no whole", () => {
+    expect(percentOf(1, 3)).toBe(33);
+    expect(percentOf(2, 3)).toBe(67);
+    expect(percentOf(5, 0)).toBe(0);
   });
 });

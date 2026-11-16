@@ -4,6 +4,7 @@ import { ModalShell } from "./modal-shell";
 import { Row } from "./row";
 import { Stack } from "./stack";
 import { Text } from "./text";
+import { WORDS } from "./wording";
 
 interface ConfirmDialogProps {
   /** The question: "Delete Push?". */
@@ -34,7 +35,7 @@ export function ConfirmDialog({
         <Text tone="muted">{children}</Text>
         <Row justify="end" gap="sm">
           <Button variant="ghost" onClick={onCancel}>
-            Cancel
+            {WORDS.cancel}
           </Button>
           <Button tone="danger" onClick={onConfirm}>
             {confirmLabel}

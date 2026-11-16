@@ -7,6 +7,7 @@ import type { BoardVM } from "./board-vm";
 import { DayCard } from "./day-card";
 import type { PlannerActions } from "./planner-actions";
 import { RestCard } from "./rest-card";
+import { WORDS } from "./wording";
 
 interface WeekBoardProps {
   vm: BoardVM;
@@ -25,7 +26,7 @@ export function WeekBoard({ vm, actions }: WeekBoardProps): JSX.Element {
     // Every tile of a row is as tall as the tallest, and never squat.
     <Grid
       role="group"
-      ariaLabel="Days"
+      ariaLabel={WORDS.days}
       columns={COLUMNS[vm.schedule]}
       rows={{ min: "tile" }}
       gap="sm"

@@ -48,7 +48,8 @@ const banned = (name, why) => ({ name, message: why });
 /** Imports that reach past a package's entry point: by alias, or by a relative path. */
 export const PAST_THE_ENTRY_POINT = [
   {
-    group: ["@nabd/*/*"],
+    // A package's plain-data file it publishes (`@nabd/design-system/prepaint.json`) is no code.
+    group: ["@nabd/*/*", "!@nabd/*/*.json"],
     message: "Import a package through its entry point, `@nabd/<name>`.",
   },
   {
@@ -82,7 +83,7 @@ const block = (files, paths, patterns = PAST_THE_ENTRY_POINT) => ({
 
 /** The app has no entry point of its own (it is the program), so its tests import its modules. */
 const APP_MODULES_ALLOWED = [
-  { ...PAST_THE_ENTRY_POINT[0], group: ["@nabd/*/*", "!@nabd/app/*"] },
+  { ...PAST_THE_ENTRY_POINT[0], group: [...PAST_THE_ENTRY_POINT[0].group, "!@nabd/app/*"] },
   PAST_THE_ENTRY_POINT[1],
 ];
 

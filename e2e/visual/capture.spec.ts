@@ -1,32 +1,20 @@
 // The states `pnpm visual` photographs (see playwright.config.ts beside this file).
 
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import type { Page } from "@playwright/test";
-import { DEFAULT_SETTINGS } from "@nabd/domain";
-import { EXERCISE, day, loggedSet, plan, planned, slot, workingSets } from "../support/data";
+import { exercise, day, loggedSet, plan, planned, slot, workingSets } from "../support/data";
 import { test } from "../support/fixtures";
-import type { App } from "../support/app";
 import { MONDAY, at, dayAfter } from "../support/time";
+import { THEMES, launchDemo, settingsOf, shooter } from "./shooting";
 
-const OUT = process.env.OUT ?? fileURLToPath(new URL("./shots/", import.meta.url));
-mkdirSync(OUT, { recursive: true });
-const { dumbbellBench, raise, curl, hammerCurl, gobletSquat, pullUp, pushUp, plank, bench } =
-  EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
+const raise = exercise("raise");
+const curl = exercise("curl");
+const hammerCurl = exercise("hammerCurl");
+const gobletSquat = exercise("gobletSquat");
+const pullUp = exercise("pullUp");
+const pushUp = exercise("pushUp");
+const plank = exercise("plank");
+const bench = exercise("bench");
 const LAST_FRIDAY = dayAfter(MONDAY, -3);
-
-const THEMES = ["dark", "light"] as const;
-type ThemeName = (typeof THEMES)[number];
-
-/** Saves `<theme>-<name>.png` once the clock has moved past every transition. */
-function shooter(page: Page, theme: ThemeName): (name: string) => Promise<void> {
-  return async (name: string): Promise<void> => {
-    await page.clock.runFor(700);
-    await page.screenshot({ path: join(OUT, `${theme}-${name}.png`), animations: "disabled" });
-  };
-}
-const settingsOf = (theme: ThemeName): typeof DEFAULT_SETTINGS => ({ ...DEFAULT_SETTINGS, theme });
 
 const pushDay = day("Push", [
   planned(dumbbellBench.id, {
@@ -50,15 +38,6 @@ const history = [
   loggedSet(raise.id, { day: LAST_FRIDAY, time: "12:05", reps: 12, kg: 6 }),
   loggedSet(curl.id, { day: LAST_FRIDAY, time: "13:05", reps: 10, kg: 8, trigger: "idle" }),
 ];
-
-async function launchDemo(app: App, page: Page, theme: ThemeName): Promise<void> {
-  // The sample plan and history: no snapshot handed over.
-  const when = at("10:30", dayAfter(MONDAY, 2));
-  await page.clock.install({ time: when });
-  await page.clock.pauseAt(when);
-  await page.goto("/");
-  if (theme === "light") await app.shell.theme("Light").click();
-}
 
 for (const theme of THEMES) {
   test.describe(theme, () => {

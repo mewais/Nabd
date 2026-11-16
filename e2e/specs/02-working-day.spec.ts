@@ -1,8 +1,10 @@
-import { EXERCISE, day, plan, planned, workingSets } from "../support/data";
+import { exercise, day, plan, planned, workingSets } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
-const { dumbbellBench, raise, curl } = EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
+const raise = exercise("raise");
+const curl = exercise("curl");
 
 /** One day of 7 sets: a main lift with a warm-up, then a superset. Default settings: 09:00–18:00, 50 / 15 min, 30 s. */
 const program = plan([

@@ -11,6 +11,7 @@ import { GROUP_OPTIONS } from "../options";
 import type { LibraryActions } from "./library-actions";
 import { LibraryRow } from "./library-row";
 import type { LibraryBrowserVM } from "./library-vm";
+import { WORDS } from "../wording";
 
 interface LibraryBrowserProps {
   vm: LibraryBrowserVM;
@@ -26,11 +27,11 @@ export function LibraryBrowser({ vm, actions }: LibraryBrowserProps): JSX.Elemen
           type="search"
           value={vm.search}
           onChange={(search) => actions.filter({ search })}
-          placeholder="Search exercises…"
-          ariaLabel="Search exercises"
+          placeholder={WORDS.searchPlaceholder}
+          ariaLabel={WORDS.search}
         />
         <ChipGroup
-          ariaLabel="Muscle group"
+          ariaLabel={WORDS.muscleGroup}
           options={GROUP_OPTIONS}
           selected={[vm.group]}
           onToggle={({ value }) => actions.filter({ group: value === "all" ? null : value })}
@@ -48,7 +49,7 @@ export function LibraryBrowser({ vm, actions }: LibraryBrowserProps): JSX.Elemen
             </Stack>
           )}
           <Button variant="add" tone="accent" block onClick={() => actions.startDraft()}>
-            Create custom exercise
+            {WORDS.createCustom}
           </Button>
         </Stack>
       </ScrollArea>

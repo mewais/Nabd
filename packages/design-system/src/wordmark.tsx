@@ -1,4 +1,6 @@
 import { COLOR, FONT_WEIGHT, TEXT } from "./tokens";
+import { WORDS } from "./wording";
+import { APP_NAME } from "@nabd/domain";
 
 /**
  * The app's name in Latin and Arabic. The Arabic word is not letter-spaced:
@@ -7,9 +9,9 @@ import { COLOR, FONT_WEIGHT, TEXT } from "./tokens";
 export function Wordmark(): JSX.Element {
   return (
     <div style={{ ...TEXT.heading, whiteSpace: "nowrap" }}>
-      Nabd <span style={{ color: COLOR.textFaint, fontWeight: FONT_WEIGHT.semibold }}>·</span>{" "}
+      {APP_NAME} <span style={{ color: COLOR.textFaint, fontWeight: FONT_WEIGHT.semibold }}>·</span>{" "}
       <span lang="ar" style={{ letterSpacing: 0, fontWeight: FONT_WEIGHT.bold }}>
-        نبض
+        {WORDS.appNameArabic}
       </span>
     </div>
   );

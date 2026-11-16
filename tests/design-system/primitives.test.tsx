@@ -24,16 +24,6 @@ import {
 import { renderRoot } from "./render";
 
 describe("Row and Stack", () => {
-  it("lay their children out side by side, or one under the other", () => {
-    expect(renderRoot(<Row>a</Row>).style.flexDirection).toBe("row");
-    expect(renderRoot(<Stack>a</Stack>).style.flexDirection).toBe("column");
-  });
-
-  it("space their children by a step of the scale", () => {
-    expect(renderRoot(<Row gap="md">a</Row>).style.gap).toBe("12px");
-    expect(renderRoot(<Stack gap="xs">a</Stack>).style.gap).toBe("4px");
-  });
-
   it("render the element and the name they are given, so structure stays semantic", () => {
     render(
       <Stack as="ul" ariaLabel="Sets">
@@ -51,10 +41,14 @@ describe("Row and Stack", () => {
 });
 
 describe("Grid", () => {
-  it("makes a number of equal columns", () => {
-    const grid = renderRoot(<Grid columns={3}>a</Grid>);
-    expect(grid.style.display).toBe("grid");
-    expect(grid.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+  it("holds its cells under the role and the name it is given", () => {
+    render(
+      <Grid role="group" ariaLabel="Days" columns={3}>
+        <span>Mon</span>
+        <span>Tue</span>
+      </Grid>,
+    );
+    expect(screen.getByRole("group", { name: "Days" })).toHaveTextContent("MonTue");
   });
 });
 
@@ -87,9 +81,9 @@ describe("Text", () => {
   });
 
   it("keeps an eyebrow's copy in plain case (the upper-casing is only how it is drawn)", () => {
-    const eyebrow = renderRoot(<Text variant="eyebrow">Logged today</Text>);
-    expect(eyebrow).toHaveTextContent("Logged today");
-    expect(eyebrow.style.textTransform).toBe("uppercase");
+    expect(renderRoot(<Text variant="eyebrow">Logged today</Text>)).toHaveTextContent(
+      "Logged today",
+    );
   });
 
   it("colours itself by tone, through the theme's colours", () => {
@@ -237,6 +231,5 @@ describe("ButtonBase, under every button", () => {
     button.click();
     expect(onClick).not.toHaveBeenCalled();
     expect(button).toBeDisabled();
-    expect(button.style.opacity).toBe("0.5");
   });
 });

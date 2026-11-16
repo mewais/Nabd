@@ -35,6 +35,7 @@ export type { Tone } from "./tokens";
 
 export { ThemeProvider } from "./theme-provider";
 export { THEME_OPTIONS } from "./theme-options";
+export { COMMON_WORDS, SCREEN_NAMES } from "./wording";
 
 // Layout
 export { Row } from "./row";
@@ -73,7 +74,6 @@ export { Swatch } from "./swatch";
 export { CheckMark } from "./check-mark";
 export { LiveDot } from "./live-dot";
 export { Chip } from "./chip";
-export { Badge } from "./badge";
 
 // Controls
 export { Button } from "./button";

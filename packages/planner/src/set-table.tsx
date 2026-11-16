@@ -4,6 +4,7 @@ import type { PrescriptionEdit } from "@nabd/program-editor";
 import { PrescriptionControls } from "./prescription-controls";
 import type { SetBlockVM } from "./set-block-vm";
 import { SetRow } from "./set-row";
+import { WORDS } from "./wording";
 
 interface SetTableProps {
   vm: SetBlockVM;
@@ -25,7 +26,7 @@ export function SetTable({ vm, onEdit }: SetTableProps): JSX.Element {
     <Stack gap="md">
       <Stack gap="sm">
         <Grid columns={columns} gap="sm">
-          <Text variant="eyebrow">Set</Text>
+          <Text variant="eyebrow">{WORDS.set}</Text>
           <Text variant="eyebrow">{vm.repHeader}</Text>
           {hasIntensityColumn && <Text variant="eyebrow">{vm.intensityHeader}</Text>}
         </Grid>
@@ -43,7 +44,7 @@ export function SetTable({ vm, onEdit }: SetTableProps): JSX.Element {
       <PrescriptionControls vm={vm} onEdit={onEdit} />
       <Row gap="lg">
         <Button variant="link" size="sm" onClick={() => onEdit((p) => p.addSet())}>
-          + Add set
+          {WORDS.addSet}
         </Button>
         <Button
           variant="link"
@@ -51,13 +52,13 @@ export function SetTable({ vm, onEdit }: SetTableProps): JSX.Element {
           tone="neutral"
           onClick={() => onEdit((p) => p.addWarmup())}
         >
-          + Warmup
+          {WORDS.addWarmup}
         </Button>
       </Row>
       <TextInput
         size="sm"
-        ariaLabel="Note"
-        placeholder="Add a note (cues, setup, tempo…)"
+        ariaLabel={WORDS.note}
+        placeholder={WORDS.notePlaceholder}
         value={vm.notes}
         onChange={(notes) => onEdit((p) => p.setNotes(notes))}
       />

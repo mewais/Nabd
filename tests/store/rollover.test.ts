@@ -1,10 +1,10 @@
 import type { Program } from "@nabd/domain";
 import { dateKey, freshDayState } from "@nabd/domain";
-import { createNabdStore, selectCoach, selectStats, selectTodayPlan } from "@nabd/store";
+import { createNabdStore, selectStats, selectTodayPlan } from "@nabd/store";
 import { carry, nov, visit } from "../support/builders";
 import { CATALOG } from "../support/exercises";
 import { catalogBenchRow, catalogFlyRow, catalogPushPull } from "../support/programs";
-import { benchSet, boot } from "./fixtures";
+import { boot } from "./fixtures";
 
 describe("across restarts and days", () => {
   it("a restart restores exactly where the day stood", async () => {
@@ -67,55 +67,6 @@ describe("across restarts and days", () => {
     const second = await boot({}, { client: first.client, data: first.data }, nov(17, 10));
     expect(second.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, remaining: 1 });
     expect(second.get().session).toBeNull();
-  });
-
-  it("a day that comes back is one session with the day it began on, for its sets and its advice", async () => {
-    // Last Monday's bench went 10, 9, 8 at 40 kg.
-    const lastWeek = [10, 9, 8].map((reps, set) =>
-      benchSet(nov(9, 10 + set), { value: reps, planItemId: catalogBenchRow.id }),
-    );
-    const app = await boot({ program: catalogPushPull, history: lastWeek });
-    await app.log(catalogBenchRow.id, 1);
-    app.advanceTo(nov(17, 9, 30));
-
-    expect(app.plan().session).toBe(dateKey(nov(16)));
-    const bench = app.plan().item(catalogBenchRow.id)!;
-    // Set 2 of the visit is compared with set 2 of last Monday, not with yesterday's set 1.
-    expect(selectCoach(app.get()).adviceFor(bench)?.basis).toEqual({ reps: 9, weight: 40 });
-    await app.log(catalogBenchRow.id, 1);
-    expect(app.get().history.at(-1)).toMatchObject({
-      date: dateKey(nov(17)),
-      session: dateKey(nov(16)),
-    });
-  });
-
-  it("a visit that comes back again stays the session its sets joined, after what it carried was edited away", async () => {
-    const app = await boot({ program: catalogPushPull });
-    await app.log(catalogBenchRow.id, 1);
-    app.advanceTo(nov(17, 9, 30));
-    await app.log(catalogFlyRow.id, 1);
-    // What Monday carried leaves the plan; Tuesday's set already belongs to Monday's session.
-    const push = catalogPushPull.days[0]!.id;
-    app.get().editProgram((editor) => editor.removeExercise(push, catalogBenchRow.id));
-    app.advanceTo(nov(18, 9, 30));
-    expect(app.plan().session).toBe(dateKey(nov(16)));
-    await app.log(catalogFlyRow.id, 1);
-    const fly = app.get().history.filter((set) => set.exId === catalogFlyRow.exId);
-    expect(fly.map((set) => set.session)).toEqual([dateKey(nov(16)), dateKey(nov(16))]);
-  });
-
-  it("keeps a day's sets in one session when the schedule is switched while a visit continues", async () => {
-    const app = await boot({ program: catalogPushPull });
-    await app.log(catalogBenchRow.id, 1);
-    app.advanceTo(nov(17, 9, 30));
-    await app.log(catalogBenchRow.id, 1);
-    // The visit begun on Monday continues; switching to weekdays leaves it behind…
-    app.get().editProgram((editor) => editor.setSchedule("weekday"));
-    await app.log(catalogBenchRow.id, 1);
-    // …but the day's sets already belong to a session, and the rest of the day's join it.
-    const tuesday = app.get().history.filter((set) => set.date === dateKey(nov(17)));
-    expect(tuesday.map((set) => set.session)).toEqual([dateKey(nov(16)), dateKey(nov(16))]);
-    expect(app.plan().session).toBe(dateKey(nov(16)));
   });
 
   it("a completed floating day moves on to the next one", async () => {

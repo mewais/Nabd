@@ -1,5 +1,6 @@
 import { Button, FormRow, FormSection } from "@nabd/design-system";
 import type { SettingsActions } from "./settings-actions";
+import { WORDS } from "../wording";
 
 interface NotificationsSectionProps {
   actions: Pick<SettingsActions, "sendTestNotification">;
@@ -8,13 +9,10 @@ interface NotificationsSectionProps {
 /** A way to check that the desktop shows Nabd's notifications. */
 export function NotificationsSection({ actions }: NotificationsSectionProps): JSX.Element {
   return (
-    <FormSection title="Notifications">
-      <FormRow
-        title="Desktop notification"
-        hint="A set due while Nabd is in the background is announced by your desktop."
-      >
+    <FormSection title={WORDS.notifications}>
+      <FormRow title={WORDS.desktopNotification} hint={WORDS.desktopNotificationHint}>
         <Button variant="ghost" size="sm" onClick={actions.sendTestNotification}>
-          Send test notification
+          {WORDS.testNotification}
         </Button>
       </FormRow>
     </FormSection>

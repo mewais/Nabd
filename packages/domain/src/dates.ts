@@ -129,7 +129,7 @@ export function monthName(month: number): string {
   return name;
 }
 
-/** "Nov" for month 10. */
-export function monthShort(month: number): string {
-  return monthName(month).slice(0, 3);
+/** "Nov 9": a date's short month and day. */
+export function monthAndDay(date: Date): string {
+  return `${monthName(date.getMonth()).slice(0, 3)} ${date.getDate()}`;
 }

@@ -3,6 +3,7 @@ import { isEmpty } from "./empty-vm";
 import type { ProgressActions } from "./progress-actions";
 import type { ProgressionVM } from "./progress-vm";
 import { PROGRESSION_COLUMNS, ProgressionRow } from "./progression-row";
+import { WORDS } from "./wording";
 
 interface ProgressionCardProps {
   vm: ProgressionVM;
@@ -13,18 +14,18 @@ interface ProgressionCardProps {
 export function ProgressionCard({ vm, actions }: ProgressionCardProps): JSX.Element {
   const { rows } = vm;
   return (
-    <Card title="Progression & records" subtitle={vm.subtitle}>
+    <Card title={WORDS.progression} subtitle={vm.subtitle}>
       {isEmpty(rows) ? (
         <EmptyNote>{rows.empty}</EmptyNote>
       ) : (
         <Stack gap="sm">
           <Grid columns={PROGRESSION_COLUMNS} gap="lg" paddingX="xxs">
-            <Text variant="eyebrow">Exercise</Text>
-            <Text variant="eyebrow">Trend</Text>
+            <Text variant="eyebrow">{WORDS.exercise}</Text>
+            <Text variant="eyebrow">{WORDS.trend}</Text>
             <Text variant="eyebrow" align="end">
-              Best
+              {WORDS.best}
             </Text>
-            <Text variant="eyebrow">Gain</Text>
+            <Text variant="eyebrow">{WORDS.gain}</Text>
           </Grid>
           <div>
             {rows.map((row) => (

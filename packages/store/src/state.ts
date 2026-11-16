@@ -24,6 +24,20 @@ export interface LoadProblem {
   detail: string;
 }
 
+/** How each stored thing is named to the user. */
+export const STORED_NAMES: Record<LoadProblem["source"], string> = {
+  program: "your plan",
+  settings: "your settings",
+  customExercises: "your custom exercises",
+  rotationState: "your exercise rotation",
+  dayState: "today's progress",
+  dayLog: "your completion log",
+  history: "your logged sets",
+  everything: "your data",
+};
+
+export const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
 /** The two places a notice is shown: the banner over every screen, or Settings → Data. */
 export type NoticePlace = "appNotice" | "dataNotice";
 

@@ -27,7 +27,8 @@ describe("Stepper", () => {
 
   describe("with a typed value", () => {
     /** A stepper over a number its owner keeps — and may refuse to change (above `max`). */
-    function Owned({ start, max = Infinity }: { start: number; max?: number }): JSX.Element {
+    function Owned(props: { start: number; max?: number; decimals?: number }): JSX.Element {
+      const { start, max = Infinity, decimals } = props;
       const [value, setValue] = useState(start);
       return (
         <Stepper
@@ -38,6 +39,7 @@ describe("Stepper", () => {
           }}
           onEnter={() => onEnter(value)}
           ariaLabel="kg"
+          decimals={decimals}
         />
       );
     }
@@ -114,6 +116,23 @@ describe("Stepper", () => {
       expect(field()).toHaveValue("40");
       press("Enter");
       expect(onEnter).toHaveBeenCalledWith(40);
+    });
+
+    it("takes a number typed finer than the field holds as its rounded value, which one Enter enters", () => {
+      render(<Owned start={40} />);
+      type("21.257");
+      press("Enter");
+      expect(onEnter).toHaveBeenCalledWith(21.26);
+      expect(field()).toHaveValue("21.26");
+    });
+
+    it("rounds to the decimals it is given: none, for whole numbers", () => {
+      render(<Owned start={8} decimals={0} />);
+      type("9.6");
+      expect(field()).toHaveValue("9.6");
+      press("Enter");
+      expect(onEnter).toHaveBeenCalledWith(10);
+      expect(field()).toHaveValue("10");
     });
 
     it("Enter does nothing while the field holds no number", () => {

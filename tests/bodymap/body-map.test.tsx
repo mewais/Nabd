@@ -1,11 +1,17 @@
-import { coverageOf } from "./fixtures";
 import { render, screen } from "@testing-library/react";
-import { BodyMap, BodyMapPair } from "@nabd/bodymap";
-import type { BodySide } from "@nabd/bodymap";
+import { BodyMapPair } from "@nabd/bodymap";
 import type { Coverage } from "@nabd/domain";
 import type { MapStyle } from "@nabd/view";
+import { coverageOf } from "../support/builders";
 
-function region(slug: string, coverage: Coverage, side: BodySide = "front", mapStyle?: MapStyle) {
+type Side = "front" | "back";
+
+/** One side of the body map alone. */
+const BodyMap = (props: { side: Side; coverage: Coverage; mapStyle?: MapStyle }) => (
+  <BodyMapPair view={props.side} coverage={props.coverage} mapStyle={props.mapStyle} />
+);
+
+function region(slug: string, coverage: Coverage, side: Side = "front", mapStyle?: MapStyle) {
   const { container } = render(<BodyMap side={side} coverage={coverage} mapStyle={mapStyle} />);
   const group = container.querySelector<SVGGElement>(`[data-region="${slug}"]`);
   if (group === null) throw new Error(`no region "${slug}" on the ${side}`);

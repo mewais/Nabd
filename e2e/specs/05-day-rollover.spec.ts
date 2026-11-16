@@ -1,8 +1,12 @@
-import { EXERCISE, day, plan, planned, slot } from "../support/data";
+import { exercise, day, plan, planned, slot } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { dumbbellBench, bench, curl, hammerCurl, pushUp } = EXERCISE;
+const dumbbellBench = exercise("dumbbellBench");
+const bench = exercise("bench");
+const curl = exercise("curl");
+const hammerCurl = exercise("hammerCurl");
+const pushUp = exercise("pushUp");
 
 const pushPull = plan([day("Push", [planned(dumbbellBench.id)]), day("Pull", [planned(curl.id)])]);
 
