@@ -1,4 +1,4 @@
-import { dateKey, kgFromDisplay } from "@nabd/domain";
+import { MAX_LOAD_KG, dateKey, kgFromDisplay } from "@nabd/domain";
 import type { Exercise, LoggedSet, SetSpec, TrackingType } from "@nabd/domain";
 import { ExerciseHistory, ProgressionAdvisor } from "@nabd/progression";
 import { exercise, logged, nov, prescription, threeSets, working } from "../support/builders";
@@ -6,18 +6,24 @@ import { exercise, logged, nov, prescription, threeSets, working } from "../supp
 const TODAY = dateKey(nov(16));
 const range8to12 = prescription(threeSets());
 
-function advise(
-  ex: Exercise,
-  sets: LoggedSet[],
-  options: { setIndex?: number; stepKg?: number; plan?: typeof range8to12 | null } = {},
-) {
-  const { setIndex = 0, stepKg = 2.5, plan = range8to12 } = options;
-  return new ProgressionAdvisor(stepKg).advise({
+interface AdviseOptions {
+  setIndex?: number;
+  stepKg?: number;
+  plan?: typeof range8to12 | null;
+  /** The user's body weight in kg; unknown unless given. */
+  bodyWeight?: number | null;
+  /** The session the set belongs to; today's unless given. */
+  session?: string;
+}
+
+function advise(ex: Exercise, sets: LoggedSet[], options: AdviseOptions = {}) {
+  const { setIndex = 0, stepKg = 2.5, plan = range8to12, bodyWeight = null } = options;
+  return new ProgressionAdvisor(stepKg, bodyWeight).advise({
     tracking: ex.tracking,
     prescription: plan,
     setIndex,
     history: new ExerciseHistory(sets, ex.id),
-    date: TODAY,
+    session: options.session ?? TODAY,
   });
 }
 
@@ -50,6 +56,20 @@ describe("double progression on a weighted exercise", () => {
     const advice = advise(curl, [logged(curl, nov(5), 6, 25), logged(curl, nov(9), 5, 25)]);
     expect(advice.kind).toBe("deload");
     expect(advice.primary).toEqual({ reps: 8, weight: 22.5 });
+  });
+
+  it("never backs off below one step of a load that has to be picked", () => {
+    const bar = exercise({ equipment: "barbell" });
+    const light = [logged(bar, nov(5), 6, 2.5), logged(bar, nov(9), 6, 2.5)];
+    const advice = advise(bar, light);
+    expect(advice.kind).toBe("reach_range");
+    expect(advice.primary).toEqual({ reps: 8, weight: 2.5 });
+  });
+
+  it("never suggests more load than a set can record", () => {
+    const advice = advise(curl, [logged(curl, nov(9), 12, MAX_LOAD_KG)]);
+    expect(advice.kind).toBe("beyond_range");
+    expect(advice.primary).toEqual({ reps: 13, weight: MAX_LOAD_KG });
   });
 
   it("one bad session after a good one is not a stall", () => {
@@ -102,6 +122,44 @@ describe("which past set a set is compared against", () => {
   it("ignores warm-ups", () => {
     const sets = [logged(press, nov(9, 9), 15, 10, { setType: "warmup" }), ...lastSession];
     expect(advise(press, sets).basis).toEqual({ reps: 12, weight: 30 });
+  });
+
+  describe("on a floating day that came back, which is one session over several days", () => {
+    const MONDAY = dateKey(nov(16));
+    /** Monday's first working set, and the next one logged on Tuesday, in Monday's session. */
+    const visit = [
+      logged(press, nov(16, 10), 6, 40),
+      logged(press, nov(17, 10), 7, 40, { session: MONDAY }),
+    ];
+
+    it("compares the rest with the session before the visit, not with the visit's own sets", () => {
+      const sets = [...lastSession, visit[0]!];
+      const advice = advise(press, sets, { setIndex: 1, session: MONDAY });
+      expect(advice.basis).toEqual({ reps: 10, weight: 30 });
+      expect(advice.kind).toBe("add_reps");
+    });
+
+    it("counts its days as one session, so two short days are not a stall", () => {
+      const sets = [...lastSession, ...visit];
+      // Wednesday's session looks back at Monday's visit, and the one before it: no stall.
+      const advice = advise(press, sets, { session: dateKey(nov(18)) });
+      expect(advice.kind).toBe("reach_range");
+      expect(advice.basis).toEqual({ reps: 6, weight: 40 });
+    });
+
+    it("leaves the next visit to compare set N with set N of the whole visit", () => {
+      const next = (setIndex: number) =>
+        advise(press, [...lastSession, ...visit], { setIndex, session: dateKey(nov(18)) }).basis;
+      expect(next(0)).toEqual({ reps: 6, weight: 40 });
+      expect(next(1)).toEqual({ reps: 7, weight: 40 });
+    });
+
+    it("estimates the max of the session before the visit, whatever the visit's days did", () => {
+      const plan = prescription([working(8, 12, 70)], { intensity: "pct" });
+      const advice = advise(press, [...lastSession, visit[0]!], { plan, session: MONDAY });
+      // The previous session's best set: 12 × 30 kg, an estimate of 42 kg.
+      expect(advice.intensity).toEqual({ kind: "pct", value: 70, max: 42 });
+    });
   });
 });
 
@@ -259,10 +317,15 @@ describe("a prescribed intensity", () => {
     expect(advise(bench, [], { plan })).toMatchObject({
       kind: "start",
       primary: { reps: 8, weight: 0 },
-      intensity: { kind: "pct", value: 70, max: null },
+      intensity: { kind: "pct", value: 70, max: null, waitingFor: "history" },
     });
     const unloaded = [logged(bench, nov(9), 10, null)];
-    expect(advise(bench, unloaded, { plan }).intensity).toMatchObject({ max: null });
+    expect(advise(bench, unloaded, { plan }).intensity).toEqual({
+      kind: "pct",
+      value: 70,
+      max: null,
+      waitingFor: "load",
+    });
   });
 
   it("never suggests less than one step of a load that has to be picked", () => {
@@ -270,28 +333,63 @@ describe("a prescribed intensity", () => {
     expect(advise(bench, feather, { plan: asked("pct", 40) }).primary.weight).toBe(2.5);
   });
 
-  it("leaves a bodyweight exercise reps-first while the load would be nothing", () => {
-    const dip = exercise({ tracking: "weighted_bodyweight" });
-    const plan = asked("pct", 50);
-    // Unloaded so far: no estimate, so the plain advice stands.
-    const bare = advise(dip, [logged(dip, nov(9), 12, 0)], { plan });
-    expect(bare).toMatchObject({ kind: "add_load", intensity: { max: null } });
-    // A little added load that rounds to nothing is not worth suggesting either.
-    const light = advise(dip, [logged(dip, nov(9), 10, 1)], { plan });
-    expect(light.intensity).toBeNull();
-    expect(light.primary).toEqual({ reps: 11, weight: 1 });
-    // Enough added load, and it is suggested like any other.
-    const loaded = advise(dip, [logged(dip, nov(9), 10, 10)], { plan });
-    expect(loaded.primary).toEqual({ reps: 8, weight: 7.5 });
+  it("never suggests more than a set can record, however big the estimate", () => {
+    const typo = [logged(bench, nov(9), 999, MAX_LOAD_KG)];
+    expect(advise(bench, typo, { plan: asked("pct", 70) }).primary.weight).toBe(MAX_LOAD_KG);
   });
 
-  it("is ignored where there is no load to lift: holds, assistance and bodyweight reps", () => {
-    for (const tracking of [
-      "duration",
-      "weight_duration",
-      "assisted_bodyweight",
-      "bodyweight_reps",
-    ] as const) {
+  describe("on a bodyweight exercise, whose load adds to (or takes off) the user's body weight", () => {
+    const dip = exercise({ tracking: "weighted_bodyweight" });
+    const assisted = exercise({ tracking: "assisted_bodyweight" });
+
+    it("waits for the body weight, keeping the plain advice", () => {
+      const plan = asked("rpe", 8);
+      for (const ex of [dip, assisted]) {
+        const advice = advise(ex, [logged(ex, nov(9), 10, 10)], { plan });
+        expect(advice.intensity).toEqual({
+          kind: "rpe",
+          value: 8,
+          max: null,
+          waitingFor: "bodyWeight",
+        });
+        expect(advice.kind).toBe("add_reps");
+      }
+    });
+
+    it("measures body weight and load together", () => {
+      // 80 kg + 10 kg for 10 reps: an estimated max of 90 × (1 + 10/30) = 120 kg.
+      const advice = advise(dip, [logged(dip, nov(9), 10, 10)], {
+        plan: asked("rpe", 8),
+        bodyWeight: 80,
+      });
+      // RPE 8 for 8 reps is 10 reps' worth: 120 / (1 + 10/30) = 90 kg in all, so 10 kg added.
+      expect(advice.primary).toEqual({ reps: 8, weight: 10 });
+      expect(advice.intensity).toEqual({ kind: "rpe", value: 8, max: 120 });
+    });
+
+    it("takes assistance off the body weight: harder asks for less of it", () => {
+      // 80 kg − 20 kg for 8 reps: 60 × (1 + 8/30) = 76 kg; RPE 8 is 76 / (1 + 10/30) = 57 kg.
+      const advice = advise(assisted, [logged(assisted, nov(9), 8, 20)], {
+        plan: asked("rpe", 8),
+        bodyWeight: 80,
+      });
+      expect(advice.primary).toEqual({ reps: 8, weight: 22.5 });
+    });
+
+    it("stays reps-first while the load would be nothing", () => {
+      const plan = asked("pct", 50);
+      // 80 kg for 12 reps is a max of 112 kg; half of it is less than the body weight alone.
+      const bare = advise(dip, [logged(dip, nov(9), 12, 0)], { plan, bodyWeight: 80 });
+      expect(bare.intensity).toBeNull();
+      expect(bare.kind).toBe("add_load");
+      const light = advise(dip, [logged(dip, nov(9), 10, 1)], { plan, bodyWeight: 80 });
+      expect(light.intensity).toBeNull();
+      expect(light.primary).toEqual({ reps: 11, weight: 1 });
+    });
+  });
+
+  it("is ignored where there is no load to lift: holds and bodyweight reps", () => {
+    for (const tracking of ["duration", "weight_duration", "bodyweight_reps"] as const) {
       const ex = exercise({ tracking });
       const plan = prescription([working(8, 12, 70)], { intensity: "pct" });
       expect(advise(ex, [logged(ex, nov(9), 8, 20)], { plan }).intensity).toBeNull();

@@ -3,7 +3,7 @@
 import type { DayState, LoggedSet, Program } from "@nabd/domain";
 import { dateKey } from "@nabd/domain";
 import { TodayPlan, rollOver } from "@nabd/scheduling";
-import { logged, nov } from "../support/builders";
+import { carry, logged, nov, visit } from "../support/builders";
 import { EX } from "../support/exercises";
 import { benchRow, cycledPlan, floatingPushPull, flyRow, raiseRow } from "../support/programs";
 import { dayState, input, pushPullOn } from "./fixtures";
@@ -36,12 +36,17 @@ describe("a floating plan over a day off", () => {
     const friday = roll(dayState(FRIDAY), SATURDAY, floatingPushPull, [benchOn(nov(20, 10))]);
     expect(friday.records).toEqual([{ date: dateKey(FRIDAY), planned: 10, done: 1 }]);
     const saturday = roll(friday.dayState, SUNDAY);
-    expect(saturday.dayState).toEqual(dayState(SUNDAY, { carried: { [benchRow.id]: 1 } }));
+    const carried = visit(FRIDAY, { [benchRow.id]: carry(EX.bench.id, { working: 1 }) });
+    expect(saturday.dayState).toEqual(dayState(SUNDAY, { carried }));
     expect(saturday.records).toEqual([]);
   });
 
   it("counts a day off, and moves on from it, once a set was logged on it", () => {
-    const carried = { [benchRow.id]: 3, [flyRow.id]: 3, [raiseRow.id]: 3 };
+    const carried = visit(FRIDAY, {
+      [benchRow.id]: carry(EX.bench.id, { warmup: 1, working: 2 }),
+      [flyRow.id]: carry(EX.fly.id, { working: 3 }),
+      [raiseRow.id]: carry(EX.raise.id, { working: 3 }),
+    });
     const state = dayState(SATURDAY, { carried });
     const finished = roll(state, SUNDAY, floatingPushPull, [benchOn(nov(21, 10))]);
     expect(finished.dayState).toEqual(dayState(SUNDAY, { dayId: "wed" }));

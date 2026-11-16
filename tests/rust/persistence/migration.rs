@@ -1,4 +1,4 @@
-//! Migrating a schema v1 database.
+//! Migrating a schema v1 or v2 database.
 
 use nabd_persistence::{LoggedSetRow, SCHEMA_VERSION};
 use serde_json::json;
@@ -11,10 +11,49 @@ fn v1_fixture_is_detected_as_version_one() {
 }
 
 #[test]
-fn migration_bumps_the_version_to_two() {
-    let db = TempDb::v1();
+fn migration_bumps_the_version_to_the_current_one() {
+    assert_eq!(SCHEMA_VERSION, 3);
+    for db in [TempDb::v1(), TempDb::v2()] {
+        let c = db.store().unwrap();
+        assert_eq!(c.schema_version().unwrap(), SCHEMA_VERSION);
+        assert_eq!(db.stored_version(), "3");
+    }
+}
+
+#[test]
+fn v2_fixture_is_detected_as_version_two() {
+    assert_eq!(TempDb::v2().stored_version(), "2");
+}
+
+#[test]
+fn migrating_v2_gives_every_set_the_session_of_its_own_date() {
+    let db = TempDb::v2();
     let c = db.store().unwrap();
-    assert_eq!(c.schema_version().unwrap(), 2);
+
+    let rows = c.all_history().unwrap().sets;
+    let sessions: Vec<_> = rows
+        .iter()
+        .map(|row| (row.id.as_str(), row.session()))
+        .collect();
+    assert_eq!(sessions, [("old-1", "2025-01-02"), ("old-2", "2025-01-03")]);
+    // What v2 knew stays as it was.
+    assert_eq!(rows[1].plan_item_id.as_deref(), Some("item-1"));
+    assert_eq!(rows[1].set_type, "drop");
+}
+
+#[test]
+fn a_set_logged_after_migrating_v2_keeps_the_session_it_was_given() {
+    let db = TempDb::v2();
+    let c = db.store().unwrap();
+    let continued = LoggedSetRow {
+        session: Some("2025-01-03".to_string()),
+        ..set_row("new-1", "2025-01-04T10:00:00.000Z")
+    };
+    c.append_history(&continued).unwrap();
+
+    let rows = db.store().unwrap().all_history().unwrap().sets;
+    assert_eq!(rows[2], continued);
+    assert_eq!(rows[2].date, "2025-01-04");
 }
 
 #[test]
@@ -33,6 +72,7 @@ fn migration_keeps_old_history_rows_readable_with_defaults() {
     assert_eq!(row.trigger, "timer");
     assert_eq!(row.plan_item_id, None);
     assert_eq!(row.set_type, "working");
+    assert_eq!(row.session(), "2025-01-02");
 }
 
 #[test]
@@ -107,7 +147,7 @@ fn migrated_db_accepts_new_style_rows_and_survives_a_second_init() {
 
     let c = db.store().unwrap();
 
-    assert_eq!(c.schema_version().unwrap(), 2);
+    assert_eq!(c.schema_version().unwrap(), SCHEMA_VERSION);
     assert_eq!(history_ids(&c), ["old-1", "new-1"]);
     assert_eq!(c.all_history().unwrap().sets[1], new_row);
     // A v2 dayState must not be deleted by re-running init.

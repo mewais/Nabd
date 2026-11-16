@@ -72,7 +72,10 @@ describe("workdays", () => {
     // Friday: one of Push's two exercises done; the weekend added nothing to the log.
     expect(app.get().dayLog).toEqual([{ date: dateKey(nov(FRIDAY)), planned: 6, done: 3 }]);
     expect(app.plan().dayName).toBe("Push");
-    expect(app.plan().item(catalogBenchRow.id)).toMatchObject({ status: "done", carried: 3 });
+    expect(app.plan().item(catalogBenchRow.id)).toMatchObject({
+      status: "done",
+      carried: { working: 3, warmup: 0, drop: 0 },
+    });
     expect(app.plan().item(catalogFlyRow.id)).toMatchObject({ owed: 3, remaining: 3 });
     expect(selectStats(app.get()).completionThisWeek()).toBe(0);
   });

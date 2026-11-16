@@ -13,6 +13,11 @@ const press = (scope: ReturnType<typeof card>, name: string | RegExp): void => {
   fireEvent.click(scope.getByRole("button", { name }));
 };
 
+/** Pick one of a card's options: a rep mode or a load mode. */
+const choose = (scope: ReturnType<typeof card>, name: string): void => {
+  fireEvent.click(scope.getByRole("radio", { name }));
+};
+
 /** The planner on Monday's "Push" day, and that day's exercise rows after every edit. */
 function renderPush() {
   const planner = renderPlanner(officeStrength());
@@ -44,10 +49,10 @@ describe("SetTable", () => {
     renderPush();
     const ohp = card(OHP_CARD);
 
-    expect(ohp.getByRole("button", { name: "Fixed" })).toHaveAttribute("aria-pressed", "true");
-    expect(ohp.getByRole("button", { name: "Range" })).toHaveAttribute("aria-pressed", "false");
-    expect(ohp.getByRole("button", { name: "%1RM" })).toHaveAttribute("aria-pressed", "true");
-    expect(ohp.getByRole("button", { name: "None" })).toHaveAttribute("aria-pressed", "false");
+    expect(ohp.getByRole("radio", { name: "Fixed" })).toBeChecked();
+    expect(ohp.getByRole("radio", { name: "Range" })).not.toBeChecked();
+    expect(ohp.getByRole("radio", { name: "%1RM" })).toBeChecked();
+    expect(ohp.getByRole("radio", { name: "None" })).not.toBeChecked();
   });
 
   it("offers no load stepper when load is off, and seconds for a timed hold", () => {
@@ -69,16 +74,17 @@ describe("SetTable", () => {
   });
 
   it.each([
-    ["Set 2 reps", "increase", { amount: 9, upTo: 10, intensity: 8 }],
-    ["Set 2 reps", "decrease", { amount: 7, upTo: 10, intensity: 8 }],
-    ["Set 2 top of range", "increase", { amount: 8, upTo: 11, intensity: 8 }],
-    ["Set 2 top of range", "decrease", { amount: 8, upTo: 9, intensity: 8 }],
-    ["Set 2 RPE", "increase", { amount: 8, upTo: 10, intensity: 8.5 }],
-    ["Set 2 RPE", "decrease", { amount: 8, upTo: 10, intensity: 7.5 }],
+    ["Set 2 reps", "Increase", { amount: 9, upTo: 10, intensity: 8 }],
+    ["Set 2 reps", "Decrease", { amount: 7, upTo: 10, intensity: 8 }],
+    ["Set 2 top of range", "Increase", { amount: 8, upTo: 11, intensity: 8 }],
+    ["Set 2 top of range", "Decrease", { amount: 8, upTo: 9, intensity: 8 }],
+    ["Set 2 RPE", "Increase", { amount: 8, upTo: 10, intensity: 8.5 }],
+    ["Set 2 RPE", "Decrease", { amount: 8, upTo: 10, intensity: 7.5 }],
   ])("%s → %s edits only its own value", (group, direction, expected) => {
     const { bench } = renderPush();
 
-    fireEvent.click(stepper(card(BENCH_CARD), group).getByRole("button", { name: direction }));
+    const name = `${direction} ${group.charAt(0).toLowerCase()}${group.slice(1)}`;
+    fireEvent.click(stepper(card(BENCH_CARD), group).getByRole("button", { name }));
 
     expect(bench().sets[1]).toMatchObject(expected);
     expect(bench().sets[0]).toEqual({ type: "warmup", amount: 10, upTo: 12, intensity: 6 });
@@ -115,7 +121,7 @@ describe("SetTable", () => {
 
     const repModes = (name: string) =>
       card(name)
-        .queryByRole("group", { name: "Rep mode" })
+        .queryByRole("radiogroup", { name: "Rep mode" })
         ?.textContent?.match(/Range|Fixed|Time/g);
     expect(repModes(BENCH_CARD)).toEqual(["Range", "Fixed"]);
     // A hold is written one way, so there is nothing to choose.
@@ -126,7 +132,7 @@ describe("SetTable", () => {
     const { bench } = renderPush();
     expect(bench().sets.map((s) => s.intensity)).toEqual([6, 8, 8.5, 9]);
 
-    press(card(BENCH_CARD), "%1RM");
+    choose(card(BENCH_CARD), "%1RM");
 
     // An RPE of 8.5 must not come back as 8.5% of a one-rep max.
     expect(bench().sets.map((s) => s.intensity)).toEqual([70, 70, 70, 70]);
@@ -135,11 +141,11 @@ describe("SetTable", () => {
   it("switching load to %1RM gives every set a percentage, None clears it", () => {
     const { plank, bench } = renderPush();
 
-    press(card(PLANK_CARD), "%1RM");
+    choose(card(PLANK_CARD), "%1RM");
     expect(plank().intensity).toBe("pct");
     expect(plank().sets.map((s) => s.intensity)).toEqual([70, 70]);
 
-    press(card(BENCH_CARD), "None");
+    choose(card(BENCH_CARD), "None");
     expect(bench().intensity).toBe("none");
     expect(bench().sets.every((s) => s.intensity === undefined)).toBe(true);
   });
@@ -148,11 +154,11 @@ describe("SetTable", () => {
     const { bench } = renderPush();
     const rest = () => stepper(card(BENCH_CARD), "Rest");
 
-    fireEvent.click(rest().getByRole("button", { name: "increase" }));
+    fireEvent.click(rest().getByRole("button", { name: "Increase rest" }));
     expect(bench().rest).toBe(165);
 
-    fireEvent.click(rest().getByRole("button", { name: "decrease" }));
-    fireEvent.click(rest().getByRole("button", { name: "decrease" }));
+    fireEvent.click(rest().getByRole("button", { name: "Decrease rest" }));
+    fireEvent.click(rest().getByRole("button", { name: "Decrease rest" }));
     expect(bench().rest).toBe(135);
   });
 

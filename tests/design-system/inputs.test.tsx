@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { Stepper, TextInput, Toggle } from "@nabd/design-system";
+import { NumberField, Stepper, TextInput, Toggle } from "@nabd/design-system";
 import { click } from "./render";
 
 describe("Stepper", () => {
-  it("shows the value between a decrease and an increase button", () => {
+  it("shows the value between a decrease and an increase button, named for what they step", () => {
     const onStep = vi.fn();
-    render(<Stepper value="50 min" onStep={onStep} />);
+    render(<Stepper value="50 min" onStep={onStep} ariaLabel="Interval" />);
 
     expect(screen.getByText("50 min")).toBeInTheDocument();
-    click("decrease");
+    click("Decrease interval");
     expect(onStep.mock.calls).toEqual([[-1]]);
-    click("increase");
+    click("Increase interval");
     expect(onStep.mock.calls).toEqual([[-1], [1]]);
   });
 
@@ -21,7 +21,7 @@ describe("Stepper", () => {
   });
 
   it("offers no input unless the value can be typed", () => {
-    render(<Stepper value={8} onStep={vi.fn()} />);
+    render(<Stepper value={8} onStep={vi.fn()} ariaLabel="Reps" />);
     expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 
@@ -123,7 +123,7 @@ describe("Stepper", () => {
       expect(field()).toHaveValue("37.5");
       // Stepping lets go of whatever was half typed.
       type("3");
-      click("increase");
+      click("Increase kg");
       expect(field()).toHaveValue("5.5");
     });
 
@@ -132,6 +132,53 @@ describe("Stepper", () => {
       const invalid = <Stepper value="8–12" onDec={vi.fn()} onInc={vi.fn()} onSet={vi.fn()} />;
       expect(invalid).toBeTruthy();
     });
+  });
+});
+
+describe("NumberField", () => {
+  /** A field over an optional number its owner keeps, taking only 20–400. */
+  function Owned({ start }: { start: number | null }): JSX.Element {
+    const [value, setValue] = useState(start);
+    return (
+      <NumberField
+        value={value}
+        onSet={(typed) => {
+          if (typed >= 20 && typed <= 400) setValue(typed);
+        }}
+        onClear={() => setValue(null)}
+        ariaLabel="Body weight"
+        placeholder="kg"
+      />
+    );
+  }
+  const field = (): HTMLElement => screen.getByRole("textbox", { name: "Body weight" });
+  const type = (text: string): boolean => fireEvent.change(field(), { target: { value: text } });
+
+  it("is empty, showing its placeholder, while there is no number", () => {
+    render(<Owned start={null} />);
+    expect(field()).toHaveValue("");
+    expect(field()).toHaveAttribute("placeholder", "kg");
+  });
+
+  it("takes a number typed digit by digit, though the first digits alone are refused", () => {
+    render(<Owned start={null} />);
+    type("8");
+    type("81");
+    type("81.5");
+    fireEvent.blur(field());
+    expect(field()).toHaveValue("81.5");
+  });
+
+  it("is cleared by emptying it", () => {
+    render(<Owned start={80} />);
+    type("");
+    fireEvent.blur(field());
+    expect(field()).toHaveValue("");
+  });
+
+  it("is a plain field, not a spin button, unless it can be stepped", () => {
+    render(<Owned start={80} />);
+    expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 });
 

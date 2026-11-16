@@ -17,8 +17,8 @@ export class Progress {
   /** "Calendar" or "Weekly". */
   tab(name: string): Locator {
     return this.screen
-      .getByRole("group", { name: "Consistency view" })
-      .getByRole("button", { name });
+      .getByRole("radiogroup", { name: "Consistency view" })
+      .getByRole("radio", { name });
   }
 
   /** The bars of a chart: "Sets per week", "Completion by day", "Sets by hour". */

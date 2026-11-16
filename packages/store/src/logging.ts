@@ -66,8 +66,9 @@ export function loggingSlice(ctx: StoreContext): LoggingSlice {
       const entry = sessionForLogging(ctx);
       if (!entry) return;
       const { session, item } = entry;
-      // The set counts toward the day that is open, whatever the clock says (see beginDay).
-      const logged = session.toLoggedSet(item, newId(), now(), get().dayState.date);
+      // The set counts toward the day that is open, whatever the clock says (see beginDay),
+      // and belongs to its session.
+      const logged = session.toLoggedSet(item, newId(), now(), selectTodayPlan(get()));
       // Show the set first; saving must never be able to stall the logger.
       set((s) => ({ history: [...s.history, logged], snoozedUntil: null, pendingNudge: null }));
       set({ session: sessionAfter(ctx, session, item, logged) });

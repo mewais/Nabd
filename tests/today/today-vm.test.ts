@@ -46,8 +46,8 @@ describe("buildTodayVM · muscle targets without exercises", () => {
 
 describe("buildTodayVM · stats", () => {
   const history = () => [
-    did(null, "bench", 8, 60, { at: nov(14, 12, 0) }),
-    did(null, "bench", 8, 60, { at: nov(15, 12, 0) }),
+    did(null, "bench", 8, 60, { at: nov(12, 12, 0) }),
+    did(null, "bench", 8, 60, { at: nov(13, 12, 0) }),
     did("p-bench", "bench", 10, 40, { setType: "warmup" }),
     did("p-bench", "bench", 9, 60),
   ];
@@ -56,7 +56,8 @@ describe("buildTodayVM · stats", () => {
 
   it("reports the streak, this week's sets and the load moved today, warm-ups left out", () => {
     const vm = todayVM({ program: pushDay(), history: history() });
-    // Sat + Sun + today; only today's two sets fall in the week that starts this Monday.
+    // Thu + Fri + today, the weekend off between them neutral; only today's two sets fall in
+    // the week that starts this Monday.
     // Lifted: the working set's 9 × 60 kg, not the warm-up's 10 × 40 kg.
     expect(figures(vm)).toEqual({
       Streak: "3 days",

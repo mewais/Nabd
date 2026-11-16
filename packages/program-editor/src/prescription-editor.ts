@@ -1,20 +1,9 @@
 import type { Direction, Intensity, Measure, Prescription, RepMode, SetSpec } from "@nabd/domain";
-import { SECONDS_STEP, SET_TYPES, clamp, measureOfMode } from "@nabd/domain";
+import { INTENSITY_SCALES, SECONDS_STEP, SET_TYPES, clamp, measureOfMode } from "@nabd/domain";
 
 const REST_STEP_SEC = 15;
 /** How far apart a range starts when a fixed rep count becomes one: 8 → 8–10. */
 const RANGE_SPAN = 2;
-
-interface IntensityScale {
-  min: number;
-  max: number;
-  step: number;
-  initial: number;
-}
-const INTENSITY_SCALES: Record<Exclude<Intensity, "none">, IntensityScale> = {
-  rpe: { min: 5, max: 10, step: 0.5, initial: 8 },
-  pct: { min: 40, max: 100, step: 2.5, initial: 70 },
-};
 
 /** The two ways reps can be written. A duration has only one, so it is not among them. */
 export type RepStyle = Exclude<RepMode, "time">;
@@ -139,6 +128,23 @@ export class PrescriptionEditor {
     const set = this.prescription.sets[index];
     if (set?.upTo === undefined) return;
     set.upTo = Math.max(set.amount, set.upTo + direction * this.amountStep);
+  }
+
+  /**
+   * Hold every set's intensity to the prescription's scale: within its
+   * bounds, at its usual value where a set has none, and absent where load is
+   * not prescribed. What the planner writes always obeys this; what was stored
+   * or imported is brought to it.
+   */
+  keepIntensitiesOnScale(): void {
+    const mode = this.prescription.intensity;
+    for (const set of this.prescription.sets) {
+      if (mode === "none") delete set.intensity;
+      else {
+        const scale = INTENSITY_SCALES[mode];
+        set.intensity = clamp(set.intensity ?? scale.initial, scale.min, scale.max);
+      }
+    }
   }
 
   /** Step a set's intensity (RPE or %1RM) within its bounds. */

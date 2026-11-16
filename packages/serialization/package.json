@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@nabd/dataset": "workspace:*",
-    "@nabd/domain": "workspace:*"
+    "@nabd/domain": "workspace:*",
+    "@nabd/scheduling": "workspace:*"
   }
 }

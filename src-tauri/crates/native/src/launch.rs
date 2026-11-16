@@ -1,5 +1,7 @@
 //! How a launch starts and what closing the window does.
 
+use crate::TrayCommand;
+
 /// The argument the autostart entry launches the app with.
 pub const AUTOSTART_ARG: &str = "--autostart";
 
@@ -44,6 +46,17 @@ impl CloseAction {
             Self::HideToTray
         } else {
             Self::Quit
+        }
+    }
+
+    /// The command a close is carried out as, instead of letting the window
+    /// go at once: quitting is the tray's Quit, which the window carries out
+    /// so that what is still waiting to be saved is saved first. Hiding is
+    /// no command.
+    pub fn command(self) -> Option<TrayCommand> {
+        match self {
+            Self::HideToTray => None,
+            Self::Quit => Some(TrayCommand::Quit),
         }
     }
 }

@@ -14,6 +14,11 @@ export function click(name: string | RegExp): void {
   fireEvent.click(screen.getByRole("button", { name }));
 }
 
+/** Pick the option (a radio of a radio group) with this accessible name. */
+export function choose(name: string | RegExp): void {
+  fireEvent.click(screen.getByRole("radio", { name }));
+}
+
 /** Press a key with focus somewhere on the page. */
 export function press(key: string): void {
   fireEvent.keyDown(document.body, { key });

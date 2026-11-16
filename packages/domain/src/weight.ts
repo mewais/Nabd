@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { roundTo } from "./numbers";
+import { clamp, roundTo } from "./numbers";
+import { needsLoad } from "./tracking";
+import type { TrackingType } from "./tracking";
 
 /** Weight unit. Weights are stored canonically in kg; this controls display + input. */
 export const WEIGHT_UNITS = ["kg", "lb"] as const;
@@ -15,6 +17,17 @@ export function roundKg(kg: number): number {
 
 /** The heaviest load a set can record, in kg; anything above it is a typing slip. */
 export const MAX_LOAD_KG = 1000;
+
+/**
+ * `kg` held to the loads a set of an exercise tracked as `tracking` can be
+ * given: at most {@link MAX_LOAD_KG}, and at least one increment (`stepKg`)
+ * for an exercise that cannot be done without a load (see `needsLoad`) — none
+ * for any other. What the advisor suggests and what the log form steps to
+ * both keep within these bounds.
+ */
+export function boundedLoad(kg: number, tracking: TrackingType, stepKg: number): number {
+  return roundKg(clamp(kg, needsLoad(tracking) ? stepKg : 0, MAX_LOAD_KG));
+}
 
 /** The finest weight increment, in either unit (micro-plates). */
 const FINEST_STEP = 0.25;

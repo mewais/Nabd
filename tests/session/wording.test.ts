@@ -1,3 +1,4 @@
+import type { TrackingType } from "@nabd/domain";
 import { dateKey } from "@nabd/domain";
 import { ExerciseHistory, ProgressionAdvisor } from "@nabd/progression";
 import { describeAdvice, formatPerformance, formatTarget } from "@nabd/session";
@@ -39,7 +40,7 @@ describe("wording", () => {
           prescription: prescription([working(8, 12)]),
           setIndex: 0,
           history: new ExerciseHistory([logged(pullUp, nov(9), reps, 0)], pullUp.id),
-          date: dateKey(TODAY),
+          session: dateKey(TODAY),
         }),
         pullUp.tracking,
         "kg",
@@ -82,16 +83,21 @@ describe("wording", () => {
   describe("when the plan prescribes an intensity", () => {
     // 8 × 60 kg last week: an estimated max of 76 kg.
     const history = [logged(curl, nov(9), 8, 60)];
-    const wording = (intensity: "pct" | "rpe", value: number, sessions = history) =>
+    const wording = (
+      intensity: "pct" | "rpe",
+      value: number,
+      sessions = history,
+      tracking: TrackingType = "weight_reps",
+    ) =>
       describeAdvice(
         new ProgressionAdvisor(2.5).advise({
-          tracking: "weight_reps",
+          tracking,
           prescription: prescription([working(8, 12, value)], { intensity }),
           setIndex: 0,
           history: new ExerciseHistory(sessions, curl.id),
-          date: dateKey(TODAY),
+          session: dateKey(TODAY),
         }),
-        "weight_reps",
+        tracking,
         "kg",
       )!;
 
@@ -119,7 +125,7 @@ describe("wording", () => {
         prescription: prescription([working(8, 12, 70)], { intensity: "pct" }),
         setIndex: 0,
         history: new ExerciseHistory(history, curl.id),
-        date: dateKey(TODAY),
+        session: dateKey(TODAY),
       });
       expect(describeAdvice(advice, "weight_reps", "lb")!.reason).toBe(
         "70% of your estimated max (167.6 lb).",
@@ -133,6 +139,24 @@ describe("wording", () => {
           "First time — start light and find your level. 70% 1RM applies once there is history.",
       });
       expect(wording("rpe", 8, []).reason).toMatch(/RPE 8 applies once there is history\.$/);
+    });
+
+    it("says, when there is history but no load in it, that the intensity waits for a load", () => {
+      const unloaded = [logged(curl, nov(9), 6, 0)];
+      expect(wording("rpe", 8, unloaded).reason).toBe(
+        "Below your range last time — same load, reach the range first. " +
+          "RPE 8 applies once you log it with weight.",
+      );
+    });
+
+    it("tells a bodyweight exercise to set the body weight first, whatever its history", () => {
+      const bodyweight = [logged(curl, nov(9), 10, 0)];
+      for (const tracking of ["weighted_bodyweight", "assisted_bodyweight"] as const) {
+        expect(wording("pct", 70, bodyweight, tracking).reason).toBe(
+          "Inside your range — beat last time. Set your body weight in Settings to use %1RM here.",
+        );
+        expect(wording("rpe", 8, [], tracking).reason).toMatch(/to use RPE here\.$/);
+      }
     });
   });
 

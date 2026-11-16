@@ -1,4 +1,4 @@
-import { EXERCISE, day, plan, planned } from "../support/data";
+import { EXERCISE, day, loggedSet, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
@@ -82,5 +82,37 @@ test("the working days are a setting, and at least one of them stays", async ({ 
     await settings.option("Working days", "Sat").click();
     await expect(settings.option("Working days", "Sat")).toHaveAttribute("aria-pressed", "true");
     await expect(shell.status).toContainText("Next nudge at 10:20");
+  });
+});
+
+test("a streak counts workdays: a weekend off neither ends it nor adds to it", async ({ app }) => {
+  const { shell, today, logger, settings, progress } = app;
+  // A set each workday last week, Monday to Friday, and one on Saturday.
+  const lastWeek = [0, 1, 2, 3, 4, 5].map((offset) =>
+    loggedSet(bench.id, { day: dayAfter(MONDAY, offset), reps: 8, kg: 20 }),
+  );
+  await app.launch(at("10:00", NEXT_MONDAY), { program, history: lastWeek });
+
+  await test.step("Monday morning, nothing logged yet: the streak still stands at Friday's", async () => {
+    await shell.goTo("Progress");
+    await expect(progress.kpi("Current streak")).toContainText("5days");
+    await expect(progress.kpi("Current streak")).toContainText(
+      "Workdays in a row with a set; days off neither add to it nor break it.",
+    );
+  });
+
+  await test.step("a set today carries it on", async () => {
+    await shell.goTo("Today");
+    await today.startSet.click();
+    await logger.log({ reps: 8, weight: 20 });
+    await logger.done();
+    await expect(today.stat("Streak")).toContainText("6");
+  });
+
+  await test.step("with Sunday a workday, the idle Sunday ends it", async () => {
+    await shell.button("Settings").click();
+    await settings.option("Working days", "Sun").click();
+    await settings.close();
+    await expect(today.stat("Streak")).toContainText("1");
   });
 });

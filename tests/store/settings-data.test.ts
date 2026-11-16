@@ -1,5 +1,6 @@
 import { APPDATA_VERSION, DEFAULT_SETTINGS } from "@nabd/domain";
 import { catalogBenchRow, catalogPushPull } from "../support/programs";
+import { working } from "../support/builders";
 import { boot } from "./fixtures";
 
 describe("settings and data", () => {
@@ -25,6 +26,19 @@ describe("settings and data", () => {
     // A unit and an increment given together are taken as given.
     app.get().updateSettings({ weightUnit: "kg", weightIncrement: 5 });
     expect(app.get().settings).toMatchObject({ weightUnit: "kg", weightIncrement: 5 });
+  });
+
+  it("keeps the body weight typed in the user's unit in kg, ignores one out of range, and forgets it", async () => {
+    const app = await boot();
+    expect(app.get().settings.bodyWeight).toBeNull();
+    app.get().updateSettings({ weightUnit: "lb" });
+    app.get().setBodyWeight(176.37);
+    expect(app.get().settings.bodyWeight).toBe(80);
+    expect(app.data.settings).toMatchObject({ bodyWeight: 80 });
+    app.get().setBodyWeight(8);
+    expect(app.get().settings.bodyWeight).toBe(80);
+    app.get().setBodyWeight(null);
+    expect(app.get().settings.bodyWeight).toBeNull();
   });
 
   it("tells the OS about autostart and translucency changes only", async () => {
@@ -53,6 +67,19 @@ describe("settings and data", () => {
     vi.mocked(app.client.exportData).mockRejectedValueOnce(new Error("read-only"));
     await app.get().exportData();
     expect(app.get().dataNotice).toEqual({ kind: "error", text: "Could not export: read-only" });
+  });
+
+  it("an imported intensity off its scale is held to it, as stored ones are", async () => {
+    const app = await boot();
+    const bench = {
+      ...catalogBenchRow,
+      intensity: "rpe",
+      sets: [{ ...working(8, 12), intensity: 50 }],
+    };
+    const day = { ...catalogPushPull.days[0]!, exercises: [bench] };
+    const program = { ...catalogPushPull, days: [day] };
+    await app.importFile(JSON.stringify({ app: "Nabd", version: 4, program }));
+    expect(app.get().program.days[0]!.exercises[0]!.sets[0]!.intensity).toBe(10);
   });
 
   it("import validates first, then reloads everything", async () => {

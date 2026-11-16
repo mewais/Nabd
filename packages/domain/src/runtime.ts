@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { MUSCLE_PRIMARY_GROUP, MuscleKeySchema } from "./muscles";
-import { SetTypeSchema } from "./program";
+import { SetCountsSchema, SetTypeSchema } from "./program";
 import { dateKey } from "./dates";
+import { isRecord } from "./json";
 import type { Exercise } from "./exercise";
 import { musclesOf } from "./exercise";
 
@@ -16,8 +17,7 @@ export const TRIGGER_NAMES: Record<Trigger, string> = {
   manual: "Manual",
 };
 
-/** A persisted, completed set (one row of history). */
-export const LoggedSetSchema = z.object({
+const LoggedSetFields = z.object({
   id: z.string(),
   exId: z.string(),
   exercise: z.string(),
@@ -40,22 +40,43 @@ export const LoggedSetSchema = z.object({
   /** The plan item (prescription / cycled slot / extra) this set counts toward. */
   planItemId: z.string().nullable().default(null),
   setType: SetTypeSchema.default("working"),
+  /**
+   * The session the set belongs to, as the date key of the day it began: one
+   * visit to a program day. That is the set's own `date`, except on a floating
+   * plan whose unfinished day came back, where every set of the visit belongs
+   * to the session it began on an earlier day. Progression reasons in
+   * sessions; calendar statistics (streaks, completion) in dates.
+   */
+  session: z.string(),
 });
+
+/**
+ * A persisted, completed set (one row of history). A row stored before sets
+ * had a session belongs to the session of its own date.
+ */
+export const LoggedSetSchema = z.preprocess(
+  (row) => (isRecord(row) && row.session === undefined ? { ...row, session: row.date } : row),
+  LoggedSetFields,
+);
 export type LoggedSet = z.infer<typeof LoggedSetSchema>;
 
 /** What a history row records beyond its exercise and its moment. */
 type SetDetails = Pick<LoggedSet, "id" | "value" | "weight" | "trigger" | "planItemId" | "setType">;
 
+/** Which day a set counts toward, and which session it belongs to. */
+export type SetDay = Pick<LoggedSet, "date" | "session">;
+
 /**
  * The history row for a set of `exercise` performed at `at`. It counts toward
- * the day `date` — the day that was open when it was logged, which is `at`'s
- * own calendar day unless the clock has been set back since.
+ * the day `day.date` — the day that was open when it was logged, which is
+ * `at`'s own calendar day unless the clock has been set back since — and
+ * belongs to the session `day.session` (by default, that day's own).
  */
 export function loggedSet(
   exercise: Exercise,
   at: Date,
   details: SetDetails,
-  date = dateKey(at),
+  day: SetDay = { date: dateKey(at), session: dateKey(at) },
 ): LoggedSet {
   return {
     ...details,
@@ -64,7 +85,8 @@ export function loggedSet(
     group: exercise.group,
     muscles: musclesOf(exercise),
     ts: at.toISOString(),
-    date,
+    date: day.date,
+    session: day.session,
   };
 }
 
@@ -105,12 +127,26 @@ const ExtraItemSchema = z.object({ id: z.string(), exId: z.string() });
 export type ExtraItem = z.infer<typeof ExtraItemSchema>;
 
 /**
- * How many of a plan item's prescribed sets (the first ones, in order) were
- * already done on earlier calendar days of the floating day that is still
- * open, keyed by plan-item id. Only items with something done are listed.
+ * What one plan item already did on earlier days: how many of its prescribed
+ * sets of each kind, and of which exercise — what a cycled slot gave that
+ * day. The sets count only while the item is still on that exercise.
  */
-export const CarriedSetsSchema = z.record(z.string(), z.number().int().positive());
-export type CarriedSets = z.infer<typeof CarriedSetsSchema>;
+const CarriedItemSchema = z.object({ exId: z.string(), sets: SetCountsSchema });
+export type CarriedItem = z.infer<typeof CarriedItemSchema>;
+
+/** What each plan item of a day already did, by plan-item id. */
+export type CarriedItems = Record<string, CarriedItem>;
+
+/**
+ * An unfinished floating day that came back: the date its visit began — the
+ * session all of its sets belong to — and what each plan item already did on
+ * the days before (only items with something done are listed).
+ */
+export const CarriedVisitSchema = z.object({
+  startedOn: z.string(),
+  items: z.record(z.string(), CarriedItemSchema),
+});
+export type CarriedVisit = z.infer<typeof CarriedVisitSchema>;
 
 /**
  * The per-day bookkeeping that is not derivable from program + history: which
@@ -125,8 +161,13 @@ export const DayStateSchema = z.object({
    * which day is today.
    */
   dayId: z.string().nullable().default(null),
-  /** What an unfinished floating day already has behind it: it comes back with only the rest. */
-  carried: CarriedSetsSchema.default({}),
+  /**
+   * What an unfinished floating day already has behind it: it comes back with
+   * only the rest. Null when the visit began today. Kept, unused, while the
+   * plan is on weekdays, so a same-day switch back finds it; the next day of
+   * a weekday plan starts without it.
+   */
+  carried: CarriedVisitSchema.nullable().default(null),
   skipped: z.array(z.string()).default([]),
   extras: z.array(ExtraItemSchema).default([]),
   /** Nudges are paused until the day ends. */
@@ -134,11 +175,11 @@ export const DayStateSchema = z.object({
 });
 export type DayState = z.infer<typeof DayStateSchema>;
 
-/** A day with nothing skipped, added or paused, on floating day `dayId` (with `carried` already done). */
+/** A day with nothing skipped, added or paused, on floating day `dayId` (continuing `carried`). */
 export const freshDayState = (
   date: Date,
   dayId: string | null = null,
-  carried: CarriedSets = {},
+  carried: CarriedVisit | null = null,
 ): DayState => ({
   date: dateKey(date),
   dayId,

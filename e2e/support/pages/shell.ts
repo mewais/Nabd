@@ -21,7 +21,7 @@ export class Shell {
   constructor(private readonly page: Page) {
     this.topBar = page
       .getByRole("banner")
-      .filter({ has: page.getByRole("group", { name: "Theme" }) });
+      .filter({ has: page.getByRole("radiogroup", { name: "Theme" }) });
     this.status = this.topBar.getByRole("status");
     this.ring = page.getByRole("img", { name: /done today$/ });
     this.toast = page.getByRole("status").filter({ hasText: "Time to move" });
@@ -38,8 +38,13 @@ export class Shell {
     await this.page.getByRole("navigation").getByRole("button", { name: screen }).click();
   }
 
-  /** A top-bar button: "Pause", "Resume", "Light", "Dark", "Settings". */
+  /** A top-bar button: "Pause", "Resume", "Settings". */
   button(name: string): Locator {
     return this.topBar.getByRole("button", { name, exact: true });
+  }
+
+  /** The top bar's theme choice: "Light" or "Dark". */
+  theme(name: "Light" | "Dark"): Locator {
+    return this.topBar.getByRole("radiogroup", { name: "Theme" }).getByRole("radio", { name });
   }
 }

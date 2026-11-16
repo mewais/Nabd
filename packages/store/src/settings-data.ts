@@ -1,4 +1,4 @@
-import { SettingsSchema, hasWorkday, plural, withWeightUnit } from "@nabd/domain";
+import { SettingsSchema, hasWorkday, kgFromDisplay, plural, withWeightUnit } from "@nabd/domain";
 import { parseImport } from "@nabd/serialization";
 import type { StoreContext } from "./context";
 import { applyAutostart, applyGlass } from "./os";
@@ -35,6 +35,12 @@ export function settingsDataSlice(ctx: StoreContext): SettingsDataSlice {
         applyAutostart(ctx, settings.openAtStartup);
       }
       if (settings.glass !== before.glass) applyGlass(ctx, settings.glass);
+    },
+
+    setBodyWeight: (displayValue) => {
+      const unit = get().settings.weightUnit;
+      const bodyWeight = displayValue === null ? null : kgFromDisplay(displayValue, unit);
+      get().updateSettings({ bodyWeight });
     },
 
     openSettings: () => set({ settingsOpen: true }),

@@ -56,10 +56,12 @@ export const selectTodayPlan = memoize(
     }),
 );
 
-/** Progression advice + form defaults for today's exercises. */
+/** Progression advice + form defaults for today's exercises, in the session today's sets belong to. */
 export const selectCoach = memoize(
-  (s) => [s.history, loadStepKg(s.settings), s.dayState.date] as const,
-  (history, stepKg, today) => new Coach(history, new ProgressionAdvisor(stepKg), today),
+  (s) =>
+    [s.history, loadStepKg(s.settings), s.settings.bodyWeight, selectTodayPlan(s).session] as const,
+  (history, stepKg, bodyWeight, session) =>
+    new Coach(history, new ProgressionAdvisor(stepKg, bodyWeight), session),
 );
 
 /** When the last set of today was logged. */
@@ -144,13 +146,13 @@ export const selectExerciseProgress = memoize(
 const selectTodayRecord = memoize(
   (s) => [selectTodayPlan(s)] as const,
   (plan): DayRecord[] => {
-    const record = plan.ledger.record();
+    const record = plan.ledger.soFar();
     return record === null ? [] : [record];
   },
 );
 
 export const selectStats = memoize(
-  (s) => [s.history, s.dayLog, selectTodayRecord(s), s.dayState.date] as const,
-  (history, dayLog, today, date) =>
-    new TrainingStats(history, [...dayLog, ...today], parseDateKey(date)),
+  (s) => [s.history, s.dayLog, selectTodayRecord(s), s.dayState.date, s.settings.workDays] as const,
+  (history, dayLog, today, date, workDays) =>
+    new TrainingStats(history, [...dayLog, ...today], parseDateKey(date), workDays),
 );

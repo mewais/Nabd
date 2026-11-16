@@ -12,6 +12,11 @@ type ImportResult = { ok: true; data: AppData } | { ok: false; errors: string[] 
  *    has behind it (`carried`) and the settings the weekdays that are worked
  *    (`workDays`); a document without them takes their defaults on validation,
  *    which is the whole upgrade.
+ *  - v4 → v5: a carried set knows its kind and its exercise, and the visit
+ *    the date it began (upgraded from the counts, see {@link upgradeStored});
+ *    a logged set knows the session it belongs to, which for a set without
+ *    one is its own date, and the settings hold the user's body weight,
+ *    unknown unless given — both defaults taken on validation.
  *  - Whatever the version, the values an export shares with what the app
  *    stores are upgraded the same way ({@link upgradeStored}).
  */

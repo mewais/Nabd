@@ -12,10 +12,26 @@ export interface QueueRowVM {
   /** "2/4 sets", "3 sets" for extras, "Skipped". */
   badge: string;
   state: "next" | "pending" | "done" | "skipped";
-  /** What the secondary action does to this row; null when there is nothing to undo or drop. */
-  skipLabel: "Skip" | "Restore" | "Remove" | null;
+  /** The secondary action: skip, restore or remove the row; null when there is nothing to undo or drop. */
+  skip: RowActionVM<"Skip" | "Restore" | "Remove"> | null;
   /** Null for a skipped exercise, which has to be restored first. */
-  startLabel: "Start" | "More" | null;
+  start: RowActionVM<"Start" | "More"> | null;
+}
+
+/** A button of a queue row. */
+export interface RowActionVM<Label extends string> {
+  /** What it says: "Skip". */
+  label: Label;
+  /** Its accessible name, which says which row it acts on: "Skip Barbell Bench Press". */
+  name: string;
+}
+
+/** The button `label` of `item`'s row, or none. */
+function action<Label extends string>(
+  label: Label | null,
+  item: PlanItem,
+): RowActionVM<Label> | null {
+  return label === null ? null : { label, name: `${label} ${item.exercise.name}` };
 }
 
 /** Today's exercises in plan order, extras last. */
@@ -31,13 +47,13 @@ function badge(item: PlanItem): string {
   return `${formatSetTally(item)} ${counted === 1 ? "set" : "sets"}`;
 }
 
-function skipLabel(item: PlanItem): QueueRowVM["skipLabel"] {
+function skipLabel(item: PlanItem): "Skip" | "Restore" | "Remove" | null {
   if (item.skipped) return "Restore";
   if (item.isExtra) return item.done === 0 ? "Remove" : null;
   return item.remaining > 0 ? "Skip" : null;
 }
 
-function startLabel(item: PlanItem): QueueRowVM["startLabel"] {
+function startLabel(item: PlanItem): "Start" | "More" | null {
   if (item.skipped) return null;
   return item.status === "done" ? "More" : "Start";
 }
@@ -54,8 +70,8 @@ export function buildQueueVM(plan: TodayPlan): QueueVM {
       sub: `${item.label} · ${muscleList(item.exercise)}`,
       badge: badge(item),
       state: item.id === nextId ? "next" : item.status,
-      skipLabel: skipLabel(item),
-      startLabel: startLabel(item),
+      skip: action(skipLabel(item), item),
+      start: action(startLabel(item), item),
     })),
   };
 }

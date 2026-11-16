@@ -22,8 +22,9 @@ export class Today {
       .getByRole("listitem", { name: exercise, exact: true });
   }
 
+  /** A button of an exercise's line, named for what it does to which exercise: "Skip Push-Up". */
   rowButton(exercise: string, action: QueueAction): Locator {
-    return this.row(exercise).getByRole("button", { name: action, exact: true });
+    return this.row(exercise).getByRole("button", { name: `${action} ${exercise}`, exact: true });
   }
 
   /** "Streak", "This week" or "Lifted today". */

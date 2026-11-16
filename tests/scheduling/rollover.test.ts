@@ -2,7 +2,7 @@ import type { DayState, LoggedSet, Program } from "@nabd/domain";
 import { dateKey } from "@nabd/domain";
 import { rollOver } from "@nabd/scheduling";
 import type { TodayPlanInput } from "@nabd/scheduling";
-import { logged, nov } from "../support/builders";
+import { carry, logged, nov, visit } from "../support/builders";
 import { EX } from "../support/exercises";
 import { benchRow, cycledPlan, floatingPushPull, flyRow, raiseRow } from "../support/programs";
 import { MONDAY, benchSet, dayState, input } from "./fixtures";
@@ -149,11 +149,14 @@ describe("pools on a floating plan that is not finished", () => {
   it("stay on the exercise they gave until the day is done", () => {
     const next = roll({ program: cycledPlan, dayState: monday, history: partial, date: TUESDAY });
     expect(next.rotation).toEqual({});
-    expect(next.dayState.carried).toEqual({ chest: 2 });
+    expect(next.dayState.carried).toEqual(
+      visit(MONDAY, { chest: carry(EX.bench.id, { working: 2 }) }),
+    );
   });
 
   it("move on together, those trained on earlier days included, when the day completes", () => {
-    const earlier = dayState(TUESDAY, { dayId: "a", carried: { chest: 3 } });
+    const carried = visit(MONDAY, { chest: carry(EX.bench.id, { working: 3 }) });
+    const earlier = dayState(TUESDAY, { dayId: "a", carried });
     const delts = [10, 11, 12].map((hour) =>
       logged(EX.raise, nov(17, hour), 10, 10, { planItemId: "delts" }),
     );

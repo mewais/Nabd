@@ -12,6 +12,7 @@ type ButtonSemantics = Pick<
   | "aria-haspopup"
   | "aria-checked"
   | "aria-selected"
+  | "tabIndex"
 >;
 
 interface ButtonBaseProps extends ButtonSemantics {

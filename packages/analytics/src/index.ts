@@ -1,7 +1,7 @@
 // @nabd/analytics — Progress-screen metrics, all in the user's local time.
 
-import type { DayRecord, LoggedSet, Trigger } from "@nabd/domain";
-import { addDays, dateKey, startOfDay, startOfWeek } from "@nabd/domain";
+import type { DayRecord, LoggedSet, Settings, Trigger } from "@nabd/domain";
+import { addDays, dateKey, isWorkDay, startOfDay, startOfWeek } from "@nabd/domain";
 
 interface HourBucket {
   hour: number;
@@ -57,6 +57,8 @@ export class TrainingStats {
     private readonly history: readonly LoggedSet[],
     dayLog: readonly DayRecord[],
     now: Date,
+    /** The weekdays the user works: the only days a streak is made of. */
+    private readonly workDays: Settings["workDays"],
   ) {
     this.today = startOfDay(now);
     for (const set of history) {
@@ -76,13 +78,20 @@ export class TrainingStats {
     return sets;
   }
 
-  /** Consecutive training days ending today (or yesterday, if today is still empty). */
+  /**
+   * Consecutive workdays trained, ending today — or, while today has nothing
+   * logged yet, the workday before it. Days off are neutral: a set on one does
+   * not extend the streak and an idle one does not break it, so a Monday to
+   * Friday streak carries over the weekend.
+   */
   streak(): number {
+    const first = [...this.setsByDate.keys()].sort()[0];
     let cursor = this.setsOn(this.today) > 0 ? this.today : addDays(this.today, -1);
     let days = 0;
-    while (this.setsOn(cursor) > 0) {
+    for (; first !== undefined && dateKey(cursor) >= first; cursor = addDays(cursor, -1)) {
+      if (!isWorkDay({ workDays: this.workDays }, cursor)) continue;
+      if (this.setsOn(cursor) === 0) break;
       days++;
-      cursor = addDays(cursor, -1);
     }
     return days;
   }

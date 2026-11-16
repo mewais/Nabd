@@ -97,9 +97,15 @@ fn menu<R: Runtime>(app: &AppHandle<R>, state: &TrayState) -> AppResult<Menu<R>>
 }
 
 fn run_menu_entry<R: Runtime>(app: &AppHandle<R>, id: &str) {
-    let Some(command) = TrayCommand::from_id(id) else {
-        return;
-    };
+    if let Some(command) = TrayCommand::from_id(id) {
+        run(app, command);
+    }
+}
+
+/// Carry out a tray command. Quit also comes from elsewhere — Cmd+Q, and
+/// closing a window that has no tray to hide in — so that every way of
+/// quitting that the app gets to hear of saves first.
+pub fn run<R: Runtime>(app: &AppHandle<R>, command: TrayCommand) {
     if command.reveals_window() {
         window::reveal(app);
     }

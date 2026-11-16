@@ -1,4 +1,4 @@
-import type { CarriedSets, LoggedSet, Program } from "@nabd/domain";
+import type { CarriedVisit, LoggedSet, Program } from "@nabd/domain";
 import { DEFAULT_SETTINGS, dateKey, freshDayState } from "@nabd/domain";
 import { ProgressionAdvisor } from "@nabd/progression";
 import { TodayPlan } from "@nabd/scheduling";
@@ -19,10 +19,10 @@ export const program: Program = {
   days: [{ id: "d", name: "D", weekday: null, exercises: [curlRow, plankRow], slots: [] }],
 };
 
-/** Today's curl and plank, with `carried` sets of each already done on earlier days. */
+/** Today's curl and plank, with what earlier days of this floating day already did. */
 export function itemsFor(
   history: LoggedSet[],
-  carried: CarriedSets = {},
+  carried: CarriedVisit | null = null,
 ): { curlItem: PlanItem; plankItem: PlanItem } {
   const plan = TodayPlan.build({
     program,
@@ -36,5 +36,6 @@ export function itemsFor(
   return { curlItem: plan.item(curlRow.id)!, plankItem: plan.item(plankRow.id)! };
 }
 
-export const coachFor = (history: LoggedSet[]): Coach =>
-  new Coach(history, new ProgressionAdvisor(2.5), dateKey(TODAY));
+/** The coach of the session `session` (today's own, unless a floating day came back). */
+export const coachFor = (history: LoggedSet[], session = dateKey(TODAY)): Coach =>
+  new Coach(history, new ProgressionAdvisor(2.5), session);

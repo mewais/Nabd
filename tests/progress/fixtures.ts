@@ -3,7 +3,7 @@
 // dateKey(), so the suite does not depend on the machine's time zone.
 
 import type { Coverage, DayRecord, LoggedSet, MuscleKey, SetType, Trigger } from "@nabd/domain";
-import { MUSCLES, dateKey } from "@nabd/domain";
+import { DEFAULT_SETTINGS, MUSCLES, dateKey } from "@nabd/domain";
 import { TrainingStats } from "@nabd/analytics";
 import { MuscleVolume } from "@nabd/coverage";
 import { ExerciseProgress } from "@nabd/progression";
@@ -85,7 +85,7 @@ export function progressVM({
   const planned = new MuscleVolume();
   for (const muscle of targets) planned.add(muscle, 3);
   return buildProgressVM({
-    stats: new TrainingStats(sets, log, now),
+    stats: new TrainingStats(sets, log, now, DEFAULT_SETTINGS.workDays),
     progress: new ExerciseProgress(sets, catalogLookup),
     unit: "kg",
     coverage,

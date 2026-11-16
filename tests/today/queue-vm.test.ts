@@ -1,7 +1,7 @@
 /** @nabd/today — buildTodayVM, the queue: today's exercises and what can be done with each. */
 
-import { working } from "../support/builders";
-import { did, mondayProgram, planRow } from "../support/programs";
+import { carry, nov, visit, working } from "../support/builders";
+import { asFloating, did, mondayProgram, planRow } from "../support/programs";
 import { todayVM } from "./fixtures";
 
 describe("buildTodayVM · queue", () => {
@@ -58,12 +58,20 @@ describe("buildTodayVM · queue", () => {
   });
 
   it("a finished exercise is done and can no longer be skipped", () => {
-    expect(row("p-bench")).toMatchObject({ state: "done", badge: "2/2 sets", skipLabel: null });
+    expect(row("p-bench")).toMatchObject({ state: "done", badge: "2/2 sets", skip: null });
   });
 
   it("the first exercise still owing sets is next; later ones are pending", () => {
-    expect(row("p-pushup")).toMatchObject({ state: "next", badge: "1/2 sets", skipLabel: "Skip" });
-    expect(row("p-dip")).toMatchObject({ state: "pending", badge: "0/2 sets", skipLabel: "Skip" });
+    expect(row("p-pushup")).toMatchObject({
+      state: "next",
+      badge: "1/2 sets",
+      skip: { label: "Skip" },
+    });
+    expect(row("p-dip")).toMatchObject({
+      state: "pending",
+      badge: "0/2 sets",
+      skip: { label: "Skip" },
+    });
     expect(row("p-plank")).toMatchObject({ state: "pending", badge: "0/1 set" });
     expect(queue().queue.rows.filter((r) => r.state === "next")).toHaveLength(1);
   });
@@ -77,34 +85,49 @@ describe("buildTodayVM · queue", () => {
   });
 
   it("anything not skipped can be started; a finished exercise takes more sets", () => {
-    expect(row("p-pushup").startLabel).toBe("Start");
-    expect(row("x-curl").startLabel).toBe("Start");
-    expect(row("p-bench").startLabel).toBe("More");
-    expect(row("p-row").startLabel).toBeNull();
+    expect(row("p-pushup").start?.label).toBe("Start");
+    expect(row("x-curl").start?.label).toBe("Start");
+    expect(row("p-bench").start?.label).toBe("More");
+    expect(row("p-row").start).toBeNull();
+  });
+
+  it("names each button for what it does to which exercise", () => {
+    expect(row("p-pushup").start?.name).toBe("Start Push-Up");
+    expect(row("p-pushup").skip?.name).toBe("Skip Push-Up");
+    expect(row("p-bench").start?.name).toBe("More Bench Press");
+    expect(row("p-row").skip?.name).toBe("Restore Barbell Row");
+    expect(row("x-curl").skip?.name).toBe("Remove Dumbbell Curl");
   });
 
   it("a skipped exercise says so and offers to restore it", () => {
     expect(row("p-row")).toMatchObject({
       state: "skipped",
       badge: "Skipped",
-      skipLabel: "Restore",
+      skip: { label: "Restore" },
     });
   });
 
   it("an untouched extra shows a bare set count and can be removed", () => {
-    expect(row("x-curl")).toMatchObject({ state: "pending", badge: "0 sets", skipLabel: "Remove" });
+    expect(row("x-curl")).toMatchObject({
+      state: "pending",
+      badge: "0 sets",
+      skip: { label: "Remove" },
+    });
   });
 
   it("an extra with logged sets is done and can no longer be removed", () => {
-    expect(row("x-pullup")).toMatchObject({ state: "done", badge: "2 sets", skipLabel: null });
+    expect(row("x-pullup")).toMatchObject({ state: "done", badge: "2 sets", skip: null });
   });
 
   describe("on a floating day that came back with only the rest", () => {
     // Bench was done on an earlier day, and one of the push-up's two sets.
     const comeback = () =>
       todayVM({
-        program: program(),
-        carried: { "p-bench": 2, "p-pushup": 1 },
+        program: asFloating(program()),
+        carried: visit(nov(13), {
+          "p-bench": carry("bench", { working: 2 }),
+          "p-pushup": carry("pushup", { working: 1 }),
+        }),
         history: [did("p-pushup", "pushup", 12, null)],
       });
     const comebackRow = (id: string) => comeback().queue.rows.find((r) => r.id === id);
@@ -116,7 +139,8 @@ describe("buildTodayVM · queue", () => {
     });
 
     it("counts a set done yesterday toward the set tally, so the exercise still owes the rest", () => {
-      const rest = todayVM({ program: program(), carried: { "p-dip": 1 } });
+      const carried = visit(nov(13), { "p-dip": carry("dip", { working: 1 }) });
+      const rest = todayVM({ program: asFloating(program()), carried });
       expect(rest.queue.rows.find((r) => r.id === "p-dip")).toMatchObject({
         state: "pending",
         badge: "1/2 sets",

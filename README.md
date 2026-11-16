@@ -19,12 +19,22 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   sets already logged for each exercise on the earlier days count as done (an exercise
   that is whole shows as done and is not nudged for, and a warm-up done yesterday means
   today starts at the first working set), and the plan moves on when the rest is done.
-  A skip is for its calendar day only, so a skipped exercise is owed again; the one
-  exception is that a day owing nothing moves on. Each calendar day puts on record what
-  it owed and what it did, so a day that came back for two sets and did them is 100%; a
-  day it merely waited on is not a missed day, so only days with a set (or that the plan
-  moved on from) count toward completion. A weekday plan has no such memory: its days
-  belong to the calendar. A few rules hold whatever is edited, stored or imported:
+  What was done is counted by kind of set (warm-ups, working sets, drop sets), so an
+  edit afterwards — a warm-up deleted, a set's kind changed — never turns a working set
+  that was done into a warm-up; and it counts for the exercise it was done on, so a pool
+  that has since moved on from that exercise owes its new one in full. Such a day is one
+  visit, and one session, however many calendar days it takes: its sets are compared
+  with the session before the visit, not with each other (see Suggestions), and the
+  logger says which day it continues ("Continuing Monday's Push"). A skip is for its
+  calendar day only, so a skipped exercise is owed again; the one exception is that a
+  day owing nothing moves on. Each calendar day puts on record what it owed and what it
+  did, so a day that came back for two sets and did them is 100%; a day it merely waited
+  on is not a missed day, so only days with a set (or that the plan moved on from) count
+  toward completion — the day the plan is on counts from the start, so Progress shows
+  what Today shows. A weekday plan has no such memory: its days belong to the calendar
+  (switching to weekdays and back on the same day finds the unfinished day as it was;
+  the weekday plan's next day forgets it). A few rules hold whatever is edited, stored
+  or imported:
   - whether a set is counted in reps or in seconds is the exercise's doing, not a
     choice: a rep-counted exercise is prescribed as a range or a fixed number, a hold in
     seconds. A cycled pool shares one prescription, so it holds one kind — the kind of
@@ -39,9 +49,13 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
     floating starts on today's weekday's day (the first day, on a rest day); going
     weekdays pins the current day to today and the days after it to the weekdays that
     follow;
+  - a set prescribed at an RPE is at RPE 5–10, at a %1RM at 40–100% — what the planner's
+    steppers allow, and what a stored or imported value outside them is held to;
   - deleting a day or a custom exercise, and importing over what is stored, ask first;
   - the planner opens on today's day — on a rest day, on the plan's first day (the
-    earliest in the week, Monday first, for a weekday plan).
+    earliest in the week, Monday first, for a weekday plan). Where the window is too
+    narrow for the day being edited and the coverage rail side by side (near its
+    smallest, 980 × 640), the rail goes under the editor.
 - **Today** is derived, never stored: the plan for the day, plus the sets logged today.
   Edit the plan and Today changes immediately; restart the app and nothing is lost. A
   set whose exercise has since left the plan (or the library) is still listed and
@@ -53,7 +67,9 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
      paused, or with nothing left. The top bar says when nudging resumes ("Quiet until
      Mon 09:00"). A day off still shows its plan and takes sets, but owes nothing until a
      set is logged on it: an idle one neither moves a floating plan on nor counts toward
-     completion;
+     completion. The streak counts workdays only: a workday with a set adds to it, a
+     workday without one ends it, and days off do neither, so a Monday-to-Friday streak
+     carries over the weekend;
   2. the timer nudges _interval_ minutes after your last set (before the first one: after
      the workday started, the app was launched, or the plan got work — whichever is latest);
   3. an idle moment (no keyboard or mouse for the _idle moment_ setting) nudges earlier —
@@ -83,9 +99,12 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   field always holds two decimals, so it can be stepped by the finest increment.
 - **Nothing logged is lost quietly.** A set the database would not take stays in the
   list, marked "not saved yet", and is retried on every clock beat, after any save that
-  works, and before an export or quitting — from Settings or from the tray menu alike
-  (the tray's Quit is carried out by the window, which saves first; if the window
-  cannot answer within three seconds the app exits anyway). A set counts toward the
+  works, and before an export or quitting — from Settings, the tray menu, Cmd+Q, or by
+  closing a window that has no tray to hide in, alike (each of those is carried out by
+  the window, which saves first; if the window cannot answer within three seconds the
+  app exits anyway). What the app is never told of cannot wait for it: the session
+  ending under it (logging off, shutting down), the Dock menu's Quit on a Mac, or the
+  process being killed — a set not saved yet by then is lost. A set counts toward the
   day that is open when it is logged, so it stays in today's list even if the clock is
   set back meanwhile. Before an import replaces anything, a backup export
   (`nabd-backup-before-import-…json`) is written next to your exports; an export says
@@ -95,38 +114,56 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   upgraded as it is read (and written back in today's shape): the field names of
   prescribed sets (export format 3), the old "translucent" theme, plans and rotations
   that pointed at positions instead of ids, and exercises the catalog has since retired
-  — a single-arm variant of two-handed equipment becomes the two-handed exercise. What
-  came later (an unfinished day's carried sets and the workdays, export format 4) is
-  simply missing from older data and takes its default: nothing carried, Monday to Friday.
-- **Suggestions** use double progression against the same set of your previous session:
+  — a single-arm variant of two-handed equipment becomes the two-handed exercise, and
+  an unfinished day's carried sets, once counts of its first prescribed sets, become
+  the kinds of those sets, of the exercise each was on (export format 5). What came
+  later (the workdays, export format 4; a set's session and your body weight, format 5)
+  is simply missing from older data and takes its default: Monday to Friday, each set
+  the session of its own date, body weight not given. The database follows suit
+  (schema version 3 gives every stored set the session of its date).
+- **Suggestions** use double progression against the same set of your previous session
+  (a session is one visit to a program day: a calendar day's sets, or all the sets of
+  an unfinished floating day that came back, whichever days they were logged on):
   inside your rep range → one more rep (or, alternatively, the same reps with more
   load); at the top → more load, back at the bottom of the range; below it → hold the
-  load; below it twice running → back off one step. "More load" is your own weight
-  increment (Settings → Training; 2.5 kg or 5 lb unless you choose your own, which a
-  change of unit leaves alone), so 8 × 25 lb suggests 9 × 25 lb or 8 × 27.5 lb.
+  load; below it two sessions running → back off one step. "More load" is your own
+  weight increment (Settings → Training; 2.5 kg or 5 lb unless you choose your own,
+  which a change of unit leaves alone), so 8 × 25 lb suggests 9 × 25 lb or 8 × 27.5 lb.
   Where a set is prescribed at a %1RM or an RPE and the exercise has an estimated 1RM
-  (Epley, from its latest session: the same estimate the trends use), the load follows
-  the prescription instead, rounded to your increment, for the bottom of the rep range: a
-  %1RM is that share of the estimate ("70% of your estimated max (86 kg)"), an RPE is
-  10 − RPE reps in reserve, the load at which the prescribed reps plus those in reserve
-  make up the estimate ("RPE 8 ≈ 2 reps in reserve"). Plain double progression stays the
-  alternative. Until there is history the advice is plain double progression and says the
-  intensity will apply later; a hold, an assisted exercise and bodyweight reps ignore it,
-  a bodyweight exercise whose load would round to nothing stays reps-first, and no
-  loaded exercise is ever asked for less than one increment.
+  (Epley, from its latest session), the load follows the prescription instead, rounded
+  to your increment, for the bottom of the rep range: a %1RM is that share of the
+  estimate ("70% of your estimated max (86 kg)"), an RPE is 10 − RPE reps in reserve,
+  the load at which the prescribed reps plus those in reserve make up the estimate
+  ("RPE 8 ≈ 2 reps in reserve"). Plain double progression stays the alternative. Until
+  there is history — or, with history, until a session moved a load — the advice is
+  plain double progression and says what the intensity is waiting for; a hold and
+  bodyweight reps ignore it. A weighted or assisted bodyweight exercise moves your body
+  weight with its load added (or its assistance taken off), so its estimate, and the
+  load an intensity asks of it, count your body weight (Settings → Training → Body
+  weight, in your unit, empty until you give it); without it such an exercise ignores
+  the intensity and says to set your body weight in Settings to use it. A bodyweight
+  exercise whose load would round to nothing stays reps-first. Every load suggested is
+  one the form takes: never above the most a set can record (1000 kg), and never less
+  than one increment for an exercise that needs a bar or a dumbbell — a deload there
+  stops at one increment, and the form's − does too.
   A bodyweight exercise with nothing added is plain reps — "12 reps", then "8 + 2.5 kg
   or 13 reps" at the top of the range — and only an exercise that needs a bar or a
   dumbbell asks you to pick a starting weight. Warm-ups are left out of progression,
   volume and trends; the form remembers your last warm-up separately, and starts each
   kind of set (warm-up, working, drop) from its own numbers. A first warm-up, with none
   on record, starts from half the last working load, rounded to your weight increment,
-  for the reps the plan asks. An exercise's trend has one unit: an estimated 1RM once
-  it has ever been loaded, reps or seconds until then.
+  for the reps the plan asks. An exercise's trend has one unit: an estimated 1RM (of the
+  load alone) once it has ever been loaded, reps or seconds until then.
 - **Closing the window hides it**; the app lives in the tray, on a Mac the menu bar (Start next set, Pause
   nudges, Open, Quit). Where the desktop shows no tray icons (stock GNOME without the
-  AppIndicator extension) the app is an ordinary window: closing it quits, and "Start
-  minimized" is switched off in Settings, which says why. Settings → Quit Nabd always
-  exits.
+  AppIndicator extension) the app is an ordinary window: closing it quits (once the
+  window has saved what is pending), and "Start minimized" is switched off in
+  Settings, which says why. Settings → Quit Nabd always exits.
+- **The keyboard reaches everything.** A row of options (theme, unit, plan type…) is
+  one tab stop, chosen with the arrow keys, Home and End; a drop-down list opens on ↓,
+  moves with the arrows, Home, End or an option's first letter, picks with Enter and
+  closes with Escape. Every − and + says what it steps ("Decrease reps"), and every
+  button of Today's queue which exercise it acts on ("Skip Barbell Bench Press").
 
 ## Prerequisites
 
@@ -141,29 +178,43 @@ provides it) and stable Rust (`rustup`), plus per platform:
   ```
 
   `rpm` as well if you build the `.rpm` bundle. At run time the app needs
-  `libwebkit2gtk-4.1-0`, `libgtk-3-0` and `libayatana-appindicator3-1`; the `.deb`/`.rpm`
-  bundles declare them.
+  `libwebkit2gtk-4.1-0` (WebKitGTK 2.40 or later), `libgtk-3-0` and
+  `libayatana-appindicator3-1`; the `.deb`/`.rpm` bundles declare them.
 
 - **Windows 10/11**: the Microsoft C++ Build Tools ("Desktop development with C++"
-  workload) and the WebView2 runtime — part of Windows 11, and installed by the Nabd
-  installer on Windows 10 if it is missing.
+  workload) and the WebView2 runtime, version 111 or later — part of Windows 11,
+  installed by the Nabd installer on Windows 10 if it is missing, and kept up to date
+  by Windows.
 
-- **macOS 10.15 or later**: the Xcode command line tools (`xcode-select --install`).
-  The WebView is the system's WKWebView, so nothing else is needed at build or run time.
+- **macOS 11 (Big Sur) or later**, with Safari 16.2 or later: the Xcode command line
+  tools (`xcode-select --install`), and both Rust targets for the universal binary CI
+  builds (`rustup target add aarch64-apple-darwin x86_64-apple-darwin`, then
+  `pnpm tauri build --target universal-apple-darwin`). The WebView is the system's
+  WKWebView: built into macOS 13.1 and later at the version the app needs, and brought
+  up to it on macOS 11 and 12 by Safari's own updates (Software Update).
+
+The minimum web views are what the UI needs: every tint and shade is mixed with
+`color-mix()` in OKLCH, and the app uses `structuredClone`, `crypto.randomUUID` and
+`Array.prototype.at` — all there from Safari 16.2, Chromium 111 (WebView2) and
+WebKitGTK 2.40. There are no fallbacks for older engines; the bundles declare the
+macOS minimum (`bundle.macOS.minimumSystemVersion`), and a supported Linux distribution
+gets WebKitGTK 2.40 or later through its updates (Ubuntu 22.04, Debian 12 and Fedora 38
+on).
 
 ## Platform support
 
-|                 | Windows 10/11                          | macOS 10.15+                                                                  | Linux, X11                                                                 | Linux, Wayland                                                               |
+|                 | Windows 10/11                          | macOS 11+                                                                     | Linux, X11                                                                 | Linux, Wayland                                                               |
 | --------------- | -------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Web view        | WebView2 111+                          | WKWebView of Safari 16.2+ (built in from macOS 13.1)                          | WebKitGTK 2.40+                                                            | the same                                                                     |
 | Tray            | always                                 | always: a menu-bar item (monochrome template icon); a click opens its menu    | needs a StatusNotifier host: KDE, or GNOME with the AppIndicator extension | the same                                                                     |
-| Without a tray  | —                                      | —                                                                             | a plain window: closing it quits                                           | the same                                                                     |
+| Without a tray  | —                                      | —                                                                             | a plain window: closing it quits, once it has saved                        | the same                                                                     |
 | Window          | closing hides it                       | closing hides it; the Dock icon brings it back                                | closing hides it (with a tray)                                             | the same                                                                     |
-| Quit            | tray Quit, Settings                    | tray Quit, Settings and Cmd+Q (all save first); the Dock menu's Quit does not | tray Quit, Settings                                                        | the same                                                                     |
+| Quit            | tray Quit, Settings (both save first)  | tray Quit, Settings and Cmd+Q (all save first); the Dock menu's Quit does not | tray Quit, Settings, closing the tray-less window (all save first)         | the same                                                                     |
 | Idle time       | system-wide                            | system-wide (CoreGraphics event source)                                       | GNOME (Mutter), else the X screen-saver extension, else KDE's screen saver | GNOME (Mutter), else `ext-idle-notify-v1` (KDE, Sway, Hyprland…), else KDE's |
 | Glass           | Mica on Windows 11, blur on Windows 10 | vibrancy (under-window material, follows light/dark)                          | not offered: no portable blur, so the window stays opaque                  | the same                                                                     |
 | Open at startup | registry `Run` entry                   | a LaunchAgent in `~/Library/LaunchAgents/`                                    | an entry in `~/.config/autostart/`                                         | the same                                                                     |
 | Notifications   | toast                                  | Notification Center                                                           | the desktop's notification service                                         | the same                                                                     |
-| Verified        | in CI (build, tests)                   | in CI (build, tests, bundle) — **not yet run on a real Mac**                  | in CI, plus the smoke test of the real binary                              | the same                                                                     |
+| Verified        | in CI (build, tests)                   | in CI (build, tests, universal bundle) — **not yet run on a real Mac**        | in CI, plus the smoke test of the real binary                              | the same                                                                     |
 
 Where the OS cannot report idle time, "idle" means no keyboard or mouse activity inside
 the Nabḍ window, and Settings says so (also when the desktop's idle service is lost, or
@@ -171,8 +222,11 @@ comes back, while the app is running). A login launch always starts in the tray 
 is one); "Start minimized" does the same for launches by hand. Windows, macOS and Linux
 are the only targets: building for anything else stops with a compile error that says so.
 
-macOS builds are unsigned and not notarized (CI makes the `.app` and `.dmg` without a
-signing identity), so Gatekeeper asks for a right-click → Open the first time.
+macOS builds are one universal binary, for Apple silicon and Intel Macs alike, unsigned
+and not notarized (CI makes the `.app` and `.dmg` without a signing identity), so
+Gatekeeper asks for a right-click → Open the first time. On every platform, what ends
+the app without telling it (logging off or shutting down, the Dock menu's Quit, a killed
+process) leaves no time to save a set that is still waiting to be.
 
 ## Quick start
 
@@ -246,11 +300,12 @@ What the browser cannot reach — the native shell, SQLite, the window's life cy
 checked on the real binary, Linux only. The script builds the debug binary and runs it in
 a throw-away session (Xvfb, its own D-Bus session, openbox) with `HOME` and the XDG
 directories in a temporary directory, then expects: a window; a database at schema
-version 2 that the frontend has written its day state to; the app quitting when its window
-is closed (the session has no tray host); a stored plan surviving a restart, with the day
-that ended meanwhile rolled over; a second launch exiting while the first keeps running;
-and — through WebDriver, when `tauri-driver` and `WebKitWebDriver` are installed — a set
-logged in the real window landing in the `history` table and, like Pause, surviving a
+version 3 that the frontend has written its day state to; the app quitting when its window
+is closed (the session has no tray host), by way of the window's own save-then-quit; a
+stored plan surviving a restart, with the day that ended meanwhile rolled over; a second
+launch exiting while the first keeps running; and — through WebDriver, when
+`tauri-driver` and `WebKitWebDriver` are installed — a set logged in the real window
+landing in the `history` table, in its day's session, and, like Pause, surviving a
 restart. `NABD_SMOKE_BINARY=<path>` tests an existing binary instead of building one.
 
 Not covered anywhere: the tray icon and its menu, desktop notifications, system-wide
@@ -299,7 +354,8 @@ packages/
                   and what holds after every change (settle.ts)
   design-system   theme, tokens (colours and tints, spacing, type roles, radii,
                   shadows, layers) and every presentational primitive: layout (Row,
-                  Stack, Grid, Divider…), Text, Card, ButtonBase under every control
+                  Stack, Grid, WithSide, Divider…), Text, Card, ButtonBase under
+                  every control
   bodymap         the anatomical SVG map (its vendored drawing in src/drawing/) and the
                   per-muscle meter
   shell           the app chrome: sidebar, top bar, notice banner

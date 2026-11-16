@@ -36,10 +36,7 @@ describe("ProgressScreen — consistency", () => {
     expect(screen.queryByText("19")).not.toBeInTheDocument(); // future
     expect(screen.queryByText("30")).not.toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Sets per week" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Calendar" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.getByRole("radio", { name: "Calendar" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("on the weekly tab shows a captioned bar per week with its set count", () => {
@@ -58,17 +55,17 @@ describe("ProgressScreen — consistency", () => {
     ]);
     expect(bars("Sets per week").at(-1)).toHaveAttribute("aria-current", "true");
     expect(screen.queryByText("November 2026")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Weekly" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "Weekly" })).toBeChecked();
   });
 
   it("asks for the tab that is clicked and keeps showing the one it was given", () => {
     const actions = renderScreen();
-    const tabs = within(screen.getByRole("group", { name: "Consistency view" }));
+    const tabs = within(screen.getByRole("radiogroup", { name: "Consistency view" }));
 
-    fireEvent.click(tabs.getByRole("button", { name: "Weekly" }));
+    fireEvent.click(tabs.getByRole("radio", { name: "Weekly" }));
     expect(actions.setTab).toHaveBeenLastCalledWith("weekly");
 
-    fireEvent.click(tabs.getByRole("button", { name: "Calendar" }));
+    fireEvent.click(tabs.getByRole("radio", { name: "Calendar" }));
     expect(actions.setTab).toHaveBeenLastCalledWith("calendar");
     expect(actions.setTab).toHaveBeenCalledTimes(2);
     expect(actions.openChart).not.toHaveBeenCalled();

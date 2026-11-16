@@ -46,6 +46,24 @@ impl TempDb {
         db
     }
 
+    /// A database exactly as schema v2 left it: v1's, with `plan_item_id`
+    /// and `set_type` but no `session`, version '2', and a second set logged
+    /// a day after the first.
+    pub fn v2() -> Self {
+        let db = Self::v1();
+        db.raw()
+            .execute_batch(
+                "ALTER TABLE history ADD COLUMN plan_item_id TEXT;
+                 ALTER TABLE history ADD COLUMN set_type TEXT NOT NULL DEFAULT 'working';
+                 UPDATE app_meta SET value = '2' WHERE key = 'version';
+                 INSERT INTO history (id, ex_id, exercise, \"group\", muscles, value, weight, ts, date, trigger, plan_item_id, set_type)
+                 VALUES ('old-2', 'squat', 'Squat', 'legs', '[\"quads\"]', 6, 62.5,
+                         '2025-01-03T09:00:00.000Z', '2025-01-03', 'idle', 'item-1', 'drop');",
+            )
+            .unwrap();
+        db
+    }
+
     /// The file as the app opens it.
     pub fn store(&self) -> nabd_persistence::Result<Store> {
         Store::open(self.path())

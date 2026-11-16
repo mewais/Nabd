@@ -8,7 +8,7 @@ use crate::logged_set::DEFAULT_SET_TYPE;
 use crate::{Error, Result, Store};
 
 /// Current database schema version.
-pub const SCHEMA_VERSION: i64 = 2;
+pub const SCHEMA_VERSION: i64 = 3;
 
 impl Store {
     /// The schema version the database is at (0 for one that was never
@@ -62,6 +62,9 @@ impl Store {
             if from < 2 {
                 self.upgrade_to_v2()?;
             }
+            if from < 3 {
+                self.upgrade_to_v3()?;
+            }
             self.conn.execute(
                 "INSERT OR REPLACE INTO app_meta (key, value) VALUES ('version', ?1)",
                 params![SCHEMA_VERSION.to_string()],
@@ -109,6 +112,17 @@ impl Store {
         }
         self.conn
             .execute("DELETE FROM kv WHERE key = 'theme'", [])?;
+        Ok(())
+    }
+
+    /// v3: sets know the session they belong to (one visit to a program day,
+    /// which an unfinished floating day stretches over several dates). Every
+    /// set logged before belongs to the session of its own date.
+    fn upgrade_to_v3(&self) -> Result<()> {
+        self.conn.execute_batch(
+            "ALTER TABLE history ADD COLUMN session TEXT NOT NULL DEFAULT '';
+             UPDATE history SET session = COALESCE(date, '');",
+        )?;
         Ok(())
     }
 }

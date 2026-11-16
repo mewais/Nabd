@@ -38,6 +38,11 @@ pub struct LoggedSetRow {
     /// "warmup" | "working" | "drop".
     #[serde(default = "default_set_type")]
     pub set_type: String,
+    /// The date key of the session (visit to a program day) the set belongs
+    /// to. Missing only from JSON written before sets had one: such a set
+    /// belongs to the session of its own date, and is stored so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session: Option<String>,
 }
 
 /// The `history` row of a set. Columns are addressed by name in both
@@ -59,12 +64,19 @@ impl LoggedSetRow {
             trigger: row.get("trigger")?,
             plan_item_id: row.get("plan_item_id")?,
             set_type: row.get("set_type")?,
+            session: Some(row.get("session")?),
         })
+    }
+
+    /// The session the set belongs to: its own, else its date's.
+    pub fn session(&self) -> &str {
+        self.session.as_deref().unwrap_or(&self.date)
     }
 
     pub(crate) fn insert_into(&self, conn: &Connection) -> Result<()> {
         let muscles = serde_json::to_string(&self.muscles)?;
-        let columns: [(&str, &dyn ToSql); 12] = [
+        let session = self.session();
+        let columns: [(&str, &dyn ToSql); 13] = [
             ("id", &self.id),
             ("ex_id", &self.ex_id),
             ("exercise", &self.exercise),
@@ -77,6 +89,7 @@ impl LoggedSetRow {
             ("trigger", &self.trigger),
             ("plan_item_id", &self.plan_item_id),
             ("set_type", &self.set_type),
+            ("session", &session),
         ];
         // Quoted: `group` is an SQL keyword.
         let names: Vec<String> = columns

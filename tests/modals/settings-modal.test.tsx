@@ -20,6 +20,7 @@ function setup(settings: Partial<Settings> = {}, over: Partial<Omit<Input, "sett
   });
   const actions: SettingsActions = {
     change: vi.fn(),
+    setBodyWeight: vi.fn(),
     exportData: vi.fn(),
     importData: vi.fn(),
     sendTestNotification: vi.fn(),
@@ -29,8 +30,10 @@ function setup(settings: Partial<Settings> = {}, over: Partial<Omit<Input, "sett
   const view = render(<SettingsModal vm={vm} actions={actions} />);
   /** The row of the setting titled `title` (its label, hint and control). */
   const setting = (title: string) => within(screen.getByRole("group", { name: title }));
-  const step = (title: string, direction: "increase" | "decrease") =>
-    fireEvent.click(setting(title).getByRole("button", { name: direction }));
+  const step = (title: string, direction: "Increase" | "Decrease") =>
+    fireEvent.click(
+      setting(title).getByRole("button", { name: `${direction} ${title.toLowerCase()}` }),
+    );
   return { actions, setting, step, ...view };
 }
 
@@ -54,11 +57,11 @@ describe("SettingsModal", () => {
     expect(setting("Starts").getByText("09:00")).toBeInTheDocument();
     expect(setting("Interval").getByText("50 min")).toBeInTheDocument();
 
-    step("Starts", "increase");
+    step("Starts", "Increase");
     expect(actions.change).toHaveBeenLastCalledWith({ workStart: 9 * 60 + 30 });
-    step("Interval", "decrease");
+    step("Interval", "Decrease");
     expect(actions.change).toHaveBeenLastCalledWith({ interval: 45 });
-    step("Weight increment", "increase");
+    step("Weight increment", "Increase");
     expect(actions.change).toHaveBeenLastCalledWith({ weightIncrement: 2.75 });
     expect(actions.change).toHaveBeenCalledTimes(3);
   });
@@ -102,9 +105,25 @@ describe("SettingsModal", () => {
   it("switches the weight unit", () => {
     const { actions, setting } = setup();
     const unit = setting("Weight unit");
-    expect(unit.getByRole("button", { name: "kg" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(unit.getByRole("button", { name: "lb" }));
+    expect(unit.getByRole("radio", { name: "kg" })).toBeChecked();
+    fireEvent.click(unit.getByRole("radio", { name: "lb" }));
     expect(actions.change).toHaveBeenLastCalledWith({ weightUnit: "lb" });
+  });
+
+  it("takes the body weight typed in the user's unit, and forgets it when emptied", () => {
+    const { actions, setting } = setup({ weightUnit: "lb", bodyWeight: 80 });
+    const field = setting("Body weight").getByRole("textbox", { name: "Body weight" });
+    expect(field).toHaveValue("176.37");
+    expect(setting("Body weight").getByText(/^In lb\./)).toBeInTheDocument();
+    fireEvent.change(field, { target: { value: "180" } });
+    expect(actions.setBodyWeight).toHaveBeenLastCalledWith(180);
+    fireEvent.change(field, { target: { value: "" } });
+    expect(actions.setBodyWeight).toHaveBeenLastCalledWith(null);
+  });
+
+  it("shows an empty body weight until one is given", () => {
+    const { setting } = setup();
+    expect(setting("Body weight").getByRole("textbox")).toHaveValue("");
   });
 
   it("marks owned equipment and removes a piece when its chip is clicked", () => {
@@ -131,11 +150,8 @@ describe("SettingsModal", () => {
 
   it("switches the theme", () => {
     const { actions, setting } = setup({ theme: "dark" });
-    expect(setting("Theme").getByRole("button", { name: "Dark" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    fireEvent.click(setting("Theme").getByRole("button", { name: "Light" }));
+    expect(setting("Theme").getByRole("radio", { name: "Dark" })).toBeChecked();
+    fireEvent.click(setting("Theme").getByRole("radio", { name: "Light" }));
     expect(actions.change).toHaveBeenLastCalledWith({ theme: "light" });
   });
 
@@ -150,7 +166,7 @@ describe("SettingsModal", () => {
 
     const on = setup({ glass: true, opacity: 0.7 });
     expect(on.setting("Background opacity").getByText("70%")).toBeInTheDocument();
-    on.step("Background opacity", "increase");
+    on.step("Background opacity", "Increase");
     expect(on.actions.change).toHaveBeenLastCalledWith({ opacity: 0.75 });
     fireEvent.click(on.setting("Translucent window").getByRole("switch"));
     expect(on.actions.change).toHaveBeenLastCalledWith({ glass: false });

@@ -20,9 +20,14 @@ describe("LogSession", () => {
     expect(hold.performance).toEqual({ reps: 50 - 5, weight: null });
   });
 
-  it("steps and sets load, never below zero, ignoring garbage", () => {
+  it("steps and sets load, never below what the exercise can be given, ignoring garbage", () => {
     expect(session.stepWeight(1, 2.5).weight).toBe(27.5);
-    expect(session.stepWeight(-1, 50).weight).toBe(0);
+    // A dumbbell is never lighter than one step, and − never makes it heavier.
+    expect(session.stepWeight(-1, 10).weight).toBe(15);
+    expect(session.stepWeight(-1, 50).weight).toBe(25);
+    expect(session.withWeight(2.5).stepWeight(-1, 2.5).weight).toBe(2.5);
+    expect(session.withWeight(0).stepWeight(-1, 2.5).weight).toBe(0);
+    expect(session.withWeight(0).stepWeight(1, 2.5).weight).toBe(2.5);
     expect(session.withWeight(12.3456).weight).toBe(12.346);
     expect(session.withWeight(Number.NaN).weight).toBe(25);
     expect(session.withReps(Number.NaN).reps).toBe(8);
@@ -53,7 +58,8 @@ describe("LogSession", () => {
 
   it("becomes a history row for its exercise, stamped with the plan item and the moment", () => {
     const at = nov(16, 10, 5);
-    expect(session.withReps(9).toLoggedSet(curlItem, "set-1", at, dateKey(at))).toEqual({
+    const day = { date: dateKey(at), session: dateKey(at) };
+    expect(session.withReps(9).toLoggedSet(curlItem, "set-1", at, day)).toEqual({
       id: "set-1",
       exId: curl.id,
       exercise: "Curl",
@@ -67,14 +73,17 @@ describe("LogSession", () => {
       planItemId: curlRow.id,
       // The curl's next prescribed set is its warm-up.
       setType: "warmup",
+      session: dateKey(at),
     });
     const hold = session.focus(plankItem, { reps: 45, weight: null });
-    expect(hold.toLoggedSet(plankItem, "set-2", at, dateKey(at))).toMatchObject({
+    expect(hold.toLoggedSet(plankItem, "set-2", at, day)).toMatchObject({
       value: 45,
       weight: null,
     });
-    // It counts toward the day that is open, even if the clock now reads another.
-    expect(hold.toLoggedSet(plankItem, "set-3", at, "2026-11-17").date).toBe("2026-11-17");
+    // It counts toward the day that is open, even if the clock now reads another, and belongs
+    // to the session that day continues.
+    const continued = { date: "2026-11-17", session: "2026-11-13" };
+    expect(hold.toLoggedSet(plankItem, "set-3", at, continued)).toMatchObject(continued);
   });
 
   it("counts rest down to zero; no rest prescribed means none", () => {

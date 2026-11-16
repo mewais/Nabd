@@ -11,10 +11,13 @@ export interface Performance {
 const performanceOf = (set: LoggedSet): Performance => ({ reps: set.value, weight: set.weight });
 
 /**
- * One exercise's logged sets grouped into sessions (one per calendar day,
- * oldest first). Warm-ups are left out of the sessions: they say nothing about
- * progress. They are still remembered ({@link latest}), so the next warm-up can
- * start from the last one.
+ * One exercise's logged sets grouped into sessions, oldest first: one per
+ * visit to a program day, which is one per calendar day except where an
+ * unfinished floating day came back — its sets, on whichever days, are one
+ * session (see `LoggedSet.session`). Sessions are known by the date key they
+ * began on. Warm-ups are left out of the sessions: they say nothing about
+ * progress. They are still remembered ({@link latest}), so the next warm-up
+ * can start from the last one.
  */
 export class ExerciseHistory {
   /** Every set of the exercise, warm-ups included, in the order it was logged. */
@@ -26,9 +29,9 @@ export class ExerciseHistory {
     const sessions = new Map<string, LoggedSet[]>();
     for (const set of this.sets) {
       if (isWarmup(set)) continue;
-      const session = sessions.get(set.date);
+      const session = sessions.get(set.session);
       if (session) session.push(set);
-      else sessions.set(set.date, [set]);
+      else sessions.set(set.session, [set]);
     }
     this.sessions = new Map([...sessions].sort(([a], [b]) => a.localeCompare(b)));
   }
@@ -44,47 +47,51 @@ export class ExerciseHistory {
     );
   }
 
-  /** Session date keys, oldest first. */
+  /** The keys of the sessions — the dates they began on — oldest first. */
   get dates(): string[] {
     return [...this.sessions.keys()];
   }
 
-  /** The sets logged on `date`, in order. */
-  on(date: string): Performance[] {
-    return (this.sessions.get(date) ?? []).map(performanceOf);
+  /** The sets of session `session`, in order. */
+  on(session: string): Performance[] {
+    return (this.sessions.get(session) ?? []).map(performanceOf);
   }
 
-  /** The most recent set of `type`; with a `date`, the most recent one logged that day. */
-  latest(type: SetType, date?: string): Performance | undefined {
+  /** The most recent set of `type`; with a `session`, the most recent one of that session. */
+  latest(type: SetType, session?: string): Performance | undefined {
     const wanted = (set: LoggedSet): boolean =>
-      set.setType === type && (date === undefined || set.date === date);
+      set.setType === type && (session === undefined || set.session === session);
     const set = this.sets.filter(wanted).at(-1);
     return set && performanceOf(set);
   }
 
-  /** Up to `count` most recent sessions strictly before `date`, newest first. */
-  sessionsBefore(date: string, count: number): Performance[][] {
+  /** Up to `count` most recent sessions that began before session `session`, newest first. */
+  sessionsBefore(session: string, count: number): Performance[][] {
     return this.dates
-      .filter((d) => d < date)
+      .filter((key) => key < session)
       .slice(-count)
       .reverse()
-      .map((d) => this.on(d));
+      .map((key) => this.on(key));
   }
 
   /**
-   * The estimated one-rep max, in kg, of the latest session before `date`: its
-   * best set's. Undefined when that session moved no load, so there is no
-   * estimate to go on.
+   * The estimated one-rep max, in kg, of the latest session before `session`:
+   * its best set's, each set's load read as `moved` says (by default as it
+   * is). Undefined when that session moved no load, so there is no estimate
+   * to go on.
    */
-  estimateBefore(date: string): number | undefined {
-    const [latest = []] = this.sessionsBefore(date, 1);
-    const best = Math.max(0, ...latest.map(estimatedMax));
+  estimateBefore(
+    session: string,
+    moved: (set: Performance) => Performance = (set) => set,
+  ): number | undefined {
+    const [latest = []] = this.sessionsBefore(session, 1);
+    const best = Math.max(0, ...latest.map((set) => estimatedMax(moved(set))));
     return best > 0 ? best : undefined;
   }
 
   /** Each session's best set as measured by `score`, oldest first (for trend charts). */
   bestPerSession(score: (set: Performance) => number): number[] {
-    return this.dates.map((d) => Math.max(...this.on(d).map(score)));
+    return this.dates.map((key) => Math.max(...this.on(key).map(score)));
   }
 }
 

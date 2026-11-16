@@ -28,7 +28,7 @@ export function SessionModal({ vm, actions }: SessionModalProps): JSX.Element {
     <ModalShell
       eyebrow="Log sets"
       title="This break"
-      subtitle="One set, or as many as you have time for — switch exercises freely."
+      subtitle={vm.subtitle}
       onClose={actions.close}
       width={720}
       footer={footer}

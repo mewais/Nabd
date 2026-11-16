@@ -44,19 +44,19 @@ describe("DayEditor — fixed day", () => {
   it("marks the day's weekday, and another weekday moves the day there", () => {
     const planner = renderPlanner(officeStrength());
     const weekday = (name: string) =>
-      within(screen.getByRole("group", { name: "Weekday" })).getByRole("button", { name });
-    expect(weekday("Monday")).toHaveAttribute("aria-pressed", "true");
+      within(screen.getByRole("radiogroup", { name: "Weekday" })).getByRole("radio", { name });
+    expect(weekday("Monday")).toBeChecked();
 
     fireEvent.click(weekday("Friday"));
 
     expect(planner.program().days.map((d) => d.weekday)).toEqual([5, 3]);
-    expect(weekday("Friday")).toHaveAttribute("aria-pressed", "true");
+    expect(weekday("Friday")).toBeChecked();
   });
 
   it("moving onto an occupied weekday swaps the two days", () => {
     const planner = renderPlanner(officeStrength());
 
-    fireEvent.click(screen.getByRole("button", { name: "Wednesday" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Wednesday" }));
 
     expect(planner.program().days.map((d) => [d.name, d.weekday])).toEqual([
       ["Push", 3],

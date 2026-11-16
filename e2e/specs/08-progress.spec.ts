@@ -54,7 +54,7 @@ test("Progress reflects the days before and the day just worked", async ({ app }
   });
 
   await test.step("consistency: this month's calendar, or sets per week", async () => {
-    await expect(progress.tab("Calendar")).toHaveAttribute("aria-pressed", "true");
+    await expect(progress.tab("Calendar")).toBeChecked();
     await expect(progress.screen).toContainText("November 2026");
     await progress.tab("Weekly").click();
     await expect(progress.bars("Sets per week")).toHaveCount(8);

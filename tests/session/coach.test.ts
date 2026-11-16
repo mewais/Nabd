@@ -1,6 +1,6 @@
-import { DEFAULT_SETTINGS, freshDayState } from "@nabd/domain";
+import { DEFAULT_SETTINGS, dateKey, freshDayState } from "@nabd/domain";
 import { TodayPlan } from "@nabd/scheduling";
-import { exercise, logged, lookupIn, nov, row, working } from "../support/builders";
+import { carry, exercise, logged, lookupIn, nov, row, visit, working } from "../support/builders";
 import { TODAY, curl, curlRow, itemsFor, coachFor, program } from "./fixtures";
 
 describe("Coach", () => {
@@ -101,8 +101,14 @@ describe("Coach", () => {
   });
 
   describe("on a floating day that comes back with only the rest", () => {
-    // Warm-up and one working set were done on earlier days; last week went 8 then 7.
-    const carried = { [curlRow.id]: 2 };
+    // Warm-up and one working set were done on Friday; last week went 8 then 7.
+    const FRIDAY = nov(13);
+    const carried = visit(FRIDAY, { [curlRow.id]: carry(curl.id, { warmup: 1, working: 1 }) });
+    const friday = [
+      logged(curl, nov(13, 9), 15, 10, { planItemId: curlRow.id, setType: "warmup" }),
+      logged(curl, nov(13, 10), 6, 30, { planItemId: curlRow.id }),
+    ];
+    const history = [...lastWeek, ...friday];
 
     it("advises the next owed set against the same set of the previous session", () => {
       const item = itemsFor(lastWeek, carried).curlItem;
@@ -110,6 +116,18 @@ describe("Coach", () => {
       const advice = coachFor(lastWeek).adviceFor(item);
       // Set 2 of the day is compared with set 2 of last week: the 7.
       expect(advice?.basis).toEqual({ reps: 7, weight: 25 });
+    });
+
+    it("is one session with the days it continues: their sets are not 'last time'", () => {
+      const item = itemsFor(history, carried).curlItem;
+      const advice = coachFor(history, dateKey(FRIDAY)).adviceFor(item);
+      expect(advice?.basis).toEqual({ reps: 7, weight: 25 });
+      expect(advice?.kind).toBe("reach_range");
+    });
+
+    it("starts the form from the session's own last set of the kind, done on an earlier day", () => {
+      const item = itemsFor(history, carried).curlItem;
+      expect(coachFor(history, dateKey(FRIDAY)).startFor(item)).toEqual({ reps: 6, weight: 30 });
     });
 
     it("gives no advice while the warm-up is what is owed, whatever the day before did", () => {

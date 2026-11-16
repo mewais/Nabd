@@ -28,6 +28,7 @@ pub fn set_json(id: &str, ts: &str) -> Value {
         "trigger": "manual",
         "planItemId": "item-1",
         "setType": "working",
+        "session": &ts[..10],
     })
 }
 

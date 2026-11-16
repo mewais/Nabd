@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { Button, NavButton, Segmented, THEME_OPTIONS } from "@nabd/design-system";
-import { click } from "./render";
+import { choose, click } from "./render";
 
 describe("NavButton", () => {
   it("is a button named by its label that calls onClick", () => {
@@ -40,8 +40,8 @@ describe("THEME_OPTIONS", () => {
   it("offers the light and dark themes to a segmented switch", () => {
     const onChange = vi.fn();
     render(<Segmented options={THEME_OPTIONS} value="dark" onChange={onChange} />);
-    click("Light");
+    choose("Light");
     expect(onChange).toHaveBeenCalledWith("light");
-    expect(screen.getByRole("button", { name: "Dark" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });
 });

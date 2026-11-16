@@ -5,8 +5,8 @@
 
 import type { LoggedSet } from "@nabd/domain";
 import { buildSessionVM } from "@nabd/modals";
-import { nov, working } from "../support/builders";
-import { did, lastWeek, mondayProgram, planRow, pushDay } from "../support/programs";
+import { carry, nov, visit, working } from "../support/builders";
+import { asFloating, did, lastWeek, mondayProgram, planRow, pushDay } from "../support/programs";
 import { buildWorld } from "../support/world";
 import { openSession, sessionVM } from "./fixtures";
 
@@ -95,10 +95,9 @@ describe("buildSessionVM", () => {
 
   it("on a day that came back with only the rest, counts the sets done on earlier days", () => {
     // The warm-up and the first working set were done earlier: the last working set is next.
-    const vm = sessionVM(
-      { program: pushDay(), history: lastWeek(), carried: { "p-bench": 2 } },
-      "p-bench",
-    );
+    const carried = visit(nov(13), { "p-bench": carry("bench", { warmup: 1, working: 1 }) });
+    const program = asFloating(pushDay());
+    const vm = sessionVM({ program, history: lastWeek(), carried }, "p-bench");
 
     expect(vm.form.setLine).toBe("Set 3 of 3 · Working set · 8–12 reps · RPE 8");
     expect(vm.form.logged).toEqual([]);
@@ -109,6 +108,20 @@ describe("buildSessionVM", () => {
     // Compared against last week's second working set, the 7.
     expect(vm.form.set.advice?.basis).toBe("Last time: 7 × 60 kg");
     expect(vm.footer).toBe("No sets logged yet today");
+    expect(vm.subtitle).toBe("Continuing Friday's Push — what was done then counts.");
+  });
+
+  it("says what the logger is for on a day that began today", () => {
+    expect(sessionVM({ program: pushDay() }, "p-bench").subtitle).toBe(
+      "One set, or as many as you have time for — switch exercises freely.",
+    );
+  });
+
+  it("names a visit begun more than a week ago by its date", () => {
+    const carried = visit(nov(2), { "p-bench": carry("bench", { warmup: 1 }) });
+    expect(sessionVM({ program: asFloating(pushDay()), carried }, "p-bench").subtitle).toBe(
+      "Continuing Nov 2's Push — what was done then counts.",
+    );
   });
 
   it("marks the sets that are not saved yet", () => {

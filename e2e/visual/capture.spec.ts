@@ -50,7 +50,7 @@ async function launchDemo(app: App, page: Page, theme: ThemeName): Promise<void>
   await page.clock.install({ time: when });
   await page.clock.pauseAt(when);
   await page.goto("/");
-  if (theme === "light") await app.shell.button("Light").click();
+  if (theme === "light") await app.shell.theme("Light").click();
 }
 
 for (const theme of THEMES) {

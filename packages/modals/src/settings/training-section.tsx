@@ -1,4 +1,4 @@
-import { ChipGroup, FormRow, FormSection, Segmented } from "@nabd/design-system";
+import { ChipGroup, FormRow, FormSection, NumberField, Segmented } from "@nabd/design-system";
 import { toggled } from "@nabd/domain";
 import { EQUIPMENT_OPTIONS, WEIGHT_UNIT_OPTIONS } from "../options";
 import type { SettingsActions } from "./settings-actions";
@@ -7,10 +7,10 @@ import { StepperRow } from "./stepper-row";
 
 interface TrainingSectionProps {
   vm: SettingsVM["training"];
-  actions: Pick<SettingsActions, "change">;
+  actions: Pick<SettingsActions, "change" | "setBodyWeight">;
 }
 
-/** How loads are shown and stepped, and what equipment the library may offer. */
+/** How loads are shown and stepped, the user's body weight, and what equipment the library may offer. */
 export function TrainingSection({ vm, actions }: TrainingSectionProps): JSX.Element {
   return (
     <FormSection title="Training">
@@ -22,6 +22,15 @@ export function TrainingSection({ vm, actions }: TrainingSectionProps): JSX.Elem
         />
       </FormRow>
       <StepperRow vm={vm.increment} actions={actions} />
+      <FormRow title="Body weight" hint={vm.bodyWeight.hint}>
+        <NumberField
+          ariaLabel="Body weight"
+          placeholder={vm.unit}
+          value={vm.bodyWeight.value}
+          onSet={actions.setBodyWeight}
+          onClear={() => actions.setBodyWeight(null)}
+        />
+      </FormRow>
       <FormRow
         stacked
         title="My equipment"

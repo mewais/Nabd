@@ -26,7 +26,14 @@ describe("upgradeStored", () => {
         slots: [slot("chest", [CATALOG.bench, CATALOG.fly], { type: "working", amount: 8 })],
       }),
       settings: { theme: "light", glass: false },
-      dayState: { date: "2026-11-16", dayId: "a", carried: { chest: 2 } },
+      dayState: {
+        date: "2026-11-16",
+        dayId: "a",
+        carried: {
+          startedOn: "2026-11-13",
+          items: { chest: { exId: CATALOG.fly, sets: { working: 2, warmup: 0, drop: 0 } } },
+        },
+      },
       rotationState: { chest: CATALOG.fly },
     };
     const upgraded = upgradeStored(stored);
@@ -102,6 +109,59 @@ describe("upgradeStored", () => {
     });
     const rotationState = { chest: 3, empty: 2, gone: 1 };
     expect(upgradeStored({ program, rotationState }).rotationState).toEqual({ chest: "fly" });
+  });
+
+  describe("what an unfinished floating day carried, as counts of its first sets (export version 4)", () => {
+    const program = programOf({
+      id: "a",
+      name: "A",
+      weekday: null,
+      exercises: [
+        {
+          id: "r",
+          exId: CATALOG.bench,
+          ...sets({ type: "warmup", amount: 10 }, { type: "working", amount: 8 }),
+        },
+      ],
+      slots: [slot("chest", [CATALOG.bench, CATALOG.fly], { type: "working", amount: 8 })],
+    });
+    const upgrade = (carried: object, rotationState: object = {}) =>
+      upgradeStored({
+        program,
+        rotationState,
+        dayState: { date: "2026-11-17", dayId: "a", carried },
+      }).dayState;
+
+    it("become the kinds of those sets, of the exercise each item is on", () => {
+      expect(upgrade({ r: 2, chest: 1 }, { chest: CATALOG.fly })).toEqual({
+        date: "2026-11-17",
+        dayId: "a",
+        carried: {
+          startedOn: "2026-11-17",
+          items: {
+            r: { exId: CATALOG.bench, sets: { warmup: 1, working: 1, drop: 0 } },
+            chest: { exId: CATALOG.fly, sets: { warmup: 0, working: 1, drop: 0 } },
+          },
+        },
+      });
+    });
+
+    it("drop the counts of items that are gone; with nothing left, nothing is carried", () => {
+      expect(upgrade({ gone: 2 })).toMatchObject({ carried: null });
+      expect(upgrade({})).toMatchObject({ carried: null });
+    });
+
+    it("leave a slot with an empty pool, which gave no exercise, out", () => {
+      const empty = programOf({
+        id: "a",
+        name: "A",
+        weekday: null,
+        exercises: [],
+        slots: [slot("chest", [], { type: "working", amount: 8 })],
+      });
+      const dayState = { date: "2026-11-17", carried: { chest: 1 } };
+      expect(upgradeStored({ program: empty, dayState }).dayState).toMatchObject({ carried: null });
+    });
   });
 
   describe("exercises the catalog has retired", () => {

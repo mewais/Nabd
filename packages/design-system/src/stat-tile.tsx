@@ -13,6 +13,8 @@ export interface StatFigure {
   value: string;
   /** What it is counted in, shown small after the figure. */
   unit?: string;
+  /** How it is counted, in a sentence under the figure, when that is not obvious. */
+  hint?: string;
   /** Colours the figure. */
   tone?: Tone;
 }
@@ -27,6 +29,7 @@ export function StatTile({
   label,
   value,
   unit,
+  hint,
   tone = "neutral",
   variant = "card",
 }: StatTileProps): JSX.Element {
@@ -44,6 +47,7 @@ export function StatTile({
             </Text>
           )}
         </Row>
+        {hint !== undefined && <Text variant="caption">{hint}</Text>}
       </Stack>
     </Card>
   );

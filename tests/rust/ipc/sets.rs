@@ -15,18 +15,33 @@ fn append_set_shows_up_in_the_snapshot_unchanged() {
 }
 
 #[test]
-fn append_set_fills_defaults_for_a_set_without_plan_item_or_set_type() {
+fn append_set_fills_defaults_for_a_set_without_plan_item_set_type_or_session() {
     let c = fresh_db();
     let mut set = set_json("a", "2025-03-01T10:00:00.000Z");
     let fields = set.as_object_mut().unwrap();
     fields.remove("planItemId");
     fields.remove("setType");
+    fields.remove("session");
 
     c.append_set(&set.to_string()).unwrap();
 
     let stored = &snapshot(&c)["history"][0];
     assert_eq!(stored["planItemId"], Value::Null);
     assert_eq!(stored["setType"], "working");
+    assert_eq!(stored["session"], "2025-03-01");
+}
+
+#[test]
+fn append_set_keeps_the_session_a_set_continues() {
+    let c = fresh_db();
+    let mut set = set_json("a", "2025-03-02T10:00:00.000Z");
+    set["session"] = json!("2025-03-01");
+
+    c.append_set(&set.to_string()).unwrap();
+
+    let stored = &snapshot(&c)["history"][0];
+    assert_eq!(stored["date"], "2025-03-02");
+    assert_eq!(stored["session"], "2025-03-01");
 }
 
 #[test]

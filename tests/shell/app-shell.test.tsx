@@ -113,12 +113,12 @@ describe("AppShell · top bar", () => {
 
   it("marks the active theme and reports the one that is picked", () => {
     const { actions } = renderShell();
-    expect(button("Dark")).toHaveAttribute("aria-pressed", "true");
-    expect(button("Light")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Light" })).not.toBeChecked();
 
-    fireEvent.click(button("Light"));
+    fireEvent.click(screen.getByRole("radio", { name: "Light" }));
     expect(actions.setTheme).toHaveBeenLastCalledWith("light");
-    fireEvent.click(button("Dark"));
+    fireEvent.click(screen.getByRole("radio", { name: "Dark" }));
     expect(actions.setTheme).toHaveBeenLastCalledWith("dark");
   });
 

@@ -31,10 +31,48 @@ export const SET_TYPE_NAMES: Record<SetType, string> = {
   drop: "Drop set",
 };
 
+const SetCountSchema = z.number().int().nonnegative().default(0);
+
+/** How many sets of each kind. */
+export const SetCountsSchema = z.object({
+  working: SetCountSchema,
+  warmup: SetCountSchema,
+  drop: SetCountSchema,
+});
+export type SetCounts = z.infer<typeof SetCountsSchema>;
+
+export const NO_SETS: Readonly<SetCounts> = { working: 0, warmup: 0, drop: 0 };
+
+/** How many of each kind `types` holds. */
+export function countSets(types: readonly SetType[]): SetCounts {
+  const counts = { ...NO_SETS };
+  for (const type of types) counts[type] += 1;
+  return counts;
+}
+
+/** How many sets `counts` holds in all. */
+export const totalSets = (counts: SetCounts): number =>
+  counts.working + counts.warmup + counts.drop;
+
+/** The scale an intensity is prescribed on: its bounds, one step of it, and where it starts. */
+interface IntensityScale {
+  min: number;
+  max: number;
+  step: number;
+  initial: number;
+}
+
+/** RPE 5–10 and 40–100 %1RM: the only values a prescription holds, however it was edited or stored. */
+export const INTENSITY_SCALES: Record<Exclude<Intensity, "none">, IntensityScale> = {
+  rpe: { min: 5, max: 10, step: 0.5, initial: 8 },
+  pct: { min: 40, max: 100, step: 2.5, initial: 70 },
+};
+
 /**
  * One prescribed set: `amount` reps or seconds — the low end of the range when
- * `upTo` gives its high end (range mode only) — at `intensity`, an RPE (5–10)
- * or a %1RM (40–100), when the prescription prescribes load.
+ * `upTo` gives its high end (range mode only) — at `intensity`, an RPE or a
+ * %1RM on its scale ({@link INTENSITY_SCALES}), when the prescription
+ * prescribes load.
  */
 const SetSpecSchema = z.object({
   type: SetTypeSchema,

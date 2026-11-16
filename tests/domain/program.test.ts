@@ -1,4 +1,13 @@
-import { ProgramSchema, firstDay, inWeekOrder, workingSets } from "@nabd/domain";
+import {
+  INTENSITY_SCALES,
+  NO_SETS,
+  ProgramSchema,
+  countSets,
+  firstDay,
+  inWeekOrder,
+  totalSets,
+  workingSets,
+} from "@nabd/domain";
 import type { Day } from "@nabd/domain";
 
 const set = { type: "working", amount: 8 };
@@ -65,6 +74,22 @@ describe("ProgramSchema", () => {
   it("a cycled slot targets one tracking muscle", () => {
     expect(accepts(withSlot({ muscle: "side_delts", notes: "Go heavy" }))).toBe(true);
     expect(accepts(withSlot({ muscle: "Chest" }))).toBe(false);
+  });
+});
+
+describe("counts of sets by kind", () => {
+  it("count each kind in a list of kinds, and add up to the whole", () => {
+    expect(countSets([])).toEqual(NO_SETS);
+    const counts = countSets(["warmup", "working", "working", "drop"]);
+    expect(counts).toEqual({ warmup: 1, working: 2, drop: 1 });
+    expect(totalSets(counts)).toBe(4);
+  });
+});
+
+describe("the intensity scales", () => {
+  it("are RPE 5–10 and 40–100 %1RM, each starting from a usual value inside", () => {
+    expect(INTENSITY_SCALES.rpe).toMatchObject({ min: 5, max: 10, initial: 8 });
+    expect(INTENSITY_SCALES.pct).toMatchObject({ min: 40, max: 100, initial: 70 });
   });
 });
 

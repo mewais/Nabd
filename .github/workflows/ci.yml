@@ -24,11 +24,16 @@ jobs:
           - os: ubuntu-latest
             # AppImage needs FUSE and downloads tooling at build time; deb + rpm are enough to prove the bundle.
             bundle-args: --bundles deb,rpm
+            bundle-dir: src-tauri/target/release/bundle
           - os: windows-latest
             bundle-args: ""
-          # app + dmg, unsigned: the config names no signing identity, so none is needed.
+            bundle-dir: src-tauri/target/release/bundle
+          # app + dmg, unsigned: the config names no signing identity, so none is needed. One
+          # universal binary (Apple silicon and Intel), built from both Rust targets.
           - os: macos-latest
-            bundle-args: ""
+            bundle-args: --target universal-apple-darwin
+            bundle-dir: src-tauri/target/universal-apple-darwin/release/bundle
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
     steps:
       # Prettier checks line endings, so the Windows checkout must not rewrite them.
       - name: Keep LF line endings
@@ -55,6 +60,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: ${{ matrix.rust-targets }}
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -90,9 +96,9 @@ jobs:
         with:
           name: nabd-${{ runner.os }}
           path: |
-            src-tauri/target/release/bundle/deb/*.deb
-            src-tauri/target/release/bundle/rpm/*.rpm
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/dmg/*.dmg
+            ${{ matrix.bundle-dir }}/deb/*.deb
+            ${{ matrix.bundle-dir }}/rpm/*.rpm
+            ${{ matrix.bundle-dir }}/nsis/*.exe
+            ${{ matrix.bundle-dir }}/msi/*.msi
+            ${{ matrix.bundle-dir }}/dmg/*.dmg
           if-no-files-found: error

@@ -52,14 +52,25 @@ export function QueueRow({ vm, actions }: QueueRowProps): JSX.Element {
       <Text as="span" variant="mono" tone={BADGE_TONES[state]}>
         {vm.badge}
       </Text>
-      {vm.skipLabel !== null && (
-        <Button variant="ghost" size="sm" onClick={() => actions.toggleSkip(vm.id)}>
-          {vm.skipLabel}
+      {vm.skip !== null && (
+        <Button
+          variant="ghost"
+          size="sm"
+          ariaLabel={vm.skip.name}
+          onClick={() => actions.toggleSkip(vm.id)}
+        >
+          {vm.skip.label}
         </Button>
       )}
-      {vm.startLabel !== null && (
-        <Button variant="ghost" size="sm" tone="accent" onClick={() => actions.start(vm.id)}>
-          {vm.startLabel}
+      {vm.start !== null && (
+        <Button
+          variant="ghost"
+          size="sm"
+          tone="accent"
+          ariaLabel={vm.start.name}
+          onClick={() => actions.start(vm.id)}
+        >
+          {vm.start.label}
         </Button>
       )}
     </Row>

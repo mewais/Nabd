@@ -12,6 +12,7 @@ use tauri::{
 };
 
 use crate::error::AppResult;
+use crate::tray;
 
 /// The label the capability file grants the app's commands to.
 const MAIN_WINDOW: &str = "main";
@@ -113,16 +114,21 @@ fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
     let _ = window.show();
 }
 
-/// Closing the window hides it while there is a tray to live in; otherwise the
-/// close goes through, and Tauri exits the app with its last window.
+/// Closing the window hides it while there is a tray to live in. Otherwise
+/// closing it is quitting, and quitting goes the way the tray's Quit does: the
+/// window stays until the frontend has saved what is pending and asked to
+/// exit, or the grace period runs out (see `tray::run`).
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     let WindowEvent::CloseRequested { api, .. } = event else {
         return;
     };
-    let tray = window.state::<Capabilities>().tray;
-    if CloseAction::for_tray(tray) == CloseAction::HideToTray {
-        api.prevent_close();
-        let _ = window.hide();
+    api.prevent_close();
+    let close = CloseAction::for_tray(window.state::<Capabilities>().tray);
+    match close.command() {
+        Some(command) => tray::run(window.app_handle(), command),
+        None => {
+            let _ = window.hide();
+        }
     }
 }
 

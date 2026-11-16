@@ -9,6 +9,41 @@ describe("normalized — a program as it was stored", () => {
   });
   const reps = { repMode: "range", intensity: "none", rest: 90 } as const;
 
+  it("holds every intensity to its scale, as the planner's steppers do", () => {
+    const program = stored({
+      exercises: [
+        {
+          id: "r1",
+          exId: bench.id,
+          ...reps,
+          intensity: "rpe",
+          sets: [
+            { type: "working", amount: 8, intensity: 50 },
+            { type: "working", amount: 8, intensity: 2 },
+            { type: "working", amount: 8 },
+          ],
+        },
+        {
+          id: "r2",
+          exId: row.id,
+          ...reps,
+          intensity: "pct",
+          sets: [{ type: "working", amount: 8, intensity: 120 }],
+        },
+        {
+          id: "r3",
+          exId: fly.id,
+          ...reps,
+          sets: [{ type: "working", amount: 8, intensity: 70 }],
+        },
+      ],
+    });
+    const [rpe, pct, none] = normalized(program, lookup).days[0]!.exercises;
+    expect(rpe!.sets.map((set) => set.intensity)).toEqual([10, 5, 8]);
+    expect(pct!.sets.map((set) => set.intensity)).toEqual([100]);
+    expect(none!.sets[0]).not.toHaveProperty("intensity");
+  });
+
   it("is the very same program when it already obeys the rules", () => {
     expect(normalized(withBench, lookup)).toBe(withBench);
   });

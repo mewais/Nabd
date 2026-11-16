@@ -16,9 +16,14 @@ export class Settings {
     return this.dialog.getByRole("group", { name: title, exact: true });
   }
 
-  /** A choice within a setting: "lb" of "Weight unit", "Dumbbells" of "My equipment". */
+  /** One of the chips of a setting that takes several: "Dumbbells" of "My equipment", "Sat" of "Working days". */
   option(title: string, name: string): Locator {
     return this.row(title).getByRole("button", { name, exact: true });
+  }
+
+  /** The choice of a setting that takes one: "lb" of "Weight unit", "Light" of "Theme". */
+  choice(title: string, name: string): Locator {
+    return this.row(title).getByRole("radio", { name, exact: true });
   }
 
   async exportData(): Promise<void> {

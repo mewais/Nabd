@@ -32,17 +32,22 @@ test("an unfinished floating day comes back with only the rest, and finishing it
     await expect(shell.status).toContainText("Quiet until 09:00");
   });
 
-  await test.step("Monday's set counts in the figures and is what today is compared against", async () => {
+  await test.step("Monday's set counts in the figures, and today continues Monday's workout", async () => {
     await expect(today.stat("Streak")).toContainText("1");
     await expect(today.stat("This week")).toContainText("1");
     await expect(today.stat("Lifted today")).toContainText("0");
     await expect(today.screen).toContainText("Set 2 of 2");
-    await expect(today.screen).toContainText("Try 9 × 20 kg or 8 × 22.5 kg");
-    await expect(today.screen).toContainText("Last time: 8 × 20 kg");
+    // One workout over two days: Monday's set is not "last time", and there was none before it.
+    await expect(today.screen).not.toContainText("Last time");
+    await today.startSet.click();
+    await expect(logger.dialog).toContainText(
+      "Continuing Monday's Push — what was done then counts.",
+    );
+    // The form starts from the workout's own last set.
+    await expect(logger.weight).toHaveValue("20");
   });
 
   await test.step("Tuesday: the rest of Push gets done, and that is the day complete", async () => {
-    await today.startSet.click();
     await logger.log();
     await logger.done();
     await expect(today.screen).toContainText("Day complete");
@@ -62,9 +67,9 @@ test("an unfinished floating day comes back with only the rest, and finishing it
     await expect(progress.kpi("Current streak")).toContainText("2");
     await expect(progress.kpi("Sets this week")).toContainText("2");
     await expect(progress.kpi("Active days 30d")).toContainText("2");
-    // 2 of the 3 sets owed over the two days. Wednesday has no set yet, and a
-    // floating plan has no calendar to fall behind: a day only counts once it is trained.
-    await expect(progress.kpi("Completion this wk")).toContainText("67");
+    // 2 of the 3 sets owed over the two days, and Wednesday's 2, still to do: Progress
+    // counts the day the plan is on as Today does.
+    await expect(progress.kpi("Completion this wk")).toContainText("40");
   });
 });
 
@@ -163,7 +168,9 @@ test("a floating day that sat idle is not a missed day", async ({ app }) => {
 
   await expect(today.row(curl.name)).toContainText("0/2 sets");
   await shell.goTo("Progress");
-  await expect(progress.kpi("Completion this wk")).toContainText("100");
+  // Monday's 2 of 2, and today's 0 of 2 as Today shows it; idle Tuesday is not on record.
+  await expect(progress.kpi("Completion this wk")).toContainText("50");
+  await expect(progress.bars("Completion by day")).toHaveCount(7);
 });
 
 test("editing a pool neither skips nor repeats an exercise", async ({ app }) => {

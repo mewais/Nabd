@@ -16,6 +16,7 @@ export { Row } from "./row";
 export { Stack } from "./stack";
 export { Grid } from "./grid";
 export { Columns } from "./columns";
+export { WithSide } from "./with-side";
 export { ScrollArea } from "./scroll-area";
 export { Spacer } from "./spacer";
 export { Divider } from "./divider";
@@ -65,6 +66,7 @@ export { Segmented } from "./segmented";
 export type { SegOption } from "./segmented";
 export { Dropdown } from "./dropdown";
 export { TextInput } from "./text-input";
+export { NumberField } from "./number-field";
 export { TitleInput } from "./title-input";
 
 // Data

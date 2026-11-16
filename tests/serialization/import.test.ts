@@ -135,13 +135,86 @@ describe("parseImport", () => {
   });
 
   it("keeps what an unfinished day has behind it, and refuses a count that is not one", () => {
-    const withCarried = (carried: object) =>
-      parseImport(doc({ dayState: { date: "2026-11-16", carried } }));
-    expect(withCarried({ r: 2 })).toMatchObject({
+    const withCarried = (working: unknown) =>
+      parseImport(
+        doc({
+          dayState: {
+            date: "2026-11-17",
+            carried: {
+              startedOn: "2026-11-16",
+              items: { r: { exId: "bench", sets: { working } } },
+            },
+          },
+        }),
+      );
+    expect(withCarried(2)).toMatchObject({
       ok: true,
-      data: { dayState: { carried: { r: 2 } } },
+      data: { dayState: { carried: { items: { r: { sets: { working: 2, warmup: 0 } } } } } },
     });
-    expect(withCarried({ r: -1 }).ok).toBe(false);
+    expect(withCarried(-1).ok).toBe(false);
+  });
+
+  it("migrates a v4 export: carried counts become kinds of set, and old sets their date's session", () => {
+    const program = {
+      name: "P",
+      type: "fixed",
+      schedule: "floating",
+      days: [
+        {
+          id: "a",
+          name: "A",
+          weekday: null,
+          exercises: [
+            {
+              id: "r",
+              exId: "bench",
+              repMode: "range",
+              intensity: "none",
+              rest: 90,
+              sets: [
+                { type: "warmup", amount: 10 },
+                { type: "working", amount: 8 },
+                { type: "working", amount: 8 },
+              ],
+            },
+          ],
+          slots: [],
+        },
+      ],
+    };
+    const set = {
+      id: "s1",
+      exId: "bench",
+      exercise: "Bench",
+      group: "Chest",
+      muscles: ["chest"],
+      value: 8,
+      weight: 40,
+      ts: "2026-11-16T10:00:00.000Z",
+      date: "2026-11-16",
+      trigger: "timer",
+    };
+    const v4 = {
+      app: "Nabd",
+      version: 4,
+      program,
+      history: [set],
+      dayState: { date: "2026-11-17", dayId: "a", carried: { r: 2, gone: 1 } },
+    };
+    const result = parseImport(JSON.stringify(v4));
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        version: APPDATA_VERSION,
+        history: [{ id: "s1", session: "2026-11-16" }],
+        dayState: {
+          carried: {
+            startedOn: "2026-11-17",
+            items: { r: { exId: "bench", sets: { warmup: 1, working: 1, drop: 0 } } },
+          },
+        },
+      },
+    });
   });
 
   it("takes the workdays an export holds, and refuses none", () => {

@@ -12,6 +12,8 @@ export function StepperRow({ vm, actions }: StepperRowProps): JSX.Element {
   return (
     <FormRow title={vm.title} hint={vm.hint}>
       <Stepper
+        ariaLabel={vm.title}
+        inLabelledRow
         value={vm.value}
         onStep={(direction) => actions.change(direction === 1 ? vm.increase : vm.decrease)}
       />

@@ -1,6 +1,6 @@
 import { dateKey, freshDayState } from "@nabd/domain";
 import type { Program } from "@nabd/domain";
-import { nov } from "../support/builders";
+import { carry, nov, visit } from "../support/builders";
 import { CATALOG } from "../support/exercises";
 import { catalogBenchRow, catalogFlyRow, catalogPushPull } from "../support/programs";
 import { boot, fakeBackend } from "./fixtures";
@@ -266,39 +266,54 @@ describe("today across plan edits", () => {
       await app.log(catalogBenchRow.id, 2);
       await app.log(catalogFlyRow.id, 1);
       app.advanceTo(nov(17, 9, 30));
-      expect(app.get().dayState.carried).toEqual({
-        [catalogBenchRow.id]: 2,
-        [catalogFlyRow.id]: 1,
-      });
+      expect(app.get().dayState.carried).toEqual(behind());
       return app;
     }
+    /** What Monday left behind: two of bench's sets, one of fly's. */
+    const behind = () =>
+      visit(nov(16), {
+        [catalogBenchRow.id]: carry(CATALOG.bench, { working: 2 }),
+        [catalogFlyRow.id]: carry(CATALOG.fly, { working: 1 }),
+      });
 
     it("keeps what it has behind it through edits that leave its exercises alone", async () => {
       const app = await onTuesday();
       app.get().editProgram((e) => e.moveExercise("push", catalogFlyRow.id, -1));
       app.get().editProgram((e) => e.addDay(null));
       app.get().editProgram((e) => e.moveDay("pull", -1));
-      expect(app.data.dayState).toMatchObject({
-        carried: { [catalogBenchRow.id]: 2, [catalogFlyRow.id]: 1 },
-      });
+      expect(app.data.dayState).toMatchObject({ carried: behind() });
       expect(app.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, remaining: 1 });
     });
 
     it("loses the count of an exercise that is deleted, and of every one on a deleted day", async () => {
       const app = await onTuesday();
       app.get().editProgram((e) => e.removeExercise("push", catalogFlyRow.id));
-      expect(app.data.dayState).toMatchObject({ carried: { [catalogBenchRow.id]: 2 } });
+      expect(app.get().dayState.carried?.items).toEqual({
+        [catalogBenchRow.id]: carry(CATALOG.bench, { working: 2 }),
+      });
 
       app.get().editProgram((e) => e.removeDay("push"));
       expect(app.plan().dayName).toBe("Pull");
-      expect(app.data.dayState).toMatchObject({ carried: {} });
+      expect(app.data.dayState).toMatchObject({ carried: null });
       expect(app.plan().setsRemaining).toBe(3);
     });
 
-    it("is dropped with the schedule that made it", async () => {
+    it("counts for nothing on weekdays, and is there again after a same-day switch back", async () => {
       const app = await onTuesday();
       app.get().editProgram((e) => e.setSchedule("weekday"));
-      expect(app.get().dayState.carried).toEqual({});
+      expect(app.plan().item(catalogBenchRow.id)).toMatchObject({ done: 0, remaining: 3 });
+      expect(app.get().dayState.carried).toEqual(behind());
+
+      app.get().editProgram((e) => e.setSchedule("floating"));
+      expect(app.plan().dayName).toBe("Push");
+      expect(app.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, remaining: 1 });
+    });
+
+    it("is dropped when a weekday plan's next day begins", async () => {
+      const app = await onTuesday();
+      app.get().editProgram((e) => e.setSchedule("weekday"));
+      app.advanceTo(nov(18, 9, 30));
+      expect(app.get().dayState.carried).toBeNull();
     });
   });
 

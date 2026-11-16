@@ -6,11 +6,13 @@ import {
   ExerciseSchema,
   GROUP_PRIMARY_MUSCLE,
   LoggedSetSchema,
+  MAX_LOAD_KG,
   MUSCLES,
   MUSCLE_GROUPS,
   MUSCLE_NAMES,
   MUSCLE_PRIMARY_GROUP,
   SettingsSchema,
+  boundedLoad,
   displayWeight,
   editableWeight,
   exerciseFromDraft,
@@ -144,6 +146,39 @@ describe("a custom-exercise draft", () => {
   });
 });
 
+describe("the loads a set can be given", () => {
+  it("are none to the most a set records, and at least one step where a load is needed", () => {
+    expect(boundedLoad(-5, "weighted_bodyweight", 2.5)).toBe(0);
+    expect(boundedLoad(-5, "assisted_bodyweight", 2.5)).toBe(0);
+    expect(boundedLoad(0, "weight_reps", 2.5)).toBe(2.5);
+    expect(boundedLoad(1, "weight_duration", 1.25)).toBe(1.25);
+    expect(boundedLoad(42.1234, "weight_reps", 2.5)).toBe(42.123);
+    expect(boundedLoad(5000, "weight_reps", 2.5)).toBe(MAX_LOAD_KG);
+    expect(boundedLoad(5000, "weighted_bodyweight", 2.5)).toBe(MAX_LOAD_KG);
+  });
+});
+
+describe("the body weight setting", () => {
+  it("is unknown by default, and takes a plausible weight in kg or nothing", () => {
+    expect(DEFAULT_SETTINGS.bodyWeight).toBeNull();
+    const bodyWeight = SettingsSchema.shape.bodyWeight;
+    expect(bodyWeight.safeParse(80).success).toBe(true);
+    expect(bodyWeight.safeParse(null).success).toBe(true);
+    expect(bodyWeight.safeParse(5).success).toBe(false);
+    expect(bodyWeight.safeParse(1000).success).toBe(false);
+  });
+
+  it("is read back field by field like every other, and reset alone when it cannot be kept", () => {
+    expect(salvageSettings({ ...DEFAULT_SETTINGS, bodyWeight: 81.5 }).settings.bodyWeight).toBe(
+      81.5,
+    );
+    expect(salvageSettings({ ...DEFAULT_SETTINGS, bodyWeight: "heavy" })).toMatchObject({
+      settings: { ...DEFAULT_SETTINGS, bodyWeight: null },
+      reset: ["bodyWeight"],
+    });
+  });
+});
+
 describe("weights", () => {
   it("stores kg and shows a weight exactly in the unit it was entered in, with no trailing zeros", () => {
     expect(displayWeight(60, "kg")).toBe(60);
@@ -218,22 +253,34 @@ describe("persisted shapes tolerate older data", () => {
     expect(LoggedSetSchema.safeParse({ ...oldSet, muscles: ["wings"] }).success).toBe(false);
   });
 
+  it("a set logged before sets had a session belongs to the session of its own date", () => {
+    expect(LoggedSetSchema.parse(oldSet).session).toBe("2026-11-16");
+    expect(LoggedSetSchema.parse({ ...oldSet, session: "2026-11-13" }).session).toBe("2026-11-13");
+    expect(LoggedSetSchema.safeParse({ ...oldSet, session: 13 }).success).toBe(false);
+  });
+
   it("an old day state (with stored slots) reads as a clean, unpaused day", () => {
     expect(DayStateSchema.parse({ date: "2026-11-16", slots: [{}] })).toEqual({
       date: "2026-11-16",
       dayId: null,
-      carried: {},
+      carried: null,
       skipped: [],
       extras: [],
       paused: false,
     });
   });
 
-  it("a day state keeps the sets an unfinished day has behind it, as whole positive counts", () => {
-    const state = (carried: object) => ({ date: "2026-11-16", carried });
-    expect(DayStateSchema.parse(state({ bench: 2 })).carried).toEqual({ bench: 2 });
-    for (const carried of [{ bench: 0 }, { bench: 1.5 }, { bench: "2" }]) {
-      expect(DayStateSchema.safeParse(state(carried)).success).toBe(false);
+  it("a day state keeps what an unfinished day has behind it, as whole counts of each kind", () => {
+    const state = (sets: object) => ({
+      date: "2026-11-17",
+      carried: { startedOn: "2026-11-16", items: { bench: { exId: "bench", sets } } },
+    });
+    expect(DayStateSchema.parse(state({ working: 2 })).carried).toEqual({
+      startedOn: "2026-11-16",
+      items: { bench: { exId: "bench", sets: { working: 2, warmup: 0, drop: 0 } } },
+    });
+    for (const sets of [{ working: -1 }, { working: 1.5 }, { working: "2" }]) {
+      expect(DayStateSchema.safeParse(state(sets)).success).toBe(false);
     }
   });
 

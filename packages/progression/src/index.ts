@@ -6,7 +6,7 @@ export type { Performance } from "./history";
 export { ProgressionAdvisor } from "./advisor";
 export type { Advice, AdviceKind } from "./advice";
 export { prescribedIntensity, repsInReserve } from "./intensity";
-export type { IntensityBasis, PrescribedIntensity } from "./intensity";
+export type { IntensityBasis, IntensityWait, PrescribedIntensity } from "./intensity";
 export { ExerciseProgress } from "./exercise-progress";
 export { trendIn } from "./trend";
 export type { ExerciseTrend } from "./trend";

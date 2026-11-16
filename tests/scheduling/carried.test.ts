@@ -1,11 +1,11 @@
 // A floating day that is not finished comes back the next day with only the rest.
 
-import type { LoggedSet } from "@nabd/domain";
-import { dateKey } from "@nabd/domain";
-import { rollOver } from "@nabd/scheduling";
-import { logged, nov, working } from "../support/builders";
+import type { LoggedSet, Program } from "@nabd/domain";
+import { NO_SETS, dateKey } from "@nabd/domain";
+import { rollOver, rotationAfterEdit } from "@nabd/scheduling";
+import { carry, logged, nov, visit, working } from "../support/builders";
 import { EX } from "../support/exercises";
-import { benchRow, floatingPushPull, flyRow, raiseRow } from "../support/programs";
+import { benchRow, cycledPlan, floatingPushPull, flyRow, raiseRow } from "../support/programs";
 import { MONDAY, benchSet, build, dayState, input } from "./fixtures";
 
 const TUESDAY = nov(17);
@@ -21,22 +21,29 @@ const monday = (): LoggedSet[] => [
   flySet(16, 12),
 ];
 
+/** What Monday leaves behind. */
+const mondayVisit = () =>
+  visit(MONDAY, {
+    [benchRow.id]: carry(EX.bench.id, { warmup: 1, working: 1 }),
+    [flyRow.id]: carry(EX.fly.id, { working: 2 }),
+  });
+
 /** Tuesday's day state after Monday ended unfinished. */
-const afterMonday = (history = monday()) =>
-  rollOver({ ...input(), program: floatingPushPull, history, date: TUESDAY });
+const afterMonday = (history = monday(), program = floatingPushPull) =>
+  rollOver({ ...input(), program, history, date: TUESDAY });
 
 /** Tuesday's plan, with what Monday left. */
 const tuesday = (history = monday(), state = afterMonday(history).dayState) =>
   build(history, state, floatingPushPull);
 
 describe("an unfinished floating day at rollover", () => {
-  it("keeps, for each exercise, how many of its prescribed sets are done", () => {
+  it("keeps, for each exercise, how many of its prescribed sets of each kind are done", () => {
     const { dayState: next, records } = afterMonday();
-    expect(next).toEqual(dayState(TUESDAY, { carried: { [benchRow.id]: 2, [flyRow.id]: 2 } }));
+    expect(next).toEqual(dayState(TUESDAY, { carried: mondayVisit() }));
     expect(records).toEqual([{ date: dateKey(MONDAY), planned: 10, done: 4 }]);
   });
 
-  it("adds each day's sets to what the earlier days left", () => {
+  it("adds each day's sets to what the earlier days left, in the visit begun on the first", () => {
     const history = [...monday(), benchSet(10, { setType: "working" })];
     const tuesdaySet = logged(EX.bench, nov(17, 10), 10, 40, { planItemId: benchRow.id });
     const state = afterMonday(history).dayState;
@@ -47,10 +54,15 @@ describe("an unfinished floating day at rollover", () => {
       history: [...history, tuesdaySet],
       date: WEDNESDAY,
     });
-    expect(next.dayState.carried).toEqual({ [benchRow.id]: 4, [flyRow.id]: 2 });
+    expect(next.dayState.carried).toEqual(
+      visit(MONDAY, {
+        [benchRow.id]: carry(EX.bench.id, { warmup: 1, working: 3 }),
+        [flyRow.id]: carry(EX.fly.id, { working: 2 }),
+      }),
+    );
   });
 
-  it("counts no more than an exercise prescribes, and nothing for an extra", () => {
+  it("counts no more of a kind than an exercise prescribes, and nothing for an extra", () => {
     const sets = [9, 10, 11, 12, 13].map((hour) => benchSet(hour));
     const extra = logged(EX.dip, nov(16, 14), 12, null, { planItemId: "x" });
     const { dayState: next } = rollOver({
@@ -60,7 +72,8 @@ describe("an unfinished floating day at rollover", () => {
       history: [...sets, extra],
       date: TUESDAY,
     });
-    expect(next.carried).toEqual({ [benchRow.id]: 4 });
+    // Five working sets fill the three prescribed; the warm-up is still owed.
+    expect(next.carried?.items).toEqual({ [benchRow.id]: carry(EX.bench.id, { working: 3 }) });
   });
 
   it("clears them once the plan moves on, and has none on a weekday plan", () => {
@@ -79,7 +92,13 @@ describe("an unfinished floating day at rollover", () => {
       date: TUESDAY,
     });
     expect(finished.dayState).toEqual(dayState(TUESDAY, { dayId: "wed" }));
-    expect(rollOver({ ...input(), history: monday(), date: TUESDAY }).dayState.carried).toEqual({});
+    expect(rollOver({ ...input(), history: monday(), date: TUESDAY }).dayState.carried).toBeNull();
+  });
+
+  it("drops what a same-day switch to weekdays kept, at the weekday plan's next day", () => {
+    const kept = dayState(MONDAY, { carried: mondayVisit() });
+    const next = rollOver({ ...input(), dayState: kept, history: monday(), date: TUESDAY });
+    expect(next.dayState.carried).toBeNull();
   });
 
   it("returns an exercise that was skipped as owed again, with what was done of it", () => {
@@ -92,7 +111,10 @@ describe("an unfinished floating day at rollover", () => {
       date: TUESDAY,
     });
     expect(next.skipped).toEqual([]);
-    expect(next.carried).toEqual({ [benchRow.id]: 1, [flyRow.id]: 1 });
+    expect(next.carried?.items).toEqual({
+      [benchRow.id]: carry(EX.bench.id, { working: 1 }),
+      [flyRow.id]: carry(EX.fly.id, { working: 1 }),
+    });
   });
 });
 
@@ -100,7 +122,8 @@ describe("the day that comes back", () => {
   it("owes each exercise only the rest, starting at the right set", () => {
     const plan = tuesday();
     const bench = plan.item(benchRow.id)!;
-    expect(bench).toMatchObject({ planned: 4, carried: 2, done: 2, owed: 2, remaining: 2 });
+    expect(bench).toMatchObject({ planned: 4, done: 2, owed: 2, remaining: 2 });
+    expect(bench.carried).toEqual({ ...NO_SETS, warmup: 1, working: 1 });
     // The warm-up was done on Monday: the first working set comes next.
     expect(bench.nextSet).toEqual(working(8, 12));
     expect(bench.workingSetsDone).toBe(1);
@@ -108,6 +131,57 @@ describe("the day that comes back", () => {
     expect(plan.item(raiseRow.id)).toMatchObject({ done: 0, owed: 3, remaining: 3 });
     expect([plan.setsPlanned, plan.setsRemaining, plan.setsDone]).toEqual([6, 6, 0]);
     expect(plan.nextItem?.id).toBe(benchRow.id);
+  });
+
+  it("continues the session the visit began in, which today's sets belong to", () => {
+    const plan = tuesday();
+    expect([plan.date, plan.continuesFrom, plan.session]).toEqual([
+      dateKey(TUESDAY),
+      dateKey(MONDAY),
+      dateKey(MONDAY),
+    ]);
+    const fresh = build([], dayState(TUESDAY), floatingPushPull);
+    expect([fresh.continuesFrom, fresh.session]).toEqual([null, dateKey(TUESDAY)]);
+  });
+
+  it("keeps its sets by kind when the plan changes: a warm-up removed leaves the working set done", () => {
+    const withoutWarmup: Program = {
+      ...floatingPushPull,
+      days: floatingPushPull.days.map((day) => ({
+        ...day,
+        exercises: day.exercises.map((row) =>
+          row.id === benchRow.id ? { ...row, sets: row.sets.slice(1) } : row,
+        ),
+      })),
+    };
+    const bench = build(monday(), afterMonday().dayState, withoutWarmup).item(benchRow.id)!;
+    expect(bench).toMatchObject({ planned: 3, done: 1, owed: 2, remaining: 2, workingSetsDone: 1 });
+    expect(bench.nextSet).toEqual(working(8, 12));
+  });
+
+  it("does not count a slot's sets for an exercise it was not done on", () => {
+    const slotSet = logged(EX.bench, nov(16, 10), 10, 40, { planItemId: "chest" });
+    const state = afterMonday([slotSet], cycledPlan).dayState;
+    expect(state.carried?.items).toEqual({ chest: carry(EX.bench.id, { working: 1 }) });
+    expect(build([slotSet], state, cycledPlan).item("chest")).toMatchObject({ done: 1, owed: 2 });
+
+    // Bench leaves the pool: the slot moves on to fly, which was never done.
+    const [dayA, dayB] = cycledPlan.days as [Program["days"][0], Program["days"][0]];
+    const withoutBench: Program = {
+      ...cycledPlan,
+      days: [
+        {
+          ...dayA,
+          slots: dayA.slots.map((s) => (s.id === "chest" ? { ...s, pool: [EX.fly.id] } : s)),
+        },
+        dayB,
+      ],
+    };
+    const rotation = rotationAfterEdit(cycledPlan, withoutBench, {});
+    const chest = build([slotSet], state, withoutBench, rotation).item("chest")!;
+    expect(chest.exercise.id).toBe(EX.fly.id);
+    expect(chest).toMatchObject({ carried: NO_SETS, done: 0, owed: 3, remaining: 3 });
+    expect(build([slotSet], state, withoutBench, rotation).ledger.carryOver).toEqual({});
   });
 
   it("counts today's sets after what was carried, and is done when the rest is", () => {
@@ -123,19 +197,27 @@ describe("the day that comes back", () => {
   });
 
   it("shows an exercise finished earlier as done, owing nothing", () => {
-    const state = dayState(TUESDAY, { carried: { [flyRow.id]: 3 } });
-    const plan = build(monday(), state, floatingPushPull);
+    const carried = visit(MONDAY, { [flyRow.id]: carry(EX.fly.id, { working: 3 }) });
+    const plan = build(monday(), dayState(TUESDAY, { carried }), floatingPushPull);
     expect(plan.item(flyRow.id)).toMatchObject({ status: "done", remaining: 0, owed: 0 });
     expect(plan.item(flyRow.id)!.nextSet).toBeNull();
     expect(plan.setsRemaining).toBe(4 + 3);
   });
 
   it("is complete when everything owed is done, though nothing is logged that day", () => {
-    const state = dayState(TUESDAY, {
-      carried: { [benchRow.id]: 4, [flyRow.id]: 3, [raiseRow.id]: 3 },
+    const carried = visit(MONDAY, {
+      [benchRow.id]: carry(EX.bench.id, { warmup: 1, working: 3 }),
+      [flyRow.id]: carry(EX.fly.id, { working: 3 }),
+      [raiseRow.id]: carry(EX.raise.id, { working: 3 }),
     });
-    const plan = build([], state, floatingPushPull);
+    const plan = build([], dayState(TUESDAY, { carried }), floatingPushPull);
     expect([plan.isComplete, plan.hasWork, plan.setsDone]).toEqual([true, false, 0]);
+  });
+
+  it("counts nothing carried on a weekday plan, which has no such memory", () => {
+    const plan = build(monday(), dayState(MONDAY, { carried: mondayVisit() }));
+    expect(plan.item(benchRow.id)).toMatchObject({ carried: NO_SETS, done: 2 });
+    expect([plan.continuesFrom, plan.session]).toEqual([null, dateKey(MONDAY)]);
   });
 
   it("records what it owed and what it did, so a finished remainder is 100%", () => {
@@ -159,5 +241,9 @@ describe("the day that comes back", () => {
   it("is not on record until a set is logged that day, however much it carries", () => {
     expect(tuesday().ledger.record()).toBeNull();
     expect(tuesday().ledger.record(true)).toEqual({ date: dateKey(TUESDAY), planned: 6, done: 0 });
+  });
+
+  it("stands, so far, at what it owes: Progress shows what Today shows", () => {
+    expect(tuesday().ledger.soFar()).toEqual({ date: dateKey(TUESDAY), planned: 6, done: 0 });
   });
 });

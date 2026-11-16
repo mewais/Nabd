@@ -1,4 +1,4 @@
-import { Grid, Page } from "@nabd/design-system";
+import { Page, WithSide } from "@nabd/design-system";
 import { CoverageRail } from "./coverage-rail";
 import { DayEditor } from "./day-editor";
 import type { PlannerActions } from "./planner-actions";
@@ -11,8 +11,14 @@ interface PlannerScreenProps {
   actions: PlannerActions;
 }
 
-/** The editor takes what the coverage rail's fixed width leaves. */
-const COLUMNS = "minmax(0, 1fr) 300px";
+/** The coverage rail's width beside the editor. */
+const RAIL_WIDTH = 300;
+/**
+ * The narrowest the editor may get beside the rail: what a set table with a
+ * rep range and an intensity column needs. With less room (a window near its
+ * smallest) the rail goes under the editor.
+ */
+const EDITOR_MIN_WIDTH = 480;
 
 /** The Plan screen: program header, week board, and the selected day beside the coverage rail. */
 export function PlannerScreen({ vm, actions }: PlannerScreenProps): JSX.Element {
@@ -21,10 +27,14 @@ export function PlannerScreen({ vm, actions }: PlannerScreenProps): JSX.Element 
       <ProgramHeader vm={vm.header} actions={actions} />
       <WeekBoard vm={vm.board} actions={actions} />
       {vm.editor && (
-        <Grid columns={COLUMNS} gap="lg" align="start">
+        <WithSide
+          side={<CoverageRail vm={vm.rail} />}
+          sideWidth={RAIL_WIDTH}
+          mainMinWidth={EDITOR_MIN_WIDTH}
+          gap="lg"
+        >
           <DayEditor vm={vm.editor} actions={actions} />
-          <CoverageRail vm={vm.rail} />
-        </Grid>
+        </WithSide>
       )}
     </Page>
   );

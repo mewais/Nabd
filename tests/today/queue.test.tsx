@@ -44,7 +44,7 @@ describe("Today · queue", () => {
 
   it("any unfinished exercise can be started, whatever the order", () => {
     const { actions } = renderToday(mixedDay());
-    fireEvent.click(queueRow("Weighted Dip").getByRole("button", { name: "Start" }));
+    fireEvent.click(queueRow("Weighted Dip").getByRole("button", { name: "Start Weighted Dip" }));
     expect(actions.start).toHaveBeenCalledTimes(1);
     expect(actions.start).toHaveBeenCalledWith("p-dip");
   });
@@ -52,15 +52,15 @@ describe("Today · queue", () => {
   it("a finished exercise offers More instead of Start, and no Skip", () => {
     const { actions } = renderToday(mixedDay());
     const bench = queueRow("Bench Press");
-    expect(bench.queryByRole("button", { name: "Start" })).toBeNull();
-    expect(bench.queryByRole("button", { name: "Skip" })).toBeNull();
-    fireEvent.click(bench.getByRole("button", { name: "More" }));
+    expect(bench.queryByRole("button", { name: /^Start/ })).toBeNull();
+    expect(bench.queryByRole("button", { name: /^Skip/ })).toBeNull();
+    fireEvent.click(bench.getByRole("button", { name: "More Bench Press" }));
     expect(actions.start).toHaveBeenCalledWith("p-bench");
   });
 
   it("Skip asks to skip that exercise", () => {
     const { actions } = renderToday(mixedDay());
-    fireEvent.click(queueRow("Push-Up").getByRole("button", { name: "Skip" }));
+    fireEvent.click(queueRow("Push-Up").getByRole("button", { name: "Skip Push-Up" }));
     expect(actions.toggleSkip).toHaveBeenCalledWith("p-pushup");
     expect(actions.start).not.toHaveBeenCalled();
   });
@@ -69,16 +69,16 @@ describe("Today · queue", () => {
     const { actions } = renderToday(mixedDay());
     const skipped = queueRow("Barbell Row");
     expect(skipped.getAllByRole("button")).toHaveLength(1);
-    fireEvent.click(skipped.getByRole("button", { name: "Restore" }));
+    fireEvent.click(skipped.getByRole("button", { name: "Restore Barbell Row" }));
     expect(actions.toggleSkip).toHaveBeenCalledWith("p-row");
   });
 
   it("an untouched extra can be started or removed", () => {
     const { actions } = renderToday(mixedDay());
     const extra = queueRow("Dumbbell Curl");
-    fireEvent.click(extra.getByRole("button", { name: "Remove" }));
+    fireEvent.click(extra.getByRole("button", { name: "Remove Dumbbell Curl" }));
     expect(actions.toggleSkip).toHaveBeenCalledWith("x-curl");
-    fireEvent.click(extra.getByRole("button", { name: "Start" }));
+    fireEvent.click(extra.getByRole("button", { name: "Start Dumbbell Curl" }));
     expect(actions.start).toHaveBeenCalledWith("x-curl");
   });
 });

@@ -93,15 +93,15 @@ describe("SessionModal", () => {
   it("the steppers nudge reps and weight down and up", () => {
     const { actions, stepper } = setup();
 
-    fireEvent.click(stepper("Reps").getByRole("button", { name: "increase" }));
+    fireEvent.click(stepper("Reps").getByRole("button", { name: "Increase reps" }));
     expect(actions.stepReps).toHaveBeenLastCalledWith(1);
-    fireEvent.click(stepper("Reps").getByRole("button", { name: "decrease" }));
+    fireEvent.click(stepper("Reps").getByRole("button", { name: "Decrease reps" }));
     expect(actions.stepReps).toHaveBeenLastCalledWith(-1);
     expect(actions.stepWeight).not.toHaveBeenCalled();
 
-    fireEvent.click(stepper("Weight (kg)").getByRole("button", { name: "decrease" }));
+    fireEvent.click(stepper("Weight (kg)").getByRole("button", { name: "Decrease weight (kg)" }));
     expect(actions.stepWeight).toHaveBeenLastCalledWith(-1);
-    fireEvent.click(stepper("Weight (kg)").getByRole("button", { name: "increase" }));
+    fireEvent.click(stepper("Weight (kg)").getByRole("button", { name: "Increase weight (kg)" }));
     expect(actions.stepWeight).toHaveBeenLastCalledWith(1);
     expect(actions.stepReps).toHaveBeenCalledTimes(2);
   });

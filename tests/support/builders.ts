@@ -2,15 +2,19 @@
 // exercises, prescribed sets and rows, logged sets, day records.
 
 import type {
+  CarriedItem,
+  CarriedItems,
+  CarriedVisit,
   DayRecord,
   Exercise,
   ExerciseLookup,
   ExercisePrescription,
   LoggedSet,
   Prescription,
+  SetCounts,
   SetSpec,
 } from "@nabd/domain";
-import { dateKey, loggedSet } from "@nabd/domain";
+import { NO_SETS, dateKey, loggedSet } from "@nabd/domain";
 
 let nextId = 0;
 const uid = (prefix: string): string => `${prefix}-${++nextId}`;
@@ -80,8 +84,22 @@ export function logged(
     planItemId: null,
     setType: "working",
   } as const;
-  return { ...loggedSet(ex, at, details), ...overrides };
+  const set = loggedSet(ex, at, details);
+  // A set moved to another day belongs to that day's session, unless told otherwise.
+  return { ...set, session: overrides.date ?? set.session, ...overrides };
 }
+
+/** What one plan item did on earlier days: these `sets` of each kind, of exercise `exId`. */
+export const carry = (exId: string, sets: Partial<SetCounts>): CarriedItem => ({
+  exId,
+  sets: { ...NO_SETS, ...sets },
+});
+
+/** An unfinished floating day that came back: its visit began on `startedOn`, with `items` behind it. */
+export const visit = (startedOn: Date, items: CarriedItems): CarriedVisit => ({
+  startedOn: dateKey(startedOn),
+  items,
+});
 
 /** How a day went against its plan: `done` of `planned` sets. */
 export const dayRecord = (date: Date, planned: number, done: number): DayRecord => ({

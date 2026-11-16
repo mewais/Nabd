@@ -27,6 +27,7 @@ fn logged_set_row_serialises_as_camel_case() {
             "trigger": "manual",
             "planItemId": "item-1",
             "setType": "warmup",
+            "session": "2025-03-01",
         })
     );
 }
@@ -59,6 +60,7 @@ fn old_json_without_plan_item_or_set_type_gets_defaults() {
     let row: LoggedSetRow = serde_json::from_value(old).unwrap();
     assert_eq!(row.plan_item_id, None);
     assert_eq!(row.set_type, "working");
+    assert_eq!(row.session(), "2024-12-01");
     assert_eq!(row.ex_id, "plank");
     assert_eq!(row.value, 60.0);
 }

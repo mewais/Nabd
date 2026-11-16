@@ -1,5 +1,5 @@
 import type { DayRecord, LoggedSet } from "@nabd/domain";
-import { dateKey } from "@nabd/domain";
+import { DEFAULT_SETTINGS, dateKey } from "@nabd/domain";
 import { TrainingStats } from "@nabd/analytics";
 import { dayRecord, exercise, logged, nov } from "../support/builders";
 
@@ -9,9 +9,12 @@ const setsOn = (day: number, count: number, hour = 10): LoggedSet[] =>
 const record = (day: number, planned: number, done: number): DayRecord =>
   dayRecord(nov(day), planned, done);
 
+/** Every day of the week worked. */
+const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
+
 // Monday 16 Nov 2026 is "today"; the week runs Mon 16 – Sun 22.
-const stats = (history: LoggedSet[], dayLog: DayRecord[] = []) =>
-  new TrainingStats(history, dayLog, nov(16, 15));
+const stats = (history: LoggedSet[], dayLog: DayRecord[] = [], workDays = EVERY_DAY) =>
+  new TrainingStats(history, dayLog, nov(16, 15), workDays);
 
 describe("TrainingStats", () => {
   it("counts a streak ending today, or yesterday when today is still empty", () => {
@@ -19,6 +22,28 @@ describe("TrainingStats", () => {
     expect(stats([...setsOn(14, 1), ...setsOn(15, 1), ...setsOn(16, 1)]).streak()).toBe(3);
     expect(stats([...setsOn(14, 1), ...setsOn(15, 1)]).streak()).toBe(2);
     expect(stats([...setsOn(13, 1), ...setsOn(14, 1)]).streak()).toBe(0);
+  });
+
+  describe("a streak of workdays (Monday to Friday)", () => {
+    const weekdays = (history: LoggedSet[]) =>
+      stats(history, [], DEFAULT_SETTINGS.workDays).streak();
+    const lastWeek = [9, 10, 11, 12, 13].flatMap((day) => setsOn(day, 1));
+
+    it("carries over a weekend with nothing logged on it", () => {
+      expect(weekdays([...lastWeek, ...setsOn(16, 1)])).toBe(6);
+      // Monday not trained yet: the streak still stands at Friday's.
+      expect(weekdays(lastWeek)).toBe(5);
+    });
+
+    it("is not extended by a set on a day off", () => {
+      expect(weekdays([...setsOn(13, 1), ...setsOn(14, 2), ...setsOn(15, 1)])).toBe(1);
+    });
+
+    it("is broken by a workday with nothing logged, wherever the days off fall", () => {
+      const missedThursday = [9, 10, 11, 13].flatMap((day) => setsOn(day, 1));
+      expect(weekdays([...missedThursday, ...setsOn(16, 1)])).toBe(2);
+      expect(weekdays([...setsOn(15, 1)])).toBe(0);
+    });
   });
 
   it("counts sets in the Monday–Sunday week and active days in the last 30", () => {

@@ -1,4 +1,4 @@
-import type { DayRecord, DayState, Program, RotationState } from "@nabd/domain";
+import type { CarriedVisit, DayRecord, DayState, Program, RotationState } from "@nabd/domain";
 import { addDays, freshDayState, parseDateKey, startOfDay } from "@nabd/domain";
 import { dayAfter } from "./floating";
 import { following } from "./rotation";
@@ -24,7 +24,9 @@ interface Rollover {
  *    off that nothing was logged on owes nothing only by not being a day on,
  *    so it neither moves the plan on nor counts;
  *  - a floating day that is not finished comes back with what it has behind
- *    it, counting what earlier days did: only the rest is owed;
+ *    it, counting what earlier days did: only the rest is owed, and the
+ *    visit stays the one session it began as. A weekday plan's next day
+ *    starts afresh, whatever a same-day switch of schedule left behind;
  *  - every cycled pool that was actually trained moves on to its next exercise
  *    when its day closes — at once on a weekday plan, and on a floating plan
  *    when the plan moves on, so an unfinished day stays on the same exercises;
@@ -51,10 +53,16 @@ export function rollOver(input: TodayPlanInput): Rollover {
   return {
     dayState: moveOn
       ? freshDayState(date, dayAfter(program, dayState.dayId))
-      : freshDayState(date, dayState.dayId, floating ? ended.ledger.carryOver : {}),
+      : freshDayState(date, dayState.dayId, floating ? continued(ended) : null),
     rotation: nextRotation,
     records: [ended.ledger.record(moveOn), ...missed].filter((record) => record !== null),
   };
+}
+
+/** The visit an unfinished floating day comes back as: null when it has nothing behind it. */
+function continued(ended: TodayPlan): CarriedVisit | null {
+  const items = ended.ledger.carryOver;
+  return Object.keys(items).length === 0 ? null : { startedOn: ended.session, items };
 }
 
 /**

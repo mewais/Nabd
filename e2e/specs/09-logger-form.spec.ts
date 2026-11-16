@@ -56,7 +56,8 @@ test("a bodyweight exercise is worded and advised in reps until weight is added"
   app,
 }) => {
   const { shell, today, logger, progress } = app;
-  const program = plan([day("Pull", [planned(pullUp.id)]), day("Push", [planned(bench.id)])]);
+  // One day, done whole each time: every day is a session of its own.
+  const program = plan([day("Pull", [planned(pullUp.id)])]);
   await app.launch(at("10:00"), { program });
 
   await test.step("first time: plain reps, with no starting weight to pick", async () => {
@@ -69,7 +70,8 @@ test("a bodyweight exercise is worded and advised in reps until weight is added"
 
   await test.step("a set with nothing added is logged as reps", async () => {
     await logger.log({ reps: 12 });
-    await expect(logger.loggedSets).toHaveText([/12 reps/]);
+    await logger.log({ reps: 12 });
+    await expect(logger.loggedSets).toHaveText([/12 reps/, /12 reps/]);
     await logger.done();
   });
 

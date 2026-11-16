@@ -9,14 +9,16 @@
 # HOME and the XDG directories pointing into a temporary directory, and checks:
 #
 #   1. first launch    a window appears; the database is created at schema
-#                      version 2; the frontend boots and stores its day state
+#                      version 3; the frontend boots and stores its day state
 #   2. closing         with no tray host in the session, closing the window
-#                      quits the app (README: "Without a tray")
+#                      quits the app, by way of the window, which saves first
+#                      (README: "Without a tray")
 #   3. restart         a plan stored before the launch is still there, and the
 #                      day that ended while the app was off is rolled over
 #   4. second launch   exits at once and leaves the first instance running
 #   5. logging a set   (WebDriver) a set logged in the real window lands in the
-#                      history table and, like Pause, survives a restart
+#                      history table, in the session of its day, and, like
+#                      Pause, survives a restart
 #
 # Part 5 needs `tauri-driver` (cargo install tauri-driver --locked) and
 # `WebKitWebDriver` (apt: webkit2gtk-driver); without them it is skipped, or
@@ -164,8 +166,8 @@ first_launch() {
   launch
   ok "a window appears"
   wait_for 30 test -s "$DB" || fail "no database at $DB"
-  expect "database schema version" "$(sql "SELECT value FROM app_meta WHERE key = 'version'")" 2
-  ok "the database is created at schema version 2"
+  expect "database schema version" "$(sql "SELECT value FROM app_meta WHERE key = 'version'")" 3
+  ok "the database is created at schema version 3"
   wait_for 30 day_is "$TODAY" || fail "the frontend did not store today's day state"
   ok "the frontend booted and stored its day state"
   close_and_expect_exit
@@ -184,7 +186,7 @@ restart_keeps_data() {
   launch
   wait_for 30 day_is "$TODAY" || fail "yesterday's day was not rolled over at launch"
   expect "stored plan after a restart" "$(sql "SELECT value FROM kv WHERE key = 'program'")" "$PLAN"
-  expect "schema version after a restart" "$(sql "SELECT value FROM app_meta WHERE key = 'version'")" 2
+  expect "schema version after a restart" "$(sql "SELECT value FROM app_meta WHERE key = 'version'")" 3
   expect "yesterday's record: date" "$(stored dayLog '[0].date')" "$YESTERDAY"
   expect "yesterday's record: planned sets" "$(stored dayLog '[0].planned')" 1
   expect "yesterday's record: done sets" "$(stored dayLog '[0].done')" 0
@@ -230,13 +232,13 @@ logged_set_survives() {
   wait_for 15 driver_ready || fail "tauri-driver did not start on port $DRIVER_PORT"
 
   act log-a-set
-  local set="SELECT ex_id || ' ' || date || ' ' || trigger || ' ' || plan_item_id FROM history"
-  expect "the history table" "$(sql "$set")" "push_up__bodyweight $TODAY manual row"
+  local set="SELECT ex_id || ' ' || date || ' ' || session || ' ' || trigger || ' ' || plan_item_id FROM history"
+  expect "the history table" "$(sql "$set")" "push_up__bodyweight $TODAY $TODAY manual row"
   expect "pause in the database" "$(stored dayState .paused)" 1
   ok "a set logged in the window is a row of the history table; Pause is stored"
 
   act after-restart
-  expect "the history table after a restart" "$(sql "$set")" "push_up__bodyweight $TODAY manual row"
+  expect "the history table after a restart" "$(sql "$set")" "push_up__bodyweight $TODAY $TODAY manual row"
   ok "after a restart the window still counts the set and nudges are still paused"
 }
 

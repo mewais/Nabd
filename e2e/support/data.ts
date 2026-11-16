@@ -67,6 +67,8 @@ export function plan(days: Day[], more: Partial<Program> = {}): Program {
 interface SetSeed {
   /** Date key of the day it was logged on. */
   day: string;
+  /** Date key of the day its session began, when that was earlier (a floating day that came back). */
+  session?: string;
   /** "HH:MM"; mid-morning unless it matters. */
   time?: string;
   reps: number;
@@ -90,5 +92,6 @@ export function loggedSet(exId: string, seed: SetSeed): LoggedSet {
     planItemId: exId,
     setType: seed.type ?? "working",
   };
-  return setOf(exercise, at(seed.time ?? "10:00", seed.day), details, seed.day);
+  const counted = { date: seed.day, session: seed.session ?? seed.day };
+  return setOf(exercise, at(seed.time ?? "10:00", seed.day), details, counted);
 }

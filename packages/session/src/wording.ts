@@ -13,7 +13,13 @@ import {
 } from "@nabd/domain";
 import type { PlanItem } from "@nabd/scheduling";
 import { prescribedIntensity, repsInReserve } from "@nabd/progression";
-import type { Advice, AdviceKind, IntensityBasis, Performance } from "@nabd/progression";
+import type {
+  Advice,
+  AdviceKind,
+  IntensityBasis,
+  IntensityWait,
+  Performance,
+} from "@nabd/progression";
 
 /**
  * "9 × 25 lb", "12 reps", "45 s", "45 s · 10 kg", "8 + 5 kg", "8 − 20 kg assist".
@@ -88,15 +94,26 @@ const ADVICE_REASONS: Record<AdviceKind, string> = {
   deload: "Two sessions short of your range — back off one step and rebuild.",
 };
 
+/** What an intensity waits for, after double progression's reason: "RPE 8 applies once there is history." */
+const INTENSITY_WAITS: Record<
+  IntensityWait,
+  (asked: Pick<IntensityBasis, "kind" | "value">) => string
+> = {
+  history: (asked) => `${formatIntensity(asked)} applies once there is history.`,
+  load: (asked) => `${formatIntensity(asked)} applies once you log it with weight.`,
+  bodyWeight: (asked) =>
+    `Set your body weight in Settings to use ${INTENSITY_NAMES[asked.kind]} here.`,
+};
+
 /**
  * Why, in a sentence: the intensity that set the load, or double progression's
  * reason — with a note on the intensity that is waiting for an estimate to
- * apply to.
+ * apply to, and what it is waiting for.
  */
 function describeReason({ kind, intensity }: Advice, unit: WeightUnit): string {
   if (intensity === null) return ADVICE_REASONS[kind];
   if (intensity.max === null) {
-    return `${ADVICE_REASONS[kind]} ${formatIntensity(intensity)} applies once there is history.`;
+    return `${ADVICE_REASONS[kind]} ${INTENSITY_WAITS[intensity.waitingFor](intensity)}`;
   }
   if (intensity.kind === "pct") {
     return `${intensity.value}% of your estimated max (${formatWeight(intensity.max, unit)}).`;

@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { Card, Page } from "@nabd/design-system";
+import { Card, Page, WithSide } from "@nabd/design-system";
 import { renderRoot } from "./render";
 
 describe("Card", () => {
@@ -48,5 +48,21 @@ describe("Page", () => {
   it("holds the screen's content", () => {
     const page = renderRoot(<Page width="narrow">screen</Page>);
     expect(page).toHaveTextContent("screen");
+  });
+});
+
+describe("WithSide", () => {
+  it("puts the main pane first, and lets the side pane go under it when the two do not fit", () => {
+    const root = renderRoot(
+      <WithSide side={<aside>rail</aside>} sideWidth={300} mainMinWidth={480}>
+        <main>editor</main>
+      </WithSide>,
+    );
+    const [main, side] = [...root.children] as HTMLElement[];
+    expect(main).toHaveTextContent("editor");
+    expect(side).toHaveTextContent("rail");
+    expect(root.style.flexWrap).toBe("wrap");
+    expect(main!.style.minWidth).toBe("min(480px, 100%)");
+    expect(side!.style.flex).toBe("1 1 300px");
   });
 });

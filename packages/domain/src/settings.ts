@@ -11,6 +11,9 @@ export type Theme = z.infer<typeof ThemeSchema>;
 
 export const THEME_NAMES: Record<Theme, string> = { light: "Light", dark: "Dark" };
 
+/** The body weights the setting accepts, in kg; anything outside is a typing slip. */
+export const BODY_WEIGHT_KG = { min: 20, max: 400 } as const;
+
 export const SettingsSchema = z.object({
   theme: ThemeSchema,
   /** Translucency on/off (the "Glass" toggle). When true the matching glass material is used. */
@@ -34,6 +37,12 @@ export const SettingsSchema = z.object({
   weightUnit: WeightUnitSchema,
   /** Smallest weight jump the user can make, in the display unit (micro-plates go down to 0.25). */
   weightIncrement: z.number().min(0.25).max(50),
+  /**
+   * The user's body weight in kg, or null when they have not said. It is what
+   * a bodyweight exercise's added load (or assistance) is added to (taken off),
+   * so only with it can such an exercise follow a %1RM or an RPE.
+   */
+  bodyWeight: z.number().min(BODY_WEIGHT_KG.min).max(BODY_WEIGHT_KG.max).nullable(),
   /** Equipment the user owns; the exercise library is filtered to it. */
   equipment: z.array(EquipmentSchema),
 });
@@ -72,6 +81,7 @@ export const DEFAULT_SETTINGS: Settings = {
   workDays: [1, 2, 3, 4, 5],
   weightUnit: "kg",
   weightIncrement: DEFAULT_INCREMENT.kg,
+  bodyWeight: null,
   equipment: [...EQUIPMENT_KEYS],
 };
 

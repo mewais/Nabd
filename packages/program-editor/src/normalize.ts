@@ -46,11 +46,19 @@ function alignMeasures(day: Day, lookup: ExerciseLookup): void {
   }
 }
 
+/** An RPE or a %1RM is only ever a value of its scale (a stored "RPE 50" is RPE 10). */
+function keepIntensitiesOnScale(day: Day): void {
+  for (const prescription of [...day.exercises, ...day.slots]) {
+    new PrescriptionEditor(prescription).keepIntensitiesOnScale();
+  }
+}
+
 /** Apply the rules to `program`, in place. */
 export function normalize(program: Program, lookup: ExerciseLookup): void {
   for (const day of program.days) {
     gatherSupersets(day);
     alignMeasures(day, lookup);
+    keepIntensitiesOnScale(day);
   }
 }
 

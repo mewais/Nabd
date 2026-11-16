@@ -13,8 +13,8 @@ export class Coach {
   constructor(
     private readonly history: readonly LoggedSet[],
     private readonly advisor: ProgressionAdvisor,
-    /** Today's local date key. */
-    private readonly today: string,
+    /** The session today's sets belong to (see `TodayPlan.session`). */
+    private readonly session: string,
   ) {}
 
   private historyOf(exId: string): ExerciseHistory {
@@ -32,7 +32,7 @@ export class Coach {
       prescription: item.prescription,
       setIndex: item.workingSetsDone,
       history: this.historyOf(item.exercise.id),
-      date: this.today,
+      session: this.session,
     });
   }
 
@@ -44,7 +44,8 @@ export class Coach {
   /**
    * What the log form starts with: what the user actually did for the kind of
    * set that comes next (warm-up, working, drop). Once the exercise has such a
-   * set today, that is it. Before that, a warm-up starts from the last warm-up
+   * set in this session (today, or on the earlier days of a floating day that
+   * came back), that is it. Before that, a warm-up starts from the last warm-up
    * logged — warm-ups stay out of progression, but are remembered — or, with
    * none on record, from half the last working load (see
    * ProgressionAdvisor.warmupFrom); any other set starts from the very set the
@@ -56,7 +57,7 @@ export class Coach {
     const history = this.historyOf(item.exercise.id);
     const type = item.nextSet?.type ?? "working";
     return (
-      history.latest(type, this.today) ??
+      history.latest(type, this.session) ??
       (type === "warmup" ? this.warmupStart(item, history) : this.advise(item).basis) ??
       this.advisor.startingPoint(item.exercise.tracking, item.nextSet).primary
     );

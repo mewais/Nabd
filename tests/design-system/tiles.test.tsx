@@ -9,6 +9,13 @@ describe("StatTile", () => {
     expect(tile).toHaveTextContent("Sets this week1,250sets");
   });
 
+  it("explains how the figure is counted, under it, when it has a hint", () => {
+    render(<StatTile label="Current streak" value="4" unit="days" hint="Workdays only." />);
+    expect(screen.getByRole("region", { name: "Current streak" })).toHaveTextContent(
+      "Current streak4daysWorkdays only.",
+    );
+  });
+
   it("leaves the unit out when there is none", () => {
     render(<StatTile label="Personal best" value="76 kg e1RM" />);
     expect(screen.getByRole("region", { name: "Personal best" })).toHaveTextContent(
@@ -104,13 +111,13 @@ describe("Segmented options with a name, a tooltip or disabled", () => {
 
   it("names an option by its ariaLabel and shows its tooltip", () => {
     render(<Segmented options={OPTIONS} value="1" onChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Monday" })).toHaveAttribute("title", "Monday");
+    expect(screen.getByRole("radio", { name: "Monday" })).toHaveAttribute("title", "Monday");
   });
 
   it("does not let a disabled option be picked", () => {
     const onChange = vi.fn();
     render(<Segmented options={OPTIONS} value="1" onChange={onChange} />);
-    const tuesday = screen.getByRole("button", { name: "T" });
+    const tuesday = screen.getByRole("radio", { name: "T" });
     expect(tuesday).toBeDisabled();
     fireEvent.click(tuesday);
     expect(onChange).not.toHaveBeenCalled();

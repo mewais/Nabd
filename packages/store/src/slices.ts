@@ -82,6 +82,8 @@ export interface LibrarySlice {
 
 export interface SettingsDataSlice {
   updateSettings: (patch: Partial<Settings>) => void;
+  /** Set the body weight typed in the display unit, or forget it (null); out of range is ignored. */
+  setBodyWeight: (displayValue: number | null) => void;
   /** Show the Settings dialog. */
   openSettings: () => void;
   closeSettings: () => void;

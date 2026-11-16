@@ -21,14 +21,16 @@ test("seconds or reps is the exercise's doing, in a fixed plan and in a cycled p
   await library.add(plank.name);
 
   await test.step("an exercise counted in reps is written as a range or a fixed number, never as time", async () => {
-    const repMode = planner.card(bench.name).getByRole("group", { name: "Rep mode" });
-    await expect(repMode.getByRole("button")).toHaveText(["Range", "Fixed"]);
-    await repMode.getByRole("button", { name: "Fixed" }).click();
+    const repMode = planner.card(bench.name).getByRole("radiogroup", { name: "Rep mode" });
+    await expect(repMode.getByRole("radio")).toHaveText(["Range", "Fixed"]);
+    await repMode.getByRole("radio", { name: "Fixed" }).click();
     await expect(planner.stepper(bench.name, "Set 1 top of range")).toBeHidden();
   });
 
   await test.step("a hold is prescribed in seconds, with nothing to choose", async () => {
-    await expect(planner.card(plank.name).getByRole("group", { name: "Rep mode" })).toBeHidden();
+    await expect(
+      planner.card(plank.name).getByRole("radiogroup", { name: "Rep mode" }),
+    ).toBeHidden();
     await expect(planner.stepper(plank.name, "Set 1 seconds")).toContainText("45s");
   });
 
@@ -147,11 +149,11 @@ test("switching the load mode starts from the new scale, not from the old number
   await app.launch(at("10:00"), { program: plan([day("Push", [planned(bench.id)])]) });
   await shell.goTo("Plan");
 
-  await planner.cardButton(bench.name, "RPE").click();
+  await planner.cardChoice(bench.name, "RPE").click();
   await step(planner.stepper(bench.name, "Set 1 RPE"), "increase", 4);
   await expect(planner.stepper(bench.name, "Set 1 RPE")).toContainText("10");
 
-  await planner.cardButton(bench.name, "%1RM").click();
+  await planner.cardChoice(bench.name, "%1RM").click();
   await expect(planner.stepper(bench.name, "Set 1 %1RM")).toContainText("70%");
   await expect(planner.stepper(bench.name, "Set 2 %1RM")).toContainText("70%");
 });

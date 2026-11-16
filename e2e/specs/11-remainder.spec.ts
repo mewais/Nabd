@@ -1,4 +1,4 @@
-import { EXERCISE, day, plan, planned, workingSets } from "../support/data";
+import { EXERCISE, day, loggedSet, plan, planned, workingSets } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
@@ -15,11 +15,20 @@ const program = plan([
   ]),
 ]);
 
+/** Push a week ago: the warm-up, then 10, 9 and 8 × 22.5 kg. */
+const LAST_MONDAY = dayAfter(MONDAY, -7);
+const lastWeek = [
+  loggedSet(bench.id, { day: LAST_MONDAY, time: "10:00", reps: 12, kg: 10, type: "warmup" }),
+  ...[10, 9, 8].map((reps, set) =>
+    loggedSet(bench.id, { day: LAST_MONDAY, time: `10:0${set + 1}`, reps, kg: 22.5 }),
+  ),
+];
+
 test("an unfinished day comes back with only what is still owed, from the right set on", async ({
   app,
 }) => {
   const { shell, today, logger, progress } = app;
-  await app.launch(at("16:00"), { program });
+  await app.launch(at("16:00"), { program, history: lastWeek });
 
   await test.step("Monday: the warm-up and the first working set", async () => {
     await today.startSet.click();
@@ -38,7 +47,8 @@ test("an unfinished day comes back with only what is still owed, from the right 
     // The warm-up is behind it: the next set is the second working set, not the warm-up.
     await expect(today.screen).toContainText("Up next · Set 3 of 4");
     await expect(today.screen).toContainText("Working set · 8–12 reps");
-    await expect(today.screen).toContainText("Last time: 8 × 20 kg");
+    // One workout over two days: set 2 is compared with last week's set 2, not with Monday's set 1.
+    await expect(today.screen).toContainText("Last time: 9 × 22.5 kg");
   });
 
   await test.step("the nudge is for the set that is owed", async () => {
@@ -46,6 +56,9 @@ test("an unfinished day comes back with only what is still owed, from the right 
     await expect(shell.toast).toContainText(bench.name);
     await expect(shell.toast).toContainText("Chest · Set 3 of 4");
     await shell.letsGo.click();
+    await expect(logger.dialog).toContainText(
+      "Continuing Monday's Push — what was done then counts.",
+    );
     await expect(logger.dialog).toContainText("Set 3 of 4 · Working set · 8–12 reps");
     await expect(logger.loggedSets).toHaveCount(0);
   });

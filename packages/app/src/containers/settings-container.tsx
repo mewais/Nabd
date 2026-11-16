@@ -19,6 +19,7 @@ export function SettingsContainer(): JSX.Element | null {
   const actions = useMemo(
     (): SettingsActions => ({
       change: store.updateSettings,
+      setBodyWeight: store.setBodyWeight,
       exportData: () => void store.exportData(),
       importData: () => pickJsonFile(store.importData),
       sendTestNotification: store.sendTestNotification,

@@ -6,23 +6,20 @@ import type { Program } from "@nabd/domain";
 import { CATALOG } from "../support/exercises";
 import { asFloating, officeStrength } from "../support/programs";
 import { dayOf } from "./fixtures";
-import { button, renderPlanner } from "./render";
+import { radio, renderPlanner } from "./render";
 
-const pressed = (name: string): string | null =>
-  screen.getByRole("button", { name }).getAttribute("aria-pressed");
-
-/** The header's plan-type button ("Fixed" is also a rep mode further down the screen). */
-const planType = (name: "Fixed" | "Cycled"): HTMLElement => button(name, 0);
+/** The header's plan-type option ("Fixed" is also a rep mode further down the screen). */
+const planType = (name: "Fixed" | "Cycled"): HTMLElement => radio(name, 0);
 
 describe("ProgramHeader", () => {
   it("shows the program name and marks the current type and schedule", () => {
     renderPlanner(officeStrength());
 
     expect(screen.getByLabelText("Program name")).toHaveValue("Office Strength");
-    expect(planType("Fixed")).toHaveAttribute("aria-pressed", "true");
-    expect(planType("Cycled")).toHaveAttribute("aria-pressed", "false");
-    expect(pressed("Weekdays")).toBe("true");
-    expect(pressed("Floating")).toBe("false");
+    expect(planType("Fixed")).toBeChecked();
+    expect(planType("Cycled")).not.toBeChecked();
+    expect(radio("Weekdays")).toBeChecked();
+    expect(radio("Floating")).not.toBeChecked();
   });
 
   it("typing in the name renames the program", () => {
@@ -63,14 +60,14 @@ describe("ProgramHeader", () => {
   it("switching to Floating turns the week into a numbered list, and back pins the days from today on", () => {
     const planner = renderPlanner(officeStrength());
 
-    fireEvent.click(screen.getByRole("button", { name: "Floating" }));
+    fireEvent.click(radio("Floating"));
 
     expect(planner.program().schedule).toBe("floating");
     expect(screen.getByText("Day 2")).toBeInTheDocument();
     expect(screen.queryByText("Tue")).toBeNull();
     expect(screen.getByText("Day 1 · floating")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Weekdays" }));
+    fireEvent.click(radio("Weekdays"));
 
     // It is Monday and the plan is on its first day: Push is Monday's, Pull Tuesday's.
     expect(planner.program().days.map((d) => d.weekday)).toEqual([1, 2]);
@@ -89,7 +86,7 @@ describe("ProgramHeader", () => {
       })),
     });
     const planner = renderPlanner(eightDays);
-    const weekdays = screen.getByRole("button", { name: "Weekdays" });
+    const weekdays = radio("Weekdays");
 
     expect(weekdays).toBeDisabled();
     expect(weekdays).toHaveAttribute("title", "A week has room for 7 days; this plan has 8");

@@ -61,6 +61,13 @@ export const card = (name: string) => within(screen.getByRole("region", { name }
 export const stepper = (scope: ReturnType<typeof within>, name: string) =>
   within(scope.getByRole("group", { name }));
 
+/** The n-th option (a radio of a radio group) with this accessible name on the whole screen. */
+export const radio = (name: string | RegExp, index = 0): HTMLElement => {
+  const found = screen.getAllByRole("radio", { name })[index];
+  if (!found) throw new Error(`no option "${name}" at ${index}`);
+  return found;
+};
+
 /** The n-th button with this accessible name on the whole screen. */
 export const button = (name: string | RegExp, index = 0): HTMLElement => {
   const found = screen.getAllByRole("button", { name })[index];

@@ -36,13 +36,13 @@ describe("Today · muscle coverage", () => {
 
   it("marks the current view and style, and reports a new choice", () => {
     const { actions } = chestDay();
-    const pressed = (name: string) => screen.getByRole("button", { name });
-    expect(pressed("Both")).toHaveAttribute("aria-pressed", "true");
-    expect(pressed("Heat")).toHaveAttribute("aria-pressed", "true");
+    const option = (name: string) => screen.getByRole("radio", { name });
+    expect(option("Both")).toBeChecked();
+    expect(option("Heat")).toBeChecked();
 
-    fireEvent.click(pressed("Back"));
+    fireEvent.click(option("Back"));
     expect(actions.setMapView).toHaveBeenCalledWith("back");
-    fireEvent.click(pressed("Outline"));
+    fireEvent.click(option("Outline"));
     expect(actions.setMapStyle).toHaveBeenCalledWith("outline");
   });
 
@@ -81,7 +81,7 @@ describe("Today · volume insight", () => {
 describe("Today · stats", () => {
   it("shows the streak, the week's sets and today's volume in the user's unit", () => {
     const history = [
-      did(null, "bench", 8, 60, { at: nov(15, 12, 0) }),
+      did(null, "bench", 8, 60, { at: nov(13, 12, 0) }),
       did("p-bench", "bench", 10, 40, { setType: "warmup" }),
       did("p-bench", "bench", 9, 60),
     ];

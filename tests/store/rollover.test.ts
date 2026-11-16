@@ -1,10 +1,10 @@
 import type { Program } from "@nabd/domain";
 import { dateKey, freshDayState } from "@nabd/domain";
-import { createNabdStore, selectStats, selectTodayPlan } from "@nabd/store";
-import { nov } from "../support/builders";
+import { createNabdStore, selectCoach, selectStats, selectTodayPlan } from "@nabd/store";
+import { carry, nov, visit } from "../support/builders";
 import { CATALOG } from "../support/exercises";
 import { catalogBenchRow, catalogFlyRow, catalogPushPull } from "../support/programs";
-import { boot } from "./fixtures";
+import { benchSet, boot } from "./fixtures";
 
 describe("across restarts and days", () => {
   it("a restart restores exactly where the day stood", async () => {
@@ -26,7 +26,8 @@ describe("across restarts and days", () => {
 
     expect(app.plan().dayName).toBe("Push");
     expect(app.plan().setsDone).toBe(0);
-    expect(app.get().dayState).toEqual(freshDayState(nov(17), null, { [catalogBenchRow.id]: 2 }));
+    const carried = visit(nov(16), { [catalogBenchRow.id]: carry(CATALOG.bench, { working: 2 }) });
+    expect(app.get().dayState).toEqual(freshDayState(nov(17), null, carried));
     expect(app.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, owed: 1, remaining: 1 });
     // The skip was for yesterday only: fly is owed in full again.
     expect(app.plan().item(catalogFlyRow.id)).toMatchObject({ skipped: false, owed: 3 });
@@ -45,7 +46,7 @@ describe("across restarts and days", () => {
 
     app.advanceTo(nov(18, 9, 30));
     expect(app.plan().dayName).toBe("Pull");
-    expect(app.get().dayState.carried).toEqual({});
+    expect(app.get().dayState.carried).toBeNull();
     expect(app.get().dayLog).toEqual([
       { date: dateKey(nov(16)), planned: 6, done: 2 },
       { date: dateKey(nov(17)), planned: 4, done: 4 },
@@ -56,11 +57,36 @@ describe("across restarts and days", () => {
     const first = await boot();
     await first.log(catalogBenchRow.id, 2);
     first.advanceTo(nov(17, 9, 30));
-    expect(first.data.dayState).toMatchObject({ carried: { [catalogBenchRow.id]: 2 } });
+    expect(first.data.dayState).toMatchObject({
+      carried: {
+        startedOn: dateKey(nov(16)),
+        items: { [catalogBenchRow.id]: { sets: { working: 2 } } },
+      },
+    });
 
     const second = await boot({}, { client: first.client, data: first.data }, nov(17, 10));
     expect(second.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, remaining: 1 });
     expect(second.get().session).toBeNull();
+  });
+
+  it("a day that comes back is one session with the day it began on, for its sets and its advice", async () => {
+    // Last Monday's bench went 10, 9, 8 at 40 kg.
+    const lastWeek = [10, 9, 8].map((reps, set) =>
+      benchSet(nov(9, 10 + set), { value: reps, planItemId: catalogBenchRow.id }),
+    );
+    const app = await boot({ program: catalogPushPull, history: lastWeek });
+    await app.log(catalogBenchRow.id, 1);
+    app.advanceTo(nov(17, 9, 30));
+
+    expect(app.plan().session).toBe(dateKey(nov(16)));
+    const bench = app.plan().item(catalogBenchRow.id)!;
+    // Set 2 of the visit is compared with set 2 of last Monday, not with yesterday's set 1.
+    expect(selectCoach(app.get()).adviceFor(bench)?.basis).toEqual({ reps: 9, weight: 40 });
+    await app.log(catalogBenchRow.id, 1);
+    expect(app.get().history.at(-1)).toMatchObject({
+      date: dateKey(nov(17)),
+      session: dateKey(nov(16)),
+    });
   });
 
   it("a completed floating day moves on to the next one", async () => {

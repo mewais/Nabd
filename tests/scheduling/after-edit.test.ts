@@ -5,7 +5,7 @@ import {
   plannerDayAfterEdit,
   rotationAfterEdit,
 } from "@nabd/scheduling";
-import { nov } from "../support/builders";
+import { carry, nov, visit } from "../support/builders";
 import { EX } from "../support/exercises";
 import { benchRow, cycledPlan, floatingPushPull, flyRow, pushPull } from "../support/programs";
 import { MONDAY } from "./fixtures";
@@ -125,7 +125,10 @@ describe("the rotation across plan edits", () => {
 });
 
 describe("what an unfinished floating day has behind it, across plan edits", () => {
-  const carried = { [benchRow.id]: 2, [flyRow.id]: 1 };
+  const carried = visit(nov(13), {
+    [benchRow.id]: carry(EX.bench.id, { warmup: 1, working: 1 }),
+    [flyRow.id]: carry(EX.fly.id, { working: 1 }),
+  });
   const [push, pull] = floatingPushPull.days as [Program["days"][0], Program["days"][0]];
 
   it("is the same while every item is still on the day", () => {
@@ -133,24 +136,33 @@ describe("what an unfinished floating day has behind it, across plan edits", () 
     expect(carriedAfterEdit(renamed, "mon", carried)).toBe(carried);
   });
 
-  it("loses the count of an item that was deleted", () => {
+  it("loses the sets of an item that was deleted, and keeps the visit's start", () => {
     const withoutFly: Program = {
       ...floatingPushPull,
       days: [{ ...push, exercises: push.exercises.filter((item) => item.id !== flyRow.id) }, pull],
     };
-    expect(carriedAfterEdit(withoutFly, "mon", carried)).toEqual({ [benchRow.id]: 2 });
+    expect(carriedAfterEdit(withoutFly, "mon", carried)).toEqual({
+      startedOn: carried.startedOn,
+      items: { [benchRow.id]: carried.items[benchRow.id] },
+    });
   });
 
   it("is dropped with a deleted day, which the day that took its place starts clean of", () => {
-    expect(carriedAfterEdit({ ...floatingPushPull, days: [pull] }, "wed", carried)).toEqual({});
-    expect(carriedAfterEdit({ ...floatingPushPull, days: [] }, null, carried)).toEqual({});
+    expect(carriedAfterEdit({ ...floatingPushPull, days: [pull] }, "wed", carried)).toBeNull();
+    expect(carriedAfterEdit({ ...floatingPushPull, days: [] }, null, carried)).toBeNull();
   });
 
-  it("is dropped when the plan stops being floating", () => {
-    expect(carriedAfterEdit(pushPull, null, carried)).toEqual({});
+  it("is kept, unused, while the plan is on weekdays, so a same-day switch back finds it", () => {
+    expect(carriedAfterEdit(pushPull, null, carried)).toBe(carried);
+    const backToFloating = dayIdAfterEdit(pushPull, floatingPushPull, null, nov(16));
+    expect(carriedAfterEdit(floatingPushPull, backToFloating, carried)).toBe(carried);
   });
 
   it("belongs to the day it was earned on: another day's items are not carried", () => {
-    expect(carriedAfterEdit(floatingPushPull, "wed", carried)).toEqual({});
+    expect(carriedAfterEdit(floatingPushPull, "wed", carried)).toBeNull();
+  });
+
+  it("stays nothing when there was nothing", () => {
+    expect(carriedAfterEdit(floatingPushPull, "mon", null)).toBeNull();
   });
 });

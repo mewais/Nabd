@@ -8,7 +8,7 @@ import type {
   RotationState,
   Settings,
 } from "@nabd/domain";
-import { dateKey, exerciseOfSet, isWorkDay, sum } from "@nabd/domain";
+import { NO_SETS, dateKey, exerciseOfSet, isWorkDay, sum } from "@nabd/domain";
 import { DayLedger } from "./day-ledger";
 import { queueEntries, resolveDay } from "./queue-entries";
 import { PlanItem } from "./plan-item";
@@ -33,6 +33,11 @@ export interface TodayPlanInput {
 export class TodayPlan {
   private constructor(
     readonly date: string,
+    /**
+     * The date an unfinished floating day that came back began on; null when
+     * today's visit began today (and always on a weekday plan).
+     */
+    readonly continuesFrom: string | null,
     /** The program day that applies today; null on a rest day or with no plan. */
     private readonly day: Day | null,
     /** What the day owed and what it did. */
@@ -51,6 +56,14 @@ export class TodayPlan {
   }
 
   /**
+   * The session today's sets belong to (see `LoggedSet.session`): the one an
+   * unfinished floating day began on an earlier day, else today's own.
+   */
+  get session(): string {
+    return this.continuesFrom ?? this.date;
+  }
+
+  /**
    * Every set logged today counts somewhere, even after the plan changed under
    * it (plan type switched, exercise removed or replaced): a set whose plan item
    * is gone moves to an untouched item of the same exercise, and failing that is
@@ -63,6 +76,9 @@ export class TodayPlan {
     const today = dateKey(date);
     const sets = new TodaysSets(history.filter((set) => set.date === today));
     const day = resolveDay(program, date, dayState.dayId);
+    const floating = program.schedule === "floating";
+    // What earlier days did counts on a floating plan only: weekdays have no such memory.
+    const visit = floating ? dayState.carried : null;
 
     const { entries, emptySlots } = queueEntries(program, day, rotation, dayState.extras, sets);
 
@@ -71,13 +87,15 @@ export class TodayPlan {
       const exercise = lookup(exId) ?? (firstSet ? exerciseOfSet(firstSet) : null);
       if (!exercise) return [];
       const skipped = dayState.skipped.includes(entry.id);
-      const carried = dayState.carried[entry.id] ?? 0;
+      // What was done counts for the exercise it was done on, not for whatever the slot gives now.
+      const earlier = visit?.items[entry.id];
+      const carried = earlier?.exId === exercise.id ? earlier.sets : NO_SETS;
       const init = { ...entry, exercise, label: label ?? exercise.group, carried, skipped };
       return [new PlanItem(init)];
     });
-    const floating = program.schedule === "floating";
     const ledger = new DayLedger(today, items, floating, isWorkDay({ workDays }, date));
-    return new TodayPlan(today, day, ledger, items, emptySlots);
+    const continuesFrom = visit?.startedOn ?? null;
+    return new TodayPlan(today, continuesFrom, day, ledger, items, emptySlots);
   }
 
   item(id: string): PlanItem | undefined {

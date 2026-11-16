@@ -1,8 +1,9 @@
-import type { Direction, LoggedSet, TrackingType, Trigger } from "@nabd/domain";
+import type { Direction, LoggedSet, SetDay, TrackingType, Trigger } from "@nabd/domain";
 import {
   MAX_AMOUNT,
   MAX_LOAD_KG,
   SECONDS_STEP,
+  boundedLoad,
   clamp,
   isWeighted,
   loggedSet,
@@ -87,8 +88,15 @@ export class LogSession {
     return this.withReps(clamp(this.reps + direction * step, 1, this.mostReps));
   }
 
+  /**
+   * Step the load down or up by `stepKg`, within the loads the exercise can be
+   * given (see `boundedLoad`): a barbell or a dumbbell never steps below one
+   * increment. A step the bounds would turn round (− from a load already
+   * lighter than that) leaves the load as it is.
+   */
   stepWeight(direction: Direction, stepKg: number): LogSession {
-    return this.withWeight(clamp(this.weight + direction * stepKg, 0, MAX_LOAD_KG));
+    const stepped = boundedLoad(this.weight + direction * stepKg, this.tracking, stepKg);
+    return Math.sign(stepped - this.weight) === -direction ? this : this.withWeight(stepped);
   }
 
   /** Start resting for `seconds` from `now`. */
@@ -105,9 +113,9 @@ export class LogSession {
 
   /**
    * The history row for this draft: a set of `item` done at `at`, counting
-   * toward the day `date` (the day that is open, as a date key).
+   * toward the day that is open and belonging to its session (`day`).
    */
-  toLoggedSet(item: PlanItem, id: string, at: Date, date: string): LoggedSet {
+  toLoggedSet(item: PlanItem, id: string, at: Date, day: SetDay): LoggedSet {
     const { reps, weight } = this.performance;
     const details = {
       id,
@@ -117,7 +125,7 @@ export class LogSession {
       planItemId: item.id,
       setType: item.nextSet?.type ?? "working",
     };
-    return loggedSet(item.exercise, at, details, date);
+    return loggedSet(item.exercise, at, details, day);
   }
 
   /** Whole seconds of rest left at `now`. */

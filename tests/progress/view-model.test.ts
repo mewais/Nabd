@@ -6,6 +6,7 @@ import {
   NO_COVERAGE,
   PLANK,
   PULL_UP,
+  history,
   loggedSet,
   progressVM,
   shown,
@@ -25,7 +26,12 @@ describe("fixtures", () => {
 describe("buildProgressVM — KPIs", () => {
   it("reports streak, completion, sets this week and active days", () => {
     expect(progressVM().kpis).toEqual([
-      { label: "Current streak", value: "3", unit: "days" }, // Mon, Tue, Wed
+      {
+        label: "Current streak",
+        value: "3", // Mon, Tue, Wed
+        unit: "days",
+        hint: "Workdays in a row with a set; days off neither add to it nor break it.",
+      },
       { label: "Completion this wk", value: "50", unit: "%" }, // 6 of 12 planned
       { label: "Sets this week", value: "6", unit: "sets" },
       { label: "Active days 30d", value: "4", unit: "days" }, // 19 Oct is day 31
@@ -38,6 +44,18 @@ describe("buildProgressVM — KPIs", () => {
 
     expect(streakAt(new Date(2026, 10, 19, 8, 0))).toBe("3");
     expect(streakAt(new Date(2026, 10, 20, 8, 0))).toBe("0");
+  });
+
+  it("counts workdays only: a weekend with nothing logged keeps the streak", () => {
+    // The following Monday morning, Saturday and Sunday off: the streak still stands at Wednesday's.
+    // (Thursday and Friday had nothing, so it is broken there.)
+    expect(progressVM({ now: new Date(2026, 10, 23, 8, 0) }).kpis[0]?.value).toBe("0");
+    const thursdayAndFriday = [19, 20].map((day) =>
+      loggedSet(BENCH, [11, day, 10, 0], 8, 60, "manual"),
+    );
+    const throughFriday = [...history(), ...thursdayAndFriday];
+    const monday = new Date(2026, 10, 23, 8, 0);
+    expect(progressVM({ sets: throughFriday, now: monday }).kpis[0]?.value).toBe("5");
   });
 });
 

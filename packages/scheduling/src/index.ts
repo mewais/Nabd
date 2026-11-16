@@ -10,3 +10,4 @@ export {
   rotationAfterEdit,
 } from "./after-edit";
 export { rollOver } from "./rollover";
+export { upNext } from "./rotation";

@@ -14,7 +14,7 @@ export class Planner {
 
   /** An option of the program header: "Fixed"/"Cycled" (Plan type), "Weekdays"/"Floating" (Schedule). */
   option(group: "Plan type" | "Schedule", name: string): Locator {
-    return this.screen.getByRole("group", { name: group }).getByRole("button", { name });
+    return this.screen.getByRole("radiogroup", { name: group }).getByRole("radio", { name });
   }
 
   /** A button of the screen by its exact name: "Add a day on Monday", "Delete day", "Move later"… */
@@ -35,9 +35,14 @@ export class Planner {
     return this.screen.getByRole("region", { name, exact: true });
   }
 
-  /** A button of a card: "Move earlier", "Superset ↓", "Unlink", "Remove exercise", "%1RM". */
+  /** A button of a card: "Move earlier", "Superset ↓", "Unlink", "Remove exercise". */
   cardButton(card: string, name: string): Locator {
     return this.card(card).getByRole("button", { name, exact: true });
+  }
+
+  /** A choice of a card's prescription: "Range"/"Fixed" (Rep mode), "None"/"RPE"/"%1RM" (Load). */
+  cardChoice(card: string, name: string): Locator {
+    return this.card(card).getByRole("radio", { name, exact: true });
   }
 
   /** The exercise (or slot) cards of the editor, top to bottom. */

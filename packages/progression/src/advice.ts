@@ -55,8 +55,8 @@ export interface AdviceRequest {
   /** Which set of the session, 0-based, warm-ups excluded. */
   setIndex: number;
   history: ExerciseHistory;
-  /** The session's local date key; only earlier sessions are compared against. */
-  date: string;
+  /** The session the set belongs to (see `LoggedSet.session`); only earlier sessions are compared against. */
+  session: string;
 }
 
 /** The goal a prescribed set asks for; a default window when nothing is prescribed. */

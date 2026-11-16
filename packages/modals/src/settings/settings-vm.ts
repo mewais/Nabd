@@ -6,7 +6,13 @@ import type {
   Theme,
   WeightUnit,
 } from "@nabd/domain";
-import { SETTING_STEPS, formatMinuteOfDay, glassInEffect, roundTo } from "@nabd/domain";
+import {
+  SETTING_STEPS,
+  editableWeight,
+  formatMinuteOfDay,
+  glassInEffect,
+  roundTo,
+} from "@nabd/domain";
 import type { Notice } from "@nabd/view";
 
 /** A change to apply to the settings. */
@@ -40,10 +46,22 @@ export interface WorkdayVM {
   days: number[];
 }
 
+/** The user's body weight, typed in the display unit. */
+export interface BodyWeightVM {
+  /** In the display unit; null while not given (the field is empty). */
+  value: number | null;
+  hint: string;
+}
+
 export interface SettingsVM {
   workday: WorkdayVM;
   nudges: StepperRowVM[];
-  training: { unit: WeightUnit; increment: StepperRowVM; equipment: Equipment[] };
+  training: {
+    unit: WeightUnit;
+    increment: StepperRowVM;
+    bodyWeight: BodyWeightVM;
+    equipment: Equipment[];
+  };
   /** `glass` and `opacity` are null where they are not offered. */
   appearance: { theme: Theme; glass: ToggleRowVM | null; opacity: StepperRowVM | null };
   startup: ToggleRowVM[];
@@ -147,6 +165,15 @@ export function buildSettingsVM({ settings, capabilities, notice }: SettingsInpu
           "The smallest jump you can load; suggestions use it. Changing the unit moves the " +
           "usual step along (2.5 kg ↔ 5 lb) and leaves a step of your own as it is.",
       }),
+      bodyWeight: {
+        value:
+          settings.bodyWeight === null
+            ? null
+            : editableWeight(settings.bodyWeight, settings.weightUnit),
+        hint:
+          `In ${settings.weightUnit}. With it, a %1RM or an RPE can set the added weight (or ` +
+          "assistance) of dips, pull-ups and the like; left empty, those exercises ignore them.",
+      },
       equipment: settings.equipment,
     },
     appearance: {

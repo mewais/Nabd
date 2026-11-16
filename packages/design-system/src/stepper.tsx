@@ -14,8 +14,10 @@ interface DisplayStepperProps {
   onSet?: undefined;
   /** `large` (default) for forms; `mini` for dense table rows. */
   size?: StepperSize;
-  /** What is being stepped: names the group. */
-  ariaLabel?: string;
+  /** What is being stepped: names the group, and its − and + after it ("Decrease interval"). */
+  ariaLabel: string;
+  /** Leave the group unnamed, where what holds it already carries the name (a settings row). */
+  inLabelledRow?: boolean;
 }
 
 /** With `onSet` the value is shown in a field the user can also type into (see {@link TypedStepper}). */
@@ -27,9 +29,9 @@ const VALUE_WIDTH: Record<StepperSize, number> = { mini: 24, large: 56 };
 /** A "− value +" control. With `onSet` the value can also be typed. */
 export function Stepper(props: StepperProps): JSX.Element {
   if (props.onSet !== undefined) return <TypedStepper {...props} />;
-  const { value, onStep, size = "large", ariaLabel } = props;
+  const { value, onStep, size = "large", ariaLabel, inLabelledRow = false } = props;
   return (
-    <StepperFrame onStep={onStep} size={size} groupLabel={ariaLabel}>
+    <StepperFrame onStep={onStep} size={size} name={ariaLabel} namesGroup={!inLabelledRow}>
       <span style={{ ...TEXT.monoValue, minWidth: VALUE_WIDTH[size], textAlign: "center" }}>
         {value}
       </span>

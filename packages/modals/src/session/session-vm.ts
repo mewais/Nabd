@@ -1,11 +1,15 @@
 import type { WeightUnit } from "@nabd/domain";
 import {
+  addDays,
   editableWeight,
   formatDuration,
   isTimeBased,
   isWeighted,
+  monthShort,
   muscleList,
+  parseDateKey,
   plural,
+  weekdayName,
 } from "@nabd/domain";
 import type { PlanItem, TodayPlan } from "@nabd/scheduling";
 import type { Coach, LogSession, NextSetWording } from "@nabd/session";
@@ -52,6 +56,11 @@ export interface SetFormVM {
 }
 
 export interface SessionVM {
+  /**
+   * Under the title: "Continuing Monday's Push — what was done then counts."
+   * when an unfinished floating day came back, else what the logger is for.
+   */
+  subtitle: string;
   list: SessionListRowVM[];
   form: SetFormVM;
   /** How much has been logged today, across all exercises. */
@@ -113,12 +122,34 @@ interface SessionInput {
   unsaved: readonly string[];
 }
 
+const SUBTITLE = "One set, or as many as you have time for — switch exercises freely.";
+/** Within a week, a weekday names a day unambiguously; beyond, the date does. */
+const DAYS_NAMED_BY_WEEKDAY = 6;
+
+/** "Monday's", within the week before `today`; "Nov 2's" further back. */
+function dayPossessive(dateKey: string, today: string): string {
+  const date = parseDateKey(dateKey);
+  const recent = addDays(date, DAYS_NAMED_BY_WEEKDAY) >= parseDateKey(today);
+  const name = recent
+    ? weekdayName(date.getDay())
+    : `${monthShort(date.getMonth())} ${date.getDate()}`;
+  return `${name}'s`;
+}
+
+/** What the logger says under its title: which earlier day it continues, if it does. */
+function subtitle(plan: TodayPlan): string {
+  if (plan.continuesFrom === null) return SUBTITLE;
+  const day = plan.dayName ?? "day";
+  return `Continuing ${dayPossessive(plan.continuesFrom, plan.date)} ${day} — what was done then counts.`;
+}
+
 /** Null when the session's exercise is no longer in today's plan. */
 export function buildSessionVM(input: SessionInput): SessionVM | null {
   const { session, plan } = input;
   const item = plan.item(session.itemId);
   if (!item) return null;
   return {
+    subtitle: subtitle(plan),
     list: plan.items.map((other) => buildListRowVM(other, item.id)),
     form: buildSetFormVM(item, input),
     footer:

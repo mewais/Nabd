@@ -294,6 +294,9 @@ importers:
       '@nabd/domain':
         specifier: workspace:*
         version: link:../domain
+      '@nabd/scheduling':
+        specifier: workspace:*
+        version: link:../scheduling
 
   packages/session:
     dependencies:

@@ -1,7 +1,7 @@
 import type { Program } from "@nabd/domain";
 import { DEFAULT_SETTINGS, dateKey } from "@nabd/domain";
 import { createNabdStore } from "@nabd/store";
-import { nov } from "../support/builders";
+import { carry, nov, visit } from "../support/builders";
 import { CATALOG } from "../support/exercises";
 import { catalogBenchRow, catalogPushPull } from "../support/programs";
 import { boot, fakeBackend } from "./fixtures";
@@ -33,9 +33,24 @@ describe("booting", () => {
       program: catalogPushPull,
       dayState: { date: dateKey(nov(16)), dayId: "pull", skipped: [], extras: [], paused: false },
     });
-    expect(app.get().dayState).toMatchObject({ dayId: "pull", carried: {} });
+    expect(app.get().dayState).toMatchObject({ dayId: "pull", carried: null });
     expect(app.get().loadProblems).toEqual([]);
-    expect(app.data.dayState).toMatchObject({ carried: {} });
+    expect(app.data.dayState).toMatchObject({ carried: null });
+  });
+
+  it("reads carried counts stored before they knew their kind, and writes them back upgraded", async () => {
+    const app = await boot(
+      {
+        program: catalogPushPull,
+        dayState: { date: dateKey(nov(17)), dayId: "push", carried: { [catalogBenchRow.id]: 2 } },
+      },
+      undefined,
+      nov(17, 10),
+    );
+    const carried = visit(nov(17), { [catalogBenchRow.id]: carry(CATALOG.bench, { working: 2 }) });
+    expect(app.get().dayState.carried).toEqual(carried);
+    expect(app.data.dayState).toMatchObject({ carried });
+    expect(app.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, remaining: 1 });
   });
 
   it("brings the OS in line with the stored autostart and translucency settings", async () => {

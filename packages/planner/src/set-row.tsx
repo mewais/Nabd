@@ -31,7 +31,8 @@ export function SetRow({ vm, columns, hasIntensityColumn, onEdit }: SetRowProps)
       >
         {vm.badge}
       </Badge>
-      <Row gap="xs">
+      {/* A range that does not fit its column goes on to a second line rather than under the next one. */}
+      <Row gap="xs" wrap>
         <Stepper
           size="mini"
           ariaLabel={labels.amount}

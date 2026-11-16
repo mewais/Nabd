@@ -116,7 +116,7 @@ describe("Today · nothing to do", () => {
     expect(screen.getByText("Everything skipped today")).toBeInTheDocument();
     expect(screen.getByText(/Restore an exercise from the queue/)).toBeInTheDocument();
     expect(screen.queryByText("Rest day")).toBeNull();
-    expect(screen.getAllByRole("button", { name: "Restore" })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: /^Restore / })).toHaveLength(3);
 
     click("Log something else");
     expect(actions.logOther).toHaveBeenCalledTimes(1);

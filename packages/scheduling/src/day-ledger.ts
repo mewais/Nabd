@@ -1,5 +1,5 @@
-import type { CarriedSets, DayRecord } from "@nabd/domain";
-import { sum } from "@nabd/domain";
+import type { CarriedItems, DayRecord } from "@nabd/domain";
+import { sum, totalSets } from "@nabd/domain";
 import type { PlanItem } from "./plan-item";
 
 /**
@@ -32,10 +32,13 @@ export class DayLedger {
     return remaining === 0 && (this.workday || this.setsLogged > 0);
   }
 
-  /** How many of each prescribed exercise is done, by item id: what a day that comes back starts from. */
-  get carryOver(): CarriedSets {
-    const done = this.items.filter((i) => i.completed > 0);
-    return Object.fromEntries(done.map((i) => [i.id, i.completed]));
+  /**
+   * What each prescribed item has done, of which exercise, by item id: what a
+   * day that comes back starts from. Items with nothing done are left out.
+   */
+  get carryOver(): CarriedItems {
+    const done = this.items.filter((i) => totalSets(i.completed) > 0);
+    return Object.fromEntries(done.map((i) => [i.id, { exId: i.exercise.id, sets: i.completed }]));
   }
 
   /**
@@ -57,6 +60,18 @@ export class DayLedger {
       planned,
       done: sum(this.items, (i) => Math.min(i.logged.length, i.owed)),
     };
+  }
+
+  /**
+   * How the day that is open stands so far, as Today shows it: read like the
+   * record of a day the plan has moved on from, so a floating day counts from
+   * the moment the plan is on it and Progress agrees with Today on what is
+   * planned. Whether an idle floating day stays on record is for the
+   * rollover to decide ({@link record}); a day off counts only once a set is
+   * logged on it.
+   */
+  soFar(): DayRecord | null {
+    return this.record(true);
   }
 
   /** Whether a day with no set logged was not due to be trained (see {@link record}). */

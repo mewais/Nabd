@@ -79,7 +79,7 @@ test("the weight unit and increment re-render weights and reshape suggestions", 
   await shell.button("Settings").click();
 
   await test.step("pounds: the usual 2.5 kg step becomes the usual 5 lb step", async () => {
-    await settings.option("Weight unit", "lb").click();
+    await settings.choice("Weight unit", "lb").click();
     await expect(settings.row("Weight increment").getByRole("group")).toHaveText("5 lb");
     await expect(today.screen).toContainText("Try 9 × 44.1 lb or 8 × 49.1 lb");
     await expect(today.screen).toContainText("Last time: 8 × 44.1 lb");
@@ -87,7 +87,7 @@ test("the weight unit and increment re-render weights and reshape suggestions", 
   });
 
   await test.step("back to kilograms, in smaller steps", async () => {
-    await settings.option("Weight unit", "kg").click();
+    await settings.choice("Weight unit", "kg").click();
     await expect(settings.row("Weight increment").getByRole("group")).toHaveText("2.5 kg");
     await step(settings.row("Weight increment"), "decrease", 2);
     await expect(settings.row("Weight increment").getByRole("group")).toHaveText("2 kg");
@@ -97,7 +97,7 @@ test("the weight unit and increment re-render weights and reshape suggestions", 
   });
 
   await test.step("an increment of the user's own keeps its number across units", async () => {
-    await settings.option("Weight unit", "lb").click();
+    await settings.choice("Weight unit", "lb").click();
     await expect(settings.row("Weight increment").getByRole("group")).toHaveText("0.25 lb");
   });
 
@@ -212,12 +212,12 @@ test("the theme can be switched from Settings and from the top bar", async ({ ap
   await expect(shell.root).toHaveAttribute("data-theme", "dark");
 
   await shell.button("Settings").click();
-  await settings.option("Theme", "Light").click();
+  await settings.choice("Theme", "Light").click();
   await expect(shell.root).toHaveAttribute("data-theme", "light");
   await settings.close();
-  await expect(shell.button("Light")).toHaveAttribute("aria-pressed", "true");
+  await expect(shell.theme("Light")).toBeChecked();
 
-  await shell.button("Dark").click();
+  await shell.theme("Dark").click();
   await expect(shell.root).toHaveAttribute("data-theme", "dark");
 });
 
