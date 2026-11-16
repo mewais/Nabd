@@ -24,15 +24,6 @@ use linux as platform;
 #[cfg(windows)]
 use windows as platform;
 
-/// macOS is not a supported target yet: there is no backend, so the frontend
-/// always uses its in-page fallback there.
-#[cfg(not(any(target_os = "linux", windows)))]
-mod platform {
-    pub fn connect() -> Option<Box<dyn super::IdleSource>> {
-        None
-    }
-}
-
 /// One way of asking the OS for the idle time. Implementations keep their
 /// connection open: they are sampled once a second.
 pub trait IdleSource: Send {

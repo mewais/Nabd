@@ -1,11 +1,11 @@
-import { EXERCISE, day, floatingProgram, planned, workingSets } from "../support/data";
+import { EXERCISE, day, plan, planned, workingSets } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
 const { bench, raise, curl } = EXERCISE;
 
 /** One day of 7 sets: a main lift with a warm-up, then a superset. Default settings: 09:00–18:00, 50 / 15 min, 30 s. */
-const program = floatingProgram([
+const program = plan([
   day("Push", [
     planned(bench.id, { sets: [{ type: "warmup", a: 12 }, ...workingSets(2)] }),
     planned(raise.id, { supersetId: "superset", rest: 60 }),
@@ -103,6 +103,7 @@ test("after a set: the next nudge, an idle moment, Snooze and Pause", async ({ a
     await app.idleFor(1);
     await expect(shell.toast).toContainText("You've gone quiet");
     await expect(shell.toast).toContainText("Chest · set 2 of 3");
+    await expect(today.screen.getByRole("button", { name: "Snooze 5m" })).toBeVisible();
   });
 
   await test.step("Snooze hides the nudge for five minutes", async () => {
@@ -133,5 +134,35 @@ test("after a set: the next nudge, an idle moment, Snooze and Pause", async ({ a
     await shell.button("Resume").click();
     await app.tick();
     await expect(shell.toast).toContainText("Interval's up");
+  });
+});
+
+test("an unanswered nudge waits; an unused logger and the end of the workday quieten it", async ({
+  app,
+}) => {
+  const { shell, logger } = app;
+  await app.launch(at("17:00"), { program });
+
+  await test.step("an idle nudge stays up when the user comes back to the mouse", async () => {
+    await app.idleFor(15);
+    await expect(shell.toast).toContainText("You've gone quiet");
+    await app.busyFor(2);
+    await expect(shell.toast).toContainText("You've gone quiet");
+  });
+
+  await test.step("closing the logger without logging keeps it quiet for the length of a snooze", async () => {
+    await shell.letsGo.click();
+    await logger.done();
+    await app.idleFor(4);
+    await expect(shell.status).toContainText("17:21");
+    await expect(shell.toast).toBeHidden();
+    await app.idleFor(1);
+    await expect(shell.toast).toBeVisible();
+  });
+
+  await test.step("the workday ending withdraws it", async () => {
+    await app.sleepUntil(at("18:00"));
+    await expect(shell.toast).toBeHidden();
+    await expect(shell.status).toContainText("Quiet until 09:00");
   });
 });

@@ -28,41 +28,48 @@ pub struct TrayItem {
     pub enabled: bool,
 }
 
-/// Where the day stands, in one line.
-fn status_line(state: &TrayState) -> String {
-    let progress = format!("{}/{} sets", state.done, state.total);
-    match &state.next_exercise {
-        Some(exercise) => format!("Next: {exercise} · {progress}"),
-        None if state.total == 0 => "Nothing planned today".to_string(),
-        None => format!("All done · {progress}"),
+impl TrayItem {
+    fn new(id: &'static str, label: &str, enabled: bool) -> Self {
+        Self {
+            id,
+            label: label.to_string(),
+            enabled,
+        }
     }
 }
 
-/// The tray menu: status line, Start next set, Pause/Resume, Open, Quit.
-pub fn tray_items(state: &TrayState) -> Vec<TrayItem> {
-    let pause = if state.paused {
-        "Resume nudges"
-    } else {
-        "Pause nudges"
-    };
-    let item = |id, label: &str, enabled| TrayItem {
-        id,
-        label: label.to_string(),
-        enabled,
-    };
-    vec![
-        item(TRAY_STATUS, &status_line(state), false),
-        item(TRAY_START, "Start next set", state.next_exercise.is_some()),
-        item(TRAY_PAUSE, pause, true),
-        item(TRAY_OPEN, "Open Nabd", true),
-        item(TRAY_QUIT, "Quit", true),
-    ]
-}
+impl TrayState {
+    /// Where the day stands, in one line.
+    fn status_line(&self) -> String {
+        let progress = format!("{}/{} sets", self.done, self.total);
+        match &self.next_exercise {
+            Some(exercise) => format!("Next: {exercise} · {progress}"),
+            None if self.total == 0 => "Nothing planned today".to_string(),
+            None => format!("All done · {progress}"),
+        }
+    }
 
-/// The text shown when the pointer rests on the tray icon.
-pub fn tray_tooltip(state: &TrayState) -> String {
-    let paused = if state.paused { " (paused)" } else { "" };
-    format!("Nabd{paused} — {}", status_line(state))
+    /// The tray menu: status line, Start next set, Pause/Resume, Open, Quit.
+    pub fn items(&self) -> Vec<TrayItem> {
+        let pause = if self.paused {
+            "Resume nudges"
+        } else {
+            "Pause nudges"
+        };
+        vec![
+            TrayItem::new(TRAY_STATUS, &self.status_line(), false),
+            TrayItem::new(TRAY_START, "Start next set", self.next_exercise.is_some()),
+            TrayItem::new(TRAY_PAUSE, pause, true),
+            TrayItem::new(TRAY_OPEN, "Open Nabd", true),
+            TrayItem::new(TRAY_QUIT, "Quit", true),
+        ]
+    }
+
+    /// The text shown when the pointer rests on the tray icon.
+    pub fn tooltip(&self) -> String {
+        let paused = if self.paused { " (paused)" } else { "" };
+        format!("Nabd{paused} — {}", self.status_line())
+    }
 }
 
 /// What choosing a tray menu entry asks for.

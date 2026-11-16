@@ -6,10 +6,10 @@ import { App } from "./app";
  * An exception thrown inside the page fails the test that caused it.
  */
 export const test = base.extend<{ app: App }>({
-  app: async ({ page }, use) => {
+  app: async ({ page }, runTest) => {
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
-    await use(new App(page));
+    await runTest(new App(page));
     expect(pageErrors, "exceptions thrown inside the page").toEqual([]);
   },
 });

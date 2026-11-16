@@ -2101,6 +2101,7 @@ dependencies = [
  "nabd-ipc",
  "nabd-native",
  "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-autostart",

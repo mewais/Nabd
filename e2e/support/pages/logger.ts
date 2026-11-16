@@ -13,8 +13,9 @@ export class Logger {
   readonly exercise: Locator;
   /** Reps, or seconds for a timed exercise. */
   readonly reps: Locator;
-  /** The load, in the display unit. */
+  /** The load, in the display unit, and the − / + stepper around it. */
   readonly weight: Locator;
+  readonly weightStepper: Locator;
   /** The coach's targets, each a button that puts it in the form: ["9 × 25 lb", "8 × 27.5 lb"]. */
   readonly suggestions: Locator;
   /** "Rest 1:30" while resting. */
@@ -26,10 +27,15 @@ export class Logger {
     this.dialog = page.getByRole("dialog", { name: "This break" });
     this.exercise = this.dialog.getByRole("heading", { level: 3 });
     this.reps = this.dialog.getByRole("spinbutton", { name: /^(Reps|Sec)$/ });
-    this.weight = this.dialog.getByRole("spinbutton", { name: /\((kg|lb)\)$/ });
+    this.weightStepper = this.dialog
+      .getByRole("group")
+      .filter({ has: page.getByRole("spinbutton", { name: /\((kg|lb)\)$/ }) });
+    this.weight = this.weightStepper.getByRole("spinbutton");
     this.suggestions = this.dialog.getByTitle("Use this");
     this.rest = this.dialog.getByRole("timer");
-    this.loggedSets = this.dialog.getByRole("region", { name: "Logged today" }).getByRole("listitem");
+    this.loggedSets = this.dialog
+      .getByRole("region", { name: "Logged today" })
+      .getByRole("listitem");
   }
 
   /** A button of the logger: "Done", "+ Something else", "Delete set 1". */

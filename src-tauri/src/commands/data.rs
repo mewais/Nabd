@@ -1,6 +1,6 @@
 //! Commands over the user's data (the command core in `nabd-ipc`).
 
-use nabd_ipc::Commands;
+use nabd_ipc::DataCommands;
 use tauri::{AppHandle, Runtime, State};
 
 use crate::db::Database;
@@ -9,7 +9,7 @@ use crate::export;
 
 #[tauri::command]
 pub fn load_all(db: State<'_, Database>) -> AppResult<String> {
-    db.with(Commands::load_all)
+    db.with(DataCommands::load_all)
 }
 
 #[tauri::command]

@@ -11,6 +11,7 @@ export default [
       "**/coverage/**",
       "**/target/**",
       "**/node_modules/**",
+      "e2e/test-results/**",
       "assets/body/**",
     ],
   },

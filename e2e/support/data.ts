@@ -57,8 +57,8 @@ export function day(name: string, exercises: ExercisePrescription[], more: Parti
   return { id: name.toLowerCase(), name, weekday: null, exercises, slots: [], ...more };
 }
 
-/** A plan whose days come round in order; fixed unless `more` says otherwise. */
-export function floatingProgram(days: Day[], more: Partial<Program> = {}): Program {
+/** A fixed plan whose days come round in order, unless `more` says otherwise. */
+export function plan(days: Day[], more: Partial<Program> = {}): Program {
   return { name: "Desk plan", type: "fixed", schedule: "floating", days, ...more };
 }
 

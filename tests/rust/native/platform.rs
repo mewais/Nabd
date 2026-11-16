@@ -1,34 +1,36 @@
 //! Platform capabilities.
 
-use nabd_native::{glass_effect, tray_host_present, Capabilities, GlassEffect, Platform};
+use nabd_native::{tray_host_present, Capabilities, GlassEffect, Platform};
 
 const WINDOWS_10: Platform = Platform::Windows { build: 19_045 };
 const WINDOWS_11: Platform = Platform::Windows { build: 22_631 };
+const LINUX_WITH_TRAY: Platform = Platform::Linux { tray_host: true };
+const LINUX_WITHOUT_TRAY: Platform = Platform::Linux { tray_host: false };
 
 // ── glass ────────────────────────────────────────────────────────────────────
 
 #[test]
 fn windows_11_gets_mica_from_its_first_build() {
     assert_eq!(
-        glass_effect(Platform::Windows { build: 22_000 }),
+        Platform::Windows { build: 22_000 }.glass_effect(),
         Some(GlassEffect::Mica)
     );
-    assert_eq!(glass_effect(WINDOWS_11), Some(GlassEffect::Mica));
+    assert_eq!(WINDOWS_11.glass_effect(), Some(GlassEffect::Mica));
 }
 
 #[test]
 fn windows_10_gets_blur() {
-    assert_eq!(glass_effect(WINDOWS_10), Some(GlassEffect::Blur));
+    assert_eq!(WINDOWS_10.glass_effect(), Some(GlassEffect::Blur));
     assert_eq!(
-        glass_effect(Platform::Windows { build: 21_999 }),
+        Platform::Windows { build: 21_999 }.glass_effect(),
         Some(GlassEffect::Blur)
     );
 }
 
 #[test]
-fn linux_and_macos_have_no_glass() {
-    assert_eq!(glass_effect(Platform::Linux), None);
-    assert_eq!(glass_effect(Platform::MacOs), None);
+fn linux_has_no_glass() {
+    assert_eq!(LINUX_WITH_TRAY.glass_effect(), None);
+    assert_eq!(LINUX_WITHOUT_TRAY.glass_effect(), None);
 }
 
 // ── tray host ────────────────────────────────────────────────────────────────
@@ -50,20 +52,20 @@ fn a_watcher_that_cannot_be_asked_counts_as_no_host() {
 #[test]
 fn linux_has_a_tray_only_with_a_host_and_never_glass() {
     assert_eq!(
-        Capabilities::decide(Platform::Linux, true, true),
+        Capabilities::decide(LINUX_WITH_TRAY, true),
         Capabilities {
             tray: true,
             glass: false,
             idle: true
         }
     );
-    assert!(!Capabilities::decide(Platform::Linux, false, true).tray);
+    assert!(!Capabilities::decide(LINUX_WITHOUT_TRAY, true).tray);
 }
 
 #[test]
 fn windows_always_has_a_tray_and_glass() {
     for platform in [WINDOWS_10, WINDOWS_11] {
-        let capabilities = Capabilities::decide(platform, false, true);
+        let capabilities = Capabilities::decide(platform, true);
         assert!(capabilities.tray);
         assert!(capabilities.glass);
     }
@@ -71,14 +73,14 @@ fn windows_always_has_a_tray_and_glass() {
 
 #[test]
 fn idle_follows_whether_a_source_was_found() {
-    assert!(Capabilities::decide(Platform::Linux, true, true).idle);
-    assert!(!Capabilities::decide(Platform::Linux, true, false).idle);
-    assert!(!Capabilities::decide(Platform::MacOs, true, false).idle);
+    assert!(Capabilities::decide(LINUX_WITH_TRAY, true).idle);
+    assert!(!Capabilities::decide(LINUX_WITH_TRAY, false).idle);
+    assert!(!Capabilities::decide(WINDOWS_11, false).idle);
 }
 
 #[test]
 fn capabilities_serialise_as_the_three_flags_the_frontend_reads() {
-    let capabilities = Capabilities::decide(WINDOWS_11, true, false);
+    let capabilities = Capabilities::decide(WINDOWS_11, false);
     assert_eq!(
         serde_json::to_value(capabilities).unwrap(),
         serde_json::json!({"tray": true, "glass": true, "idle": false})

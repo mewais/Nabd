@@ -1,11 +1,11 @@
-import { EXERCISE, day, floatingProgram, planned } from "../support/data";
+import { EXERCISE, day, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
 const { bench, curl, pushUp } = EXERCISE;
 
 /** Two exercises of two sets each. */
-const program = floatingProgram([day("Push", [planned(bench.id), planned(curl.id)])]);
+const program = plan([day("Push", [planned(bench.id), planned(curl.id)])]);
 
 test("a nudge is an invitation: any order, extra sets, extras, skipping and undoing", async ({
   app,
@@ -92,4 +92,19 @@ test("an extra added by mistake can be removed until it has a set", async ({ app
   await expect(today.row(pushUp.name)).toContainText("0 sets");
   await today.rowButton(pushUp.name, "Remove").click();
   await expect(today.row(pushUp.name)).toBeHidden();
+});
+
+test("a number in the set form can be deleted and typed afresh", async ({ app }) => {
+  test.fail(
+    true,
+    "an emptied Reps or Weight field snaps back to its old value, so the digits typed next are appended to it",
+  );
+  const { today, logger } = app;
+  await app.launch(at("10:00"), { program });
+  await today.startSet.click();
+  await expect(logger.reps).toHaveValue("8");
+
+  await logger.reps.press("Backspace");
+  await logger.reps.pressSequentially("12");
+  await expect(logger.reps).toHaveValue("12");
 });

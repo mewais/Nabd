@@ -23,6 +23,18 @@ impl SessionKind {
             Self::Unknown
         }
     }
+
+    /// The backends worth trying in this session, best first; the first that
+    /// answers is used. Mutter leads because it is the only one GNOME offers:
+    /// it has neither the Wayland protocol nor `GetSessionIdleTime`.
+    pub fn idle_backends(self) -> &'static [IdleBackend] {
+        use IdleBackend::{Mutter, SessionIdleTime, WaylandIdleNotify, XScreenSaver};
+        match self {
+            Self::Wayland => &[Mutter, WaylandIdleNotify, SessionIdleTime],
+            Self::X11 => &[Mutter, XScreenSaver, SessionIdleTime],
+            Self::Unknown => &[Mutter, SessionIdleTime],
+        }
+    }
 }
 
 /// A way of asking a Linux desktop how long the user has been idle.
@@ -36,18 +48,6 @@ pub enum IdleBackend {
     XScreenSaver,
     /// `org.freedesktop.ScreenSaver.GetSessionIdleTime` (KDE implements it).
     SessionIdleTime,
-}
-
-/// The backends worth trying in a session, best first; the first that answers
-/// is used. Mutter leads because it is the only one GNOME offers: it has
-/// neither the Wayland protocol nor `GetSessionIdleTime`.
-pub fn idle_backends(session: SessionKind) -> &'static [IdleBackend] {
-    use IdleBackend::{Mutter, SessionIdleTime, WaylandIdleNotify, XScreenSaver};
-    match session {
-        SessionKind::Wayland => &[Mutter, WaylandIdleNotify, SessionIdleTime],
-        SessionKind::X11 => &[Mutter, XScreenSaver, SessionIdleTime],
-        SessionKind::Unknown => &[Mutter, SessionIdleTime],
-    }
 }
 
 /// Milliseconds from `earlier` to `now` on a 32-bit millisecond tick counter

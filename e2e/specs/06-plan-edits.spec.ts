@@ -1,10 +1,10 @@
-import { EXERCISE, day, floatingProgram, planned } from "../support/data";
+import { EXERCISE, day, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
 const { bench, curl, squat } = EXERCISE;
 
-const program = floatingProgram([
+const program = plan([
   day("Push", [planned(bench.id), planned(curl.id)]),
   day("Legs", [planned(squat.id)]),
 ]);
@@ -51,10 +51,30 @@ test("deleting an exercise that has sets today keeps them listed and counted", a
   await expect(shell.ring).toHaveAccessibleName("0 of 2 sets done today");
 });
 
+test("a custom exercise deleted from the library keeps the sets logged of it", async ({ app }) => {
+  const { today, logger, library } = app;
+
+  await today.logSomethingElse.click();
+  await library.createCustom("Desk Dips", "Triceps");
+  await library.add("Desk Dips");
+  await logger.log({ reps: 12 });
+  await logger.done();
+  await expect(today.row("Desk Dips")).toContainText("1 set");
+
+  await today.logSomethingElse.click();
+  await library.search.fill("Desk Dips");
+  await library.button("Delete custom exercise").click();
+  await expect(library.row("Desk Dips")).toBeHidden();
+  await library.close();
+  await expect(today.row("Desk Dips")).toContainText("1 set");
+  await expect(today.stat("This week")).toContainText("2");
+});
+
 test("reordering floating days leaves today on the day it is on", async ({ app }) => {
   const { shell, today, planner } = app;
 
   await shell.goTo("Plan");
+  await planner.dayCard("Push").click();
   await expect(planner.screen).toContainText("Day 1 · floating");
   await planner.button("Move later").first().click();
   await expect(planner.screen).toContainText("Day 2 · floating");
@@ -63,4 +83,18 @@ test("reordering floating days leaves today on the day it is on", async ({ app }
   await shell.goTo("Today");
   await expect(today.row(bench.name)).toContainText("1/2 sets");
   await expect(today.row(squat.name)).toBeHidden();
+});
+
+test("moving the day the editor opened on keeps the editor on that day", async ({ app }) => {
+  test.fail(
+    true,
+    "with no day picked on the board the editor shows whichever day is first, so it jumps to the other day",
+  );
+  const { shell, planner } = app;
+
+  await shell.goTo("Plan");
+  await expect(planner.dayName).toHaveValue("Push");
+  await planner.button("Move later").first().click();
+  await expect(planner.dayCard("Push")).toContainText("Day 2");
+  await expect(planner.dayName).toHaveValue("Push");
 });

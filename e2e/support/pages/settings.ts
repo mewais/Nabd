@@ -29,7 +29,11 @@ export class Settings {
   async importData(text: string): Promise<void> {
     const chooser = this.page.waitForEvent("filechooser");
     await this.dialog.getByRole("button", { name: "Import data" }).click();
-    const file = { name: "nabd-export.json", mimeType: "application/json", buffer: Buffer.from(text) };
+    const file = {
+      name: "nabd-export.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(text),
+    };
     await (await chooser).setFiles(file);
   }
 

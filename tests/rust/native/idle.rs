@@ -1,6 +1,6 @@
 //! Idle backend selection and tick-counter arithmetic.
 
-use nabd_native::{idle_backends, millis_since, IdleBackend, SessionKind};
+use nabd_native::{millis_since, IdleBackend, SessionKind};
 
 // ── session detection ────────────────────────────────────────────────────────
 
@@ -36,7 +36,7 @@ fn empty_or_missing_variables_mean_an_unknown_session() {
 #[test]
 fn gnome_is_asked_first_in_every_session() {
     for session in [SessionKind::Wayland, SessionKind::X11, SessionKind::Unknown] {
-        assert_eq!(idle_backends(session)[0], IdleBackend::Mutter);
+        assert_eq!(session.idle_backends()[0], IdleBackend::Mutter);
     }
 }
 
@@ -44,7 +44,7 @@ fn gnome_is_asked_first_in_every_session() {
 fn a_wayland_session_never_asks_the_x_server() {
     // XWayland's idle counter only sees input given to X clients.
     assert_eq!(
-        idle_backends(SessionKind::Wayland),
+        SessionKind::Wayland.idle_backends(),
         [
             IdleBackend::Mutter,
             IdleBackend::WaylandIdleNotify,
@@ -56,7 +56,7 @@ fn a_wayland_session_never_asks_the_x_server() {
 #[test]
 fn an_x11_session_asks_the_x_server_and_never_wayland() {
     assert_eq!(
-        idle_backends(SessionKind::X11),
+        SessionKind::X11.idle_backends(),
         [
             IdleBackend::Mutter,
             IdleBackend::XScreenSaver,
@@ -68,7 +68,7 @@ fn an_x11_session_asks_the_x_server_and_never_wayland() {
 #[test]
 fn an_unknown_session_only_has_the_dbus_services() {
     assert_eq!(
-        idle_backends(SessionKind::Unknown),
+        SessionKind::Unknown.idle_backends(),
         [IdleBackend::Mutter, IdleBackend::SessionIdleTime]
     );
 }

@@ -1,13 +1,44 @@
-//! The main window: bringing it forward, showing it discreetly, and what
-//! closing it means.
+//! The main window: creating it, bringing it forward, showing it discreetly,
+//! and what closing it means.
 //!
 //! Window calls can only fail once the window or the event loop is gone (the
 //! app is shutting down), so their results are deliberately dropped.
 
-use nabd_native::{close_action, Capabilities, CloseAction};
-use tauri::{AppHandle, Manager, Runtime, WebviewWindow, Window, WindowEvent};
+use nabd_native::{Capabilities, CloseAction, Platform};
+use tauri::window::Color;
+use tauri::{
+    AppHandle, Manager, Runtime, WebviewUrl, WebviewWindow, WebviewWindowBuilder, Window,
+    WindowEvent,
+};
 
+use crate::error::AppResult;
+
+/// The label the capability file grants the app's commands to.
 const MAIN_WINDOW: &str = "main";
+const TITLE: &str = "Nabḍ · نبض";
+const SIZE: (f64, f64) = (1280.0, 820.0);
+const MIN_SIZE: (f64, f64) = (980.0, 640.0);
+/// What an opaque window shows until the page has painted: the dark theme's
+/// background, so a launch does not flash white.
+const BACKGROUND: Color = Color(0x15, 0x18, 0x1f, 0xff);
+
+/// Create the main window, hidden: the launch decides whether it is shown.
+/// It is transparent only where a glass effect can go behind it; elsewhere
+/// it is opaque.
+pub fn create<R: Runtime>(app: &AppHandle<R>, platform: Platform) -> AppResult<()> {
+    let translucent = platform.glass_effect().is_some();
+    let mut window = WebviewWindowBuilder::new(app, MAIN_WINDOW, WebviewUrl::default())
+        .title(TITLE)
+        .inner_size(SIZE.0, SIZE.1)
+        .min_inner_size(MIN_SIZE.0, MIN_SIZE.1)
+        .visible(false)
+        .transparent(translucent);
+    if !translucent {
+        window = window.background_color(BACKGROUND);
+    }
+    window.build()?;
+    Ok(())
+}
 
 pub fn main_window<R: Runtime>(app: &AppHandle<R>) -> Option<WebviewWindow<R>> {
     app.get_webview_window(MAIN_WINDOW)
@@ -73,13 +104,6 @@ fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
     }
 }
 
-/// macOS (not a supported target yet): plain `show()`, which does not
-/// activate the app.
-#[cfg(not(any(target_os = "linux", windows)))]
-fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
-    let _ = window.show();
-}
-
 /// Closing the window hides it while there is a tray to live in; otherwise the
 /// close goes through, and Tauri exits the app with its last window.
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
@@ -87,7 +111,7 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
         return;
     };
     let tray = window.state::<Capabilities>().tray;
-    if close_action(tray) == CloseAction::HideToTray {
+    if CloseAction::for_tray(tray) == CloseAction::HideToTray {
         api.prevent_close();
         let _ = window.hide();
     }

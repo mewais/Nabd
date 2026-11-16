@@ -28,12 +28,14 @@ authors.workspace = true
 license.workspace = true
 default-run = "nabd"
 
+# Named apart from the binary: on Windows a library and a binary of the same
+# name collide.
 [lib]
 name = "nabd_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+serde_json = { workspace = true }
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }

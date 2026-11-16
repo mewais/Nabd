@@ -5,12 +5,16 @@ use serde::Serialize;
 /// The first Windows 11 build; Mica does not exist before it.
 const WINDOWS_11_BUILD: u32 = 22_000;
 
-/// The operating system, as far as native features care.
+/// The supported platforms, each with the fact native features turn on.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Platform {
-    Windows { build: u32 },
-    MacOs,
-    Linux,
+    Windows {
+        build: u32,
+    },
+    Linux {
+        /// Something draws tray icons in this session (see [`tray_host_present`]).
+        tray_host: bool,
+    },
 }
 
 /// The one backdrop effect used for the translucent ("Glass") window.
@@ -22,15 +26,25 @@ pub enum GlassEffect {
     Blur,
 }
 
-/// The backdrop effect for a platform, or None where the window cannot be
-/// translucent: Linux has no compositor-independent blur (a transparent window
-/// would just show the sharp desktop), and macOS would need Tauri's private-API
-/// transparency, which this app does not enable.
-pub fn glass_effect(platform: Platform) -> Option<GlassEffect> {
-    match platform {
-        Platform::Windows { build } if build >= WINDOWS_11_BUILD => Some(GlassEffect::Mica),
-        Platform::Windows { .. } => Some(GlassEffect::Blur),
-        Platform::MacOs | Platform::Linux => None,
+impl Platform {
+    /// The backdrop effect, or None where the window cannot be translucent:
+    /// Linux has no compositor-independent blur (a transparent window would
+    /// just show the sharp desktop).
+    pub fn glass_effect(self) -> Option<GlassEffect> {
+        match self {
+            Self::Windows { build } if build >= WINDOWS_11_BUILD => Some(GlassEffect::Mica),
+            Self::Windows { .. } => Some(GlassEffect::Blur),
+            Self::Linux { .. } => None,
+        }
+    }
+
+    /// Whether a tray icon will be shown: always on Windows; on Linux only
+    /// when a host draws it.
+    pub fn has_tray(self) -> bool {
+        match self {
+            Self::Windows { .. } => true,
+            Self::Linux { tray_host } => tray_host,
+        }
     }
 }
 
@@ -54,11 +68,10 @@ pub struct Capabilities {
 }
 
 impl Capabilities {
-    /// `tray_host` is only consulted on Linux: Windows and macOS always have a tray.
-    pub fn decide(platform: Platform, tray_host: bool, idle_source: bool) -> Self {
+    pub fn decide(platform: Platform, idle_source: bool) -> Self {
         Self {
-            tray: platform != Platform::Linux || tray_host,
-            glass: glass_effect(platform).is_some(),
+            tray: platform.has_tray(),
+            glass: platform.glass_effect().is_some(),
             idle: idle_source,
         }
     }

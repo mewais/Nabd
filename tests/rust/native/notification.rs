@@ -1,19 +1,26 @@
 //! Notifications.
 
-use nabd_native::{test_notification, NotifPayload};
+use nabd_native::DesktopNotification;
 
 #[test]
 fn a_notification_arrives_from_the_frontend_as_a_title_and_a_body() {
-    let payload: NotifPayload =
+    let notification: DesktopNotification =
         serde_json::from_str(r#"{"title": "Time to move", "body": "Squat — Interval's up"}"#)
             .unwrap();
-    assert_eq!(payload.title, "Time to move");
-    assert_eq!(payload.body, "Squat — Interval's up");
+    assert_eq!(notification.title, "Time to move");
+    assert_eq!(notification.body, "Squat — Interval's up");
 }
 
 #[test]
 fn the_test_notification_is_recognisably_a_test() {
-    let payload = test_notification();
-    assert_eq!(payload.title, "Nabd");
-    assert!(payload.body.starts_with("Notifications are working"));
+    let notification = DesktopNotification::test();
+    assert_eq!(notification.title, "Nabd");
+    assert!(notification.body.starts_with("Notifications are working"));
+}
+
+#[test]
+fn a_failed_start_is_reported_with_its_reason() {
+    let notification = DesktopNotification::startup_failure(&"the database is locked");
+    assert_eq!(notification.title, "Nabd could not start");
+    assert_eq!(notification.body, "the database is locked");
 }

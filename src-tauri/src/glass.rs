@@ -2,20 +2,23 @@
 //! chosen in `nabd-native`, applied through Tauri's window-effects API. The
 //! tint and its opacity are painted by the frontend, so no colour is set here.
 
-use nabd_native::{glass_effect, GlassEffect};
+use nabd_native::{GlassEffect, Platform};
 use tauri::window::{Effect, EffectsBuilder};
-use tauri::{AppHandle, Runtime};
+use tauri::{AppHandle, Manager, Runtime};
 
-use crate::{platform, window};
+use crate::error::AppResult;
+use crate::window;
 
 /// Put the backdrop effect on the main window, or take it off again. Where
 /// the platform has no effect this clears, which does nothing.
-pub fn set<R: Runtime>(app: &AppHandle<R>, enabled: bool) -> tauri::Result<()> {
+pub fn set<R: Runtime>(app: &AppHandle<R>, enabled: bool) -> AppResult<()> {
     let Some(window) = window::main_window(app) else {
         return Ok(());
     };
-    let effect = glass_effect(platform::current()).filter(|_| enabled);
-    window.set_effects(effect.map(|effect| EffectsBuilder::new().effect(native(effect)).build()))
+    let effect = app.state::<Platform>().glass_effect().filter(|_| enabled);
+    window
+        .set_effects(effect.map(|effect| EffectsBuilder::new().effect(native(effect)).build()))?;
+    Ok(())
 }
 
 fn native(effect: GlassEffect) -> Effect {

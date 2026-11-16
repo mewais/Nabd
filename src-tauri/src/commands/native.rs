@@ -1,6 +1,6 @@
 //! Commands over the desktop: tray, notifications, window, login entry.
 
-use nabd_native::{test_notification, Capabilities, NotifPayload, TrayState};
+use nabd_native::{Capabilities, DesktopNotification, TrayState};
 use tauri::{AppHandle, Runtime, State};
 
 use crate::error::AppResult;
@@ -15,19 +15,22 @@ pub fn platform_capabilities(capabilities: State<'_, Capabilities>) -> Capabilit
 /// through to the app on every platform, so a window hidden in the tray is
 /// also put back on screen (unfocused): looking for the app finds the nudge.
 #[tauri::command]
-pub fn notify_nudge<R: Runtime>(notification: NotifPayload, app: AppHandle<R>) -> AppResult<()> {
+pub fn notify_nudge<R: Runtime>(
+    notification: DesktopNotification,
+    app: AppHandle<R>,
+) -> AppResult<()> {
     window::reveal_quietly(&app);
     notifications::show(&app, notification)
 }
 
 #[tauri::command]
 pub fn send_test_notification<R: Runtime>(app: AppHandle<R>) -> AppResult<()> {
-    notifications::show(&app, test_notification())
+    notifications::show(&app, DesktopNotification::test())
 }
 
 #[tauri::command]
 pub fn set_glass<R: Runtime>(enabled: bool, app: AppHandle<R>) -> AppResult<()> {
-    Ok(glass::set(&app, enabled)?)
+    glass::set(&app, enabled)
 }
 
 #[tauri::command]
@@ -37,7 +40,7 @@ pub fn set_autostart<R: Runtime>(enabled: bool, app: AppHandle<R>) -> AppResult<
 
 #[tauri::command]
 pub fn update_tray<R: Runtime>(state: TrayState, app: AppHandle<R>) -> AppResult<()> {
-    Ok(tray::update(&app, &state)?)
+    tray::update(&app, &state)
 }
 
 #[tauri::command]

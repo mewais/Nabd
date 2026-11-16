@@ -1,4 +1,4 @@
-import { EXERCISE, day, floatingProgram, loggedSet, planned, workingSets } from "../support/data";
+import { EXERCISE, day, plan, loggedSet, planned, workingSets } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
@@ -16,9 +16,7 @@ const LAST_WEDNESDAY = dayAfter(MONDAY, -5);
  */
 const stored = {
   settings: { weightUnit: "lb", weightIncrement: 2.5 },
-  program: floatingProgram([
-    day("Pull", [planned(curl.id, { sets: workingSets(3) }), planned(squat.id)]),
-  ]),
+  program: plan([day("Pull", [planned(curl.id, { sets: workingSets(3) }), planned(squat.id)])]),
   history: [
     loggedSet(squat.id, { day: LAST_WEDNESDAY, reps: 6, kg: lb(40) }),
     loggedSet(curl.id, { day: LAST_FRIDAY, time: "10:00", reps: 8, kg: lb(25) }),

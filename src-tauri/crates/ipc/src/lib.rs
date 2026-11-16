@@ -1,6 +1,6 @@
 //! nabd-ipc — the IPC command core (no Tauri dependency).
 //!
-//! [`Commands`] is what the frontend can ask of the stored data, JSON in and
+//! [`DataCommands`] is what the frontend can ask of the stored data, JSON in and
 //! JSON out, over a `nabd-persistence` store. The `#[tauri::command]` wrappers
 //! live in the binary.
 
@@ -9,15 +9,15 @@ use std::path::Path;
 use nabd_persistence::{LoggedSetRow, Store, KV_KEYS};
 use serde_json::{json, Map, Value};
 
-pub mod error;
+mod error;
 pub use error::{IpcError, IpcResult};
 
 /// The commands over the user's data.
-pub struct Commands {
+pub struct DataCommands {
     store: Store,
 }
 
-impl Commands {
+impl DataCommands {
     /// Over the database file at `path`, created or migrated as needed.
     pub fn open(path: &Path) -> IpcResult<Self> {
         Ok(Self::over(Store::open(path)?))
@@ -31,11 +31,7 @@ impl Commands {
     fn snapshot(&self) -> IpcResult<Map<String, Value>> {
         let mut obj = Map::new();
         for key in KV_KEYS {
-            let value = match self.store.get_kv(key)? {
-                Some(json) => serde_json::from_str(&json)?,
-                None => Value::Null,
-            };
-            obj.insert(key.to_string(), value);
+            obj.insert(key.to_string(), self.store.get_json(key)?);
         }
         obj.insert(
             "history".to_string(),
@@ -102,10 +98,7 @@ impl Commands {
 
     /// Whether the stored settings ask for the window to stay hidden at launch.
     pub fn starts_minimized(&self) -> IpcResult<bool> {
-        let settings: Value = match self.store.get_kv("settings")? {
-            Some(json) => serde_json::from_str(&json)?,
-            None => Value::Null,
-        };
+        let settings = self.store.get_json("settings")?;
         Ok(settings["minimizedByDefault"].as_bool().unwrap_or(false))
     }
 }

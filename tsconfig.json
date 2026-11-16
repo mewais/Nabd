@@ -37,5 +37,5 @@
       "@nabd/modals": ["./packages/modals/src/index.ts"]
     }
   },
-  "include": ["packages/*/src", "packages/*/*.ts", "tests", "assets", "scripts/*.ts", "*.ts"]
+  "include": ["packages/*/src", "packages/*/*.ts", "tests", "e2e", "assets", "scripts/*.ts", "*.ts"]
 }
