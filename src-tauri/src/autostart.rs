@@ -5,9 +5,9 @@ use tauri::plugin::TauriPlugin;
 use tauri::{AppHandle, Runtime};
 use tauri_plugin_autostart::ManagerExt;
 
-use crate::error::AppResult;
 #[cfg(target_os = "linux")]
 use crate::error::AppError;
+use crate::error::AppResult;
 
 /// The plugin, set up so a login launch can be told from a manual one.
 pub fn plugin<R: Runtime>() -> TauriPlugin<R> {

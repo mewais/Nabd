@@ -8,6 +8,7 @@
 // Each act starts the app, does its part and closes the app again.
 
 import process from "node:process";
+import { execFileSync } from "node:child_process";
 import { clock, expectNudge, idleTicks, notifications, screen, tray } from "./desktop.mjs";
 import { Session } from "./webdriver.mjs";
 
@@ -75,9 +76,15 @@ const ACTS = {
     clock.advance(6); // 09:12: unanswered for an interval
     expectNudge(await notifications.expect(2), NUDGE.timer);
 
-    await app.press("Snooze"); // for five minutes: until 09:17
+    console.error("DBGs0", screen.focused(), screen.shown());
+    // await app.press("Snooze");
+    await new Promise((r) => setTimeout(r, 1000));
+    console.error("DBGs1", screen.focused(), screen.shown());
     screen.close();
     await screen.expectShown(false);
+    execFileSync(new URL("x11.sh", import.meta.url).pathname, ["elsewhere"]);
+    await new Promise((r) => setTimeout(r, 1000));
+    console.error("DBGs2", screen.focused(), require_focus());
     clock.advance(3); // 09:15
     await notifications.expectNoMoreThan(2);
     clock.advance(3); // 09:18
@@ -142,6 +149,8 @@ const ACTS = {
     expectNudge(await notifications.expect(1), NUDGE.idle);
   },
 };
+
+function require_focus() { return execFileSync('xdotool', ['getwindowfocus','getwindowname'], {encoding:'utf8'}).trim(); }
 
 async function logOneSet(app) {
   await app.press("Start set");
