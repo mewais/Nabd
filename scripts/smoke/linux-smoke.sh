@@ -46,7 +46,7 @@
 #                      waits for the minimum gap and for nobody at the mouse
 #
 # The WebDriver parts need `tauri-driver` (cargo install tauri-driver --locked)
-# and `WebKitWebDriver` (apt: webkit2gtk-driver); without them they are
+# and `WebKitWebDriver` (apt: webkit2gtk-driver, from Ubuntu 24.10 on webkitgtk-webdriver); without them they are
 # skipped, or fail when NABD_SMOKE_REQUIRE_WEBDRIVER=1.
 #
 # Environment:
@@ -204,7 +204,7 @@ second_instance() {
 
 # needs_webdriver WHAT: whether the WebDriver parts can run; says so when not.
 needs_webdriver() {
-  if command -v tauri-driver >/dev/null && command -v WebKitWebDriver >/dev/null; then
+  if command -v tauri-driver >/dev/null && [[ -n "$(webkit_webdriver)" ]]; then
     [[ -n "$DRIVER_PID" ]] || start_webdriver
     return 0
   fi

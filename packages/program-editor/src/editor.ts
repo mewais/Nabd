@@ -1,8 +1,5 @@
 import type {
-  CycledSlot,
-  Day,
   Direction,
-  ExerciseLookup,
   MuscleKey,
   Prescription,
   Program,
@@ -12,14 +9,13 @@ import type {
 } from "@nabd/domain";
 import { isFloating, measureOf, poolMeasure } from "@nabd/domain";
 import { deriveSlots } from "./derive-slots";
-import { normalize } from "./normalize";
 import { initialPrescription } from "./defaults";
+import { ProgramDraft } from "./draft";
 import { PrescriptionEditor } from "./prescription-editor";
 import type { PrescriptionEdit } from "./prescription-editor";
 import { removeAll, removeById, shiftById } from "./reorder";
 import type { Identified } from "./reorder";
 import { fitsWeekdaySchedule, reschedule } from "./schedule";
-import type { PlanToday } from "./schedule";
 import { moveRow, toggleSupersetOf } from "./supersets";
 
 /** Points at the prescription being edited: a fixed exercise row or a cycled slot. */
@@ -33,38 +29,10 @@ export type ProgramEdit = (editor: ProgramEditor) => Program;
 
 /**
  * Every way the planner can change a program. Each method returns a new
- * Program and leaves the original untouched; whatever the change, the result
- * obeys the program rules (see normalize.ts).
+ * Program and leaves the original untouched (see {@link ProgramDraft});
+ * whatever the change, the result obeys the program rules (see normalize.ts).
  */
-export class ProgramEditor {
-  constructor(
-    private readonly program: Program,
-    private readonly newId: () => string,
-    private readonly lookup: ExerciseLookup,
-    private readonly today: PlanToday,
-  ) {}
-
-  private edit(change: (draft: Program) => void): Program {
-    const draft = structuredClone(this.program);
-    change(draft);
-    normalize(draft, this.lookup);
-    return draft;
-  }
-
-  private editDay(dayId: string, change: (day: Day, draft: Program) => void): Program {
-    return this.edit((draft) => {
-      const day = draft.days.find((d) => d.id === dayId);
-      if (day) change(day, draft);
-    });
-  }
-
-  private editSlot(dayId: string, slotId: string, change: (slot: CycledSlot) => void): Program {
-    return this.editDay(dayId, (day) => {
-      const slot = day.slots.find((s) => s.id === slotId);
-      if (slot) change(slot);
-    });
-  }
-
+export class ProgramEditor extends ProgramDraft {
   /** Change the prescription `ref` points at (see {@link PrescriptionEditor} for the changes). */
   editPrescription(dayId: string, ref: EditRef, edit: PrescriptionEdit): Program {
     return this.editDay(dayId, (day) => {
@@ -137,15 +105,12 @@ export class ProgramEditor {
   // ----- Fixed-mode exercises -----
 
   addExercise(dayId: string, exId: string): Program {
-    const exercise = this.lookup(exId);
-    if (!exercise) return this.program;
-    return this.editDay(dayId, (day) => {
-      day.exercises.push({
-        id: this.newId(),
-        exId: exercise.id,
-        ...initialPrescription(measureOf(exercise.tracking)),
-      });
-    });
+    return this.withExercise(exId, (exercise) =>
+      this.editDay(dayId, (day) => {
+        const prescription = initialPrescription(measureOf(exercise.tracking));
+        day.exercises.push({ id: this.newId(), exId: exercise.id, ...prescription });
+      }),
+    );
   }
 
   removeExercise(dayId: string, rowId: string): Program {
@@ -196,13 +161,13 @@ export class ProgramEditor {
    * starts afresh in its measure.
    */
   addPoolExercise(dayId: string, slotId: string, exId: string): Program {
-    const exercise = this.lookup(exId);
-    if (!exercise) return this.program;
-    return this.editSlot(dayId, slotId, (slot) => {
-      const kind = poolMeasure(slot.pool, this.lookup);
-      const fits = kind === null || kind === measureOf(exercise.tracking);
-      if (fits && !slot.pool.includes(exId)) slot.pool.push(exId);
-    });
+    return this.withExercise(exId, (exercise) =>
+      this.editSlot(dayId, slotId, (slot) => {
+        const kind = poolMeasure(slot.pool, this.lookup);
+        const fits = kind === null || kind === measureOf(exercise.tracking);
+        if (fits && !slot.pool.includes(exId)) slot.pool.push(exId);
+      }),
+    );
   }
 
   removePoolExercise(dayId: string, slotId: string, exId: string): Program {

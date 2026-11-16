@@ -159,8 +159,15 @@ driver_ready() {
   curl --silent --fail "http://127.0.0.1:$DRIVER_PORT/status"
 }
 
+# WebKitWebDriver: on the PATH, or where a distribution's package keeps it
+# outside it; empty when it is not installed.
+webkit_webdriver() {
+  command -v WebKitWebDriver || find /usr/lib /usr/libexec -name WebKitWebDriver -type f 2>/dev/null | head -n 1
+}
+
 start_webdriver() {
-  tauri-driver --port "$DRIVER_PORT" --native-port "$((DRIVER_PORT + 1))" &
+  tauri-driver --port "$DRIVER_PORT" --native-port "$((DRIVER_PORT + 1))" \
+    --native-driver "$(webkit_webdriver)" &
   DRIVER_PID=$!
   wait_for 15 driver_ready || fail "tauri-driver did not start on port $DRIVER_PORT"
 }
