@@ -27,6 +27,8 @@ export interface DayProgressVM {
   totalLabel: string;
   /** 0–100 ring fill. */
   pct: number;
+  /** The whole reading in words: "2 of 12 sets done today". */
+  ariaLabel: string;
 }
 
 export interface SidebarVM {
@@ -40,12 +42,21 @@ export interface StatusVM extends NudgeSummary {
   clock: string;
 }
 
+/** The button that pauses nudges, or resumes them. */
+interface PauseVM {
+  paused: boolean;
+  /** "Pause", or "Resume" while paused. */
+  label: string;
+  /** "Pause nudges", or "Resume nudges" while paused. */
+  title: string;
+}
+
 export interface TopBarVM {
   greeting: string;
   date: string;
   status: StatusVM;
   theme: Theme;
-  paused: boolean;
+  pause: PauseVM;
   /** Whether the Glass switch is offered at all. */
   glassAvailable: boolean;
   glass: boolean;
@@ -63,11 +74,18 @@ export interface ShellVM {
 }
 
 function buildDayProgressVM({ done, planned }: ShellInput["sets"]): DayProgressVM {
+  const totalLabel = `of ${plural(planned, "set")}`;
   return {
     done,
-    totalLabel: `of ${plural(planned, "set")}`,
+    totalLabel,
     pct: planned > 0 ? Math.round((done / planned) * 100) : 0,
+    ariaLabel: `${done} ${totalLabel} done today`,
   };
+}
+
+function pauseVM(paused: boolean): PauseVM {
+  const label = paused ? "Resume" : "Pause";
+  return { paused, label, title: `${label} nudges` };
 }
 
 export function buildShellVM(input: ShellInput): ShellVM {
@@ -87,7 +105,7 @@ export function buildShellVM(input: ShellInput): ShellVM {
       date: dateLabel(now),
       status: { clock: formatClock(now), ...summarizeNudge(nudge) },
       theme: settings.theme,
-      paused: input.paused,
+      pause: pauseVM(input.paused),
       glassAvailable: capabilities.glass,
       glass,
     },

@@ -12,7 +12,8 @@ import { MONDAY, at, dayAfter } from "../support/time";
 
 const OUT = process.env.OUT ?? fileURLToPath(new URL("./shots/", import.meta.url));
 mkdirSync(OUT, { recursive: true });
-const { bench, raise, curl, hammerCurl, squat, pullUp, pushUp, plank, barbellBench } = EXERCISE;
+const { dumbbellBench, raise, curl, hammerCurl, gobletSquat, pullUp, pushUp, plank, bench } =
+  EXERCISE;
 const LAST_FRIDAY = dayAfter(MONDAY, -3);
 
 const THEMES = ["dark", "light"] as const;
@@ -28,7 +29,7 @@ function shooter(page: Page, theme: ThemeName): (name: string) => Promise<void> 
 const settingsOf = (theme: ThemeName): typeof DEFAULT_SETTINGS => ({ ...DEFAULT_SETTINGS, theme });
 
 const pushDay = day("Push", [
-  planned(bench.id, {
+  planned(dumbbellBench.id, {
     sets: [{ type: "warmup", amount: 12 }, ...workingSets(2)],
     notes: "Elbows at 45°, pause on the chest",
   }),
@@ -37,9 +38,15 @@ const pushDay = day("Push", [
   planned(plank.id, { repMode: "fixed", sets: [{ type: "working", amount: 45 }] }),
 ]);
 const history = [
-  loggedSet(bench.id, { day: LAST_FRIDAY, time: "10:00", reps: 12, kg: 10, type: "warmup" }),
-  loggedSet(bench.id, { day: LAST_FRIDAY, time: "10:05", reps: 9, kg: 20 }),
-  loggedSet(bench.id, { day: LAST_FRIDAY, time: "11:05", reps: 8, kg: 20 }),
+  loggedSet(dumbbellBench.id, {
+    day: LAST_FRIDAY,
+    time: "10:00",
+    reps: 12,
+    kg: 10,
+    type: "warmup",
+  }),
+  loggedSet(dumbbellBench.id, { day: LAST_FRIDAY, time: "10:05", reps: 9, kg: 20 }),
+  loggedSet(dumbbellBench.id, { day: LAST_FRIDAY, time: "11:05", reps: 8, kg: 20 }),
   loggedSet(raise.id, { day: LAST_FRIDAY, time: "12:05", reps: 12, kg: 6 }),
   loggedSet(curl.id, { day: LAST_FRIDAY, time: "13:05", reps: 10, kg: 8, trigger: "idle" }),
 ];
@@ -73,7 +80,7 @@ for (const theme of THEMES) {
       await logger.log();
       await logger.log();
       await shot("logger-mid-superset");
-      await logger.listRow(bench.name).click();
+      await logger.listRow(dumbbellBench.name).click();
       await shot("logger-complete-exercise-logged-sets");
       await logger.button("+ Something else").click();
       await shot("library-extra");
@@ -109,7 +116,7 @@ for (const theme of THEMES) {
       const program = plan(
         [
           day("Pull", [planned(pullUp.id), planned(curl.id)], { weekday: 2 }),
-          day("Legs", [planned(squat.id)], { weekday: 4 }),
+          day("Legs", [planned(gobletSquat.id)], { weekday: 4 }),
         ],
         { schedule: "weekday" },
       );
@@ -142,7 +149,7 @@ for (const theme of THEMES) {
               { type: "drop", amount: 10, upTo: 12, intensity: 7 },
             ],
           }),
-          planned(barbellBench.id, {
+          planned(bench.id, {
             intensity: "pct",
             repMode: "fixed",
             sets: [
@@ -187,12 +194,12 @@ for (const theme of THEMES) {
         [
           day("Upper", [], {
             slots: [
-              slot("chest", [bench.id, pushUp.id]),
+              slot("chest", [dumbbellBench.id, pushUp.id]),
               slot("biceps", [curl.id, hammerCurl.id]),
               slot("side_delts", []),
             ],
           }),
-          day("Lower", [], { slots: [slot("quads", [squat.id])] }),
+          day("Lower", [], { slots: [slot("quads", [gobletSquat.id])] }),
         ],
         { type: "cycled" },
       );

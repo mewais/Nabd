@@ -8,7 +8,7 @@ import {
   totalSets,
   workingSets,
 } from "@nabd/domain";
-import type { Day } from "@nabd/domain";
+import type { Day, Weekday } from "@nabd/domain";
 
 const set = { type: "working", amount: 8 };
 const row = { id: "p1", exId: "bench", repMode: "range", intensity: "pct", rest: 120, sets: [set] };
@@ -105,7 +105,7 @@ describe("workingSets", () => {
 });
 
 describe("the order of a plan's days", () => {
-  const day = (id: string, weekday: number | null): Day => ({
+  const day = (id: string, weekday: Weekday | null): Day => ({
     id,
     name: id,
     weekday,

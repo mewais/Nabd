@@ -32,22 +32,22 @@ export function TopBar({ vm, actions }: TopBarProps): JSX.Element {
           onChange={actions.setTheme}
         />
         <Button
-          variant={vm.paused ? "primary" : "secondary"}
+          variant={vm.pause.paused ? "primary" : "secondary"}
           size="sm"
-          title={vm.paused ? "Resume nudges" : "Pause nudges"}
+          title={vm.pause.title}
           onClick={actions.togglePause}
         >
-          {vm.paused ? "Resume" : "Pause"}
+          {vm.pause.label}
         </Button>
         {vm.glassAvailable && (
           <Button
             variant={vm.glass ? "primary" : "secondary"}
             size="sm"
             title="Translucent window"
-            pressed={vm.glass}
+            on={vm.glass}
             onClick={() => actions.setGlass(!vm.glass)}
           >
-            <Icon name="glass" size={14} strokeWidth={1.7} />
+            <Icon name="glass" size="sm" weight="thin" />
             Glass
           </Button>
         )}

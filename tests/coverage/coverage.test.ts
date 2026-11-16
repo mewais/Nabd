@@ -1,10 +1,19 @@
 import type { Program } from "@nabd/domain";
 import { MUSCLES } from "@nabd/domain";
-import { MuscleVolume, insight, recommendation } from "@nabd/coverage";
+import { CoverageReport, MuscleVolume } from "@nabd/coverage";
 
 /** Sixteen sets a week cover a muscle in full. */
 const FULL_COVERAGE_SETS = 16;
-import { exercise, logged, lookupIn, nov, row, threeSets, warmup, working } from "../support/builders";
+import {
+  exercise,
+  logged,
+  lookupIn,
+  nov,
+  row,
+  workingSets,
+  warmup,
+  working,
+} from "../support/builders";
 
 const press = exercise({ primary: ["chest"], secondary: ["triceps", "front_delts"] });
 const fly = exercise({ primary: ["chest"], secondary: [] });
@@ -26,9 +35,9 @@ describe("planned volume", () => {
           weekday: 1,
           slots: [],
           exercises: [
-            row(press.id, [warmup(10), ...threeSets()]),
+            row(press.id, [warmup(10), ...workingSets(3)]),
             row(curl.id, [working(10), { type: "drop", amount: 10 }]),
-            row("missing", threeSets()),
+            row("missing", workingSets(3)),
           ],
         },
       ],
@@ -58,16 +67,16 @@ describe("planned volume", () => {
           id: "d",
           name: "D",
           weekday: null,
-          exercises: [row(curl.id, threeSets())],
+          exercises: [row(curl.id, workingSets(3))],
           slots: [
             {
               id: "s1",
               muscle: "chest",
               pool: [press.id, fly.id],
               ...prescription,
-              sets: threeSets(),
+              sets: workingSets(3),
             },
-            { id: "s2", muscle: "lats", pool: [], ...prescription, sets: threeSets() },
+            { id: "s2", muscle: "lats", pool: [], ...prescription, sets: workingSets(3) },
           ],
         },
       ],
@@ -128,7 +137,7 @@ describe("recommendations", () => {
   it("rests well-covered muscles and pushes lagging ones", () => {
     const advice = (pct: number) => {
       const { actual, planned } = chestAt(pct);
-      return recommendation("chest", actual, planned);
+      return new CoverageReport(actual, planned).recommendation("chest");
     };
     expect(advice(66)).toBe("rest");
     expect(advice(65)).toBe("none");
@@ -138,11 +147,17 @@ describe("recommendations", () => {
 
   it("never tells anyone to push a muscle their plan does not target", () => {
     const lagging = chestAt(10);
-    expect(recommendation("calves", lagging.actual, lagging.planned)).toBe("none");
-    expect(recommendation("quads", lagging.actual, lagging.planned)).toBe("none");
+    expect(new CoverageReport(lagging.actual, lagging.planned).recommendation("calves")).toBe(
+      "none",
+    );
+    expect(new CoverageReport(lagging.actual, lagging.planned).recommendation("quads")).toBe(
+      "none",
+    );
     // Resting needs no plan: a well-trained muscle is well trained either way.
     const covered = chestAt(80);
-    expect(recommendation("calves", covered.actual, covered.planned)).toBe("rest");
+    expect(new CoverageReport(covered.actual, covered.planned).recommendation("calves")).toBe(
+      "rest",
+    );
   });
 
   it("only calls a muscle lagging if the plan targets it, and says nothing with nothing to say", () => {
@@ -150,14 +165,17 @@ describe("recommendations", () => {
     planned.add("chest", 9);
     planned.add("biceps", 6);
     const actual = new MuscleVolume();
-    expect(insight(actual.toCoverage(), planned)).toEqual({ rest: [], push: ["chest", "biceps"] });
+    expect(new CoverageReport(actual.toCoverage(), planned).insight()).toEqual({
+      rest: [],
+      push: ["chest", "biceps"],
+    });
 
     actual.add("chest", 14);
     actual.add("quads", 16);
-    expect(insight(actual.toCoverage(), planned)).toEqual({
+    expect(new CoverageReport(actual.toCoverage(), planned).insight()).toEqual({
       rest: ["quads", "chest"],
       push: ["biceps"],
     });
-    expect(insight(actual.toCoverage(), new MuscleVolume()).push).toEqual([]);
+    expect(new CoverageReport(actual.toCoverage(), new MuscleVolume()).insight().push).toEqual([]);
   });
 });

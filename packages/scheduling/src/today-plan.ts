@@ -8,8 +8,9 @@ import type {
   RotationState,
   Settings,
 } from "@nabd/domain";
-import { NO_SETS, dateKey, exerciseOfSet, isWorkDay, sum } from "@nabd/domain";
+import { NO_SETS, dateKey, exerciseOfSet, isFloating, isWorkday, sum } from "@nabd/domain";
 import { DayLedger } from "./day-ledger";
+import type { LedgerCalendar } from "./day-ledger";
 import { queueEntries, resolveDay } from "./queue-entries";
 import { PlanItem } from "./plan-item";
 import { TodaysSets } from "./todays-sets";
@@ -38,14 +39,20 @@ export class TodayPlan {
      * today's visit began today (and always on a weekday plan).
      */
     readonly continuesFrom: string | null,
+    /** The session today's sets belong to (see `LoggedSet.session`). */
+    readonly session: string,
     /** The program day that applies today; null on a rest day or with no plan. */
     private readonly day: Day | null,
-    /** What the day owed and what it did. */
-    readonly ledger: DayLedger,
     readonly items: readonly PlanItem[],
     /** Muscles of cycled slots that cannot be trained yet: their pool is empty. */
     readonly emptySlots: readonly MuscleKey[],
-  ) {}
+    calendar: LedgerCalendar,
+  ) {
+    this.ledger = new DayLedger(this, calendar);
+  }
+
+  /** What the day owed and what it did. */
+  readonly ledger: DayLedger;
 
   get dayId(): string | null {
     return this.day?.id ?? null;
@@ -53,14 +60,6 @@ export class TodayPlan {
 
   get dayName(): string | null {
     return this.day?.name ?? null;
-  }
-
-  /**
-   * The session today's sets belong to (see `LoggedSet.session`): the one an
-   * unfinished floating day began on an earlier day, else today's own.
-   */
-  get session(): string {
-    return this.continuesFrom ?? this.date;
   }
 
   /**
@@ -74,9 +73,10 @@ export class TodayPlan {
   static build(input: TodayPlanInput): TodayPlan {
     const { program, date, dayState, rotation, history, lookup, workDays } = input;
     const today = dateKey(date);
-    const sets = new TodaysSets(history.filter((set) => set.date === today));
+    const logged = history.filter((set) => set.date === today);
+    const sets = new TodaysSets(logged);
     const day = resolveDay(program, date, dayState.dayId);
-    const floating = program.schedule === "floating";
+    const floating = isFloating(program);
     // What earlier days did counts on a floating plan only: weekdays have no such memory.
     const visit = floating ? dayState.carried : null;
 
@@ -93,13 +93,22 @@ export class TodayPlan {
       const init = { ...entry, exercise, label: label ?? exercise.group, carried, skipped };
       return [new PlanItem(init)];
     });
-    const ledger = new DayLedger(today, items, floating, isWorkDay({ workDays }, date));
     const continuesFrom = visit?.startedOn ?? null;
-    return new TodayPlan(today, continuesFrom, day, ledger, items, emptySlots);
+    // Today's sets belong to the session an unfinished floating day began on an earlier day,
+    // else to today's own; once a set is logged, the rest of the day's join it whatever the
+    // schedule has since become, so a day's sets never split across two sessions.
+    const session = logged[0]?.session ?? continuesFrom ?? today;
+    const calendar = { floating, workday: isWorkday({ workDays }, date) };
+    return new TodayPlan(today, continuesFrom, session, day, items, emptySlots, calendar);
   }
 
   item(id: string): PlanItem | undefined {
     return this.items.find((i) => i.id === id);
+  }
+
+  /** Prescribed sets this day owes, skipped items included: what it is on record against. */
+  get setsOwed(): number {
+    return sum(this.items, (i) => i.owed);
   }
 
   /** Prescribed sets this day owes across items that were not skipped. */

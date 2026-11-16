@@ -13,13 +13,13 @@ interface ProgressScreenProps {
   actions: ProgressActions;
 }
 
-/** Two cards side by side, as tall as each other: the first wider, or both alike. */
-const PAIR = { wideFirst: "minmax(0, 1.5fr) minmax(0, 1fr)", even: 2 } as const;
-
-/** Progress: the headline figures, then how regularly, when, why and how well sets get done. */
+/**
+ * Progress: the headline figures, then how regularly, when, why and how well
+ * sets get done, in pairs of cards as tall as each other.
+ */
 export function ProgressScreen({ vm, actions }: ProgressScreenProps): JSX.Element {
   return (
-    <Page width="narrow">
+    <Page width="sm">
       <Text as="h1" variant="title">
         Progress
       </Text>
@@ -28,11 +28,11 @@ export function ProgressScreen({ vm, actions }: ProgressScreenProps): JSX.Elemen
           <StatTile key={kpi.label} {...kpi} />
         ))}
       </Row>
-      <Grid columns={PAIR.wideFirst} gap="lg">
+      <Grid columns={[1.5, 1]} gap="lg">
         <ConsistencyCard vm={vm.consistency} actions={actions} />
         <CompletionCard vm={vm.completion} />
       </Grid>
-      <Grid columns={PAIR.even} gap="lg">
+      <Grid columns={2} gap="lg">
         <TimeOfDayCard vm={vm.timeOfDay} />
         <TriggerCard vm={vm.triggers} />
       </Grid>

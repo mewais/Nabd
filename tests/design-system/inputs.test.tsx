@@ -16,7 +16,7 @@ describe("Stepper", () => {
   });
 
   it("names the group after what it steps", () => {
-    render(<Stepper value="90s" onStep={vi.fn()} size="mini" ariaLabel="Rest" />);
+    render(<Stepper value="90s" onStep={vi.fn()} size="sm" ariaLabel="Rest" />);
     expect(screen.getByRole("group", { name: "Rest" })).toHaveTextContent("90s");
   });
 

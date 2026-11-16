@@ -1,4 +1,5 @@
 import { Button, Divider, Grid, Row, Stack, Text, TextInput } from "@nabd/design-system";
+import type { GridColumns } from "@nabd/design-system";
 import type { PrescriptionEdit } from "@nabd/program-editor";
 import { PrescriptionControls } from "./prescription-controls";
 import type { SetBlockVM } from "./set-block-vm";
@@ -12,9 +13,9 @@ interface SetTableProps {
 
 /** Badge, reps, [load], remove. */
 const COLUMNS = {
-  plain: "24px minmax(150px, 1fr) 24px",
-  withIntensity: "24px minmax(150px, 1fr) 96px 24px",
-};
+  plain: ["badge", { min: "tile" }, "badge"],
+  withIntensity: ["badge", { min: "tile" }, "stepper", "badge"],
+} as const satisfies Record<string, GridColumns>;
 
 /** A prescription's sets, with the controls that shape them and a note. */
 export function SetTable({ vm, onEdit }: SetTableProps): JSX.Element {

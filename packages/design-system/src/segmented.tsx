@@ -1,11 +1,13 @@
 import { useRef } from "react";
 import type { KeyboardEvent } from "react";
 import { ButtonBase } from "./button-base";
-import type { Option } from "./option";
-import { COLOR, FONT_SIZE, QUIET_BOX, RADIUS, SPACE } from "./tokens";
+import type { Option, OptionValue } from "./option";
 import { rovingTarget } from "./roving";
+import { pad } from "./styles";
+import { COLOR, FONT_WEIGHT, QUIET_BOX, RADIUS, SPACE, TEXT } from "./tokens";
+import type { Size } from "./tokens";
 
-export interface SegOption<V extends string = string> extends Option<V> {
+export interface SegOption<V extends OptionValue = string> extends Option<V> {
   /** Accessible name, when the label alone is not enough (e.g. an initial). */
   ariaLabel?: string;
   /** Tooltip. */
@@ -14,33 +16,36 @@ export interface SegOption<V extends string = string> extends Option<V> {
   disabled?: boolean;
 }
 
-interface SegmentedProps<V extends string = string> {
+type SegmentedSize = Extract<Size, "sm" | "md">;
+
+interface SegmentedProps<V extends OptionValue = string> {
   options: readonly SegOption<V>[];
-  value: V;
+  /** The chosen option's value; null while none is chosen. */
+  value: V | null;
   onChange: (value: V) => void;
-  size?: "sm" | "md";
+  size?: SegmentedSize;
   /** Names the group for assistive tech. */
   ariaLabel?: string;
 }
 
 const SIZES = {
-  sm: { padding: `${SPACE.xs}px ${SPACE.sm}px`, fontSize: FONT_SIZE.tiny, radius: RADIUS.tag },
-  md: { padding: `${SPACE.xs}px ${SPACE.md}px`, fontSize: FONT_SIZE.small, radius: RADIUS.chip },
-} as const;
+  sm: { padding: pad("xs", "sm"), text: TEXT.controlXs, radius: RADIUS.tag },
+  md: { padding: pad("xs", "md"), text: TEXT.controlSm, radius: RADIUS.chip },
+} as const satisfies Record<SegmentedSize, object>;
 
 /**
  * A row of mutually exclusive options; the chosen one is filled. To the
  * keyboard it is one radio group, a single tab stop: the arrow keys (and Home
  * and End) move to another option and choose it, skipping disabled ones.
  */
-export function Segmented<V extends string = string>({
+export function Segmented<V extends OptionValue = string>({
   options,
   value,
   onChange,
   size = "md",
   ariaLabel,
 }: SegmentedProps<V>): JSX.Element {
-  const { padding, fontSize, radius } = SIZES[size];
+  const { padding, text, radius } = SIZES[size];
   const group = useRef<HTMLDivElement>(null);
   const enabled = options.map((option) => !option.disabled);
   const chosen = options.findIndex((option) => option.value === value);
@@ -73,25 +78,25 @@ export function Segmented<V extends string = string>({
       }}
     >
       {options.map((option, index) => {
-        const active = index === chosen;
+        const selected = index === chosen;
         return (
           <ButtonBase
             key={option.value}
             role="radio"
-            aria-checked={active}
+            aria-checked={selected}
             aria-label={option.ariaLabel}
             title={option.title}
             disabled={option.disabled}
             tabIndex={index === tabStop ? 0 : -1}
             onClick={() => onChange(option.value)}
             style={{
+              ...text,
               padding,
-              fontSize,
               lineHeight: 1.5,
               borderRadius: radius,
-              fontWeight: 600,
-              background: active ? COLOR.accent : COLOR.none,
-              color: active ? COLOR.onAccent : COLOR.textMuted,
+              fontWeight: FONT_WEIGHT.semibold,
+              background: selected ? COLOR.accent : COLOR.none,
+              color: selected ? COLOR.onAccent : COLOR.textMuted,
             }}
           >
             {option.label}

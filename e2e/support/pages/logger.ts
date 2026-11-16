@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { DialogObject } from "./region";
 
 /** What to type into the set form before logging; a field left out keeps what the form shows. */
 export interface SetEntry {
@@ -7,8 +8,7 @@ export interface SetEntry {
 }
 
 /** The set logger ("This break"): today's exercises on the left, one set at a time on the right. */
-export class Logger {
-  readonly dialog: Locator;
+export class Logger extends DialogObject {
   /** The exercise the form is on. */
   readonly exercise: Locator;
   /** Reps, or seconds for a timed exercise. */
@@ -18,13 +18,13 @@ export class Logger {
   readonly weightStepper: Locator;
   /** The coach's targets, each a button that puts it in the form: ["9 × 25 lb", "8 × 27.5 lb"]. */
   readonly suggestions: Locator;
-  /** "Rest 1:30" while resting. */
+  /** "Rest 2:00" while resting. */
   readonly rest: Locator;
   /** This exercise's sets logged today, one list item each. */
   readonly loggedSets: Locator;
 
   constructor(page: Page) {
-    this.dialog = page.getByRole("dialog", { name: "This break" });
+    super(page, page.getByRole("dialog", { name: "This break" }));
     this.exercise = this.dialog.getByRole("heading", { level: 3 });
     this.reps = this.dialog.getByRole("spinbutton", { name: /^(Reps|Sec)$/ });
     this.weightStepper = this.dialog
@@ -36,11 +36,6 @@ export class Logger {
     this.loggedSets = this.dialog
       .getByRole("region", { name: "Logged today" })
       .getByRole("listitem");
-  }
-
-  /** A button of the logger: "Done", "+ Something else", "Delete set 1". */
-  button(name: string): Locator {
-    return this.dialog.getByRole("button", { name, exact: true });
   }
 
   /** An exercise in the left-hand list; its text ends with its progress, "1/3". */

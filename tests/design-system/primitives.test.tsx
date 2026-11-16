@@ -1,16 +1,14 @@
 import { render, screen, within } from "@testing-library/react";
 import {
-  Badge,
   Button,
   CardButton,
   CheckMark,
-  ChipToggle,
+  ChipGroup,
   COLOR,
   Divider,
   Grid,
   HeatCell,
   IconButton,
-  NavButton,
   ProgressRing,
   Row,
   RowButton,
@@ -119,19 +117,19 @@ describe("TitleBlock", () => {
 
 describe("CheckMark", () => {
   it("says what it marks when given a label", () => {
-    render(<CheckMark checked label="Done" />);
+    render(<CheckMark state="done" ariaLabel="Done" />);
     expect(screen.getByRole("img", { name: "Done" })).toBeInTheDocument();
   });
 
   it("is decorative without one", () => {
-    render(<CheckMark checked={false} />);
+    render(<CheckMark state="todo" />);
     expect(screen.queryByRole("img")).toBeNull();
   });
 
   it("gives each state a shape of its own, so colour is never the only signal", () => {
-    const done = renderRoot(<CheckMark checked />);
-    const next = renderRoot(<CheckMark checked={false} current />);
-    const todo = renderRoot(<CheckMark checked={false} />);
+    const done = renderRoot(<CheckMark state="done" />);
+    const next = renderRoot(<CheckMark state="next" />);
+    const todo = renderRoot(<CheckMark state="todo" />);
     expect(done.querySelector("svg[data-icon='check']")).not.toBeNull();
     expect(next.querySelector("svg")).toBeNull();
     expect(next.children).toHaveLength(1);
@@ -141,7 +139,7 @@ describe("CheckMark", () => {
 
 describe("Swatch", () => {
   it("is a labelled image when it carries meaning, and decorative otherwise", () => {
-    render(<Swatch tone="success" label="Done" />);
+    render(<Swatch tone="success" ariaLabel="Done" />);
     expect(screen.getByRole("img", { name: "Done" })).toBeInTheDocument();
     expect(renderRoot(<Swatch />)).not.toHaveAttribute("role");
   });
@@ -188,7 +186,7 @@ describe("Wordmark", () => {
   });
 });
 
-describe("ButtonBase, under every button-like primitive", () => {
+describe("ButtonBase, under every button", () => {
   const noop = (): void => undefined;
   const buttons = (): HTMLButtonElement[] => {
     render(
@@ -196,16 +194,16 @@ describe("ButtonBase, under every button-like primitive", () => {
         <Button onClick={noop}>Save</Button>
         <IconButton icon="close" ariaLabel="Close" onClick={noop} />
         <RowButton onClick={noop}>Row</RowButton>
-        <NavButton icon="today" label="Today" active={false} onClick={noop} />
-        <ChipToggle active={false} onToggle={noop}>
-          Chest
-        </ChipToggle>
+        <RowButton variant="nav" selected={false} onClick={noop}>
+          Today
+        </RowButton>
+        <ChipGroup options={[{ value: "chest", label: "Chest" }]} selected={[]} onToggle={noop} />
         <CardButton selected={false} onClick={noop}>
           Card
         </CardButton>
-        <Badge onClick={noop} title="Edit">
+        <Button variant="badge" onClick={noop} title="Edit">
           A1
-        </Badge>
+        </Button>
         <Toggle on={false} onChange={noop} ariaLabel="Sound" />
       </>,
     );

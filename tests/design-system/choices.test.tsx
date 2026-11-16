@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { Chip, ChipGroup, ChipToggle, Dropdown, Segmented } from "@nabd/design-system";
+import { Chip, ChipGroup, Dropdown, Segmented } from "@nabd/design-system";
 import type { Option } from "@nabd/design-system";
 import { choose, click, press } from "./render";
 
@@ -209,23 +209,6 @@ describe("Chip", () => {
   });
 });
 
-describe("ChipToggle", () => {
-  it.each([true, false])("reports whether it is on (%s) and asks to toggle on click", (active) => {
-    const onToggle = vi.fn();
-    render(
-      <ChipToggle active={active} onToggle={onToggle}>
-        Dumbbells
-      </ChipToggle>,
-    );
-    expect(screen.getByRole("button", { name: "Dumbbells" })).toHaveAttribute(
-      "aria-pressed",
-      String(active),
-    );
-    click("Dumbbells");
-    expect(onToggle).toHaveBeenCalledTimes(1);
-  });
-});
-
 describe("ChipGroup", () => {
   it("renders a chip per option, pressed for the selected keys", () => {
     render(<ChipGroup options={UNITS} selected={["lb"]} onToggle={vi.fn()} ariaLabel="Units" />);
@@ -238,10 +221,20 @@ describe("ChipGroup", () => {
     );
   });
 
-  it("reports the key of the chip that was clicked, typed from the options", () => {
+  it("reports the option of the chip that was clicked, typed from the options", () => {
     const toggled: Unit[] = [];
-    render(<ChipGroup options={UNITS} selected={[]} onToggle={(unit) => toggled.push(unit)} />);
+    render(
+      <ChipGroup options={UNITS} selected={[]} onToggle={({ value }) => toggled.push(value)} />,
+    );
     click("Kilograms");
     expect(toggled).toEqual(["kg"]);
+  });
+
+  it("hands back an option with whatever its view-model gave it", () => {
+    const options = UNITS.map((option) => ({ ...option, patch: { unit: option.value } }));
+    const onToggle = vi.fn();
+    render(<ChipGroup options={options} selected={[]} onToggle={onToggle} />);
+    click("Pounds");
+    expect(onToggle).toHaveBeenCalledWith(expect.objectContaining({ patch: { unit: "lb" } }));
   });
 });

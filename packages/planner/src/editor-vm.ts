@@ -7,12 +7,14 @@ import type {
   MuscleKey,
   Program,
   ProgramType,
+  Weekday,
 } from "@nabd/domain";
 import {
   EQUIPMENT_NAMES,
   MUSCLE_NAMES,
   exerciseName,
   firstDay,
+  isFloating,
   muscleList,
   plural,
   supersetTags,
@@ -49,6 +51,8 @@ export interface SlotCardVM {
 export interface PoolEntryVM {
   id: string;
   name: string;
+  /** Names its remove button: "Remove Dumbbell Curl from pool". */
+  removeAriaLabel: string;
 }
 
 /** Exercises done back to back. */
@@ -64,7 +68,7 @@ export type EditorRowVM =
 
 /** Where the day sits: on a weekday, or at a position in the floating order. */
 export type DayPlacementVM =
-  | { kind: "weekday"; weekday: number | null }
+  | { kind: "weekday"; weekday: Weekday | null }
   | { kind: "floating"; label: string };
 
 export interface EditorVM {
@@ -130,7 +134,10 @@ function slotRow(slot: CycledSlot, lookup: ExerciseLookup): EditorRowVM {
       muscleName,
       hint: `Targets ${muscleName} · cycles its pool`,
       poolLabel: `Exercise pool · ${plural(slot.pool.length, "exercise")}`,
-      pool: slot.pool.map((id) => ({ id, name: exerciseName(lookup, id) })),
+      pool: slot.pool.map((id): PoolEntryVM => {
+        const name = exerciseName(lookup, id);
+        return { id, name, removeAriaLabel: `Remove ${name} from pool` };
+      }),
       block: buildSetBlockVM(slot),
     },
   };
@@ -141,10 +148,9 @@ export function buildEditorVM(program: Program, day: Day, lookup: ExerciseLookup
     dayId: day.id,
     name: day.name,
     type: program.type,
-    placement:
-      program.schedule === "weekday"
-        ? { kind: "weekday", weekday: day.weekday }
-        : { kind: "floating", label: `${dayOrdinal(program.days.indexOf(day))} · floating` },
+    placement: isFloating(program)
+      ? { kind: "floating", label: `${dayOrdinal(program.days.indexOf(day))} · floating` }
+      : { kind: "weekday", weekday: day.weekday },
     summary: daySummary(day, program.type),
     rows:
       program.type === "fixed"

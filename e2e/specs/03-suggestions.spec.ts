@@ -2,7 +2,7 @@ import { EXERCISE, day, plan, loggedSet, planned, workingSets } from "../support
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { curl, squat } = EXERCISE;
+const { curl, gobletSquat } = EXERCISE;
 
 const LB_PER_KG = 2.2046226218;
 const lb = (pounds: number): number => pounds / LB_PER_KG;
@@ -16,13 +16,15 @@ const LAST_WEDNESDAY = dayAfter(MONDAY, -5);
  */
 const stored = {
   settings: { weightUnit: "lb", weightIncrement: 2.5 },
-  program: plan([day("Pull", [planned(curl.id, { sets: workingSets(3) }), planned(squat.id)])]),
+  program: plan([
+    day("Pull", [planned(curl.id, { sets: workingSets(3) }), planned(gobletSquat.id)]),
+  ]),
   history: [
-    loggedSet(squat.id, { day: LAST_WEDNESDAY, reps: 6, kg: lb(40) }),
+    loggedSet(gobletSquat.id, { day: LAST_WEDNESDAY, reps: 6, kg: lb(40) }),
     loggedSet(curl.id, { day: LAST_FRIDAY, time: "10:00", reps: 8, kg: lb(25) }),
     loggedSet(curl.id, { day: LAST_FRIDAY, time: "11:00", reps: 12, kg: lb(25) }),
     loggedSet(curl.id, { day: LAST_FRIDAY, time: "12:00", reps: 6, kg: lb(25) }),
-    loggedSet(squat.id, { day: LAST_FRIDAY, time: "13:00", reps: 6, kg: lb(40) }),
+    loggedSet(gobletSquat.id, { day: LAST_FRIDAY, time: "13:00", reps: 6, kg: lb(40) }),
   ],
 };
 
@@ -67,8 +69,8 @@ test("double progression against the same set of the previous session", async ({
   });
 
   await test.step("below the range twice running: back off one step", async () => {
-    await logger.listRow(squat.name).click();
-    await expect(logger.exercise).toHaveText(squat.name);
+    await logger.listRow(gobletSquat.name).click();
+    await expect(logger.exercise).toHaveText(gobletSquat.name);
     await expect(logger.suggestions).toHaveText(["8 × 37.5 lb"]);
     await expect(logger.dialog).toContainText("Last time: 6 × 40 lb");
     await expect(logger.weight).toHaveValue("40");

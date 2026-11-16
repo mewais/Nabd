@@ -9,9 +9,8 @@
 // It drives the app with the e2e fixture and builders, on the same fake clock,
 // so two runs of the same build give the same pictures.
 
-import { defineConfig, devices } from "@playwright/test";
-import { fileURLToPath } from "node:url";
-import { TIME_ZONE } from "../support/time";
+import { defineConfig } from "@playwright/test";
+import { browserAt, servedApp } from "../base.config";
 
 const PORT = 4398;
 /** An app someone already serves; otherwise this config builds and serves one. */
@@ -24,20 +23,6 @@ export default defineConfig({
   workers: 1,
   reporter: "line",
   retries: 1,
-  use: {
-    ...devices["Desktop Chrome"],
-    baseURL: URL_GIVEN ?? `http://localhost:${PORT}`,
-    viewport: { width: 1280, height: 900 },
-    locale: "en-US",
-    timezoneId: TIME_ZONE,
-  },
-  webServer: URL_GIVEN
-    ? undefined
-    : {
-        command: `pnpm build && pnpm --filter @nabd/app exec vite preview --port ${PORT} --strictPort`,
-        cwd: fileURLToPath(new URL("../..", import.meta.url)),
-        url: `http://localhost:${PORT}`,
-        reuseExistingServer: true,
-        timeout: 180_000,
-      },
+  use: browserAt(URL_GIVEN ?? `http://localhost:${PORT}`),
+  webServer: URL_GIVEN ? undefined : servedApp(PORT, true),
 });

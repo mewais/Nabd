@@ -249,17 +249,31 @@ pnpm check              # all of the above
 ```
 
 Besides the usual rules, ESLint enforces three things about this code base
-(`eslint.config.js`, `scripts/eslint/`): the dependency direction between packages
-described under [Layout](#layout); one import style — types come in their own
-`import type { … }` statement, and a module is imported once per kind; and that styling
-stays in the design system (`scripts/eslint/styling.js`) — outside it there is no
-`style` attribute, no colour spelled out (`var(--…)`, `color-mix(…)`, hex, `rgb(…)`),
-no number for a font size, gap, padding or margin, and no raw `<button>`, `<input>`,
-`<select>` or `<textarea>`. A genuine one-off is disabled on its line, with the reason.
+(`eslint.config.js`, `scripts/eslint/`, with their own tests in `tests/scripts/`):
+
+- the dependency direction between packages described under [Layout](#layout), and
+  that a package — or a test — reaches another only through its entry point
+  `@nabd/<name>`, never a file inside it, by alias or by relative path; the end-to-end
+  specs may use only what does not draw (`scripts/eslint/layers.js`);
+- one import style: types come in their own `import type { … }` statement, and a module
+  is imported once per kind;
+- that styling stays in the design system (`scripts/eslint/styling.js`). Outside it
+  there is no `style` attribute (nor one passed in a spread); no colour spelled out
+  (`var(--…)`, `color-mix(…)`, hex, `rgb(…)`, `oklch(…)`, or a word such as `"red"` for a
+  colour property or attribute); no CSS length, track list or function in a string
+  (`"8px"`, `"1fr"`, `"minmax(…)"`); no number or string for a size, spacing, radius,
+  weight or position of a style property, however its key is written; no number for a
+  sizing attribute (`size={14}`, `width={540}`); and no raw `<button>`, `<input>`,
+  `<select>` or `<textarea>`, nor any other element made clickable with `onClick`.
+
+A genuine one-off is disabled on its line, with the reason.
 
 The app's version is written in `package.json` (which `tauri.conf.json` and the UI
 read) and in `src-tauri/Cargo.toml`; `src-tauri/build.rs` refuses to build when the
-two differ. The same build script takes the window's title from the page's `<title>`.
+two differ. The same build script takes the window's title from the page's `<title>`,
+and the window's background before the page has painted from the design system's
+theme (its dark background, `DARK_BACKGROUND` in `theme.ts`, which the page's own
+prepaint uses too).
 
 ## End-to-end tests
 
@@ -281,9 +295,13 @@ the in-memory backend of `pnpm dev`. Two things make them deterministic:
   `window.__NABD_E2E_SNAPSHOT__` (`packages/app/src/demo.ts`), the one seam the tests
   have. It is read only where the demo backend is built, which the desktop app never does.
 
-`e2e/support/` has the fixture (`app`), one page object per screen and modal, and the
-builders for plans and history; the browser runs in a non-UTC time zone so "today" is
-tested as the user's calendar day. Page objects find things the way a person does — by
+`e2e/support/` has the fixture (`app`), one page object per screen and modal (each a
+`ScreenObject` or a `DialogObject`, `pages/region.ts`), and the plans and history the
+specs start from — built with the unit suites' fixture kit (`tests/support/builders.ts`
+and the catalog ids of `tests/support/exercises.ts`), so an exercise or a prescription
+means the same in both. `e2e/base.config.ts` is what the specs and the screenshot capture
+share: the browser, and the served build it drives. The browser runs in a non-UTC time
+zone so "today" is tested as the user's calendar day. Page objects find things the way a person does — by
 role and name — never by style. A spec marked `test.fail` documents designed behaviour
 the app does not have yet: it starts failing the day the app is fixed, and the mark comes
 off. No spec is marked at present.
@@ -352,12 +370,14 @@ packages/
   ipc-client      the typed boundary to the Rust backend, and an in-memory stand-in
   store           Zustand store, one file per slice: state, actions, memoized selectors,
                   and what holds after every change (settle.ts)
-  design-system   theme, tokens (colours and tints, spacing, type roles, radii,
-                  shadows, layers) and every presentational primitive: layout (Row,
-                  Stack, Grid, WithSide, Divider…), Text, Card, ButtonBase under
-                  every control
-  bodymap         the anatomical SVG map (its vendored drawing in src/drawing/) and the
-                  per-muscle meter
+  design-system   theme, tokens (colours and tints, spacing, sizes and named widths,
+                  type roles and weights, radii, shadows, layers) and every
+                  presentational primitive: layout (Row, Stack, Grid, WithSide,
+                  Divider…), Text, Card, ButtonBase under every button and
+                  InputBase under every field; one prop vocabulary for all of them
+                  (the CONVENTIONS at the top of its index.ts)
+  bodymap         the anatomical SVG map (its vendored drawing in src/drawing/), the
+                  per-muscle meter, and the muscles as the options of a picker
   shell           the app chrome: sidebar, top bar, notice banner
   today           the Today screen
   planner         the Plan screen
@@ -370,29 +390,44 @@ src-tauri/
   crates/native        the pure decisions behind native features (tray model,
                        notifications, capabilities, launch/close, idle backends)
   crates/ipc           DataCommands: what the frontend can ask of the stored data
-  src/                 the Tauri binary: commands/, db, error, tray, window, clock,
-                       glass, autostart, notifications, export, platform/ (what differs
-                       between the three desktops) and idle/ (one backend per platform API)
-  build.rs             the version check and the window title (see Checks)
-tests/                 tests/<package>/, tests/rust/<crate>/, and the shared kits:
-                       tests/support/ (builders, exercises, programs, world, dom) and
+  src/                 the Tauri binary: lib, main, commands/ (data, native), db, error,
+                       tray, app_menu (the macOS menu bar's app menu: Cmd+Q), window,
+                       clock, glass, autostart, notifications, export, platform/ (what
+                       differs between the desktops: linux, macos, windows) and idle/
+                       (one backend per platform API: dbus, wayland, x11 under linux;
+                       macos; windows)
+  build.rs             the version check, the window title and its background (see Checks)
+tests/                 tests/<package>/, tests/rust/<crate>/, tests/scripts/ (the local
+                       ESLint rules), and the shared kits: tests/support/ (the fixture
+                       kit — builders, exercises, programs — and world, dom) and
                        tests/rust/common/
-e2e/                   Playwright specs of the whole UI, with their page objects, and
-                       the screenshot capture (visual/)
+e2e/                   Playwright specs of the whole UI, with their page objects and
+                       shared config, and the screenshot capture (visual/)
 scripts/               the Vitest setup file, the local ESLint rules, the icon script
                        and the Linux smoke test
 ```
 
 **Dependencies only point one way**, and ESLint refuses an import that does not
-(`scripts/eslint/layers.js`):
+(`scripts/eslint/layers.js`; a test checks that this drawing is the one it enforces).
+Each package, with what it may import:
 
 ```
-domain ← view ← engines (dataset … serialization) ← ipc-client ← store
-domain ← view ← design-system ← bodymap ← screens (shell, today, planner, progress, modals)
+domain          ← —
+view            ← domain
+engines         ← domain, one another
+ipc-client      ← domain
+store           ← domain, view, engines, ipc-client
+design-system   ← domain, view
+bodymap         ← domain, view, coverage, design-system
+screens         ← domain, view, engines, design-system, bodymap
+app             ← all of them
+
+engines: dataset, coverage, scheduling, progression, session, nudge, analytics, program-editor, serialization
+screens: shell, today, planner, progress, modals
 ```
 
-Engines know nothing about React or the store; screens use the engines but never the
-store or the backend; only `app` joins the two sides, in
+Engines know nothing about React, the view vocabulary or the store; screens use the
+engines but never the store or the backend; only `app` joins the two sides, in
 `packages/app/src/containers/` (select state → build the view-model → bind the
 actions). The store is the only place that persists. View vocabulary lives in `view`
 rather than `domain` so that the engines never see it, and so that neither the store
@@ -405,11 +440,15 @@ same shape:
   the app (or a test) needs of them.
 - View-models are in `<name>-vm.ts`: the `<Name>VM` types and a pure
   `build<Name>VM` function that turns domain objects into exactly what is rendered,
-  every word already written. The screen's own is `<screen>-vm.ts`.
+  every word already written, and every change a control makes already worked out (a
+  settings row carries its patch, a chip of a multi-select the list it leaves). The
+  screen's own is `<screen>-vm.ts`.
 - `<screen>-actions.ts` declares `<Screen>Actions`: what the screen asks of the app.
 - `options.ts` holds the package's pickers (what each `Segmented`, `Dropdown` or chip
-  group offers), built with `optionsOf(keys, NAMES)` where the names are a domain table;
-  `wording.ts` holds any text helpers.
+  group offers), built with `optionsOf(keys, names)` — the names a domain table or a
+  naming function — or, where the labels are the screen's own, written out; a picker
+  more than one screen offers lives below them (the muscles in `bodymap`, the themes in
+  `design-system`). `wording.ts` holds any text helpers.
 - Components are one per file, named after the file, each with a `<Name>Props`
   interface, and take their props by one rule:
   - **`vm`** — the view-model, or the part of it, that the component draws. Anything
@@ -430,7 +469,8 @@ on `ProgramEditor` or `PrescriptionEditor`, and written out where the user trigg
 In the store, the actions are grouped as slices (`DaySlice`, `LoggingSlice`, … in
 `slices.ts`, one file each). A slice never imports another slice: what it needs of
 another it asks for through `get().action()`, and what two of them share lives in a
-helper module (`persistence`, `rollover`, `open-session`, `os`, `selectors`).
+helper module (`state`, `context`, `persistence`, `hydration`, `rollover`,
+`open-session`, `os`, `selectors`, `settle`).
 
 ## Credits
 

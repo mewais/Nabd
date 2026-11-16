@@ -1,5 +1,7 @@
 import type { Schedule } from "@nabd/domain";
+import { DAYS_PER_WEEK } from "@nabd/domain";
 import { Grid } from "@nabd/design-system";
+import type { GridColumns } from "@nabd/design-system";
 import { AddCard } from "./add-card";
 import type { BoardVM } from "./board-vm";
 import { DayCard } from "./day-card";
@@ -11,18 +13,23 @@ interface WeekBoardProps {
   actions: Pick<PlannerActions, "edit" | "selectDay">;
 }
 
-/** Seven equal columns for a week; as many tiles as fit for a floating plan. */
-const COLUMNS: Record<Schedule, number | string> = {
-  weekday: 7,
-  floating: "repeat(auto-fill, minmax(150px, 1fr))",
+/** A column per weekday for a week; as many tiles as fit for a floating plan. */
+const COLUMNS: Record<Schedule, GridColumns> = {
+  weekday: DAYS_PER_WEEK,
+  floating: { atLeast: "tile" },
 };
-/** Every tile of a row is as tall as the tallest, and never squat. */
-const ROWS = "minmax(150px, auto)";
 
 /** The plan at a glance: one tile per day (or free weekday), the selected one ringed. */
 export function WeekBoard({ vm, actions }: WeekBoardProps): JSX.Element {
   return (
-    <Grid role="group" ariaLabel="Days" columns={COLUMNS[vm.schedule]} rows={ROWS} gap="sm">
+    // Every tile of a row is as tall as the tallest, and never squat.
+    <Grid
+      role="group"
+      ariaLabel="Days"
+      columns={COLUMNS[vm.schedule]}
+      rows={{ min: "tile" }}
+      gap="sm"
+    >
       {vm.columns.map((column) => {
         switch (column.kind) {
           case "day":

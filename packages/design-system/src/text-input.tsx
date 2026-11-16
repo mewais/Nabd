@@ -1,5 +1,10 @@
-import { FIELD_CLASS } from "./global-styles";
-import { COLOR, FONT_SIZE, QUIET_BOX, RADIUS, SPACE } from "./tokens";
+import { InputBase } from "./input-base";
+import { pad } from "./styles";
+import { QUIET_BOX, RADIUS, SPACE, TEXT } from "./tokens";
+import type { Size } from "./tokens";
+
+/** `sm` for inline notes inside a card. */
+type TextInputSize = Extract<Size, "sm" | "md">;
 
 interface TextInputProps {
   value: string;
@@ -7,20 +12,15 @@ interface TextInputProps {
   placeholder?: string;
   /** `search` makes it a search box. */
   type?: "text" | "search";
-  /** `sm` for inline notes inside a card. */
-  size?: "sm" | "md";
+  size?: TextInputSize;
   /** Accessible name, when there is no visible label. */
   ariaLabel?: string;
 }
 
 const SIZES = {
-  sm: {
-    borderRadius: RADIUS.chip,
-    padding: `${SPACE.sm}px ${SPACE.md}px`,
-    fontSize: FONT_SIZE.small,
-  },
-  md: { borderRadius: RADIUS.control, padding: SPACE.md, fontSize: FONT_SIZE.medium },
-} as const;
+  sm: { ...TEXT.controlSm, borderRadius: RADIUS.chip, padding: pad("sm", "md") },
+  md: { ...TEXT.controlLg, borderRadius: RADIUS.control, padding: SPACE.md },
+} as const satisfies Record<TextInputSize, object>;
 
 /** A single-line text field that fills its container. */
 export function TextInput({
@@ -32,21 +32,13 @@ export function TextInput({
   ariaLabel,
 }: TextInputProps): JSX.Element {
   return (
-    <input
+    <InputBase
       type={type}
-      className={FIELD_CLASS}
       value={value}
       placeholder={placeholder}
       aria-label={ariaLabel}
       onChange={(event) => onChange(event.target.value)}
-      style={{
-        ...QUIET_BOX,
-        ...SIZES[size],
-        width: "100%",
-        boxSizing: "border-box",
-        fontFamily: "inherit",
-        color: COLOR.text,
-      }}
+      style={{ ...QUIET_BOX, ...SIZES[size], width: "100%" }}
     />
   );
 }

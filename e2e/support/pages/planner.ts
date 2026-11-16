@@ -1,13 +1,13 @@
 import type { Locator, Page } from "@playwright/test";
+import { ScreenObject } from "./region";
 
 /** The Plan screen: the program header, the week board and the editor of the selected day. */
-export class Planner {
-  readonly screen: Locator;
+export class Planner extends ScreenObject {
   readonly dayName: Locator;
   readonly addExercise: Locator;
 
-  constructor(private readonly page: Page) {
-    this.screen = page.getByRole("main");
+  constructor(page: Page) {
+    super(page);
     this.dayName = this.screen.getByRole("textbox", { name: "Day name" });
     this.addExercise = this.screen.getByRole("button", { name: "+ Add exercise" });
   }
@@ -15,11 +15,6 @@ export class Planner {
   /** An option of the program header: "Fixed"/"Cycled" (Plan type), "Weekdays"/"Floating" (Schedule). */
   option(group: "Plan type" | "Schedule", name: string): Locator {
     return this.screen.getByRole("radiogroup", { name: group }).getByRole("radio", { name });
-  }
-
-  /** A button of the screen by its exact name: "Add a day on Monday", "Delete day", "Move later"… */
-  button(name: string): Locator {
-    return this.screen.getByRole("button", { name, exact: true });
   }
 
   /** A day's tile on the board; pressing it opens the day in the editor. */

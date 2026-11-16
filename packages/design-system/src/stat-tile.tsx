@@ -38,7 +38,7 @@ export function StatTile({
       <Stack gap="sm">
         <Text variant="caption">{label}</Text>
         <Row gap="xs" align="baseline">
-          <Text as="span" variant="stat" tone={tone === "neutral" ? "strong" : tone}>
+          <Text as="span" variant="stat" tone={tone}>
             {value}
           </Text>
           {unit !== undefined && (

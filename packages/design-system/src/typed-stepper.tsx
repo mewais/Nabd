@@ -22,7 +22,7 @@ export interface TypedStepperProps {
  * stepping lets go of whatever was half typed.
  */
 export function TypedStepper(props: TypedStepperProps): JSX.Element {
-  const { value, onStep, onSet, onEnter, ariaLabel, size = "large" } = props;
+  const { value, onStep, onSet, onEnter, ariaLabel, size = "md" } = props;
   // A fresh field after each press of − or +: what was half typed is dropped.
   const [presses, setPresses] = useState(0);
   const step = (direction: Direction): void => {

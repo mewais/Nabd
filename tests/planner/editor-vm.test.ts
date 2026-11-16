@@ -122,8 +122,12 @@ describe("editor view-model", () => {
     const row = editorOf(program, "d-core").rows[0]!;
 
     expect(row.kind === "slot" && row.slot.pool).toEqual([
-      { id: CATALOG.plank, name: "Plank" },
-      { id: "mystery_hold", name: "mystery_hold" },
+      { id: CATALOG.plank, name: "Plank", removeAriaLabel: "Remove Plank from pool" },
+      {
+        id: "mystery_hold",
+        name: "mystery_hold",
+        removeAriaLabel: "Remove mystery_hold from pool",
+      },
     ]);
   });
 });

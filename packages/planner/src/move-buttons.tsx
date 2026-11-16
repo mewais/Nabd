@@ -13,13 +13,13 @@ export function MoveButtons({ onMove, horizontal = false }: MoveButtonsProps): J
   return (
     <Row gap="xs">
       <IconButton
-        variant="mini"
+        size="sm"
         icon={horizontal ? "chevron-left" : "chevron-up"}
         ariaLabel="Move earlier"
         onClick={() => onMove(-1)}
       />
       <IconButton
-        variant="mini"
+        size="sm"
         icon={horizontal ? "chevron-right" : "chevron-down"}
         ariaLabel="Move later"
         onClick={() => onMove(1)}

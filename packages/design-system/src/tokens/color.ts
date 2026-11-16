@@ -31,16 +31,31 @@ export const COLOR = {
 } as const;
 
 /**
- * What a colour says. Every `tone` prop speaks this vocabulary; `neutral` is
- * each component's own quiet default.
+ * What a colour says, for every `tone` prop: what it means (`accent`,
+ * `success`, `info`, `danger`), how much it stands out (`strong`, `muted`,
+ * `faint`), or that it sits on an accent fill (`onAccent`). `neutral` is each
+ * component's own quiet default.
  */
-export type Tone = "neutral" | "accent" | "success" | "info" | "danger";
+export type Tone =
+  | "neutral"
+  | "strong"
+  | "muted"
+  | "faint"
+  | "accent"
+  | "success"
+  | "info"
+  | "danger"
+  | "onAccent";
 
 const TONE_COLOR: Record<Exclude<Tone, "neutral">, string> = {
+  strong: COLOR.text,
+  muted: COLOR.textMuted,
+  faint: COLOR.textFaint,
   accent: COLOR.accent,
   success: COLOR.success,
   info: COLOR.info,
   danger: COLOR.danger,
+  onAccent: COLOR.onAccent,
 };
 
 /** The colour of `tone`; null for `neutral`, which is each component's own quiet colour. */

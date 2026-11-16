@@ -1,5 +1,5 @@
 import type { LoggedSet, TrackingType, WeightUnit } from "@nabd/domain";
-import { inUnit, isTimeBased, roundTo } from "@nabd/domain";
+import { inUnit, isAssisted, isTimeBased, roundTo } from "@nabd/domain";
 import { estimatedMax } from "./epley";
 import { ExerciseHistory, assistedScore } from "./history";
 import type { Performance } from "./history";
@@ -46,7 +46,7 @@ const SCORES: Record<TrendScale, (set: Performance) => number> = {
  * seconds.
  */
 function scaleFor(tracking: TrackingType | undefined, loaded: boolean): TrendScale {
-  if (tracking === "assisted_bodyweight") return "bodyweight";
+  if (tracking !== undefined && isAssisted(tracking)) return "bodyweight";
   if (loaded) return "e1rm";
   return tracking !== undefined && isTimeBased(tracking) ? "seconds" : "reps";
 }

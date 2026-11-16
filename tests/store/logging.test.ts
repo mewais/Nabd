@@ -1,6 +1,6 @@
 import { dateKey, DEFAULT_SETTINGS } from "@nabd/domain";
 import { selectCoach } from "@nabd/store";
-import { nov, threeSets, warmup } from "../support/builders";
+import { nov, workingSets, warmup } from "../support/builders";
 import { CATALOG } from "../support/exercises";
 import { catalogBenchRow, catalogFlyRow, catalogPushPull } from "../support/programs";
 import { benchSet, boot } from "./fixtures";
@@ -40,7 +40,7 @@ describe("logging sets", () => {
     const app = await boot();
     await app.log(catalogBenchRow.id, 1);
     expect(app.get().session!.itemId).toBe(catalogBenchRow.id);
-    expect(app.get().session!.restRemaining(app.clock.now)).toBe(90);
+    expect(app.get().session!.restRemaining(app.clock.now)).toBe(120);
     await app.get().logSet();
     await app.get().logSet();
     expect(app.get().session!.itemId).toBe(catalogFlyRow.id);
@@ -88,20 +88,28 @@ describe("logging sets", () => {
     expect(app.data.history).toHaveLength(1);
   });
 
-  it("ignores a typed number that no set could have", async () => {
+  it("ignores typed reps that no set could have", async () => {
     const app = await boot();
     app.get().openSession();
     app.get().setReps(10);
-    app.get().setWeight(40);
     for (const reps of [0, 1000, Number.NaN]) app.get().setReps(reps);
-    for (const weight of [-5, 99999, Number.NaN]) app.get().setWeight(weight);
-    expect(app.get().session).toMatchObject({ reps: 10, weight: 40 });
+    expect(app.get().session).toMatchObject({ reps: 10 });
+  });
+
+  it("takes a typed load only within the bounds stepping keeps to: a barbell takes at least one increment", async () => {
+    const app = await boot();
+    app.get().openSession();
+    app.get().setWeight(40);
+    for (const weight of [0, 2, -5, 99999, Number.NaN]) app.get().setWeight(weight);
+    expect(app.get().session).toMatchObject({ weight: 40 });
+    app.get().setWeight(2.5);
+    expect(app.get().session).toMatchObject({ weight: 2.5 });
   });
 
   describe("what the form holds after a set", () => {
     /** Bench with a warm-up before its three working sets, trained once before. */
     const warmedUp = async () => {
-      const row = { ...catalogBenchRow, sets: [warmup(12), ...threeSets()] };
+      const row = { ...catalogBenchRow, sets: [warmup(12), ...workingSets(3)] };
       const plan = {
         ...catalogPushPull,
         days: [{ ...catalogPushPull.days[0]!, exercises: [row, catalogFlyRow] }],

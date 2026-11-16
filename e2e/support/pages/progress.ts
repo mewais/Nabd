@@ -1,14 +1,9 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import { statTile } from "./controls";
+import { ScreenObject } from "./region";
 
 /** The Progress screen, and the full-history chart a progression row opens. */
-export class Progress {
-  readonly screen: Locator;
-
-  constructor(private readonly page: Page) {
-    this.screen = page.getByRole("main");
-  }
-
+export class Progress extends ScreenObject {
   /** "Current streak", "Completion this wk", "Sets this week" or "Active days 30d". */
   kpi(label: string): Locator {
     return statTile(this.screen, label);

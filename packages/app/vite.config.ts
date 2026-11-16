@@ -1,8 +1,7 @@
 import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { workspaceAliases } from "../../workspace.config";
-import { PREPAINT_BACKGROUND } from "../design-system/src/theme";
+import { PREPAINT_BACKGROUND, workspaceAliases } from "../../workspace.config";
 
 /** index.html paints the theme's own background until React has rendered. */
 const prepaint: Plugin = {

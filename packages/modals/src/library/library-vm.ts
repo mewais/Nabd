@@ -1,5 +1,6 @@
 import type { ExerciseLibrary } from "@nabd/dataset";
-import type { Equipment, Exercise, ExerciseDraft, Measure } from "@nabd/domain";
+import { MUSCLE_OPTIONS } from "@nabd/bodymap";
+import type { Equipment, Exercise, ExerciseDraft, Measure, MuscleKey } from "@nabd/domain";
 import {
   EQUIPMENT_NAMES,
   MUSCLE_NAMES,
@@ -9,6 +10,8 @@ import {
   poolMeasure,
 } from "@nabd/domain";
 import type { LibraryState, LibraryTarget } from "@nabd/view";
+import { buildChipsVM } from "../chips-vm";
+import type { ChipsVM } from "../chips-vm";
 import type { GroupFilter } from "../options";
 
 interface LibraryInput {
@@ -40,7 +43,11 @@ export interface LibraryBrowserVM {
   emptyNote: string | null;
 }
 
-export interface ExerciseFormVM extends ExerciseDraft {
+export interface ExerciseFormVM extends Omit<ExerciseDraft, "primary" | "secondary"> {
+  /** The muscles it works most, each a chip that switches it in or out. */
+  primary: ChipsVM<MuscleKey, Partial<ExerciseDraft>>;
+  /** The muscles it works besides. */
+  secondary: ChipsVM<MuscleKey, Partial<ExerciseDraft>>;
   /** An exercise needs a name and at least one primary muscle. */
   canCreate: boolean;
 }
@@ -82,13 +89,22 @@ const SCOPE_NOTES: Record<Measure, string> = {
   time: "This pool is timed, like its first exercise, so only timed exercises are offered.",
 };
 
+function buildFormVM(draft: ExerciseDraft): ExerciseFormVM {
+  return {
+    ...draft,
+    primary: buildChipsVM(MUSCLE_OPTIONS, draft.primary, (primary) => ({ primary })),
+    secondary: buildChipsVM(MUSCLE_OPTIONS, draft.secondary, (secondary) => ({ secondary })),
+    canCreate: isCompleteDraft(draft),
+  };
+}
+
 /** The library modal; null while it is closed. */
 export function buildLibraryVM({ state, pool, library, owned }: LibraryInput): LibraryVM | null {
   const { target, search, group, draft } = state;
   if (target === null) return null;
   const title = titleFor(target);
   if (draft !== null) {
-    return { title, mode: "create", form: { ...draft, canCreate: isCompleteDraft(draft) } };
+    return { title, mode: "create", form: buildFormVM(draft) };
   }
   // A cycled pool shares one prescription, so once it has an exercise it only
   // takes more of that measure.

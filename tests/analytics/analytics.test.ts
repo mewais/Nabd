@@ -1,5 +1,5 @@
 import type { DayRecord, LoggedSet } from "@nabd/domain";
-import { DEFAULT_SETTINGS, dateKey } from "@nabd/domain";
+import { DEFAULT_SETTINGS, WEEKDAYS, dateKey } from "@nabd/domain";
 import { TrainingStats } from "@nabd/analytics";
 import { dayRecord, exercise, logged, nov } from "../support/builders";
 
@@ -10,7 +10,7 @@ const record = (day: number, planned: number, done: number): DayRecord =>
   dayRecord(nov(day), planned, done);
 
 /** Every day of the week worked. */
-const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
+const EVERY_DAY = WEEKDAYS;
 
 // Monday 16 Nov 2026 is "today"; the week runs Mon 16 – Sun 22.
 const stats = (history: LoggedSet[], dayLog: DayRecord[] = [], workDays = EVERY_DAY) =>

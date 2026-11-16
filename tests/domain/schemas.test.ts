@@ -13,12 +13,11 @@ import {
   MUSCLE_PRIMARY_GROUP,
   SettingsSchema,
   boundedLoad,
-  displayWeight,
   editableWeight,
   exerciseFromDraft,
   formatWeight,
   isCompleteDraft,
-  isWorkDay,
+  isWorkday,
   kgFromDisplay,
   loadStepKg,
   salvageSettings,
@@ -71,9 +70,9 @@ describe("settings", () => {
 
   it("knows which dates fall on a workday", () => {
     // Fri 20 and Sat 21 Nov 2026.
-    expect(isWorkDay(DEFAULT_SETTINGS, new Date(2026, 10, 20))).toBe(true);
-    expect(isWorkDay(DEFAULT_SETTINGS, new Date(2026, 10, 21))).toBe(false);
-    expect(isWorkDay({ workDays: [6] }, new Date(2026, 10, 21, 23, 59))).toBe(true);
+    expect(isWorkday(DEFAULT_SETTINGS, new Date(2026, 10, 20))).toBe(true);
+    expect(isWorkday(DEFAULT_SETTINGS, new Date(2026, 10, 21))).toBe(false);
+    expect(isWorkday({ workDays: [6] }, new Date(2026, 10, 21, 23, 59))).toBe(true);
   });
 });
 
@@ -181,7 +180,7 @@ describe("the body weight setting", () => {
 
 describe("weights", () => {
   it("stores kg and shows a weight exactly in the unit it was entered in, with no trailing zeros", () => {
-    expect(displayWeight(60, "kg")).toBe(60);
+    expect(formatWeight(60, "kg")).toBe("60 kg");
     expect(formatWeight(20, "kg")).toBe("20 kg");
     expect(formatWeight(12.5, "kg")).toBe("12.5 kg");
     expect(formatWeight(kgFromDisplay(27.5, "lb"), "lb")).toBe("27.5 lb");
@@ -198,7 +197,7 @@ describe("weights", () => {
   });
 
   it("shows a weight from the other unit as a conversion, to one decimal", () => {
-    expect(displayWeight(60, "lb")).toBe(132.3);
+    expect(formatWeight(60, "lb")).toBe("132.3 lb");
     expect(formatWeight(20, "kg")).toBe("20 kg");
     expect(formatWeight(20, "lb")).toBe("44.1 lb");
     expect(formatWeight(62.5, "lb")).toBe("137.8 lb");
@@ -217,13 +216,17 @@ describe("weights", () => {
       "22.5 kg",
       "23.75 kg",
     ]);
-    expect([20.25, 20.5, 20.75].map((kg) => displayWeight(kg, "kg"))).toEqual([20.25, 20.5, 20.75]);
+    expect([20.25, 20.5, 20.75].map((kg) => formatWeight(kg, "kg"))).toEqual([
+      "20.25 kg",
+      "20.5 kg",
+      "20.75 kg",
+    ]);
     expect(formatWeight(kgFromDisplay(26.25, "lb"), "lb")).toBe("26.25 lb");
   });
 
   it("round-trips typed pound values through kg without drift", () => {
     for (const pounds of [0.25, 2.5, 25, 26.25, 27.5, 135, 225]) {
-      expect(displayWeight(kgFromDisplay(pounds, "lb"), "lb")).toBe(pounds);
+      expect(formatWeight(kgFromDisplay(pounds, "lb"), "lb")).toBe(`${pounds} lb`);
     }
   });
 

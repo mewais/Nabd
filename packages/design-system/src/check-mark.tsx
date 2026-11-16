@@ -1,50 +1,56 @@
+import type { CSSProperties } from "react";
 import { Icon } from "./icon";
+import { CENTERED } from "./styles";
 import { COLOR, HAIRLINE, RADIUS } from "./tokens";
+import type { IconSize, Size } from "./tokens";
+
+/** Where something stands: still to do, the one in play, or done. */
+type CheckState = "todo" | "next" | "done";
+/** `sm` marks a row; `lg` is a celebration. */
+type CheckMarkSize = Extract<Size, "sm" | "lg">;
 
 interface CheckMarkProps {
-  /** Done: a filled disc with a tick. Not done: an empty ring. */
-  checked: boolean;
-  /** Not done, but the one in play: the ring turns accent and gets a dot. */
-  current?: boolean;
-  /** `sm` marks a row; `lg` is a celebration. */
-  size?: "sm" | "lg";
+  state: CheckState;
+  size?: CheckMarkSize;
   /** What the mark says here ("Done", "Up next"), for assistive tech. */
-  label?: string;
+  ariaLabel?: string;
 }
 
-const SIZES = {
-  sm: { box: 18, icon: 12, stroke: 3.4, dot: 8 },
-  lg: { box: 56, icon: 28, stroke: 2.6, dot: 24 },
-} as const;
+const SIZES: Record<CheckMarkSize, { box: number; icon: IconSize; dot: number }> = {
+  sm: { box: 18, icon: "xs", dot: 8 },
+  lg: { box: 56, icon: "xxl", dot: 24 },
+};
+
+const BORDER: Record<CheckState, CSSProperties["border"]> = {
+  todo: HAIRLINE,
+  next: `1.5px solid ${COLOR.accent}`,
+  done: "none",
+};
 
 /**
- * A round mark of where something stands: to do, in play, or done. Each state
- * has a shape of its own — an empty ring, a ring with a dot, a tick — so the
- * colour is never the only thing that tells them apart.
+ * A round mark of where something stands. Each state has a shape of its own —
+ * an empty ring, a ring with a dot, a tick — so the colour is never the only
+ * thing that tells them apart.
  */
-export function CheckMark(props: CheckMarkProps): JSX.Element {
-  const { checked, current = false, size = "sm", label } = props;
-  const { box, icon, stroke, dot } = SIZES[size];
-  const accented = current && !checked;
+export function CheckMark({ state, size = "sm", ariaLabel }: CheckMarkProps): JSX.Element {
+  const { box, icon, dot } = SIZES[size];
   return (
     <span
-      role={label === undefined ? undefined : "img"}
-      aria-label={label}
+      role={ariaLabel === undefined ? undefined : "img"}
+      aria-label={ariaLabel}
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flex: "none",
-        boxSizing: "border-box",
+        ...CENTERED,
         width: box,
         height: box,
         borderRadius: RADIUS.round,
-        background: checked ? COLOR.success : COLOR.surface,
-        border: checked ? "none" : accented ? `1.5px solid ${COLOR.accent}` : HAIRLINE,
+        background: state === "done" ? COLOR.success : COLOR.surface,
+        border: BORDER[state],
       }}
     >
-      {checked && <Icon name="check" size={icon} strokeWidth={stroke} tone="onAccent" />}
-      {accented && (
+      {state === "done" && (
+        <Icon name="check" size={icon} weight={size === "sm" ? "black" : "heavy"} tone="onAccent" />
+      )}
+      {state === "next" && (
         <span
           style={{ width: dot, height: dot, borderRadius: RADIUS.round, background: COLOR.accent }}
         />

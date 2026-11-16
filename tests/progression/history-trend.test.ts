@@ -43,11 +43,18 @@ describe("ExerciseHistory", () => {
   });
 
   it("estimates a one-rep max from loaded sets, and nothing from a set without load", () => {
-    expect(estimatedMax({ reps: 30, weight: 100 })).toBe(200);
+    expect(estimatedMax({ reps: 15, weight: 100 })).toBe(150);
     // Reps are not kilograms: an unloaded set must never score its rep count.
     expect(estimatedMax({ reps: 12, weight: null })).toBe(0);
     expect(estimatedMax({ reps: 12, weight: 0 })).toBe(0);
     expect(history.bestPerSession(estimatedMax)).toEqual([50 * (1 + 9 / 30), 60 * (1 + 8 / 30)]);
+  });
+
+  it("reads no more than 15 reps from a set, so a slip of the keyboard cannot inflate the estimate", () => {
+    expect(estimatedMax({ reps: 999, weight: 60 })).toBe(estimatedMax({ reps: 15, weight: 60 }));
+    expect(estimatedMax({ reps: 16, weight: 60 })).toBe(90);
+    const slip = new ExerciseHistory([logged(squat, nov(9), 999, 60)], squat.id);
+    expect(slip.estimateBefore(dateKey(nov(16)))).toBe(90);
   });
 
   it("estimates the max from the best set of the latest session before a date", () => {
@@ -95,9 +102,9 @@ describe("ExerciseProgress", () => {
   const bench = exercise({ name: "Bench" });
   const pushUp = exercise({ name: "Push-Up", tracking: "bodyweight_reps" });
   const history = [
-    logged(bench, nov(9), 30, 50),
+    logged(bench, nov(9), 15, 50),
     logged(pushUp, nov(9), 10, null),
-    logged(bench, nov(12), 30, 60),
+    logged(bench, nov(12), 15, 60),
     logged(pushUp, nov(12), 14, null),
   ];
   const library = lookupIn([bench, pushUp]);
@@ -106,11 +113,11 @@ describe("ExerciseProgress", () => {
     const [first, second] = trends(history, "kg", library);
     expect(first).toMatchObject({
       exId: bench.id,
-      series: [100, 120],
+      series: [75, 90],
       unit: "kg e1RM",
-      best: 120,
-      current: 120,
-      gain: 20,
+      best: 90,
+      current: 90,
+      gain: 15,
       since: dateKey(nov(9)),
     });
     expect(second).toMatchObject({ exId: pushUp.id, series: [10, 14], unit: "reps", gain: 4 });
@@ -119,7 +126,7 @@ describe("ExerciseProgress", () => {
   it("converts loaded trends to the display unit", () => {
     const [benchTrend] = trends(history, "lb", library);
     expect(benchTrend!.unit).toBe("lb e1RM");
-    expect(benchTrend!.series[0]).toBeCloseTo(220.5, 1);
+    expect(benchTrend!.series[0]).toBeCloseTo(165.35, 1);
   });
 
   describe("one unit per exercise, never reps and kilograms in one series", () => {
@@ -145,10 +152,8 @@ describe("ExerciseProgress", () => {
     });
 
     it("the same holds for a barbell lift whose first set was logged at the prefilled 0 kg", () => {
-      const sessions = [logged(bench, nov(9), 8, 0), logged(bench, nov(12), 30, 60)];
-      expect(trends(sessions, "kg", library)).toMatchObject([
-        { unit: "kg e1RM", series: [0, 120] },
-      ]);
+      const sessions = [logged(bench, nov(9), 8, 0), logged(bench, nov(12), 15, 60)];
+      expect(trends(sessions, "kg", library)).toMatchObject([{ unit: "kg e1RM", series: [0, 90] }]);
     });
   });
 

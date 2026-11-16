@@ -83,7 +83,7 @@ function enteredUnit(kg: number): WeightUnit | null {
  * 21.25, 27.5); shown in the other unit it is a conversion, rounded to one
  * decimal (20 kg is 44.1 lb).
  */
-export function displayWeight(kg: number, unit: WeightUnit): number {
+function displayWeight(kg: number, unit: WeightUnit): number {
   const decimals = enteredUnit(kg) === unit ? ENTERED_DECIMALS : CONVERTED_DECIMALS;
   return roundTo(inUnit(kg, unit), decimals);
 }

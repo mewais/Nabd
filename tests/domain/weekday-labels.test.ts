@@ -1,9 +1,16 @@
-import { WEEK_ORDER, weekdayInitial, weekdayName, weekdayShort } from "@nabd/domain";
+import {
+  WEEK_ORDER,
+  isWeekday,
+  weekdayInitial,
+  weekdayName,
+  weekdayOf,
+  weekdayShort,
+} from "@nabd/domain";
 
 describe("weekday labels", () => {
   it("names a weekday the way Date.getDay() numbers it", () => {
     expect(weekdayName(0)).toBe("Sunday");
-    expect(weekdayName(new Date(2026, 10, 16).getDay())).toBe("Monday");
+    expect(weekdayName(weekdayOf(new Date(2026, 10, 16)))).toBe("Monday");
     expect(weekdayName(6)).toBe("Saturday");
   });
 
@@ -12,8 +19,9 @@ describe("weekday labels", () => {
     expect(weekdayInitial(3)).toBe("W");
   });
 
-  it("refuses a number that is not a weekday", () => {
-    expect(() => weekdayName(7)).toThrow(RangeError);
+  it("tells a weekday number from any other", () => {
+    expect([0, 3, 6].every(isWeekday)).toBe(true);
+    expect([-1, 7, 2.5].some(isWeekday)).toBe(false);
   });
 
   it("orders the week Monday first, Sunday last", () => {

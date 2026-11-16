@@ -4,11 +4,11 @@ import { EXERCISE, day, plan, loggedSet, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { bench, barbellBench, squat } = EXERCISE;
+const { dumbbellBench, bench, gobletSquat } = EXERCISE;
 
-const program = plan([day("Push", [planned(bench.id)])]);
+const program = plan([day("Push", [planned(dumbbellBench.id)])]);
 /** Last session: 8 × 20 kg, inside the plan's 8–12. */
-const history = [loggedSet(bench.id, { day: dayAfter(MONDAY, -3), reps: 8, kg: 20 })];
+const history = [loggedSet(dumbbellBench.id, { day: dayAfter(MONDAY, -3), reps: 8, kg: 20 })];
 
 test("the workday window bounds the nudges, and cannot be turned inside out", async ({ app }) => {
   const { shell, settings } = app;
@@ -142,11 +142,11 @@ test("the library only offers exercises for the equipment owned", async ({ app }
 
   await today.logSomethingElse.click();
   await library.search.fill("bench press");
-  await expect(library.row(barbellBench.name)).toBeVisible();
-  await expect(library.row(bench.name)).toBeHidden();
+  await expect(library.row(bench.name)).toBeVisible();
+  await expect(library.row(dumbbellBench.name)).toBeHidden();
   // An exercise already in the plan stays there.
   await library.close();
-  await expect(today.row(bench.name)).toBeVisible();
+  await expect(today.row(dumbbellBench.name)).toBeVisible();
 });
 
 test("one-sided variants are offered only where one side can do the movement", async ({ app }) => {
@@ -246,10 +246,10 @@ test("export says where the file went; import asks first, then reports what it d
     await expect(settings.notice).toHaveText(
       "Could not import: This file was exported by a newer version of Nabd. Update the app to import it.",
     );
-    await expect(today.row(bench.name)).toBeVisible();
+    await expect(today.row(dumbbellBench.name)).toBeVisible();
   });
 
-  const imported = plan([day("Legs", [planned(squat.id)])]);
+  const imported = plan([day("Legs", [planned(gobletSquat.id)])]);
   // An export of the previous version: its prescribed sets go by their old field names.
   const file = JSON.stringify({
     app: "Nabd",
@@ -265,7 +265,7 @@ test("export says where the file went; import asks first, then reports what it d
     await expect(confirm.dialog).toHaveAccessibleName("Replace your data?");
     await expect(confirm.dialog).toContainText("A backup of what you have now is written");
     await confirm.cancel();
-    await expect(today.row(bench.name)).toBeVisible();
+    await expect(today.row(dumbbellBench.name)).toBeVisible();
     await expect(settings.row("Interval")).toContainText("50 min");
   });
 
@@ -278,7 +278,7 @@ test("export says where the file went; import asks first, then reports what it d
     await expect(settings.row("Interval")).toContainText("30 min");
     await expect(settings.row("Minimum gap")).toContainText("15 min");
     await settings.close();
-    await expect(today.row(squat.name)).toContainText("0/2 sets");
-    await expect(today.row(bench.name)).toBeHidden();
+    await expect(today.row(gobletSquat.name)).toContainText("0/2 sets");
+    await expect(today.row(dumbbellBench.name)).toBeHidden();
   });
 });

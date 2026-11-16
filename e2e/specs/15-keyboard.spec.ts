@@ -2,9 +2,9 @@ import { EXERCISE, day, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
-const { bench, curl } = EXERCISE;
+const { dumbbellBench, curl } = EXERCISE;
 
-const program = plan([day("Push", [planned(bench.id), planned(curl.id)])]);
+const program = plan([day("Push", [planned(dumbbellBench.id), planned(curl.id)])]);
 
 test("a segmented choice is one tab stop, chosen with the arrow keys", async ({ app, page }) => {
   const { shell, settings } = app;
@@ -81,7 +81,7 @@ test("every stepper button and row button says what it acts on", async ({ app })
   const { shell, today, settings } = app;
   await app.launch(at("10:00"), { program });
 
-  await expect(today.rowButton(bench.name, "Start")).toBeVisible();
+  await expect(today.rowButton(dumbbellBench.name, "Start")).toBeVisible();
   await expect(today.rowButton(curl.name, "Skip")).toBeVisible();
   await shell.button("Settings").click();
   const interval = settings.row("Interval");

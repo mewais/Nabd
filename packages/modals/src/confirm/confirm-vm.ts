@@ -1,8 +1,13 @@
-/** What is about to happen, named the way the user knows it. */
-export type ConfirmSubject =
-  | { kind: "import" }
-  | { kind: "deleteDay"; name: string }
-  | { kind: "deleteExercise"; name: string };
+import type { ExerciseLookup, Program } from "@nabd/domain";
+import type { Confirmation } from "@nabd/view";
+
+interface ConfirmInput {
+  confirmation: Confirmation;
+  /** Where a day being deleted gets its name. */
+  program: Program;
+  /** Where an exercise being deleted gets its name. */
+  lookup: ExerciseLookup;
+}
 
 export interface ConfirmVM {
   /** The question: "Delete Push?". */
@@ -14,9 +19,9 @@ export interface ConfirmVM {
 
 const KEEPS_HISTORY = "Sets you have logged stay in your history.";
 
-/** The question to ask before `subject` happens. */
-export function buildConfirmVM(subject: ConfirmSubject): ConfirmVM {
-  switch (subject.kind) {
+/** The question to ask before the confirmation's action happens, naming what it acts on. */
+export function buildConfirmVM({ confirmation, program, lookup }: ConfirmInput): ConfirmVM {
+  switch (confirmation.kind) {
     case "import":
       return {
         title: "Replace your data?",
@@ -25,15 +30,17 @@ export function buildConfirmVM(subject: ConfirmSubject): ConfirmVM {
           "holds. A backup of what you have now is written next to your exports first.",
         confirmLabel: "Import",
       };
-    case "deleteDay":
+    case "deleteDay": {
+      const name = program.days.find((d) => d.id === confirmation.dayId)?.name ?? "this day";
       return {
-        title: `Delete ${subject.name}?`,
+        title: `Delete ${name}?`,
         text: `The day and everything planned on it leave your plan. ${KEEPS_HISTORY}`,
         confirmLabel: "Delete day",
       };
+    }
     case "deleteExercise":
       return {
-        title: `Delete ${subject.name}?`,
+        title: `Delete ${lookup(confirmation.exId)?.name ?? "this exercise"}?`,
         text: `It leaves the library and your plan. ${KEEPS_HISTORY}`,
         confirmLabel: "Delete exercise",
       };

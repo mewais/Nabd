@@ -11,7 +11,7 @@ export function StatusPill({ vm }: StatusPillProps): JSX.Element {
     <Card variant="inset" padding="sm">
       <Row role="status" gap="md" paddingX="xs">
         <Row gap="sm">
-          <LiveDot active={vm.due} />
+          <LiveDot on={vm.due} />
           <Text as="span" variant="mono">
             {vm.clock}
           </Text>

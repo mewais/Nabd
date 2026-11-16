@@ -1,4 +1,4 @@
-import { dateKey, freshDayState } from "@nabd/domain";
+import { WEEKDAYS, WEEK_ORDER, dateKey, freshDayState } from "@nabd/domain";
 import type { Program } from "@nabd/domain";
 import { carry, nov, visit } from "../support/builders";
 import { CATALOG } from "../support/exercises";
@@ -110,7 +110,10 @@ describe("the day open in the planner", () => {
     const resting: Program = {
       ...catalogPushPull,
       schedule: "weekday",
-      days: catalogPushPull.days.map((day, index) => ({ ...day, weekday: index + 2 })),
+      days: catalogPushPull.days.map((day, index) => ({
+        ...day,
+        weekday: WEEK_ORDER[index + 1] ?? null,
+      })),
     };
     const app = await boot({ program: resting });
     app.get().showScreen("planner");
@@ -121,7 +124,10 @@ describe("the day open in the planner", () => {
     const sundayFirst: Program = {
       ...catalogPushPull,
       schedule: "weekday",
-      days: catalogPushPull.days.map((day, index) => ({ ...day, weekday: index * 2 })),
+      days: catalogPushPull.days.map((day, index) => ({
+        ...day,
+        weekday: WEEKDAYS[index * 2] ?? null,
+      })),
     };
     const stored = await boot({ program: sundayFirst });
     expect(stored.get().plannerDayId).toBe("pull");

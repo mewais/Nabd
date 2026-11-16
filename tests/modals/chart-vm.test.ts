@@ -6,14 +6,17 @@
 import { did } from "../support/programs";
 import { dateKey } from "@nabd/domain";
 import { buildChartVM } from "@nabd/modals";
+import type { ChartVM } from "@nabd/modals";
+import { ExerciseProgress } from "@nabd/progression";
+import { LIBRARY } from "../support/exercises";
 import { nov } from "../support/builders";
-import { benchHistory, trendOf } from "./fixtures";
+import { benchHistory, chartOf } from "./fixtures";
 
 describe("buildChartVM", () => {
-  const values = (vm: ReturnType<typeof buildChartVM>) => vm.stats.map((stat) => stat.value);
+  const values = (vm: ChartVM) => vm.stats.map((stat) => stat.value);
 
   it("summarises the trend: since when, how many sessions, best, current and gain", () => {
-    const vm = buildChartVM("Bench Press", trendOf(benchHistory(), "bench"), "kg");
+    const vm = chartOf(benchHistory(), "bench", "kg");
 
     expect(vm.exercise).toBe("Bench Press");
     expect(vm.subtitle).toBe(`Since ${dateKey(nov(2))} · 3 sessions`);
@@ -25,7 +28,7 @@ describe("buildChartVM", () => {
   });
 
   it("charts the best set of each session, oldest first, between the first date and now", () => {
-    const vm = buildChartVM("Bench Press", trendOf(benchHistory(), "bench"), "kg");
+    const vm = chartOf(benchHistory(), "bench", "kg");
 
     expect(vm.series).toEqual([76, 78, 79.17]);
     expect(vm.chartLabel).toBe("Bench Press, kg e1RM per session");
@@ -39,7 +42,7 @@ describe("buildChartVM", () => {
       did(null, "pushup", 18, null, { at: nov(9) }),
       did(null, "pushup", 14, null, { at: nov(16) }),
     ];
-    const vm = buildChartVM("Push-Up", trendOf(history, "pushup"), "kg");
+    const vm = chartOf(history, "pushup", "kg");
 
     expect(values(vm)).toEqual(["18 reps", "14 reps", "-1 reps"]);
   });
@@ -49,22 +52,22 @@ describe("buildChartVM", () => {
       did(null, "plank", 30, null, { at: nov(9) }),
       did(null, "plank", 45, null, { at: nov(16) }),
     ];
-    const vm = buildChartVM("Plank", trendOf(history, "plank"), "kg");
+    const vm = chartOf(history, "plank", "kg");
 
     expect(values(vm)).toEqual(["45 s", "45 s", "+15 s"]);
   });
 
   it("reports loaded trends in pounds for lb users", () => {
-    const vm = buildChartVM("Bench Press", trendOf(benchHistory(), "bench"), "lb");
+    const vm = chartOf(benchHistory(), "bench", "lb");
     expect(values(vm)).toEqual(["174.5 lb e1RM", "174.5 lb e1RM", "+7 lb e1RM"]);
   });
 
+  it("is nothing for an exercise without history", () => {
+    expect(buildChartVM(new ExerciseProgress([], LIBRARY.lookup), "bench", "kg")).toBeNull();
+  });
+
   it("counts a single session as one, with no gain", () => {
-    const vm = buildChartVM(
-      "Bench Press",
-      trendOf([did(null, "bench", 8, 60, { at: nov(16) })], "bench"),
-      "kg",
-    );
+    const vm = chartOf([did(null, "bench", 8, 60, { at: nov(16) })], "bench", "kg");
 
     expect(vm.subtitle).toBe(`Since ${dateKey(nov(16))} · 1 session`);
     expect(vm.series).toEqual([76]);

@@ -1,20 +1,21 @@
 import type { ReactNode } from "react";
-import { SPACE } from "./tokens";
-import type { Space } from "./tokens";
+import { Row } from "./row";
+import { WIDTH } from "./tokens";
+import type { Space, Width } from "./tokens";
 
 interface WithSideProps {
   /** The main pane: it takes whatever room the side pane leaves. */
   children: ReactNode;
   /** The side pane, beside the main one on its right. */
   side: ReactNode;
-  /** The side pane's width beside the main one, in px. */
-  sideWidth: number;
+  /** The side pane's width beside the main one. */
+  sideWidth: Width;
   /**
-   * The narrowest the main pane may get beside the side pane, in px. With
+   * The narrowest the main pane may get beside the side pane. With
    * less room than that and the side pane together, the side pane goes under
    * the main one instead, both as wide as the container.
    */
-  mainMinWidth: number;
+  mainMinWidth: Width;
   gap?: Space;
 }
 
@@ -27,10 +28,12 @@ export function WithSide({
   gap = "none",
 }: WithSideProps): JSX.Element {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: SPACE[gap] }}>
+    <Row wrap align="start" gap={gap}>
       {/* Growing ever so much faster, the main pane takes all the room the side pane can spare. */}
-      <div style={{ flex: "999 1 0", minWidth: `min(${mainMinWidth}px, 100%)` }}>{children}</div>
-      <div style={{ flex: `1 1 ${sideWidth}px`, minWidth: 0 }}>{side}</div>
-    </div>
+      <div style={{ flex: "999 1 0", minWidth: `min(${WIDTH[mainMinWidth]}px, 100%)` }}>
+        {children}
+      </div>
+      <div style={{ flex: `1 1 ${WIDTH[sideWidth]}px`, minWidth: 0 }}>{side}</div>
+    </Row>
   );
 }

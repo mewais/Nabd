@@ -1,11 +1,12 @@
 // How sets, targets, progress and advice are worded — shared by the Today
 // screen, the logger and the nudge toast.
 
-import type { Prescription, SetSpec, TrackingType, WeightUnit } from "@nabd/domain";
+import type { AdviceWording, Prescription, SetSpec, TrackingType, WeightUnit } from "@nabd/domain";
 import {
   INTENSITY_NAMES,
   SET_TYPE_NAMES,
   formatWeight,
+  isAssisted,
   isBodyweightLoaded,
   isTimeBased,
   needsLoad,
@@ -16,9 +17,9 @@ import { prescribedIntensity, repsInReserve } from "@nabd/progression";
 import type {
   Advice,
   AdviceKind,
-  IntensityBasis,
   IntensityWait,
   Performance,
+  PrescribedIntensity,
 } from "@nabd/progression";
 
 /**
@@ -36,8 +37,8 @@ export function formatPerformance(
     return isTimeBased(tracking) ? amount : plural(reps, "rep");
   }
   const load = formatWeight(weight, unit);
-  if (tracking === "assisted_bodyweight") return `${amount} − ${load} assist`;
-  if (tracking === "weighted_bodyweight") return `${amount} + ${load}`;
+  if (isAssisted(tracking)) return `${amount} − ${load} assist`;
+  if (isBodyweightLoaded(tracking)) return `${amount} + ${load}`;
   return isTimeBased(tracking) ? `${amount} · ${load}` : `${amount} × ${load}`;
 }
 
@@ -49,7 +50,7 @@ function formatAmountAsked(spec: SetSpec, prescription: Prescription): string {
 }
 
 /** How hard a set should be: "RPE 8", "70% 1RM". */
-function formatIntensity({ kind, value }: Pick<IntensityBasis, "kind" | "value">): string {
+function formatIntensity({ kind, value }: PrescribedIntensity): string {
   return kind === "rpe" ? `${INTENSITY_NAMES.rpe} ${value}` : `${value}% 1RM`;
 }
 
@@ -95,10 +96,7 @@ const ADVICE_REASONS: Record<AdviceKind, string> = {
 };
 
 /** What an intensity waits for, after double progression's reason: "RPE 8 applies once there is history." */
-const INTENSITY_WAITS: Record<
-  IntensityWait,
-  (asked: Pick<IntensityBasis, "kind" | "value">) => string
-> = {
+const INTENSITY_WAITS: Record<IntensityWait, (asked: PrescribedIntensity) => string> = {
   history: (asked) => `${formatIntensity(asked)} applies once there is history.`,
   load: (asked) => `${formatIntensity(asked)} applies once you log it with weight.`,
   bodyWeight: (asked) =>
@@ -119,17 +117,6 @@ function describeReason({ kind, intensity }: Advice, unit: WeightUnit): string {
     return `${intensity.value}% of your estimated max (${formatWeight(intensity.max, unit)}).`;
   }
   return `${formatIntensity(intensity)} ≈ ${plural(repsInReserve(intensity.value), "rep")} in reserve.`;
-}
-
-export interface AdviceWording {
-  /** The headline target, e.g. "9 × 25 lb". */
-  primary: string;
-  /** The other option, e.g. "8 × 27.5 lb"; null when there is only one way forward. */
-  alternative: string | null;
-  /** Why, in a sentence. */
-  reason: string;
-  /** What it was compared against: "Last time: 8 × 25 lb"; null with no history. */
-  basis: string | null;
 }
 
 /** Advice in words; null in, null out. */

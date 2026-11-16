@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ExerciseLookup } from "./exercise";
-import { WEEK_ORDER } from "./dates";
+import { WEEK_ORDER, WeekdaySchema } from "./dates";
 import { MuscleKeySchema } from "./muscles";
 import { measureOf } from "./tracking";
 import type { Measure } from "./tracking";
@@ -158,8 +158,8 @@ export type CycledSlot = z.infer<typeof CycledSlotSchema>;
 const DaySchema = z.object({
   id: z.string(),
   name: z.string(),
-  /** 0=Sun..6=Sat for weekday schedules; null = floating/unassigned. */
-  weekday: z.number().int().min(0).max(6).nullable(),
+  /** The weekday it is trained on, for weekday schedules; null = floating/unassigned. */
+  weekday: WeekdaySchema.nullable(),
   exercises: z.array(ExercisePrescriptionSchema),
   slots: z.array(CycledSlotSchema),
 });
@@ -179,6 +179,10 @@ export const ProgramSchema = z.object({
 });
 export type Program = z.infer<typeof ProgramSchema>;
 
+/** Whether the plan follows its own order (floating) rather than the calendar (weekday). */
+export const isFloating = (program: Pick<Program, "schedule">): boolean =>
+  program.schedule === "floating";
+
 /** `days` in the order they run through the week, Monday first; days on no weekday come last. */
 export function inWeekOrder(days: readonly Day[]): Day[] {
   const weekPosition = (day: Day): number =>
@@ -192,7 +196,7 @@ export function inWeekOrder(days: readonly Day[]): Day[] {
  * empty plan.
  */
 export function firstDay(program: Pick<Program, "schedule" | "days">): Day | undefined {
-  return program.schedule === "floating" ? program.days[0] : inWeekOrder(program.days)[0];
+  return isFloating(program) ? program.days[0] : inWeekOrder(program.days)[0];
 }
 
 /** The program a fresh install starts with. */

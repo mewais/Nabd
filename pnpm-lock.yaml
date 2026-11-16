@@ -95,6 +95,9 @@ importers:
       '@nabd/planner':
         specifier: workspace:*
         version: link:../planner
+      '@nabd/program-editor':
+        specifier: workspace:*
+        version: link:../program-editor
       '@nabd/progress':
         specifier: workspace:*
         version: link:../progress
@@ -186,6 +189,9 @@ importers:
 
   packages/modals:
     dependencies:
+      '@nabd/bodymap':
+        specifier: workspace:*
+        version: link:../bodymap
       '@nabd/dataset':
         specifier: workspace:*
         version: link:../dataset

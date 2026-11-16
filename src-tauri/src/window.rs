@@ -21,9 +21,9 @@ const TITLE: &str = env!("NABD_WINDOW_TITLE");
 const SIZE: (f64, f64) = (1280.0, 820.0);
 const MIN_SIZE: (f64, f64) = (980.0, 640.0);
 /// What an opaque window shows until the page has painted: the dark theme's
-/// background (`--bg` in the design system's theme.ts, here as the sRGB the
-/// window API takes), so a launch does not flash white.
-const BACKGROUND: Color = Color(0x15, 0x18, 0x1f, 0xff);
+/// background, read from the design system's theme.ts by build.rs, so a
+/// launch does not flash white.
+const BACKGROUND: Color = include!(concat!(env!("OUT_DIR"), "/background.rs"));
 
 /// Create the main window, hidden: the launch decides whether it is shown.
 /// It is transparent only where a glass effect can go behind it; elsewhere

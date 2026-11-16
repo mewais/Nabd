@@ -1,5 +1,5 @@
 import type { CarriedVisit, DayRecord, DayState, Program, RotationState } from "@nabd/domain";
-import { addDays, freshDayState, parseDateKey, startOfDay } from "@nabd/domain";
+import { addDays, freshDayState, isFloating, parseDateKey, startOfDay } from "@nabd/domain";
 import { dayAfter } from "./floating";
 import { following } from "./rotation";
 import { TodayPlan } from "./today-plan";
@@ -37,7 +37,7 @@ export function rollOver(input: TodayPlanInput): Rollover {
   const endedOn = parseDateKey(dayState.date);
   const ended = TodayPlan.build({ ...input, date: endedOn });
 
-  const floating = program.schedule === "floating";
+  const floating = isFloating(program);
   const moveOn = floating && ended.ledger.owesNothing;
   const closes = !floating || moveOn;
   const nextRotation =
@@ -55,14 +55,20 @@ export function rollOver(input: TodayPlanInput): Rollover {
       ? freshDayState(date, dayAfter(program, dayState.dayId))
       : freshDayState(date, dayState.dayId, floating ? continued(ended) : null),
     rotation: nextRotation,
-    records: [ended.ledger.record(moveOn), ...missed].filter((record) => record !== null),
+    records: [moveOn ? ended.ledger.closedRecord() : ended.ledger.record(), ...missed].filter(
+      (record) => record !== null,
+    ),
   };
 }
 
-/** The visit an unfinished floating day comes back as: null when it has nothing behind it. */
+/**
+ * The visit an unfinished floating day comes back as: the one it continued,
+ * or one begun on the day that ended; null when it has nothing behind it.
+ */
 function continued(ended: TodayPlan): CarriedVisit | null {
   const items = ended.ledger.carryOver;
-  return Object.keys(items).length === 0 ? null : { startedOn: ended.session, items };
+  if (Object.keys(items).length === 0) return null;
+  return { startedOn: ended.continuesFrom ?? ended.date, items };
 }
 
 /**
@@ -88,7 +94,7 @@ function rotated(program: Program, ended: TodayPlan, rotation: RotationState): R
  * running, whereas a floating plan simply waits.
  */
 function missedDays(program: Program, endedOn: Date, today: Date): Date[] {
-  if (program.schedule !== "weekday") return [];
+  if (isFloating(program)) return [];
   const days: Date[] = [];
   for (let day = addDays(endedOn, 1); day < startOfDay(today); day = addDays(day, 1)) {
     days.push(day);

@@ -7,16 +7,11 @@ interface DayProgressRingProps {
 
 /** Today's sets as a ring that fills as they get done. */
 export function DayProgressRing({ vm }: DayProgressRingProps): JSX.Element {
-  const { done, totalLabel, pct } = vm;
+  const { done, totalLabel, pct, ariaLabel } = vm;
   return (
     <Card variant="inset" padding="lg">
       <Row justify="center">
-        <ProgressRing
-          pct={pct}
-          value={done}
-          caption={totalLabel}
-          ariaLabel={`${done} ${totalLabel} done today`}
-        />
+        <ProgressRing pct={pct} value={done} caption={totalLabel} ariaLabel={ariaLabel} />
       </Row>
     </Card>
   );

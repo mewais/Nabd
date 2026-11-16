@@ -2,10 +2,9 @@
 // logger, and real trends from logged sets for the full-history chart.
 
 import type { LoggedSet, WeightUnit } from "@nabd/domain";
-import { buildSessionVM } from "@nabd/modals";
-import type { SessionVM } from "@nabd/modals";
+import { buildChartVM, buildSessionVM } from "@nabd/modals";
+import type { ChartVM, SessionVM } from "@nabd/modals";
 import { ExerciseProgress } from "@nabd/progression";
-import type { ExerciseTrend } from "@nabd/progression";
 import { LogSession } from "@nabd/session";
 import { nov } from "../support/builders";
 import { LIBRARY } from "../support/exercises";
@@ -45,14 +44,13 @@ export function sessionVM(
   return vm;
 }
 
-/** The trend of `ex` over `history`; throws if it has none. */
-export function trendOf(history: LoggedSet[], ex: ExKey): ExerciseTrend {
-  const trend = new ExerciseProgress(history, LIBRARY.lookup).trendOf(ex);
-  if (!trend) throw new Error(`no trend for "${ex}"`);
-  return trend;
+/** The full-history chart of `ex` over `history`, loads in `unit`; throws if it has no trend. */
+export function chartOf(history: LoggedSet[], ex: ExKey, unit: WeightUnit = "kg"): ChartVM {
+  const vm = buildChartVM(new ExerciseProgress(history, LIBRARY.lookup), ex, unit);
+  if (vm === null) throw new Error(`${ex} has no trend`);
+  return vm;
 }
 
-/** Three bench sessions; each session's best set is an e1RM of 76 → 78 → 79.2 kg. */
 export const benchHistory = (): LoggedSet[] => [
   did(null, "bench", 8, 60, { at: nov(2) }),
   did(null, "bench", 6, 60, { at: nov(2) }),

@@ -1,6 +1,6 @@
 // How the shell words the moment and the app itself.
 
-import { monthShort, weekdayName } from "@nabd/domain";
+import { monthShort, weekdayName, weekdayOf } from "@nabd/domain";
 
 const NOON = 12;
 const EVENING = 18;
@@ -15,7 +15,7 @@ export function greeting(now: Date): string {
 
 /** "MONDAY · Nov 16". */
 export function dateLabel(now: Date): string {
-  const weekday = weekdayName(now.getDay()).toUpperCase();
+  const weekday = weekdayName(weekdayOf(now)).toUpperCase();
   return `${weekday} · ${monthShort(now.getMonth())} ${now.getDate()}`;
 }
 

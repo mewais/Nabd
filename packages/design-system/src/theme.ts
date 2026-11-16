@@ -16,18 +16,28 @@ type ThemeToken =
   | "--accent2"
   | "--accent3"
   | "--map-muscle"
-  | "--glow"
   | "--cardshadow"
   | "--modal-bg";
 
 type Material = Record<ThemeToken, string>;
 
 /**
- * Each theme comes as a solid material and a glass one. Glass re-specifies the
- * tokens for legibility over the translucent window tint; its `--bg` is only a
- * fallback, the live tint follows the opacity setting.
+ * The dark theme's background: also what the window shows before the app has
+ * painted, so a launch does not flash white. The build reads it from this
+ * line — the page's prepaint (packages/app/vite.config.ts) and the native
+ * window's background (src-tauri/build.rs) — so keep it a one-line literal.
  */
-const MATERIALS: Record<Theme, { solid: Material; glass: Material; glassTintRgb: string }> = {
+const DARK_BACKGROUND = "oklch(0.21 0.014 265)";
+
+/**
+ * Each theme comes as a solid material and a glass one. Glass re-specifies the
+ * tokens for legibility over the translucent window tint, which it paints in
+ * place of `--bg`: `glassTintRgb`, at the strength the opacity setting gives.
+ */
+const MATERIALS: Record<
+  Theme,
+  { solid: Material; glass: Omit<Material, "--bg">; glassTintRgb: string }
+> = {
   light: {
     solid: {
       "--bg": "oklch(0.97 0.003 250)",
@@ -41,12 +51,10 @@ const MATERIALS: Record<Theme, { solid: Material; glass: Material; glassTintRgb:
       "--accent2": "oklch(0.62 0.13 155)",
       "--accent3": "oklch(0.58 0.12 255)",
       "--map-muscle": "oklch(0.86 0.006 250)",
-      "--glow": "none",
       "--cardshadow": "0 1px 2px rgba(0,0,0,0.04)",
       "--modal-bg": "oklch(1 0 0)",
     },
     glass: {
-      "--bg": "rgba(244,246,251,0.6)",
       "--surface": "rgba(255,255,255,0.62)",
       "--surface2": "rgba(24,28,40,0.06)",
       "--line": "rgba(20,24,35,0.16)",
@@ -57,7 +65,6 @@ const MATERIALS: Record<Theme, { solid: Material; glass: Material; glassTintRgb:
       "--accent2": "oklch(0.5 0.14 158)",
       "--accent3": "oklch(0.5 0.14 255)",
       "--map-muscle": "rgba(34,38,52,0.18)",
-      "--glow": "inset 0 1px 0 rgba(255,255,255,0.55)",
       "--cardshadow": "0 6px 22px rgba(20,28,48,0.16)",
       "--modal-bg": "rgba(244,246,251,0.95)",
     },
@@ -65,7 +72,7 @@ const MATERIALS: Record<Theme, { solid: Material; glass: Material; glassTintRgb:
   },
   dark: {
     solid: {
-      "--bg": "oklch(0.21 0.014 265)",
+      "--bg": DARK_BACKGROUND,
       "--surface": "oklch(0.25 0.016 265)",
       "--surface2": "oklch(0.295 0.018 265)",
       "--line": "oklch(0.36 0.018 265)",
@@ -76,12 +83,10 @@ const MATERIALS: Record<Theme, { solid: Material; glass: Material; glassTintRgb:
       "--accent2": "oklch(0.72 0.13 158)",
       "--accent3": "oklch(0.7 0.12 252)",
       "--map-muscle": "oklch(0.42 0.02 265)",
-      "--glow": "none",
       "--cardshadow": "0 1px 2px rgba(0,0,0,0.2)",
       "--modal-bg": "oklch(0.25 0.016 265)",
     },
     glass: {
-      "--bg": "rgba(15,17,24,0.5)",
       "--surface": "rgba(255,255,255,0.075)",
       "--surface2": "rgba(255,255,255,0.135)",
       "--line": "rgba(255,255,255,0.18)",
@@ -92,7 +97,6 @@ const MATERIALS: Record<Theme, { solid: Material; glass: Material; glassTintRgb:
       "--accent2": "oklch(0.76 0.14 158)",
       "--accent3": "oklch(0.74 0.14 252)",
       "--map-muscle": "rgba(255,255,255,0.2)",
-      "--glow": "inset 0 1px 0 rgba(255,255,255,0.14)",
       "--cardshadow": "0 6px 22px rgba(0,0,0,0.28)",
       "--modal-bg": "rgba(22,24,32,0.94)",
     },
@@ -100,12 +104,8 @@ const MATERIALS: Record<Theme, { solid: Material; glass: Material; glassTintRgb:
   },
 };
 
-/**
- * What the window shows before the app has painted: the dark theme's
- * background, so a launch does not flash white. The app's index.html takes it
- * from here (packages/app/vite.config.ts).
- */
-export const PREPAINT_BACKGROUND = MATERIALS.dark.solid["--bg"];
+/** What the window shows before the app has painted (see {@link DARK_BACKGROUND}). */
+export const PREPAINT_BACKGROUND = DARK_BACKGROUND;
 
 const GLASS_FROST = "blur(34px) saturate(1.7)";
 

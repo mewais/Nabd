@@ -2,16 +2,18 @@ import type { CSSProperties } from "react";
 import { ButtonBase } from "./button-base";
 import { Icon } from "./icon";
 import type { IconName } from "./icon-paths";
+import { CENTERED } from "./styles";
 import { COLOR, QUIET_BOX, RADIUS, RAISED_BOX } from "./tokens";
-import type { Tone } from "./tokens";
+import type { IconSize, Size, Tone } from "./tokens";
 
 /**
- * - `boxed`: a square filled button (close, duplicate, delete, settings).
- * - `raised`: the same on a quiet fill, where `boxed` would not show (a stepper's − and +).
- * - `mini`: the small square used in dense rows (reorder arrows, table steppers).
+ * - `inset`: a square on a quiet fill (close, duplicate, delete, settings; reorder arrows).
+ * - `raised`: a raised square, where `inset` would not show (a stepper's − and + on a quiet fill).
  * - `plain`: the bare glyph (remove ×).
  */
-type IconButtonVariant = "boxed" | "raised" | "mini" | "plain";
+type IconButtonVariant = "inset" | "raised" | "plain";
+/** `md` stands on its own; `sm` sits in a dense row. */
+type IconButtonSize = Extract<Size, "sm" | "md">;
 
 interface IconButtonProps {
   icon: IconName;
@@ -19,59 +21,51 @@ interface IconButtonProps {
   ariaLabel: string;
   onClick: () => void;
   variant?: IconButtonVariant;
+  size?: IconButtonSize;
   /** Colours the icon; `neutral` leaves it in the button's own text colour. */
   tone?: Tone;
   disabled?: boolean;
 }
 
-const LARGE = 32;
-const MINI = 24;
-
-function square(side: number, radius: number): CSSProperties {
-  return { width: side, height: side, borderRadius: radius };
-}
-
-const VARIANTS: Record<IconButtonVariant, { box: CSSProperties; iconSize: number }> = {
-  boxed: {
-    box: { ...QUIET_BOX, ...square(LARGE, RADIUS.control), color: COLOR.textMuted },
-    iconSize: 15,
-  },
-  raised: {
-    box: { ...RAISED_BOX, ...square(LARGE, RADIUS.chip), color: COLOR.text },
-    iconSize: 15,
-  },
-  mini: {
-    box: { ...QUIET_BOX, ...square(MINI, RADIUS.tag), color: COLOR.textMuted },
-    iconSize: 11,
-  },
-  plain: { box: { ...square(MINI, RADIUS.tag), color: COLOR.textFaint }, iconSize: 14 },
+const SIDE: Record<IconButtonSize, number> = { sm: 24, md: 32 };
+const RADIUS_OF: Record<IconButtonSize, number> = { sm: RADIUS.tag, md: RADIUS.control };
+const ICON: Record<IconButtonVariant, Record<IconButtonSize, IconSize>> = {
+  inset: { sm: "xs", md: "md" },
+  raised: { sm: "xs", md: "md" },
+  plain: { sm: "sm", md: "md" },
 };
+
+function look(variant: IconButtonVariant, size: IconButtonSize): CSSProperties {
+  const square = { width: SIDE[size], height: SIDE[size], borderRadius: RADIUS_OF[size] };
+  switch (variant) {
+    case "inset":
+      return { ...QUIET_BOX, ...square, color: COLOR.textMuted };
+    case "raised":
+      return { ...RAISED_BOX, ...square, borderRadius: RADIUS.chip, color: COLOR.text };
+    case "plain":
+      return { ...square, color: COLOR.textFaint };
+  }
+}
 
 /** A button that is only an icon. */
 export function IconButton({
   icon,
   ariaLabel,
   onClick,
-  variant = "boxed",
+  variant = "inset",
+  size = variant === "plain" ? "sm" : "md",
   tone = "neutral",
   disabled = false,
 }: IconButtonProps): JSX.Element {
-  const { box, iconSize } = VARIANTS[variant];
   return (
     <ButtonBase
       aria-label={ariaLabel}
       title={ariaLabel}
       onClick={onClick}
       disabled={disabled}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flex: "none",
-        ...box,
-      }}
+      style={{ ...CENTERED, ...look(variant, size) }}
     >
-      <Icon name={icon} size={iconSize} strokeWidth={2.2} tone={tone} />
+      <Icon name={icon} size={ICON[variant][size]} weight="bold" tone={tone} />
     </ButtonBase>
   );
 }

@@ -4,14 +4,14 @@
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { ChartModal, buildChartVM } from "@nabd/modals";
+import { ChartModal } from "@nabd/modals";
 import type { ChartActions } from "@nabd/modals";
-import { benchHistory, trendOf } from "./fixtures";
+import { benchHistory, chartOf } from "./fixtures";
 import { modalBackdrop } from "../support/dom";
 
 describe("ChartModal", () => {
   const setup = () => {
-    const vm = buildChartVM("Bench Press", trendOf(benchHistory(), "bench"), "kg");
+    const vm = chartOf(benchHistory(), "bench");
     const actions: ChartActions = { close: vi.fn() };
     render(<ChartModal vm={vm} actions={actions} />);
     return { vm, actions };

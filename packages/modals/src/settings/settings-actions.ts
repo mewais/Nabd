@@ -1,4 +1,4 @@
-import type { SettingsPatch } from "./settings-vm";
+import type { SettingsPatch } from "./rows-vm";
 
 export interface SettingsActions {
   /** Apply a change; out-of-range values are ignored by the store. */

@@ -4,3 +4,4 @@
 
 export type { AdviceChoice, MapStyle, MapView, Notice, ProgressTab, Screen } from "./view";
 export type { LibraryState, LibraryTarget } from "./library";
+export type { Confirmation } from "./confirmation";

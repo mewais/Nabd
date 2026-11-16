@@ -1,4 +1,4 @@
-import { parseDateKey } from "@nabd/domain";
+import { parseDateKey, weekdayOf } from "@nabd/domain";
 import { ProgramEditor } from "@nabd/program-editor";
 import {
   carriedAfterEdit,
@@ -17,7 +17,7 @@ export function planSlice({ get, set, newId, persistTogether }: StoreContext): P
       const { program } = s;
       const today = parseDateKey(s.dayState.date);
       const editor = new ProgramEditor(program, newId, selectLibrary(s).lookup, {
-        weekday: today.getDay(),
+        weekday: weekdayOf(today),
         dayId: selectTodayPlan(s).dayId,
       });
       const edited = edit(editor);

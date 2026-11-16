@@ -19,3 +19,18 @@ export function formatAmount(value: number, unit: string): string {
 export function formatGain(value: number, unit: string): string {
   return `${value > 0 ? "+" : ""}${formatAmount(value, unit)}`;
 }
+
+/**
+ * A suggestion for a set, in words: what the coach's advice says (the session
+ * package words it), and what the advice card shows.
+ */
+export interface AdviceWording {
+  /** The headline target, e.g. "9 × 25 lb". */
+  primary: string;
+  /** The other way forward, e.g. "8 × 27.5 lb"; null when there is only one. */
+  alternative: string | null;
+  /** Why, in a sentence. */
+  reason: string;
+  /** What it was compared against: "Last time: 8 × 25 lb"; null with no history. */
+  basis: string | null;
+}

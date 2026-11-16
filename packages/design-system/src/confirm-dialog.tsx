@@ -17,8 +17,6 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-const WIDTH = 420;
-
 /**
  * Asks before something that cannot be undone. It opens over every other
  * dialog, and nothing happens unless the confirm button is pressed.
@@ -31,7 +29,7 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps): JSX.Element {
   return (
-    <ModalShell title={title} onClose={onCancel} width={WIDTH} layer="confirm">
+    <ModalShell title={title} onClose={onCancel} width="sm" layer="confirm">
       <Stack gap="xl" paddingX="xxl" paddingY="xl">
         <Text tone="muted">{children}</Text>
         <Row justify="end" gap="sm">

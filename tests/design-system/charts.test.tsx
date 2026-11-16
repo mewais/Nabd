@@ -115,14 +115,14 @@ describe("MeterBar", () => {
 
 describe("LiveDot", () => {
   it("is decorative: the words beside it say what it means", () => {
-    expect(renderRoot(<LiveDot active />)).toHaveAttribute("aria-hidden", "true");
+    expect(renderRoot(<LiveDot on />)).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("turns accent and pulses only while active", () => {
-    const idle = renderRoot(<LiveDot active={false} />);
+  it("turns accent and pulses only while on", () => {
+    const idle = renderRoot(<LiveDot on={false} />);
     expect(idle.style.background).toBe(COLOR.textFaint);
     expect(idle.style.animation).toBe("");
-    const active = renderRoot(<LiveDot active />);
+    const active = renderRoot(<LiveDot on />);
     expect(active.style.background).toBe(COLOR.accent);
     expect(active.style.animation).not.toBe("");
   });

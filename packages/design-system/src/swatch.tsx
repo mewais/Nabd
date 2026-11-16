@@ -9,27 +9,26 @@ interface SwatchProps {
   /** An outline instead of a fill: "not yet", beside filled dots that say "now". */
   hollow?: boolean;
   /** What the mark says, in words, for assistive tech. */
-  label?: string;
+  ariaLabel?: string;
 }
 
 const SIZE = { dot: 8, square: 12 } as const;
 
-/** A small patch of colour. Where it carries meaning, give it a `label` — and a shape of its own. */
+/** A small patch of colour. Where it carries meaning, give it an `ariaLabel` — and a shape of its own. */
 export function Swatch({
   tone = "neutral",
   shape = "dot",
   hollow = false,
-  label,
+  ariaLabel,
 }: SwatchProps): JSX.Element {
   const color = toneColor(tone) ?? COLOR.textFaint;
   return (
     <span
-      role={label === undefined ? undefined : "img"}
-      aria-label={label}
+      role={ariaLabel === undefined ? undefined : "img"}
+      aria-label={ariaLabel}
       style={{
         display: "inline-block",
         flex: "none",
-        boxSizing: "border-box",
         width: SIZE[shape],
         height: SIZE[shape],
         borderRadius: shape === "dot" ? RADIUS.round : RADIUS.bar,

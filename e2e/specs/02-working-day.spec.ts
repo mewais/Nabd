@@ -2,12 +2,12 @@ import { EXERCISE, day, plan, planned, workingSets } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
-const { bench, raise, curl } = EXERCISE;
+const { dumbbellBench, raise, curl } = EXERCISE;
 
 /** One day of 7 sets: a main lift with a warm-up, then a superset. Default settings: 09:00–18:00, 50 / 15 min, 30 s. */
 const program = plan([
   day("Push", [
-    planned(bench.id, { sets: [{ type: "warmup", amount: 12 }, ...workingSets(2)] }),
+    planned(dumbbellBench.id, { sets: [{ type: "warmup", amount: 12 }, ...workingSets(2)] }),
     planned(raise.id, { supersetId: "superset", rest: 60 }),
     planned(curl.id, { supersetId: "superset", rest: 60 }),
   ]),
@@ -33,7 +33,7 @@ test("a workday: quiet before hours, nudged at the interval, logged from the nud
     await expect(shell.toast).toBeHidden();
     await app.busyFor(1);
     await expect(shell.toast).toContainText("Interval's up");
-    await expect(shell.toast).toContainText(bench.name);
+    await expect(shell.toast).toContainText(dumbbellBench.name);
     await expect(shell.toast).toContainText("Chest · Set 1 of 3");
     await expect(shell.status).toContainText("Interval's up");
   });
@@ -46,7 +46,7 @@ test("a workday: quiet before hours, nudged at the interval, logged from the nud
   await test.step('"Let\'s go" opens the logger on the next set, with its target', async () => {
     await shell.letsGo.click();
     await expect(shell.toast).toBeHidden();
-    await expect(logger.exercise).toHaveText(bench.name);
+    await expect(logger.exercise).toHaveText(dumbbellBench.name);
     await expect(logger.dialog).toContainText("Set 1 of 3 · Warm-up · 12 reps");
   });
 
@@ -57,17 +57,19 @@ test("a workday: quiet before hours, nudged at the interval, logged from the nud
   });
 
   await test.step("rest is counted down before the working sets", async () => {
-    await expect(logger.rest).toHaveText("Rest 1:30");
+    await expect(logger.rest).toHaveText("Rest 2:00");
     await app.busyFor(0.5);
-    await expect(logger.rest).toHaveText("Rest 1:00");
+    await expect(logger.rest).toHaveText("Rest 1:30");
     await expect(logger.dialog).toContainText("Set 2 of 3 · Working set · 8–12 reps");
     await expect(logger.suggestions).toHaveCount(1);
     await logger.log({ reps: 8, weight: 20 });
-    await app.busyFor(1.5);
+    await app.busyFor(2);
     await expect(logger.rest).toBeHidden();
     await logger.log();
-    await expect(logger.listRow(bench.name)).toContainText("3/3");
-    await expect(logger.listRow(bench.name).getByRole("img", { name: "complete" })).toBeVisible();
+    await expect(logger.listRow(dumbbellBench.name)).toContainText("3/3");
+    await expect(
+      logger.listRow(dumbbellBench.name).getByRole("img", { name: "complete" }),
+    ).toBeVisible();
   });
 
   await test.step("the superset alternates between its two exercises", async () => {
@@ -90,7 +92,7 @@ test("after a set: the next nudge, an idle moment, Snooze and Pause", async ({ a
 
   await test.step("the sidebar ring, the queue and the top bar follow the logged set", async () => {
     await expect(shell.ring).toHaveAccessibleName("1 of 7 sets done today");
-    await expect(today.row(bench.name)).toContainText("1/3 sets");
+    await expect(today.row(dumbbellBench.name)).toContainText("1/3 sets");
     await expect(today.row(raise.name)).toContainText("0/2 sets");
     await expect(today.screen).toContainText("Up next · Set 2 of 3");
     await expect(shell.status).toContainText("Next nudge at 10:50, sooner if you go idle");

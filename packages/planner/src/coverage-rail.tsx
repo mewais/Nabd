@@ -20,7 +20,7 @@ export function CoverageRail({ vm }: CoverageRailProps): JSX.Element {
               label={bar.name}
               pct={bar.pct}
               value={bar.value}
-              valueWidth="wide"
+              valueWidth="md"
             />
           ))}
         </div>

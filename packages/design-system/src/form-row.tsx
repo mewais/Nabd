@@ -15,7 +15,7 @@ interface FormRowProps {
 
 /** One setting: its name and a hint, with the control beside or under them. */
 export function FormRow({ title, hint, stacked = false, children }: FormRowProps): JSX.Element {
-  const text = <TitleBlock size="row" title={title} subtitle={hint} grow />;
+  const text = <TitleBlock size="md" title={title} subtitle={hint} grow />;
   return stacked ? (
     <Stack role="group" ariaLabel={title} gap="sm" paddingY="sm">
       {text}

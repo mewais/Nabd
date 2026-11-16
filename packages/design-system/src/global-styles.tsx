@@ -21,17 +21,18 @@ const KEYFRAMES = `
 `;
 
 /**
- * What inline styles cannot say: the one focus ring (keyboard focus only) and
- * a field's placeholder.
+ * What inline styles cannot say: the one box model (sizes include padding and
+ * border), the one focus ring (keyboard focus only) and a field's placeholder.
  */
 const STATES = `
+*, *::before, *::after { box-sizing: border-box; }
 .${BUTTON_CLASS}:focus-visible, .${FIELD_CLASS}:focus-visible { outline: 2px solid ${COLOR.accent}; outline-offset: 2px; }
 .${FIELD_CLASS}:focus-visible { outline-offset: -1px; }
 [role="dialog"]:focus { outline: none; }
 .${FIELD_CLASS}::placeholder { color: ${COLOR.textFaint}; }
 `;
 
-/** The keyframes behind `ANIMATION` and the interaction states. Rendered once, by `ThemeProvider`. */
+/** The keyframes behind `ANIMATION`, the box model and the interaction states. Rendered once, by `ThemeProvider`. */
 export function GlobalStyles(): JSX.Element {
   return <style>{KEYFRAMES + STATES}</style>;
 }

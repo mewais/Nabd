@@ -13,7 +13,7 @@ import {
 } from "./fixtures";
 
 const progressionRow = (vm: ProgressVM, exId: string) =>
-  shown(vm.progression).find((row) => row.exId === exId);
+  shown(vm.progression.rows).find((row) => row.exId === exId);
 
 describe("fixtures", () => {
   it("only reference exercises that exist in the catalog", () => {
@@ -74,7 +74,10 @@ describe("buildProgressVM — a new user", () => {
     expect(vm.completion).toEqual({ empty: expect.stringMatching(/^Nothing planned yet/) });
     expect(vm.timeOfDay).toEqual({ empty: expect.stringMatching(/^No sets logged yet/) });
     expect(vm.triggers).toEqual({ empty: expect.stringMatching(/^No sets logged yet/) });
-    expect(vm.progression).toEqual({ empty: expect.stringMatching(/^No sets logged yet/) });
+    expect(vm.progression).toEqual({
+      subtitle: "Trend & personal best",
+      rows: { empty: expect.stringMatching(/^No sets logged yet/) },
+    });
     expect(vm.heatmap.muscles).toEqual({ empty: "No sets in the last 7 days." });
   });
 
@@ -227,8 +230,12 @@ describe("buildProgressVM — muscle coverage", () => {
 describe("buildProgressVM — progression", () => {
   const vm = progressVM();
 
+  it("says that a row opens the exercise's full history", () => {
+    expect(vm.progression.subtitle).toBe("Trend & personal best · click a row for full history");
+  });
+
   it("has one row per exercise, in order of first appearance, named from the library", () => {
-    expect(shown(vm.progression).map((row) => [row.exId, row.exercise])).toEqual([
+    expect(shown(vm.progression.rows).map((row) => [row.exId, row.exercise])).toEqual([
       [PLANK, "Plank"],
       [BENCH, "Barbell Bench Press"],
       [PULL_UP, "Pull-Up"],

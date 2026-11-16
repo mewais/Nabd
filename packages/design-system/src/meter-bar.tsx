@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { clamp } from "@nabd/domain";
 import { Row } from "./row";
 import { COLOR, RADIUS, TEXT, toneColor } from "./tokens";
-import type { Tone } from "./tokens";
+import type { Size, Tone } from "./tokens";
 
 interface MeterBarProps {
   label: string;
@@ -10,15 +10,15 @@ interface MeterBarProps {
   pct: number;
   /** The figure after the bar, e.g. "47%" or "6 sets". */
   value: string;
-  /** `wide` keeps room for a figure with its unit ("1.5 sets"), so a column of meters lines up. */
-  valueWidth?: "narrow" | "wide";
+  /** `md` keeps room for a figure with its unit ("1.5 sets"), so a column of meters lines up. */
+  valueWidth?: Extract<Size, "sm" | "md">;
   /** A word after the figure when the meter stands out ("Push"); room is kept for it when given, even empty. */
   tag?: string;
   tagTone?: Tone;
 }
 
 const LABEL_WIDTH = 76;
-const VALUE_WIDTH = { narrow: 32, wide: 64 } as const;
+const VALUE_WIDTH = { sm: 32, md: 64 } as const;
 const TAG_WIDTH = 40;
 const HEIGHT = 6;
 
@@ -35,7 +35,7 @@ export function MeterBar({
   label,
   pct,
   value,
-  valueWidth = "narrow",
+  valueWidth = "sm",
   tag,
   tagTone = "neutral",
 }: MeterBarProps): JSX.Element {

@@ -24,9 +24,9 @@ export type { SettingsActions } from "./settings/settings-actions";
 
 export { ConfirmModal } from "./confirm/confirm-modal";
 export { buildConfirmVM } from "./confirm/confirm-vm";
-export type { ConfirmSubject } from "./confirm/confirm-vm";
 export type { ConfirmActions } from "./confirm/confirm-actions";
 
 export { ChartModal } from "./chart/chart-modal";
 export { buildChartVM } from "./chart/chart-vm";
+export type { ChartVM } from "./chart/chart-vm";
 export type { ChartActions } from "./chart/chart-actions";

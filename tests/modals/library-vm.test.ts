@@ -3,7 +3,7 @@
  * its state, the library and the equipment the user owns.
  */
 
-import { EQUIPMENT_KEYS } from "@nabd/domain";
+import { EQUIPMENT_KEYS, MUSCLES } from "@nabd/domain";
 import type { Equipment } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
 import { buildLibraryVM } from "@nabd/modals";
@@ -132,10 +132,30 @@ describe("buildLibraryVM", () => {
     };
 
     it("shows the form, filled from the draft, under the same title", () => {
-      expect(form()).toEqual({
+      const vm = form();
+      expect(vm).toMatchObject({
         title: "Log Something Else",
         mode: "create",
-        form: { ...draft, canCreate: true },
+        form: { name: "Goblet Squat", equipment: "kettlebell", tracking: "weight_reps" },
+      });
+      expect(vm.form.primary.selected).toEqual(draft.primary);
+      expect(vm.form.secondary.selected).toEqual(draft.secondary);
+      expect(vm.form.canCreate).toBe(true);
+    });
+
+    it("offers every muscle as a chip that switches it in or out of its list", () => {
+      const { primary, secondary } = form().form;
+      const chip = (muscle: string, chips: typeof primary.chips) =>
+        chips.find((c) => c.value === muscle);
+      expect(primary.chips).toHaveLength(MUSCLES.length);
+      expect(chip("glutes", primary.chips)?.toggle).toEqual({
+        primary: [...draft.primary, "glutes"],
+      });
+      expect(chip(draft.primary[0]!, primary.chips)?.toggle).toEqual({
+        primary: draft.primary.slice(1),
+      });
+      expect(chip("chest", secondary.chips)?.toggle).toEqual({
+        secondary: [...draft.secondary, "chest"],
       });
     });
 

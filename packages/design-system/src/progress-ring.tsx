@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { clamp } from "@nabd/domain";
+import { CENTERED } from "./styles";
 import { COLOR, RADIUS, TEXT } from "./tokens";
 
 interface ProgressRingProps {
@@ -16,13 +17,7 @@ interface ProgressRingProps {
 const SIZE = 108;
 const WIDTH = 9;
 
-const DISC: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: RADIUS.round,
-};
+const DISC: CSSProperties = { ...CENTERED, flexDirection: "column", borderRadius: RADIUS.round };
 
 /** A ring that fills as something gets done, with the count in the middle. */
 export function ProgressRing({ pct, value, caption, ariaLabel }: ProgressRingProps): JSX.Element {

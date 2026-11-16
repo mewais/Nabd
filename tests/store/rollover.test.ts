@@ -89,6 +89,20 @@ describe("across restarts and days", () => {
     });
   });
 
+  it("keeps a day's sets in one session when the schedule is switched while a visit continues", async () => {
+    const app = await boot({ program: catalogPushPull });
+    await app.log(catalogBenchRow.id, 1);
+    app.advanceTo(nov(17, 9, 30));
+    await app.log(catalogBenchRow.id, 1);
+    // The visit begun on Monday continues; switching to weekdays leaves it behind…
+    app.get().editProgram((editor) => editor.setSchedule("weekday"));
+    await app.log(catalogBenchRow.id, 1);
+    // …but the day's sets already belong to a session, and the rest of the day's join it.
+    const tuesday = app.get().history.filter((set) => set.date === dateKey(nov(17)));
+    expect(tuesday.map((set) => set.session)).toEqual([dateKey(nov(16)), dateKey(nov(16))]);
+    expect(app.plan().session).toBe(dateKey(nov(16)));
+  });
+
   it("a completed floating day moves on to the next one", async () => {
     const app = await boot();
     await app.log(catalogBenchRow.id, 3);

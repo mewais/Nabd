@@ -10,17 +10,15 @@ import type {
   Program,
   RotationState,
 } from "@nabd/domain";
-import { MUSCLE_NAMES } from "@nabd/domain";
+import { MUSCLE_NAMES, isFloating, weekdayOf } from "@nabd/domain";
 import { floatingDay } from "./floating";
 import { upNext } from "./rotation";
 import type { TodaysSets } from "./todays-sets";
 
 /** Which program day applies on `date`: by weekday, or the current floating day. */
 export function resolveDay(program: Program, date: Date, dayId: string | null): Day | null {
-  if (program.schedule === "weekday") {
-    return program.days.find((d) => d.weekday === date.getDay()) ?? null;
-  }
-  return floatingDay(program, dayId);
+  if (isFloating(program)) return floatingDay(program, dayId);
+  return program.days.find((d) => d.weekday === weekdayOf(date)) ?? null;
 }
 
 /** Item-id prefix for sets that count toward nothing in the plan (see {@link queueEntries}). */

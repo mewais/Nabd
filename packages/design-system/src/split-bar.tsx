@@ -2,7 +2,7 @@ import { COLOR, RADIUS, SPACE, toneColor } from "./tokens";
 import type { Tone } from "./tokens";
 
 /** One share of the whole. */
-export interface SplitSegment {
+interface SplitSegment {
   /** Tells the segments apart. */
   key: string;
   /** Its share of the bar, 0–100. */

@@ -12,6 +12,20 @@ export type RepStyle = Exclude<RepMode, "time">;
 const defaultSet = (measure: Measure): SetSpec =>
   measure === "time" ? { type: "working", amount: 45 } : { type: "working", amount: 8, upTo: 12 };
 
+/**
+ * What a newly added exercise or slot is prescribed, counted in `measure`:
+ * three default sets (8–12 reps, or a 45 s hold), with the usual rest.
+ */
+export function initialPrescription(measure: Measure): Prescription {
+  const set = defaultSet(measure);
+  return {
+    repMode: measure === "time" ? "time" : "range",
+    intensity: "none",
+    rest: measure === "time" ? 60 : 120,
+    sets: [{ ...set }, { ...set }, { ...set }],
+  };
+}
+
 /** A change to one prescription, expressed against its editor. */
 export type PrescriptionEdit = (editor: PrescriptionEditor) => void;
 
@@ -22,17 +36,6 @@ export type PrescriptionEdit = (editor: PrescriptionEditor) => void;
  */
 export class PrescriptionEditor {
   constructor(private readonly prescription: Prescription) {}
-
-  /** What a newly added exercise or slot is prescribed: three default sets. */
-  static initial(measure: Measure): Prescription {
-    const set = defaultSet(measure);
-    return {
-      repMode: measure === "time" ? "time" : "range",
-      intensity: "none",
-      rest: measure === "time" ? 60 : 120,
-      sets: [{ ...set }, { ...set }, { ...set }],
-    };
-  }
 
   private get measure(): Measure {
     return measureOfMode(this.prescription.repMode);

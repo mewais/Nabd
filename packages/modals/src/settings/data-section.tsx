@@ -15,11 +15,11 @@ export function DataSection({ vm, actions }: DataSectionProps): JSX.Element {
       <Stack gap="sm">
         <Row gap="sm">
           <Button variant="secondary" onClick={actions.exportData} grow>
-            <Icon name="download" size={15} />
+            <Icon name="download" />
             Export data
           </Button>
           <Button variant="secondary" onClick={actions.importData} grow>
-            <Icon name="upload" size={15} />
+            <Icon name="upload" />
             Import data
           </Button>
         </Row>

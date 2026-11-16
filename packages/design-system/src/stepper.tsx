@@ -12,7 +12,7 @@ interface DisplayStepperProps {
   /** − was pressed (-1), or + (+1). */
   onStep: (direction: Direction) => void;
   onSet?: undefined;
-  /** `large` (default) for forms; `mini` for dense table rows. */
+  /** `md` (default) for forms; `sm` for dense table rows. */
   size?: StepperSize;
   /** What is being stepped: names the group, and its − and + after it ("Decrease interval"). */
   ariaLabel: string;
@@ -24,12 +24,12 @@ interface DisplayStepperProps {
 type StepperProps = DisplayStepperProps | TypedStepperProps;
 
 /** The width kept for a displayed value, in px, so the buttons do not move as it changes. */
-const VALUE_WIDTH: Record<StepperSize, number> = { mini: 24, large: 56 };
+const VALUE_WIDTH: Record<StepperSize, number> = { sm: 24, md: 56 };
 
 /** A "− value +" control. With `onSet` the value can also be typed. */
 export function Stepper(props: StepperProps): JSX.Element {
   if (props.onSet !== undefined) return <TypedStepper {...props} />;
-  const { value, onStep, size = "large", ariaLabel, inLabelledRow = false } = props;
+  const { value, onStep, size = "md", ariaLabel, inLabelledRow = false } = props;
   return (
     <StepperFrame onStep={onStep} size={size} name={ariaLabel} namesGroup={!inLabelledRow}>
       <span style={{ ...TEXT.monoValue, minWidth: VALUE_WIDTH[size], textAlign: "center" }}>

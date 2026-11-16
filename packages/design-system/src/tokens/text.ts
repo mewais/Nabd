@@ -7,7 +7,7 @@ export const FONT = {
 } as const;
 
 /** The type scale, in px. Text is set through a role of `TEXT`, which picks its step. */
-export const FONT_SIZE = {
+const FONT_SIZE = {
   micro: 10,
   tiny: 11,
   small: 12,
@@ -21,30 +21,49 @@ export const FONT_SIZE = {
   jumbo: 40,
 } as const;
 
+/** The weights the app sets text in. */
+export const FONT_WEIGHT = {
+  regular: 400,
+  medium: 500,
+  semibold: 600,
+  bold: 700,
+  heavy: 800,
+} as const;
+
 const MONO: CSSProperties = { fontFamily: FONT.mono };
 const TIGHT = "-.02em";
 
 /** Every kind of text the app sets, by what it is for. `Text` draws one by name. */
 export const TEXT = {
   /** The one line a screen is about: the next exercise. */
-  display: { fontSize: FONT_SIZE.display, fontWeight: 800, letterSpacing: TIGHT, lineHeight: 1.05 },
+  display: {
+    fontSize: FONT_SIZE.display,
+    fontWeight: FONT_WEIGHT.heavy,
+    letterSpacing: TIGHT,
+    lineHeight: 1.05,
+  },
   /** A big statement inside a card or a form. */
   headline: {
     fontSize: FONT_SIZE.headline,
-    fontWeight: 800,
+    fontWeight: FONT_WEIGHT.heavy,
     letterSpacing: TIGHT,
     lineHeight: 1.15,
   },
   /** A screen's or a modal's heading. */
-  title: { fontSize: FONT_SIZE.title, fontWeight: 800, letterSpacing: TIGHT },
+  title: { fontSize: FONT_SIZE.title, fontWeight: FONT_WEIGHT.heavy, letterSpacing: TIGHT },
   /** A heading inside a panel: a day's name, the toast's exercise. */
-  heading: { fontSize: FONT_SIZE.heading, fontWeight: 800, letterSpacing: TIGHT, lineHeight: 1.15 },
+  heading: {
+    fontSize: FONT_SIZE.heading,
+    fontWeight: FONT_WEIGHT.heavy,
+    letterSpacing: TIGHT,
+    lineHeight: 1.15,
+  },
   /** The name of a card or of a section. */
-  cardTitle: { fontSize: FONT_SIZE.large, fontWeight: 700, letterSpacing: "-.01em" },
+  cardTitle: { fontSize: FONT_SIZE.large, fontWeight: FONT_WEIGHT.bold, letterSpacing: "-.01em" },
   /** The name of a form row or of a list entry. */
-  label: { fontSize: FONT_SIZE.medium, fontWeight: 600 },
+  label: { fontSize: FONT_SIZE.medium, fontWeight: FONT_WEIGHT.semibold },
   /** The name of a row in a dense list or table. */
-  rowLabel: { fontSize: FONT_SIZE.base, fontWeight: 600 },
+  rowLabel: { fontSize: FONT_SIZE.base, fontWeight: FONT_WEIGHT.semibold },
   /** A paragraph of running text. */
   body: { fontSize: FONT_SIZE.base, lineHeight: 1.5 },
   /** A quiet aside next to something more important. */
@@ -57,7 +76,7 @@ export const TEXT = {
   eyebrow: {
     ...MONO,
     fontSize: FONT_SIZE.micro,
-    fontWeight: 700,
+    fontWeight: FONT_WEIGHT.bold,
     letterSpacing: ".1em",
     textTransform: "uppercase",
     color: COLOR.textFaint,
@@ -67,12 +86,22 @@ export const TEXT = {
   /** The mono small print: axis labels, tallies, what a chart shows. */
   monoCaption: { ...MONO, fontSize: FONT_SIZE.tiny, color: COLOR.textFaint },
   /** A number in the mono face: a stepper's value, a figure in a row. */
-  monoValue: { ...MONO, fontSize: FONT_SIZE.base, fontWeight: 600 },
+  monoValue: { ...MONO, fontSize: FONT_SIZE.base, fontWeight: FONT_WEIGHT.semibold },
+  /** The mono micro-print: a tag such as "CUSTOM", a chart's bar captions. */
+  monoMicro: { ...MONO, fontSize: FONT_SIZE.micro, color: COLOR.textFaint },
+  /** The words on the smallest controls: a small option of a switch. */
+  controlXs: { fontSize: FONT_SIZE.tiny },
+  /** The words on small controls: small buttons and fields, chips, options. */
+  controlSm: { fontSize: FONT_SIZE.small },
+  /** The words on a control of the regular size. */
+  controlMd: { fontSize: FONT_SIZE.base },
+  /** The words on large controls: big buttons, fields, menus, navigation. */
+  controlLg: { fontSize: FONT_SIZE.medium },
   /** A headline figure. */
   stat: {
     ...MONO,
     fontSize: FONT_SIZE.headline,
-    fontWeight: 600,
+    fontWeight: FONT_WEIGHT.semibold,
     letterSpacing: TIGHT,
     lineHeight: 1.1,
   },
@@ -80,7 +109,7 @@ export const TEXT = {
   bigStat: {
     ...MONO,
     fontSize: FONT_SIZE.jumbo,
-    fontWeight: 600,
+    fontWeight: FONT_WEIGHT.semibold,
     letterSpacing: "-.03em",
     lineHeight: 1.1,
   },

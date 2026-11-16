@@ -7,8 +7,7 @@ import {
   Stack,
   TextInput,
 } from "@nabd/design-system";
-import { toggled } from "@nabd/domain";
-import { EQUIPMENT_OPTIONS, MUSCLE_OPTIONS, TRACKING_OPTIONS } from "../options";
+import { EQUIPMENT_OPTIONS, TRACKING_OPTIONS } from "../options";
 import type { LibraryActions } from "./library-actions";
 import type { ExerciseFormVM } from "./library-vm";
 
@@ -32,9 +31,9 @@ export function ExerciseForm({ vm, actions }: ExerciseFormProps): JSX.Element {
       </FormSection>
       <FormSection title="Primary muscles">
         <ChipGroup
-          options={MUSCLE_OPTIONS}
-          selected={vm.primary}
-          onToggle={(muscle) => patchDraft({ primary: toggled(vm.primary, muscle) })}
+          options={vm.primary.chips}
+          selected={vm.primary.selected}
+          onToggle={(chip) => patchDraft(chip.toggle)}
         />
       </FormSection>
       <FormSection title="How to track it">
@@ -55,9 +54,9 @@ export function ExerciseForm({ vm, actions }: ExerciseFormProps): JSX.Element {
       </FormSection>
       <FormSection title="Secondary muscles">
         <ChipGroup
-          options={MUSCLE_OPTIONS}
-          selected={vm.secondary}
-          onToggle={(muscle) => patchDraft({ secondary: toggled(vm.secondary, muscle) })}
+          options={vm.secondary.chips}
+          selected={vm.secondary.selected}
+          onToggle={(chip) => patchDraft(chip.toggle)}
         />
       </FormSection>
       <Row gap="sm">

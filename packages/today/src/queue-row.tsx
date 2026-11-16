@@ -1,5 +1,5 @@
 import { Button, CheckMark, Row, Text, TitleBlock } from "@nabd/design-system";
-import type { TextTone } from "@nabd/design-system";
+import type { Tone } from "@nabd/design-system";
 import type { QueueRowVM } from "./queue-vm";
 import type { TodayActions } from "./today-actions";
 
@@ -10,15 +10,10 @@ interface QueueRowProps {
 
 type RowState = QueueRowVM["state"];
 
-/** What the row's mark says to assistive tech; its shape says the same to the eye. */
-const STATE_NAMES: Record<RowState, string> = {
-  next: "Up next",
-  pending: "To do",
-  done: "Done",
-  skipped: "Skipped",
-};
+/** The row's mark: done, the one up next, or still to do (a skipped row too). */
+const MARKS = { next: "next", pending: "todo", done: "done", skipped: "todo" } as const;
 
-const BADGE_TONES: Record<RowState, TextTone> = {
+const BADGE_TONES: Record<RowState, Tone> = {
   next: "accent",
   pending: "faint",
   done: "success",
@@ -41,9 +36,9 @@ export function QueueRow({ vm, actions }: QueueRowProps): JSX.Element {
       <Text as="span" variant="mono" tone="faint">
         {vm.marker}
       </Text>
-      <CheckMark checked={state === "done"} current={state === "next"} label={STATE_NAMES[state]} />
+      <CheckMark state={MARKS[state]} ariaLabel={vm.stateName} />
       <TitleBlock
-        size="row"
+        size="md"
         title={vm.exercise}
         subtitle={vm.sub}
         tone={state === "next" ? "strong" : "muted"}

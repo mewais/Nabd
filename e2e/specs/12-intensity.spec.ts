@@ -3,7 +3,7 @@ import { EXERCISE, day, loggedSet, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { bench, squat, curl } = EXERCISE;
+const { dumbbellBench, gobletSquat, curl } = EXERCISE;
 
 /** A working set of 8–12 reps asked at an RPE or a %1RM of `intensity`. */
 const asked = (intensity: number): SetSpec => ({
@@ -15,19 +15,19 @@ const asked = (intensity: number): SetSpec => ({
 
 /**
  * Bench at 70% of the max, squats at RPE 8, curls at 70% with no history yet.
- * Last Friday bench and squat both went 10 × 60 kg: an estimated max of 80 kg.
+ * Last Friday dumbbellBench and gobletSquat both went 10 × 60 kg: an estimated max of 80 kg.
  */
 const stored = {
   program: plan([
     day("Push", [
-      planned(bench.id, { intensity: "pct", sets: [asked(70), asked(70)] }),
-      planned(squat.id, { intensity: "rpe", sets: [asked(8), asked(8)] }),
+      planned(dumbbellBench.id, { intensity: "pct", sets: [asked(70), asked(70)] }),
+      planned(gobletSquat.id, { intensity: "rpe", sets: [asked(8), asked(8)] }),
       planned(curl.id, { intensity: "pct", sets: [asked(70), asked(70)] }),
     ]),
   ]),
   history: [
-    loggedSet(bench.id, { day: dayAfter(MONDAY, -3), reps: 10, kg: 60 }),
-    loggedSet(squat.id, { day: dayAfter(MONDAY, -3), reps: 10, kg: 60 }),
+    loggedSet(dumbbellBench.id, { day: dayAfter(MONDAY, -3), reps: 10, kg: 60 }),
+    loggedSet(gobletSquat.id, { day: dayAfter(MONDAY, -3), reps: 10, kg: 60 }),
   ],
 };
 
@@ -60,9 +60,9 @@ test("an RPE suggests the load that leaves 10 − RPE reps in reserve", async ({
   const { today, logger } = app;
   await app.launch(at("10:00"), stored);
   await today.startSet.click();
-  await logger.listRow(squat.name).click();
+  await logger.listRow(gobletSquat.name).click();
 
-  await expect(logger.exercise).toHaveText(squat.name);
+  await expect(logger.exercise).toHaveText(gobletSquat.name);
   await expect(logger.dialog).toContainText("Working set · 8–12 reps · RPE 8");
   // 8 reps with 2 in reserve is 10 reps' worth of an 80 kg max: 80 / (1 + 10/30) = 60 kg.
   await expect(logger.suggestions).toHaveText(["8 × 60 kg", "11 × 60 kg"]);

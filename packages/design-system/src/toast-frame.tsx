@@ -17,7 +17,6 @@ export function ToastFrame({ children }: ToastFrameProps): JSX.Element {
         bottom: SPACE.xxl,
         right: SPACE.xxl,
         width: WIDTH,
-        boxSizing: "border-box",
         zIndex: Z.toast,
         padding: SPACE.xl,
         background: COLOR.surface,

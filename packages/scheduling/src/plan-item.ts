@@ -1,5 +1,5 @@
 import type { Exercise, LoggedSet, Prescription, SetCounts, SetSpec, SetType } from "@nabd/domain";
-import { NO_SETS, SET_TYPES, countSets, isWarmup, totalSets } from "@nabd/domain";
+import { NO_SETS, SET_TYPES, countSets, isWarmup, sum, totalSets } from "@nabd/domain";
 
 type PlanItemStatus = "done" | "skipped" | "pending";
 
@@ -118,8 +118,7 @@ export class PlanItem {
 
   /** Load moved so far, in kg: reps × weight over the logged sets, warm-ups left out. */
   get loadLifted(): number {
-    return this.logged
-      .filter((set) => !isWarmup(set))
-      .reduce((total, set) => total + set.value * (set.weight ?? 0), 0);
+    const lifted = this.logged.filter((set) => !isWarmup(set));
+    return sum(lifted, (set) => set.value * (set.weight ?? 0));
   }
 }

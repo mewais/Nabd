@@ -1,12 +1,12 @@
-import { ChipGroup, FormRow, FormSection, NumberField, Segmented } from "@nabd/design-system";
-import { toggled } from "@nabd/domain";
-import { EQUIPMENT_OPTIONS, WEIGHT_UNIT_OPTIONS } from "../options";
+import { FormRow, FormSection, NumberField, Segmented } from "@nabd/design-system";
+import { WEIGHT_UNIT_OPTIONS } from "../options";
+import { ChipsRow } from "./chips-row";
 import type { SettingsActions } from "./settings-actions";
-import type { SettingsVM } from "./settings-vm";
 import { StepperRow } from "./stepper-row";
+import type { TrainingVM } from "./training-vm";
 
 interface TrainingSectionProps {
-  vm: SettingsVM["training"];
+  vm: TrainingVM;
   actions: Pick<SettingsActions, "change" | "setBodyWeight">;
 }
 
@@ -31,17 +31,7 @@ export function TrainingSection({ vm, actions }: TrainingSectionProps): JSX.Elem
           onClear={() => actions.setBodyWeight(null)}
         />
       </FormRow>
-      <FormRow
-        stacked
-        title="My equipment"
-        hint="The exercise library only offers what you can do with these."
-      >
-        <ChipGroup
-          options={EQUIPMENT_OPTIONS}
-          selected={vm.equipment}
-          onToggle={(key) => actions.change({ equipment: toggled(vm.equipment, key) })}
-        />
-      </FormRow>
+      <ChipsRow vm={vm.equipment} actions={actions} />
     </FormSection>
   );
 }

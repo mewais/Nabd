@@ -14,14 +14,14 @@ export function PoolChips({ vm, onRemove, onAdd }: PoolChipsProps): JSX.Element 
       {vm.map((entry) => (
         <Chip
           key={entry.id}
-          variant="box"
+          variant="entry"
           onRemove={() => onRemove(entry.id)}
-          removeLabel={`Remove ${entry.name} from pool`}
+          removeAriaLabel={entry.removeAriaLabel}
         >
           {entry.name}
         </Chip>
       ))}
-      <Button variant="ghost" size="sm" tone="accent" dashed onClick={onAdd}>
+      <Button variant="add" size="sm" tone="accent" onClick={onAdd}>
         + Add exercise
       </Button>
     </Row>

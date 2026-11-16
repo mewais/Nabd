@@ -39,7 +39,7 @@ describe("ModalShell", () => {
         title="Settings"
         eyebrow="Preferences"
         subtitle="Saved as you go"
-        width={540}
+        width="md"
         onClose={onClose}
       >
         <button>Inside</button>
@@ -87,15 +87,15 @@ describe("ModalShell", () => {
 
   it("stops listening for Escape once it is gone", () => {
     const onClose = vi.fn();
-    const { unmount } = render(<ModalShell title="Gone" width={300} onClose={onClose} />);
+    const { unmount } = render(<ModalShell title="Gone" width="sm" onClose={onClose} />);
     unmount();
     press("Escape");
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it("stacks above the layer it was opened from", () => {
-    render(<ModalShell title="Below" width={300} onClose={vi.fn()} />);
-    render(<ModalShell title="Above" width={300} layer="modalOver" onClose={vi.fn()} />);
+    render(<ModalShell title="Below" width="sm" onClose={vi.fn()} />);
+    render(<ModalShell title="Above" width="sm" layer="modalOver" onClose={vi.fn()} />);
     const [below, above] = [...document.querySelectorAll<HTMLElement>("[data-modal-backdrop]")];
     expect([below?.dataset.layer, above?.dataset.layer]).toEqual(["modal", "modalOver"]);
     expect(Number(above?.style.zIndex)).toBeGreaterThan(Number(below?.style.zIndex));
@@ -104,9 +104,9 @@ describe("ModalShell", () => {
   it("gives Escape to the modal on top only", () => {
     const closeBelow = vi.fn();
     const closeAbove = vi.fn();
-    render(<ModalShell title="Below" width={300} onClose={closeBelow} />);
+    render(<ModalShell title="Below" width="sm" onClose={closeBelow} />);
     const above = render(
-      <ModalShell title="Above" width={300} layer="modalOver" onClose={closeAbove} />,
+      <ModalShell title="Above" width="sm" layer="modalOver" onClose={closeAbove} />,
     );
 
     press("Escape");
@@ -121,7 +121,7 @@ describe("ModalShell", () => {
   it("lets an open dropdown inside it take Escape first", () => {
     const onClose = vi.fn();
     render(
-      <ModalShell title="New exercise" width={560} onClose={onClose}>
+      <ModalShell title="New exercise" width="md" onClose={onClose}>
         <Dropdown
           options={[{ value: "a", label: "Alpha" }]}
           value="a"
@@ -181,7 +181,7 @@ describe("ConfirmDialog", () => {
   });
 
   it("opens over every other dialog", () => {
-    render(<ModalShell title="Top" width={300} layer="modalTop" onClose={vi.fn()} />);
+    render(<ModalShell title="Top" width="sm" layer="modalTop" onClose={vi.fn()} />);
     setup();
     const [top, confirm] = [...document.querySelectorAll<HTMLElement>("[data-modal-backdrop]")];
     expect(confirm?.dataset.layer).toBe("confirm");

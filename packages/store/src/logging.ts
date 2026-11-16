@@ -53,13 +53,19 @@ export function loggingSlice(ctx: StoreContext): LoggingSlice {
 
     setReps: (reps) => editSession(ctx, (s) => s.withReps(reps)),
 
-    setWeight: (displayValue) =>
-      editSession(ctx, (s) => s.withWeight(kgFromDisplay(displayValue, get().settings.weightUnit))),
+    setWeight: (displayValue) => {
+      const { settings } = get();
+      const kg = kgFromDisplay(displayValue, settings.weightUnit);
+      editSession(ctx, (s) => s.withWeight(kg, loadStepKg(settings)));
+    },
 
     applyAdvice: (which) => {
       const item = sessionItem(ctx);
       const target = item && selectCoach(get()).adviceFor(item)?.[which];
-      if (target) editSession(ctx, (s) => s.withReps(target.reps).withWeight(target.weight ?? 0));
+      const stepKg = loadStepKg(get().settings);
+      if (target) {
+        editSession(ctx, (s) => s.withReps(target.reps).withWeight(target.weight ?? 0, stepKg));
+      }
     },
 
     logSet: async () => {

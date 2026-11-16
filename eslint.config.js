@@ -19,7 +19,7 @@ export default [
   {
     ignores: [
       "**/dist/**",
-      "**/coverage/**",
+      "coverage/**",
       "**/target/**",
       "**/node_modules/**",
       "e2e/test-results/**",

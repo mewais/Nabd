@@ -25,25 +25,10 @@ describe("StatTile", () => {
 });
 
 describe("Badge", () => {
-  it("is a plain marker by default", () => {
-    render(<Badge>W</Badge>);
-    expect(screen.getByText("W")).toBeInTheDocument();
+  it("is a plain marker, with its tooltip", () => {
+    render(<Badge title="Warm-up">W</Badge>);
+    expect(screen.getByText("W")).toHaveAttribute("title", "Warm-up");
     expect(screen.queryByRole("button")).toBeNull();
-  });
-
-  it("becomes a button with a tooltip when it can be clicked", () => {
-    const onClick = vi.fn();
-    render(
-      <Badge tone="accent" title="Working — click to change" onClick={onClick}>
-        2
-      </Badge>,
-    );
-    click("2");
-    expect(onClick).toHaveBeenCalledOnce();
-    expect(screen.getByRole("button", { name: "2" })).toHaveAttribute(
-      "title",
-      "Working — click to change",
-    );
   });
 });
 
@@ -62,15 +47,6 @@ describe("CardButton", () => {
     );
     expect(screen.getByRole("button", { name: "Push" })).toHaveAttribute("aria-pressed", "true");
   });
-
-  it("is a plain action, not a selection, when dashed", () => {
-    render(
-      <CardButton dashed onClick={vi.fn()}>
-        Add day
-      </CardButton>,
-    );
-    expect(screen.getByRole("button", { name: "Add day" })).not.toHaveAttribute("aria-pressed");
-  });
 });
 
 describe("TitleInput", () => {
@@ -88,7 +64,7 @@ describe("Chip with a remove button", () => {
   it("ends in a × that calls onRemove", () => {
     const onRemove = vi.fn();
     render(
-      <Chip variant="box" onRemove={onRemove} removeLabel="Remove Plank from pool">
+      <Chip variant="entry" onRemove={onRemove} removeAriaLabel="Remove Plank from pool">
         Plank
       </Chip>,
     );
@@ -98,7 +74,7 @@ describe("Chip with a remove button", () => {
   });
 
   it("has no button without onRemove", () => {
-    render(<Chip variant="box">Plank</Chip>);
+    render(<Chip variant="entry">Plank</Chip>);
     expect(screen.queryByRole("button")).toBeNull();
   });
 });

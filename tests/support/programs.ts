@@ -1,14 +1,23 @@
 // The standard small programs the suites train on, each defined once:
-//  - `mondayProgram` / `pushDay` (+ `lastWeek`): one Monday of made-up
-//    exercises, for the Today, logger and toast suites;
+//  - `mondayProgram` / `pushDay` (+ `lastWeek`), `fullBodyMonday`: one
+//    Monday of made-up exercises, fixed or cycled, for the Today, logger and
+//    toast suites;
 //  - `pushPull`, `floatingPushPull`, `cycledPlan`: a two-day plan of made-up
 //    exercises on weekdays, floating, and cycled, for the scheduling engine;
 //  - `catalogPushPull`: a floating two-day plan of built-in exercises, for the store;
 //  - `officeStrength`, `rotationPlan`: a fuller fixed and a cycled plan of
 //    built-in exercises, for the planner.
 
-import type { ExercisePrescription, Intensity, LoggedSet, Program, SetSpec } from "@nabd/domain";
-import { logged, nov, prescription, row, threeSets, warmup, working } from "./builders";
+import type {
+  CycledSlot,
+  ExercisePrescription,
+  Intensity,
+  LoggedSet,
+  MuscleKey,
+  Program,
+  SetSpec,
+} from "@nabd/domain";
+import { day, logged, nov, plan, row, slot, warmup, working, workingSets } from "./builders";
 import { CATALOG, EX } from "./exercises";
 import type { ExKey } from "./exercises";
 
@@ -27,12 +36,16 @@ export function planRow(
 
 /** A weekday program whose only training day is Monday. */
 export function mondayProgram(rows: ExercisePrescription[], dayName = "Push"): Program {
-  return {
+  return plan([day(dayName, { id: "mon", weekday: 1, exercises: rows })], {
     name: "Test Plan",
-    type: "fixed",
     schedule: "weekday",
-    days: [{ id: "mon", name: dayName, weekday: 1, exercises: rows, slots: [] }],
-  };
+  });
+}
+
+/** A cycled weekday program whose only training day is Monday's "Full body", of these `slots`. */
+export function fullBodyMonday(slots: CycledSlot[]): Program {
+  const fullBody = day("Full body", { id: "mon", weekday: 1, slots });
+  return { ...mondayProgram([]), type: "cycled", days: [fullBody] };
 }
 
 /** A set of `ex` logged against plan item `itemId` (today at 10:00 unless `at` is given). */
@@ -71,75 +84,52 @@ export const lastWeek = (): LoggedSet[] => [
   did("p-plank", "plank", 30, null, { at: LAST_WEEK }),
 ];
 
-export const benchRow = row(EX.bench.id, [warmup(12), ...threeSets()]);
-export const flyRow = row(EX.fly.id, threeSets(), { supersetId: "ss" });
-export const raiseRow = row(EX.raise.id, threeSets(), { supersetId: "ss" });
+export const benchRow = row(EX.bench.id, [warmup(12), ...workingSets(3)]);
+export const flyRow = row(EX.fly.id, workingSets(3), { supersetId: "ss" });
+export const raiseRow = row(EX.raise.id, workingSets(3), { supersetId: "ss" });
 
 /** Push on Monday (bench, then fly and raise as a superset), Pull on Wednesday (dips). */
-export const pushPull: Program = {
-  name: "P",
-  type: "fixed",
-  schedule: "weekday",
-  days: [
-    { id: "mon", name: "Push", weekday: 1, exercises: [benchRow, flyRow, raiseRow], slots: [] },
-    { id: "wed", name: "Pull", weekday: 3, exercises: [row(EX.dip.id, threeSets())], slots: [] },
+export const pushPull: Program = plan(
+  [
+    day("Push", { id: "mon", weekday: 1, exercises: [benchRow, flyRow, raiseRow] }),
+    day("Pull", { id: "wed", weekday: 3, exercises: [row(EX.dip.id, workingSets(3))] }),
   ],
-};
+  { name: "P", schedule: "weekday" },
+);
 
 /** The same plan with its days in order instead of on weekdays. */
 export const floatingPushPull: Program = { ...pushPull, schedule: "floating" };
 
-/** What a cycled slot prescribes in these tests. */
-export const slotSets = () => prescription(threeSets(), { rest: 60 });
+/** A cycled slot of these tests, called `id`: three sets of 8–12 with a minute's rest. */
+const cycledSlot = (id: string, muscle: MuscleKey, pool: string[]) =>
+  slot(muscle, pool, workingSets(3), { id, rest: 60 });
 
 /** A floating cycled plan: day A has a two-exercise pool, a one-exercise pool and an empty one; day B is empty. */
-export const cycledPlan: Program = {
-  name: "C",
-  type: "cycled",
-  schedule: "floating",
-  days: [
-    {
-      id: "a",
-      name: "A",
-      weekday: null,
+export const cycledPlan: Program = plan(
+  [
+    day("A", {
       // Left over from a fixed plan: must be ignored while the plan is cycled.
       exercises: [benchRow],
       slots: [
-        { id: "chest", muscle: "chest", pool: [EX.bench.id, EX.fly.id], ...slotSets() },
-        { id: "delts", muscle: "side_delts", pool: [EX.raise.id], ...slotSets() },
-        { id: "empty", muscle: "lats", pool: [], ...slotSets() },
+        cycledSlot("chest", "chest", [EX.bench.id, EX.fly.id]),
+        cycledSlot("delts", "side_delts", [EX.raise.id]),
+        cycledSlot("empty", "lats", []),
       ],
-    },
-    { id: "b", name: "B", weekday: null, exercises: [], slots: [] },
+    }),
+    day("B"),
   ],
-};
+  { name: "C", type: "cycled" },
+);
 
 /** The rows of {@link catalogPushPull}'s Push day. */
-export const catalogBenchRow = row(CATALOG.bench, threeSets());
-export const catalogFlyRow = row(CATALOG.fly, threeSets());
+export const catalogBenchRow = row(CATALOG.bench, workingSets(3));
+export const catalogFlyRow = row(CATALOG.fly, workingSets(3));
 
 /** A floating two-day plan of built-in exercises: Push (bench, fly) then Pull (row). */
-export const catalogPushPull: Program = {
-  name: "Test plan",
-  type: "fixed",
-  schedule: "floating",
-  days: [
-    {
-      id: "push",
-      name: "Push",
-      weekday: null,
-      exercises: [catalogBenchRow, catalogFlyRow],
-      slots: [],
-    },
-    {
-      id: "pull",
-      name: "Pull",
-      weekday: null,
-      exercises: [row(CATALOG.row, threeSets())],
-      slots: [],
-    },
-  ],
-};
+export const catalogPushPull: Program = plan([
+  day("Push", { exercises: [catalogBenchRow, catalogFlyRow] }),
+  day("Pull", { exercises: [row(CATALOG.row, workingSets(3))] }),
+]);
 
 /**
  * Fixed plan on weekdays.
@@ -147,159 +137,73 @@ export const catalogPushPull: Program = {
  *   Wed "Pull": pull-up + pulldown as a superset, then deadlift.
  */
 export function officeStrength(): Program {
-  return {
-    name: "Office Strength",
-    type: "fixed",
-    schedule: "weekday",
-    days: [
-      {
-        id: "d-push",
-        name: "Push",
-        weekday: 1,
-        slots: [],
-        exercises: [
-          {
-            id: "e-bench",
-            exId: CATALOG.bench,
-            repMode: "range",
-            intensity: "rpe",
-            rest: 150,
-            notes: "Pause on the chest",
-            sets: [
-              { type: "warmup", amount: 10, upTo: 12, intensity: 6 },
-              { type: "working", amount: 8, upTo: 10, intensity: 8 },
-              { type: "working", amount: 6, upTo: 8, intensity: 8.5 },
-              { type: "drop", amount: 12, upTo: 15, intensity: 9 },
-            ],
-          },
-          {
-            id: "e-ohp",
-            exId: CATALOG.overheadPress,
-            repMode: "fixed",
-            intensity: "pct",
-            rest: 120,
-            sets: [
-              { type: "working", amount: 5, intensity: 70 },
-              { type: "working", amount: 5, intensity: 72.5 },
-              { type: "working", amount: 5, intensity: 75 },
-            ],
-          },
-          {
-            id: "e-plank",
-            exId: CATALOG.plank,
-            repMode: "time",
-            intensity: "none",
-            rest: 45,
-            sets: [
-              { type: "working", amount: 45 },
-              { type: "working", amount: 60 },
-            ],
-          },
-        ],
-      },
-      {
-        id: "d-pull",
-        name: "Pull",
-        weekday: 3,
-        slots: [],
-        exercises: [
-          {
-            id: "e-pullup",
-            exId: CATALOG.pullUp,
-            supersetId: "ss-1",
-            repMode: "range",
-            intensity: "none",
-            rest: 90,
-            sets: [
-              { type: "working", amount: 6, upTo: 10 },
-              { type: "working", amount: 6, upTo: 10 },
-            ],
-          },
-          {
-            id: "e-pulldown",
-            exId: CATALOG.pulldown,
-            supersetId: "ss-1",
-            repMode: "range",
-            intensity: "none",
-            rest: 90,
-            sets: [
-              { type: "working", amount: 10, upTo: 12 },
-              { type: "working", amount: 10, upTo: 12 },
-            ],
-          },
-          {
-            id: "e-deadlift",
-            exId: CATALOG.deadlift,
-            repMode: "fixed",
-            intensity: "none",
-            rest: 180,
-            sets: [{ type: "working", amount: 5 }],
-          },
-        ],
-      },
+  const bench = row(
+    CATALOG.bench,
+    [
+      { ...working(10, 12, 6), type: "warmup" },
+      working(8, 10, 8),
+      working(6, 8, 8.5),
+      { ...working(12, 15, 9), type: "drop" },
     ],
-  };
+    { id: "e-bench", intensity: "rpe", rest: 150, notes: "Pause on the chest" },
+  );
+  const press = row(
+    CATALOG.overheadPress,
+    [working(5, undefined, 70), working(5, undefined, 72.5), working(5, undefined, 75)],
+    {
+      id: "e-ohp",
+      repMode: "fixed",
+      intensity: "pct",
+    },
+  );
+  const plank = row(CATALOG.plank, [working(45), working(60)], {
+    id: "e-plank",
+    repMode: "time",
+    rest: 45,
+  });
+  const superset = { supersetId: "ss-1", rest: 90 };
+  return plan(
+    [
+      day("Push", { id: "d-push", weekday: 1, exercises: [bench, press, plank] }),
+      day("Pull", {
+        id: "d-pull",
+        weekday: 3,
+        exercises: [
+          row(CATALOG.pullUp, workingSets(2, 6, 10), { id: "e-pullup", ...superset }),
+          row(CATALOG.pulldown, workingSets(2, 10, 12), { id: "e-pulldown", ...superset }),
+          row(CATALOG.deadlift, [working(5)], { id: "e-deadlift", repMode: "fixed", rest: 180 }),
+        ],
+      }),
+    ],
+    { name: "Office Strength", schedule: "weekday" },
+  );
 }
 
 /** Cycled plan on weekdays: Mon "Upper" (chest + lats slots), Thu "Core" (abs slot). */
 export function rotationPlan(): Program {
-  return {
-    name: "Rotation",
-    type: "cycled",
-    schedule: "weekday",
-    days: [
-      {
+  return plan(
+    [
+      day("Upper", {
         id: "d-upper",
-        name: "Upper",
         weekday: 1,
-        exercises: [],
         slots: [
-          {
+          slot("chest", [CATALOG.bench, CATALOG.dumbbellBench, CATALOG.pushUp], workingSets(3), {
             id: "s-chest",
-            muscle: "chest",
-            pool: [CATALOG.bench, CATALOG.dumbbellBench, CATALOG.pushUp],
-            repMode: "range",
-            intensity: "none",
-            rest: 120,
-            sets: [
-              { type: "working", amount: 8, upTo: 12 },
-              { type: "working", amount: 8, upTo: 12 },
-              { type: "working", amount: 8, upTo: 12 },
-            ],
-          },
-          {
+          }),
+          slot("lats", [CATALOG.pullUp, CATALOG.pulldown], workingSets(2, 6, 10), {
             id: "s-lats",
-            muscle: "lats",
-            pool: [CATALOG.pullUp, CATALOG.pulldown],
-            repMode: "range",
-            intensity: "none",
             rest: 105,
-            sets: [
-              { type: "working", amount: 6, upTo: 10 },
-              { type: "working", amount: 6, upTo: 10 },
-            ],
-          },
+          }),
         ],
-      },
-      {
+      }),
+      day("Core", {
         id: "d-core",
-        name: "Core",
         weekday: 4,
-        exercises: [],
-        slots: [
-          {
-            id: "s-abs",
-            muscle: "abs",
-            pool: [CATALOG.plank],
-            repMode: "time",
-            intensity: "none",
-            rest: 60,
-            sets: [{ type: "working", amount: 45 }],
-          },
-        ],
-      },
+        slots: [slot("abs", [CATALOG.plank], [working(45)], { id: "s-abs", repMode: "time" })],
+      }),
     ],
-  };
+    { name: "Rotation", type: "cycled", schedule: "weekday" },
+  );
 }
 
 export const asFloating = (program: Program): Program => ({

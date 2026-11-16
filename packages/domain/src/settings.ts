@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { WeekdaySchema, weekdayOf } from "./dates";
+import type { Weekday } from "./dates";
 import { EQUIPMENT_KEYS, EquipmentSchema } from "./equipment";
 import { isRecord } from "./json";
 import { WeightUnitSchema, kgFromDisplay } from "./weight";
@@ -12,7 +14,7 @@ export type Theme = z.infer<typeof ThemeSchema>;
 export const THEME_NAMES: Record<Theme, string> = { light: "Light", dark: "Dark" };
 
 /** The body weights the setting accepts, in kg; anything outside is a typing slip. */
-export const BODY_WEIGHT_KG = { min: 20, max: 400 } as const;
+const BODY_WEIGHT_KG = { min: 20, max: 400 } as const;
 
 export const SettingsSchema = z.object({
   theme: ThemeSchema,
@@ -31,8 +33,8 @@ export const SettingsSchema = z.object({
   /** Workday bounds (minutes since midnight); the app never nudges outside them. */
   workStart: z.number().int().min(0).max(1439),
   workEnd: z.number().int().min(1).max(1440),
-  /** The weekdays (0 = Sunday … 6 = Saturday) the app nudges on; at least one. */
-  workDays: z.array(z.number().int().min(0).max(6)).min(1),
+  /** The weekdays the app nudges on; at least one. */
+  workDays: z.array(WeekdaySchema).min(1),
   /** Weight unit for display + input (weights are stored canonically in kg). */
   weightUnit: WeightUnitSchema,
   /** Smallest weight jump the user can make, in the display unit (micro-plates go down to 0.25). */
@@ -99,13 +101,13 @@ export function withWeightUnit(settings: Settings, unit: WeightUnit): Settings {
   };
 }
 
-/** Whether the workday has a start before its end. */
-export const hasWorkday = (settings: Pick<Settings, "workStart" | "workEnd">): boolean =>
+/** Whether the working hours have a start before their end. */
+export const hasWorkingHours = (settings: Pick<Settings, "workStart" | "workEnd">): boolean =>
   settings.workStart < settings.workEnd;
 
 /** Whether `date` falls on a day the user works, the only days the app nudges on. */
-export const isWorkDay = (settings: Pick<Settings, "workDays">, date: Date): boolean =>
-  settings.workDays.includes(date.getDay());
+export const isWorkday = (settings: { workDays: readonly Weekday[] }, date: Date): boolean =>
+  settings.workDays.includes(weekdayOf(date));
 
 /**
  * Settings read from storage field by field: every valid field is kept, and a
@@ -123,7 +125,7 @@ export function salvageSettings(stored: unknown): { settings: Settings; reset: s
     else reset.push(key);
   }
   const settings = SettingsSchema.parse({ ...DEFAULT_SETTINGS, ...kept });
-  if (hasWorkday(settings)) return { settings, reset };
+  if (hasWorkingHours(settings)) return { settings, reset };
   const { workStart, workEnd } = DEFAULT_SETTINGS;
   return {
     settings: { ...settings, workStart, workEnd },

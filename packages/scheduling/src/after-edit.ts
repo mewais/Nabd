@@ -2,6 +2,7 @@
 // the planner has open, and the exercise each cycled pool is about to give.
 
 import type { CarriedVisit, CycledSlot, Program, RotationState } from "@nabd/domain";
+import { isFloating, weekdayOf } from "@nabd/domain";
 import { floatingDay } from "./floating";
 
 const hasDay = (program: Program, dayId: string): boolean =>
@@ -30,9 +31,9 @@ export function dayIdAfterEdit(
   dayId: string | null,
   today: Date,
 ): string | null {
-  if (after.schedule === "weekday") return null;
-  if (before.schedule === "weekday") {
-    return before.days.find((day) => day.weekday === today.getDay())?.id ?? null;
+  if (!isFloating(after)) return null;
+  if (!isFloating(before)) {
+    return before.days.find((day) => day.weekday === weekdayOf(today))?.id ?? null;
   }
   const current = floatingDay(before, dayId);
   return current === null ? dayId : successorDay(before, after, current.id);
@@ -52,7 +53,7 @@ export function carriedAfterEdit(
   dayId: string | null,
   carried: CarriedVisit | null,
 ): CarriedVisit | null {
-  if (carried === null || after.schedule === "weekday") return carried;
+  if (carried === null || !isFloating(after)) return carried;
   const day = floatingDay(after, dayId);
   const onDay = new Set(
     day === null ? [] : [...day.exercises, ...day.slots].map((item) => item.id),

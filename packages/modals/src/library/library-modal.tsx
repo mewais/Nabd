@@ -12,7 +12,7 @@ interface LibraryModalProps {
 /** The exercise library: browse and pick an exercise, or create a custom one. */
 export function LibraryModal({ vm, actions }: LibraryModalProps): JSX.Element {
   return (
-    <ModalShell title={vm.title} onClose={actions.close} width={560} height={680} layer="modalOver">
+    <ModalShell title={vm.title} onClose={actions.close} width="md" tall layer="modalOver">
       {vm.mode === "browse" ? (
         <LibraryBrowser vm={vm.browser} actions={actions} />
       ) : (

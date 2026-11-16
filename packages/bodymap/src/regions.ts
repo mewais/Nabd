@@ -1,5 +1,5 @@
 import type { Coverage, MuscleKey } from "@nabd/domain";
-import { clamp } from "@nabd/domain";
+import { clamp, sum } from "@nabd/domain";
 
 /**
  * The tracked muscles each region of the drawing (./drawing) shows. The
@@ -45,6 +45,6 @@ interface RegionCoverage {
 export function regionCoverage(slug: string, coverage: Coverage): RegionCoverage | null {
   if (!isMuscleRegion(slug)) return null;
   const muscles: readonly MuscleKey[] = REGION_MUSCLES[slug];
-  const total = muscles.reduce((sum, muscle) => sum + clamp(coverage[muscle], 0, 100), 0);
+  const total = sum(muscles, (muscle) => clamp(coverage[muscle], 0, 100));
   return { muscles, pct: total / muscles.length };
 }

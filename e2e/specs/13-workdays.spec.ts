@@ -2,9 +2,9 @@ import { EXERCISE, day, loggedSet, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { bench } = EXERCISE;
+const { dumbbellBench } = EXERCISE;
 
-const program = plan([day("Push", [planned(bench.id)])]);
+const program = plan([day("Push", [planned(dumbbellBench.id)])]);
 
 const FRIDAY = dayAfter(MONDAY, 4);
 const SATURDAY = dayAfter(MONDAY, 5);
@@ -30,11 +30,11 @@ test("a day off is quiet, still takes a set, and the next workday resumes the nu
   });
 
   await test.step("the day's plan is there, and a set can be logged", async () => {
-    await expect(today.row(bench.name)).toContainText("0/2 sets");
+    await expect(today.row(dumbbellBench.name)).toContainText("0/2 sets");
     await today.startSet.click();
     await logger.log({ reps: 8, weight: 20 });
     await logger.done();
-    await expect(today.row(bench.name)).toContainText("1/2 sets");
+    await expect(today.row(dumbbellBench.name)).toContainText("1/2 sets");
     await app.idleFor(120);
     await expect(shell.toast).toBeHidden();
   });
@@ -43,7 +43,7 @@ test("a day off is quiet, still takes a set, and the next workday resumes the nu
 
   await test.step("Sunday: tomorrow is a workday, so that is when it resumes", async () => {
     await expect(shell.status).toContainText("Quiet until 09:00");
-    await expect(today.row(bench.name)).toContainText("1/2 sets");
+    await expect(today.row(dumbbellBench.name)).toContainText("1/2 sets");
   });
 
   await app.sleepUntil(at("00:01", NEXT_MONDAY));
@@ -51,7 +51,7 @@ test("a day off is quiet, still takes a set, and the next workday resumes the nu
 
   await test.step("Monday: the plan did not move on in between, and the timer is nudging again", async () => {
     await expect(shell.status).toContainText("Interval's up");
-    await expect(shell.toast).toContainText(bench.name);
+    await expect(shell.toast).toContainText(dumbbellBench.name);
     await expect(shell.toast).toContainText("Chest · Set 2 of 2");
   });
 });
@@ -89,7 +89,7 @@ test("a streak counts workdays: a weekend off neither ends it nor adds to it", a
   const { shell, today, logger, settings, progress } = app;
   // A set each workday last week, Monday to Friday, and one on Saturday.
   const lastWeek = [0, 1, 2, 3, 4, 5].map((offset) =>
-    loggedSet(bench.id, { day: dayAfter(MONDAY, offset), reps: 8, kg: 20 }),
+    loggedSet(dumbbellBench.id, { day: dayAfter(MONDAY, offset), reps: 8, kg: 20 }),
   );
   await app.launch(at("10:00", NEXT_MONDAY), { program, history: lastWeek });
 

@@ -13,14 +13,11 @@ interface TodayScreenProps {
   actions: TodayActions;
 }
 
-/** The day's column, and a narrower one for the week. */
-const COLUMNS = "minmax(0, 1.55fr) minmax(0, 1fr)";
-
-/** Today: the next set and the day's queue on the left, the week's coverage on the right. */
+/** Today: the next set and the day's queue on the left, the week's coverage in a narrower column on the right. */
 export function TodayScreen({ vm, actions }: TodayScreenProps): JSX.Element {
   return (
     <Page>
-      <Grid columns={COLUMNS} gap="xl" align="start">
+      <Grid columns={[1.55, 1]} gap="xl" align="start">
         <Stack gap="xl">
           {vm.hero.kind === "next" ? (
             <NextSetCard vm={vm.hero} actions={actions} />

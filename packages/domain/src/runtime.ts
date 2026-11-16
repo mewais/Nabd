@@ -142,7 +142,7 @@ export type CarriedItems = Record<string, CarriedItem>;
  * session all of its sets belong to — and what each plan item already did on
  * the days before (only items with something done are listed).
  */
-export const CarriedVisitSchema = z.object({
+const CarriedVisitSchema = z.object({
   startedOn: z.string(),
   items: z.record(z.string(), CarriedItemSchema),
 });

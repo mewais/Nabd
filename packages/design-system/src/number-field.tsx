@@ -1,10 +1,11 @@
 import { useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { Direction } from "@nabd/domain";
-import { FIELD_CLASS } from "./global-styles";
-import { COLOR, HAIRLINE, RADIUS, SPACE, TEXT } from "./tokens";
+import { InputBase } from "./input-base";
+import { pad } from "./styles";
+import { COLOR, HAIRLINE, RADIUS, TEXT } from "./tokens";
 
-export interface NumberFieldProps {
+interface NumberFieldProps {
   /** The owner's number; null shows an empty field. */
   value: number | null;
   /** A number was typed. The owner decides whether to take it; `value` says what it kept. */
@@ -24,13 +25,11 @@ export interface NumberFieldProps {
 const INPUT: CSSProperties = {
   ...TEXT.monoValue,
   width: 64,
-  boxSizing: "border-box",
   textAlign: "center",
   background: COLOR.surface,
-  color: COLOR.text,
   border: HAIRLINE,
   borderRadius: RADIUS.chip,
-  padding: `${SPACE.sm}px ${SPACE.xs}px`,
+  padding: pad("sm", "xs"),
 };
 
 /** The number `text` spells — digits with at most one decimal point or comma — or null. */
@@ -64,11 +63,10 @@ export function NumberField(props: NumberFieldProps): JSX.Element {
   };
 
   return (
-    <input
+    <InputBase
       type="text"
       inputMode="decimal"
       role={onStep ? "spinbutton" : undefined}
-      className={FIELD_CLASS}
       aria-label={ariaLabel}
       aria-valuenow={onStep && value !== null ? value : undefined}
       placeholder={placeholder}

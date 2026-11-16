@@ -1,4 +1,4 @@
-import { NavButton, Spacer, Stack } from "@nabd/design-system";
+import { Icon, RowButton, Spacer, Stack } from "@nabd/design-system";
 import { BrandLockup } from "./brand-lockup";
 import { DayProgressRing } from "./day-progress-ring";
 import { NAV_ITEMS } from "./options";
@@ -16,15 +16,20 @@ export function Sidebar({ vm, actions }: SidebarProps): JSX.Element {
     <Stack as="aside" surface edge="right" gap="xl" paddingX="lg" paddingY="xl">
       <BrandLockup versionLabel={vm.versionLabel} />
       <Stack as="nav">
-        {NAV_ITEMS.map((item) => (
-          <NavButton
-            key={item.screen}
-            icon={item.icon}
-            label={item.label}
-            active={item.screen === vm.screen}
-            onClick={() => actions.navigate(item.screen)}
-          />
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const selected = item.screen === vm.screen;
+          return (
+            <RowButton
+              key={item.screen}
+              variant="nav"
+              selected={selected}
+              onClick={() => actions.navigate(item.screen)}
+            >
+              <Icon name={item.icon} size="lg" tone={selected ? "accent" : "neutral"} />
+              {item.label}
+            </RowButton>
+          );
+        })}
       </Stack>
       <Spacer />
       <DayProgressRing vm={vm.progress} />

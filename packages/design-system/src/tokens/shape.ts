@@ -27,7 +27,6 @@ export const SHADOW = {
 
 /** Stacking layers, lowest first. A modal opened from another modal goes one layer up. */
 export const Z = {
-  raised: 1,
   toast: 60,
   modal: 70,
   modalOver: 80,
@@ -38,6 +37,9 @@ export const Z = {
 
 /** The modal layers of `Z`; `confirm` is the confirmation asked over any of the others. */
 export type ModalLayer = "modal" | "modalOver" | "modalTop" | "confirm";
+
+/** How faded something out of play is drawn: a disabled control, a skipped row. */
+export const DIMMED_OPACITY = 0.5;
 
 /** The look shared by everything that sits on a card: a quiet filled box with a hairline. */
 export const QUIET_BOX: CSSProperties = { background: COLOR.surfaceAlt, border: HAIRLINE };

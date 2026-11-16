@@ -7,14 +7,18 @@ import type {
   Program,
   ProgramType,
   Schedule,
+  Weekday,
 } from "@nabd/domain";
-import { WEEK_ORDER, inWeekOrder, measureOf, poolMeasure } from "@nabd/domain";
+import { isFloating, measureOf, poolMeasure } from "@nabd/domain";
 import { deriveSlots } from "./derive-slots";
 import { normalize } from "./normalize";
-import { PrescriptionEditor } from "./prescription-editor";
-import { movingBlocks, shift, shiftById, without } from "./reorder";
-import type { Identified } from "./reorder";
+import { PrescriptionEditor, initialPrescription } from "./prescription-editor";
 import type { PrescriptionEdit } from "./prescription-editor";
+import { shiftById, without } from "./reorder";
+import type { Identified } from "./reorder";
+import { fitsWeekdaySchedule, reschedule } from "./schedule";
+import type { PlanToday } from "./schedule";
+import { moveRow, toggleSupersetOf } from "./supersets";
 
 /** Points at the prescription being edited: a fixed exercise row or a cycled slot. */
 export interface EditRef {
@@ -22,27 +26,8 @@ export interface EditRef {
   id: string;
 }
 
-/** Where the plan stands today, for the edits that must not move today: switching schedule. */
-export interface PlanToday {
-  /** Today's weekday, 0 = Sunday. */
-  weekday: number;
-  /** The program day today is on; null on a rest day or in an empty plan. */
-  dayId: string | null;
-}
-
 /** A change to the program, expressed against an editor (see {@link ProgramEditor}). */
 export type ProgramEdit = (editor: ProgramEditor) => Program;
-
-/** Days a weekday schedule has room for: one per weekday, as a further day could never come up. */
-export const WEEKDAY_SLOTS = WEEK_ORDER.length;
-
-/**
- * Whether `program` could run on a weekday schedule — with `added` more days,
- * if any: it would have no more days than a week.
- */
-export function fitsWeekdaySchedule(program: Pick<Program, "days">, added = 0): boolean {
-  return program.days.length + added <= WEEKDAY_SLOTS;
-}
 
 /**
  * Every way the planner can change a program. Each method returns a new
@@ -100,39 +85,20 @@ export class ProgramEditor {
   }
 
   /**
-   * Switch schedule, keeping today on the day it is on.
-   *
-   * Going floating puts the days in the order they ran through the week,
-   * Monday first, and unpins them. Going weekday pins the day the plan is on
-   * today to today's weekday and the days after it, in plan order, to the
-   * weekdays that follow; it is refused while the plan has more days than a week.
+   * Switch schedule, keeping today on the day it is on (see {@link reschedule});
+   * going weekday is refused while the plan has more days than a week.
    */
   setSchedule(schedule: Schedule): Program {
     if (schedule === this.program.schedule) return this.program;
     if (schedule === "weekday" && !fitsWeekdaySchedule(this.program)) return this.program;
-    return this.edit((draft) => {
-      draft.schedule = schedule;
-      if (schedule === "floating") {
-        draft.days = inWeekOrder(draft.days);
-        for (const day of draft.days) day.weekday = null;
-        return;
-      }
-      const current = Math.max(
-        0,
-        draft.days.findIndex((d) => d.id === this.today.dayId),
-      );
-      const fromToday = [...draft.days.slice(current), ...draft.days.slice(0, current)];
-      fromToday.forEach((day, daysAhead) => {
-        day.weekday = (this.today.weekday + daysAhead) % WEEKDAY_SLOTS;
-      });
-    });
+    return this.edit((draft) => reschedule(draft, schedule, this.today));
   }
 
   // ----- Days -----
 
   /** Add an empty day; a weekday schedule that is already full stays as it is. */
-  addDay(weekday: number | null): Program {
-    const full = this.program.schedule === "weekday" && !fitsWeekdaySchedule(this.program, 1);
+  addDay(weekday: Weekday | null): Program {
+    const full = !isFloating(this.program) && !fitsWeekdaySchedule(this.program, 1);
     if (full) return this.program;
     return this.edit((draft) => {
       draft.days.push({ id: this.newId(), name: "New day", weekday, exercises: [], slots: [] });
@@ -152,7 +118,7 @@ export class ProgramEditor {
   }
 
   /** Put a day on a weekday; a day already there swaps places with it. */
-  setWeekday(dayId: string, weekday: number): Program {
+  setWeekday(dayId: string, weekday: Weekday): Program {
     return this.editDay(dayId, (day, draft) => {
       const occupant = draft.days.find((d) => d.weekday === weekday && d.id !== dayId);
       if (occupant) occupant.weekday = day.weekday;
@@ -174,7 +140,7 @@ export class ProgramEditor {
       day.exercises.push({
         id: this.newId(),
         exId: exercise.id,
-        ...PrescriptionEditor.initial(measureOf(exercise.tracking)),
+        ...initialPrescription(measureOf(exercise.tracking)),
       });
     });
   }
@@ -185,46 +151,14 @@ export class ProgramEditor {
     });
   }
 
-  /**
-   * Move an exercise earlier (-1) or later (+1) in its day. A superset always
-   * stays together:
-   *  - an exercise on its own steps over a whole superset, never into it;
-   *  - a superset member trades places with the partner beside it;
-   *  - a member moved out past the edge of its superset leaves it (is unlinked)
-   *    and stays where it is, now on its own.
-   */
+  /** Move an exercise earlier (-1) or later (+1) in its day, superset by superset (see {@link moveRow}). */
   moveExercise(dayId: string, rowId: string, direction: Direction): Program {
-    return this.editDay(dayId, (day) => {
-      const blocks = movingBlocks(day.exercises);
-      const at = blocks.findIndex((block) => block.some((row) => row.id === rowId));
-      const block = blocks[at];
-      const row = block?.find((member) => member.id === rowId);
-      if (!block || !row) return;
-      const target = block.indexOf(row) + direction;
-      if (block.length === 1) shift(blocks, at, direction);
-      else if (target >= 0 && target < block.length) shiftById(block, rowId, direction);
-      else delete row.supersetId;
-      day.exercises = blocks.flat();
-    });
+    return this.editDay(dayId, (day) => moveRow(day, rowId, direction));
   }
 
-  /**
-   * An exercise already in a superset: dissolve that superset. Otherwise: link it
-   * with the exercise after it (joining that one's superset if it has one).
-   */
+  /** Link an exercise with the one after it, or dissolve its superset (see {@link toggleSupersetOf}). */
   toggleSuperset(dayId: string, rowId: string): Program {
-    return this.editDay(dayId, (day) => {
-      const index = day.exercises.findIndex((e) => e.id === rowId);
-      const current = day.exercises[index];
-      if (!current) return;
-      if (current.supersetId !== undefined) {
-        const supersetId = current.supersetId;
-        for (const e of day.exercises) if (e.supersetId === supersetId) delete e.supersetId;
-        return;
-      }
-      const next = day.exercises[index + 1];
-      if (next) current.supersetId = next.supersetId ??= this.newId();
-    });
+    return this.editDay(dayId, (day) => toggleSupersetOf(day, rowId, this.newId));
   }
 
   /** Remove an exercise from every day and every pool (it was deleted from the library). */
@@ -241,7 +175,7 @@ export class ProgramEditor {
 
   addSlot(dayId: string, muscle: MuscleKey): Program {
     return this.editDay(dayId, (day) => {
-      day.slots.push({ id: this.newId(), muscle, pool: [], ...PrescriptionEditor.initial("reps") });
+      day.slots.push({ id: this.newId(), muscle, pool: [], ...initialPrescription("reps") });
     });
   }
 

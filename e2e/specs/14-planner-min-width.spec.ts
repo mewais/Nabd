@@ -4,7 +4,7 @@ import { EXERCISE, day, plan, planned, slot } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
-const { bench, squat, curl, hammerCurl } = EXERCISE;
+const { dumbbellBench, gobletSquat, curl, hammerCurl } = EXERCISE;
 
 /** The window's own minimum size (src-tauri/src/window.rs). */
 const SMALLEST_WINDOW = { width: 980, height: 640 };
@@ -24,8 +24,8 @@ test("at the window's smallest size, no control of the day editor covers another
   const { shell, planner } = app;
   const fixed = plan([
     day("Push", [
-      planned(bench.id, { intensity: "pct", sets: sets(72.5) }),
-      planned(squat.id, { intensity: "rpe", sets: sets(8.5) }),
+      planned(dumbbellBench.id, { intensity: "pct", sets: sets(72.5) }),
+      planned(gobletSquat.id, { intensity: "rpe", sets: sets(8.5) }),
     ]),
   ]);
   await app.launch(at("10:00"), { program: fixed });
@@ -33,8 +33,8 @@ test("at the window's smallest size, no control of the day editor covers another
   const editor = planner.screen.getByRole("region", { name: "Day editor" });
 
   await test.step("a fixed day, with a %1RM and an RPE column", async () => {
-    await expect(planner.stepper(bench.name, "Set 1 %1RM")).toContainText("72.5%");
-    await expect(planner.stepper(squat.name, "Set 3 RPE")).toContainText("8.5");
+    await expect(planner.stepper(dumbbellBench.name, "Set 1 %1RM")).toContainText("72.5%");
+    await expect(planner.stepper(gobletSquat.name, "Set 3 RPE")).toContainText("8.5");
     expect(await overlappingControls(editor)).toEqual([]);
   });
 

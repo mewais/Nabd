@@ -16,8 +16,8 @@ const setCount = (n: number): number => (Number.isFinite(n) ? Math.max(0, Math.r
 /** Build a client over the given transport. */
 export function createIpcClient(invoke: Invoke, listen: Listen): IpcClient {
   return {
-    async loadAll() {
-      return JSON.parse(await invoke<string>("load_all")) as BootSnapshot;
+    async loadAll(): Promise<BootSnapshot> {
+      return JSON.parse(await invoke<string>("load_all"));
     },
     save: (key, value) => invoke("save_singleton", { key, value: JSON.stringify(value) }),
     saveMany: (values) =>

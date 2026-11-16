@@ -14,7 +14,7 @@ export function Toast({ vm, actions }: ToastProps): JSX.Element {
       <Stack gap="lg">
         <Stack role="status" gap="sm">
           <Row gap="sm">
-            <LiveDot active />
+            <LiveDot on />
             <Text variant="eyebrow" tone="accent">
               {vm.title}
             </Text>

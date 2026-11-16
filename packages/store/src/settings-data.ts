@@ -1,4 +1,10 @@
-import { SettingsSchema, hasWorkday, kgFromDisplay, plural, withWeightUnit } from "@nabd/domain";
+import {
+  SettingsSchema,
+  hasWorkingHours,
+  kgFromDisplay,
+  plural,
+  withWeightUnit,
+} from "@nabd/domain";
 import { parseImport } from "@nabd/serialization";
 import type { StoreContext } from "./context";
 import { applyAutostart, applyGlass } from "./os";
@@ -28,7 +34,7 @@ export function settingsDataSlice(ctx: StoreContext): SettingsDataSlice {
           : before;
       const parsed = SettingsSchema.safeParse({ ...base, ...patch });
       // An out-of-range value (a stepper pushed past its bound) is simply not applied.
-      if (!parsed.success || !hasWorkday(parsed.data)) return;
+      if (!parsed.success || !hasWorkingHours(parsed.data)) return;
       const settings = parsed.data;
       save("settings", settings);
       if (settings.openAtStartup !== before.openAtStartup) {

@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import { Button, IconButton } from "@nabd/design-system";
-import type { ButtonVariant } from "@nabd/design-system";
 import { click, renderRoot } from "./render";
 
 describe("Button", () => {
@@ -39,13 +38,26 @@ describe("Button", () => {
     expect(renderRoot(<Button>Go</Button>)).toHaveAttribute("type", "button");
   });
 
-  it.each<ButtonVariant>(["primary", "secondary", "ghost", "link"])(
+  it.each(["primary", "secondary", "ghost", "link", "add", "badge"] as const)(
     "renders the %s variant as a button",
     (variant) => {
       render(<Button variant={variant}>Label</Button>);
       expect(screen.getByRole("button", { name: "Label" })).toBeInTheDocument();
     },
   );
+
+  it("as a badge, keeps its tooltip and calls onClick", () => {
+    const onClick = vi.fn();
+    render(
+      <Button variant="badge" tone="accent" title="Working set — click to change" onClick={onClick}>
+        1
+      </Button>,
+    );
+    const badge = screen.getByRole("button", { name: "1" });
+    expect(badge).toHaveAttribute("title", "Working set — click to change");
+    click("1");
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("IconButton", () => {

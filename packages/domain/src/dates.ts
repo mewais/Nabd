@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * Local-time date helpers. Every "which day is it" decision in the app goes
  * through here so a day always means the user's calendar day, never UTC.
@@ -26,9 +28,29 @@ export function parseDateKey(key: string): Date {
   return new Date(year, month - 1, day);
 }
 
+/** A day of the week, counted the way `Date.getDay()` counts it: 0 = Sunday … 6 = Saturday. */
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/** The days of a week. */
+export const DAYS_PER_WEEK = 7;
+
+/** Whether `n` is a weekday number, 0–6. */
+export const isWeekday = (n: number): n is Weekday =>
+  Number.isInteger(n) && n >= 0 && n < DAYS_PER_WEEK;
+
+/** A stored weekday number. */
+export const WeekdaySchema = z.number().refine(isWeekday);
+
+/** The weekday `d` falls on. */
+export function weekdayOf(d: Date): Weekday {
+  const day = d.getDay();
+  if (!isWeekday(day)) throw new RangeError(`getDay() gave ${day}`);
+  return day;
+}
+
 /** The Monday starting the Mon–Sun week that contains `d`. */
 export function startOfWeek(d: Date): Date {
-  const daysSinceMonday = (d.getDay() + 6) % 7;
+  const daysSinceMonday = (d.getDay() + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK;
   return addDays(d, -daysSinceMonday);
 }
 
@@ -52,8 +74,11 @@ export function formatClock(d: Date): string {
   return formatMinuteOfDay(minuteOfDay(d));
 }
 
-/** Weekday numbers (0 = Sunday) in the order a week is shown: Monday first. */
-export const WEEK_ORDER: readonly number[] = [1, 2, 3, 4, 5, 6, 0];
+/** The weekdays in the order a week is shown: Monday first. */
+export const WEEK_ORDER: readonly Weekday[] = [1, 2, 3, 4, 5, 6, 0];
+
+/** The weekdays in the order `Date.getDay()` counts them: Sunday first. */
+export const WEEKDAYS: readonly Weekday[] = [0, 1, 2, 3, 4, 5, 6];
 
 /** Weekday names, indexed like `Date.getDay()` (0 = Sunday). */
 const WEEKDAY_NAMES = [
@@ -66,20 +91,18 @@ const WEEKDAY_NAMES = [
   "Saturday",
 ] as const;
 
-/** "Monday" for weekday 1 (0 = Sunday … 6 = Saturday). */
-export function weekdayName(weekday: number): string {
-  const name = WEEKDAY_NAMES[weekday];
-  if (name === undefined) throw new RangeError(`weekday ${weekday} is not 0–6`);
-  return name;
+/** "Monday" for weekday 1. */
+export function weekdayName(weekday: Weekday): string {
+  return WEEKDAY_NAMES[weekday];
 }
 
 /** "Mon" for weekday 1. */
-export function weekdayShort(weekday: number): string {
+export function weekdayShort(weekday: Weekday): string {
   return weekdayName(weekday).slice(0, 3);
 }
 
 /** "M" for weekday 1. */
-export function weekdayInitial(weekday: number): string {
+export function weekdayInitial(weekday: Weekday): string {
   return weekdayName(weekday).charAt(0);
 }
 

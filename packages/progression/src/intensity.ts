@@ -1,5 +1,5 @@
 import type { Prescription, SetSpec, TrackingType } from "@nabd/domain";
-import { isBodyweightLoaded, isTimeBased, isWeighted } from "@nabd/domain";
+import { isAssisted, isBodyweightLoaded, isTimeBased, isWeighted } from "@nabd/domain";
 import { loadForReps } from "./epley";
 import type { Performance } from "./history";
 
@@ -76,20 +76,20 @@ export class MovedLoad {
     return this.isLift && (this.bodyWeightKg !== null || !isBodyweightLoaded(this.tracking));
   }
 
+  /** +1 where the load adds to the body weight, -1 where it is assistance taken off. */
+  private get sign(): number {
+    return isAssisted(this.tracking) ? -1 : 1;
+  }
+
   /** `set` with its load as the weight moved in all. */
   of(set: Performance): Performance {
-    const load = set.weight ?? 0;
-    const body = this.bodyWeightKg ?? 0;
-    if (this.tracking === "weighted_bodyweight") return { ...set, weight: body + load };
-    if (this.tracking === "assisted_bodyweight") return { ...set, weight: body - load };
-    return set;
+    if (!isBodyweightLoaded(this.tracking)) return set;
+    return { ...set, weight: (this.bodyWeightKg ?? 0) + this.sign * (set.weight ?? 0) };
   }
 
   /** The load (or assistance) to set for `movedKg` in all: the inverse of {@link of}. */
   loadFor(movedKg: number): number {
-    const body = this.bodyWeightKg ?? 0;
-    if (this.tracking === "weighted_bodyweight") return movedKg - body;
-    if (this.tracking === "assisted_bodyweight") return body - movedKg;
-    return movedKg;
+    if (!isBodyweightLoaded(this.tracking)) return movedKg;
+    return this.sign * (movedKg - (this.bodyWeightKg ?? 0));
   }
 }

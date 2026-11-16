@@ -10,6 +10,5 @@ export {
   formatSetTally,
   formatTarget,
 } from "./wording";
-export type { AdviceWording } from "./wording";
 export { describeNextSet } from "./next-set";
 export type { NextSetWording } from "./next-set";

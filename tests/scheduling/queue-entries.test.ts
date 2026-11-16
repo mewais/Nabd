@@ -1,7 +1,7 @@
 import type { Exercise, Program, RotationState } from "@nabd/domain";
-import { exercise, logged, nov } from "../support/builders";
+import { exercise, logged, nov, prescription, workingSets } from "../support/builders";
 import { EX } from "../support/exercises";
-import { benchRow, cycledPlan, pushPull, slotSets } from "../support/programs";
+import { benchRow, cycledPlan, pushPull } from "../support/programs";
 import { MONDAY, benchSet, build, dayState } from "./fixtures";
 
 describe("sets whose plan item no longer exists", () => {
@@ -54,7 +54,7 @@ describe("sets whose plan item no longer exists", () => {
       id: "chest",
       muscle: "chest" as const,
       pool: [EX.fly.id, EX.bench.id],
-      ...slotSets(),
+      ...prescription(workingSets(3), { rest: 60 }),
     };
     const cycledNow: Program = {
       ...pushPull,
@@ -73,7 +73,7 @@ describe("cycled slots", () => {
     id: "chest",
     muscle: "chest" as const,
     pool: [EX.bench.id, EX.fly.id],
-    ...slotSets(),
+    ...prescription(workingSets(3), { rest: 60 }),
   };
   const withPool = (pool: string[]): Program => ({
     ...pushPull,

@@ -4,11 +4,11 @@ import type { IconName } from "@nabd/design-system";
 import { renderRoot } from "./render";
 
 describe("Icon", () => {
-  it("draws the named icon at the requested size", () => {
-    const svg = renderRoot(<Icon name="bolt" size={15} />);
+  it("draws the named icon at a step of the size scale", () => {
+    const svg = renderRoot(<Icon name="bolt" size="sm" />);
     expect(svg).toHaveAttribute("data-icon", "bolt");
-    expect(svg).toHaveAttribute("width", "15");
-    expect(svg).toHaveAttribute("height", "15");
+    expect(svg).toHaveAttribute("width", "14");
+    expect(svg).toHaveAttribute("height", "14");
     expect(svg.querySelector("path")?.getAttribute("d")).toBeTruthy();
   });
 
@@ -44,7 +44,7 @@ describe("Icon", () => {
 
 describe("BrandMark", () => {
   it("is the Nabd logo, drawn as one labelled image", () => {
-    render(<BrandMark size={48} />);
+    render(<BrandMark />);
     const mark = screen.getByRole("img", { name: "Nabd" });
     expect(mark.querySelector("svg")).not.toBeNull();
   });

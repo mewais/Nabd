@@ -1,3 +1,4 @@
+import { CENTERED } from "./styles";
 import { COLOR, RADIUS } from "./tokens";
 
 const ACCENT = COLOR.accent;
@@ -12,35 +13,24 @@ const HEART_STROKES = [
   { d: "M19.4 14.8 C20.6 18 20.8 22 19.7 26", stroke: ACCENT, width: 1.3 },
 ];
 
-interface BrandMarkProps {
-  /** Side of the square, in px. */
-  size?: number;
-}
+/** Side of the tile, in px. */
+const SIZE = 36;
 
 /** The Nabd logo: an anatomical heart on an accent tile. */
-export function BrandMark({ size = 36 }: BrandMarkProps): JSX.Element {
+export function BrandMark(): JSX.Element {
   return (
     <div
       role="img"
       aria-label="Nabd"
       style={{
-        width: size,
-        height: size,
+        ...CENTERED,
+        width: SIZE,
+        height: SIZE,
         borderRadius: RADIUS.control,
         background: ACCENT,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
       }}
     >
-      <svg
-        width={(size * 22) / 36}
-        height={(size * 25) / 36}
-        viewBox="0 0 32 36"
-        fill="none"
-        aria-hidden
-      >
+      <svg width={22} height={25} viewBox="0 0 32 36" fill="none" aria-hidden>
         <path
           d="M17.5 33.8 C12.8 33.2 5.3 28 4 20.6 C3.3 16.8 4.6 12.6 8.6 12.2 C12.4 11.8 16.4 12 20.2 12.1 C24 12.2 26.8 14.6 26.7 18.4 C26.6 23.2 22.8 28.4 19 31.6 C18.4 32.2 17.9 33 17.5 33.8 Z"
           fill={COLOR.onAccent}

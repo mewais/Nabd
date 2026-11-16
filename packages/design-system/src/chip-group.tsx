@@ -1,30 +1,31 @@
 import { ChipToggle } from "./chip-toggle";
-import type { Option } from "./option";
+import type { Option, OptionValue } from "./option";
 import { Row } from "./row";
 
-interface ChipGroupProps<V extends string> {
-  options: readonly Option<V>[];
+interface ChipGroupProps<O extends Option<OptionValue>> {
+  options: readonly O[];
   /** The values that are on: one for a filter, any number for a multi-select. */
-  selected: readonly V[];
-  onToggle: (value: V) => void;
+  selected: readonly O["value"][];
+  /** A chip was pressed: the option it stands for, so a view-model's option can carry what that does. */
+  onToggle: (option: O) => void;
   /** Names the group for assistive tech. */
   ariaLabel?: string;
 }
 
 /** A wrapping row of toggle chips over a set of values. */
-export function ChipGroup<V extends string>({
+export function ChipGroup<O extends Option<OptionValue>>({
   options,
   selected,
   onToggle,
   ariaLabel,
-}: ChipGroupProps<V>): JSX.Element {
+}: ChipGroupProps<O>): JSX.Element {
   return (
     <Row role="group" ariaLabel={ariaLabel} gap="sm" wrap>
       {options.map((option) => (
         <ChipToggle
           key={option.value}
-          active={selected.includes(option.value)}
-          onToggle={() => onToggle(option.value)}
+          on={selected.includes(option.value)}
+          onToggle={() => onToggle(option)}
         >
           {option.label}
         </ChipToggle>

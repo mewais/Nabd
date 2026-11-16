@@ -1,7 +1,7 @@
 // Today's plan on Monday 16 Nov 2026, built from the standard Push / Pull plan
 // (tests/support/programs.ts) and whatever a test varies.
 
-import type { DayState, LoggedSet, Program } from "@nabd/domain";
+import type { DayState, LoggedSet, Program, Weekday } from "@nabd/domain";
 import { DEFAULT_SETTINGS, freshDayState, parseDateKey } from "@nabd/domain";
 import { TodayPlan } from "@nabd/scheduling";
 import type { TodayPlanInput } from "@nabd/scheduling";
@@ -28,7 +28,7 @@ export const input = (): TodayPlanInput => ({
 });
 
 /** The weekday Push / Pull plan with its Push day moved to `weekday` (0 = Sunday … 6 = Saturday). */
-export const pushPullOn = (weekday: number): Program => ({
+export const pushPullOn = (weekday: Weekday): Program => ({
   ...pushPull,
   days: [{ ...pushPull.days[0]!, weekday }],
 });

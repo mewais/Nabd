@@ -1,13 +1,13 @@
 import type { Locator, Page } from "@playwright/test";
+import { DialogObject } from "./region";
 
 /** The Settings dialog: one named row per setting. */
-export class Settings {
-  readonly dialog: Locator;
+export class Settings extends DialogObject {
   /** The outcome of the last import or export. */
   readonly notice: Locator;
 
-  constructor(private readonly page: Page) {
-    this.dialog = page.getByRole("dialog", { name: "Settings" });
+  constructor(page: Page) {
+    super(page, page.getByRole("dialog", { name: "Settings" }));
     this.notice = this.dialog.getByRole("status");
   }
 
@@ -27,13 +27,13 @@ export class Settings {
   }
 
   async exportData(): Promise<void> {
-    await this.dialog.getByRole("button", { name: "Export data" }).click();
+    await this.button("Export data").click();
   }
 
   /** Choose a file holding `text` to import; a valid one then has to be confirmed. */
   async importData(text: string): Promise<void> {
     const chooser = this.page.waitForEvent("filechooser");
-    await this.dialog.getByRole("button", { name: "Import data" }).click();
+    await this.button("Import data").click();
     const file = {
       name: "nabd-export.json",
       mimeType: "application/json",
@@ -43,6 +43,6 @@ export class Settings {
   }
 
   async close(): Promise<void> {
-    await this.dialog.getByRole("button", { name: "Close", exact: true }).click();
+    await this.button("Close").click();
   }
 }

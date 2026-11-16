@@ -1,12 +1,11 @@
-import { ChipGroup, FormRow, FormSection } from "@nabd/design-system";
-import { toggled } from "@nabd/domain";
-import { WEEKDAY_OPTIONS } from "../options";
+import { FormSection } from "@nabd/design-system";
+import { ChipsRow } from "./chips-row";
 import type { SettingsActions } from "./settings-actions";
-import type { SettingsVM } from "./settings-vm";
 import { StepperRow } from "./stepper-row";
+import type { WorkdayVM } from "./workday-vm";
 
 interface WorkdaySectionProps {
-  vm: SettingsVM["workday"];
+  vm: WorkdayVM;
   actions: Pick<SettingsActions, "change">;
 }
 
@@ -17,17 +16,7 @@ export function WorkdaySection({ vm, actions }: WorkdaySectionProps): JSX.Elemen
       {vm.hours.map((row) => (
         <StepperRow key={row.title} vm={row} actions={actions} />
       ))}
-      <FormRow
-        stacked
-        title="Working days"
-        hint="Nabd stays quiet on the others, though you can still log. At least one stays on."
-      >
-        <ChipGroup
-          options={WEEKDAY_OPTIONS}
-          selected={vm.days.map(String)}
-          onToggle={(day) => actions.change({ workDays: toggled(vm.days, Number(day)) })}
-        />
-      </FormRow>
+      <ChipsRow vm={vm.days} actions={actions} />
     </FormSection>
   );
 }

@@ -1,6 +1,6 @@
 import { FormRow, Toggle } from "@nabd/design-system";
 import type { SettingsActions } from "./settings-actions";
-import type { ToggleRowVM } from "./settings-vm";
+import type { ToggleRowVM } from "./rows-vm";
 
 interface ToggleRowProps {
   vm: ToggleRowVM;

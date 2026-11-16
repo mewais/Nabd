@@ -1,29 +1,18 @@
 /** @nabd/today — buildTodayVM, the stat tiles and the note on empty muscle targets. */
 
 import type { TodayVM } from "@nabd/today";
-import { nov, working } from "../support/builders";
-import { did, mondayProgram, planRow, pushDay } from "../support/programs";
+import type { MuscleKey } from "@nabd/domain";
+import { nov, slot as cycledSlot, working } from "../support/builders";
+import { did, fullBodyMonday, mondayProgram, planRow, pushDay } from "../support/programs";
 import { todayVM } from "./fixtures";
 
 describe("buildTodayVM · muscle targets without exercises", () => {
-  const slot = (id: string, muscle: "chest" | "lats" | "abs", pool: string[]) => ({
-    id,
-    muscle,
-    pool,
-    repMode: "range" as const,
-    intensity: "none" as const,
-    rest: 90,
-    sets: [working(8, 12)],
-  });
-  const cycled = (slots: ReturnType<typeof slot>[]) => ({
-    ...mondayProgram([]),
-    type: "cycled" as const,
-    days: [{ id: "mon", name: "Full body", weekday: 1, exercises: [], slots }],
-  });
+  const slot = (id: string, muscle: MuscleKey, pool: string[]) =>
+    cycledSlot(muscle, pool, [working(8, 12)], { id });
 
   it("says which cycled targets were left out because their pool is empty", () => {
     const vm = todayVM({
-      program: cycled([
+      program: fullBodyMonday([
         slot("s1", "chest", ["bench"]),
         slot("s2", "lats", []),
         slot("s3", "abs", []),
@@ -32,13 +21,13 @@ describe("buildTodayVM · muscle targets without exercises", () => {
     expect(vm.queue.rows.map((row) => row.exercise)).toEqual(["Bench Press"]);
     expect(vm.emptySlotsNote).toBe("2 muscle targets have no exercises yet: Lats, Abs");
 
-    const one = todayVM({ program: cycled([slot("s2", "lats", [])]) });
+    const one = todayVM({ program: fullBodyMonday([slot("s2", "lats", [])]) });
     expect(one.emptySlotsNote).toBe("1 muscle target has no exercises yet: Lats");
   });
 
   it("says nothing when every target has an exercise", () => {
     expect(
-      todayVM({ program: cycled([slot("s1", "chest", ["bench"])]) }).emptySlotsNote,
+      todayVM({ program: fullBodyMonday([slot("s1", "chest", ["bench"])]) }).emptySlotsNote,
     ).toBeNull();
     expect(todayVM({ program: pushDay() }).emptySlotsNote).toBeNull();
   });

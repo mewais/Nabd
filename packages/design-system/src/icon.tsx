@@ -1,45 +1,39 @@
 import { ICON_PATHS } from "./icon-paths";
 import type { IconName } from "./icon-paths";
-import { COLOR, toneColor } from "./tokens";
-import type { Tone } from "./tokens";
-
-/** An icon's colour: a tone, the faint text colour, or white on an accent fill. */
-type IconTone = Tone | "faint" | "onAccent";
+import { ICON_SIZE, toneColor } from "./tokens";
+import type { IconSize, Tone } from "./tokens";
 
 interface IconProps {
   name: IconName;
-  /** Width and height in px. */
-  size?: number;
+  size?: IconSize;
   /** `neutral` (default) draws in the surrounding text colour. */
-  tone?: IconTone;
-  strokeWidth?: number;
+  tone?: Tone;
+  /** How heavy its strokes are. */
+  weight?: keyof typeof STROKE;
   /** Accessible name. Without one the icon is decorative and hidden from assistive tech. */
   ariaLabel?: string;
 }
 
-function strokeOf(tone: IconTone): string {
-  if (tone === "faint") return COLOR.textFaint;
-  if (tone === "onAccent") return COLOR.onAccent;
-  return toneColor(tone) ?? "currentColor";
-}
+/** Stroke widths, in the icon's own 24-unit drawing. */
+const STROKE = { thin: 1.7, regular: 2, bold: 2.2, heavy: 2.6, black: 3.4 } as const;
 
 /** A stroke icon from the app's set. */
 export function Icon({
   name,
-  size = 24,
+  size = "md",
   tone = "neutral",
-  strokeWidth = 2,
+  weight = "regular",
   ariaLabel,
 }: IconProps): JSX.Element {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
+      width={ICON_SIZE[size]}
+      height={ICON_SIZE[size]}
       viewBox="0 0 24 24"
       fill="none"
-      stroke={strokeOf(tone)}
-      strokeWidth={strokeWidth}
+      stroke={toneColor(tone) ?? "currentColor"}
+      strokeWidth={STROKE[weight]}
       strokeLinecap="round"
       strokeLinejoin="round"
       data-icon={name}

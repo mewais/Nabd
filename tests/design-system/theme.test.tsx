@@ -9,8 +9,8 @@ const root = (theme: "light" | "dark", glass: boolean, opacity = 0.7): HTMLEleme
     </ThemeProvider>,
   );
 
+/** The colour tokens every material defines; a solid one defines `--bg` too, which glass paints over. */
 const TOKENS = [
-  "--bg",
   "--surface",
   "--surface2",
   "--line",
@@ -21,7 +21,6 @@ const TOKENS = [
   "--accent2",
   "--accent3",
   "--map-muscle",
-  "--glow",
   "--cardshadow",
   "--modal-bg",
 ];
@@ -45,7 +44,8 @@ describe("ThemeProvider", () => {
     ["dark", true],
   ] as const)("defines every colour token for %s (glass: %s)", (theme, glass) => {
     const style = root(theme, glass).style;
-    for (const token of TOKENS) expect(style.getPropertyValue(token), token).not.toBe("");
+    const tokens = glass ? TOKENS : [...TOKENS, "--bg"];
+    for (const token of tokens) expect(style.getPropertyValue(token), token).not.toBe("");
   });
 
   it("gives each of the four materials its own palette", () => {
@@ -74,9 +74,9 @@ describe("ThemeProvider", () => {
   it("ships the keyframes of every animation its primitives play", () => {
     const { container } = render(
       <ThemeProvider theme="dark" glass={false} opacity={1}>
-        <LiveDot active />
+        <LiveDot on />
         <ToastFrame>toast</ToastFrame>
-        <ModalShell title="Modal" width={300} onClose={() => undefined} />
+        <ModalShell title="Modal" width="sm" onClose={() => undefined} />
       </ThemeProvider>,
     );
     const css = container.querySelector("style")?.textContent ?? "";

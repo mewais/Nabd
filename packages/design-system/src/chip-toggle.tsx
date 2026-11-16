@@ -1,27 +1,28 @@
 import type { ReactNode } from "react";
 import { ButtonBase } from "./button-base";
-import { COLOR, FONT_SIZE, RADIUS, SPACE, tint } from "./tokens";
+import { pad } from "./styles";
+import { COLOR, FONT_WEIGHT, RADIUS, TEXT, tint } from "./tokens";
 
 interface ChipToggleProps {
-  active: boolean;
+  on: boolean;
   onToggle: () => void;
   children?: ReactNode;
 }
 
-/** A chip that is on or off (a filter, a muscle, a piece of equipment). */
-export function ChipToggle({ active, onToggle, children }: ChipToggleProps): JSX.Element {
+/** A chip that is on or off (a filter, a muscle, a piece of equipment): one of a `ChipGroup`. */
+export function ChipToggle({ on, onToggle, children }: ChipToggleProps): JSX.Element {
   return (
     <ButtonBase
-      aria-pressed={active}
+      aria-pressed={on}
       onClick={onToggle}
       style={{
-        fontSize: FONT_SIZE.small,
-        fontWeight: active ? 700 : 500,
-        padding: `${SPACE.xs}px ${SPACE.md}px`,
+        ...TEXT.controlSm,
+        fontWeight: on ? FONT_WEIGHT.bold : FONT_WEIGHT.medium,
+        padding: pad("xs", "md"),
         borderRadius: RADIUS.chip,
-        border: `1px solid ${active ? COLOR.accent : COLOR.line}`,
-        background: active ? tint(COLOR.accent, "soft") : COLOR.surfaceAlt,
-        color: active ? COLOR.accent : COLOR.textMuted,
+        border: `1px solid ${on ? COLOR.accent : COLOR.line}`,
+        background: on ? tint(COLOR.accent, "soft") : COLOR.surfaceAlt,
+        color: on ? COLOR.accent : COLOR.textMuted,
       }}
     >
       {children}

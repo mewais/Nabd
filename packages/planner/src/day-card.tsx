@@ -22,7 +22,7 @@ export function DayCard({ vm, actions }: DayCardProps): JSX.Element {
         </Stack>
         <Stack as="span" gap="xs">
           {vm.chips.map((chip, index) => (
-            <Chip key={index} variant="box" tone={chip.superset ? "success" : "neutral"}>
+            <Chip key={index} variant="entry" tone={chip.superset ? "success" : "neutral"}>
               {chip.name}
             </Chip>
           ))}

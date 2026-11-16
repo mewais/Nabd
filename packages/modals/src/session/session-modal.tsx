@@ -9,11 +9,6 @@ interface SessionModalProps {
   actions: SessionActions;
 }
 
-/** The exercise list's fixed width, then the form. */
-const COLUMNS = "248px minmax(0, 1fr)";
-/** One row as tall as the dialog allows: each pane scrolls on its own. */
-const ROWS = "minmax(0, 1fr)";
-
 /** The logger: today's exercises on the left, one set at a time on the right. */
 export function SessionModal({ vm, actions }: SessionModalProps): JSX.Element {
   const footer = (
@@ -30,10 +25,11 @@ export function SessionModal({ vm, actions }: SessionModalProps): JSX.Element {
       title="This break"
       subtitle={vm.subtitle}
       onClose={actions.close}
-      width={720}
+      width="lg"
       footer={footer}
     >
-      <Grid columns={COLUMNS} rows={ROWS} grow>
+      {/* One row as tall as the dialog allows: each pane scrolls on its own. */}
+      <Grid columns={["sidebar", 1]} rows="fill" grow>
         <ExerciseList vm={vm.list} actions={actions} />
         <SetForm vm={vm.form} actions={actions} />
       </Grid>

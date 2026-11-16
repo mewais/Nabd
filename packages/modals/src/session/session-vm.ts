@@ -1,19 +1,18 @@
 import type { WeightUnit } from "@nabd/domain";
 import {
-  addDays,
   editableWeight,
   formatDuration,
+  isAssisted,
+  isBodyweightLoaded,
   isTimeBased,
   isWeighted,
-  monthShort,
   muscleList,
-  parseDateKey,
   plural,
-  weekdayName,
 } from "@nabd/domain";
 import type { PlanItem, TodayPlan } from "@nabd/scheduling";
 import type { Coach, LogSession, NextSetWording } from "@nabd/session";
 import { describeNextSet, formatPerformance, formatSetTally } from "@nabd/session";
+import { sessionSubtitle } from "./wording";
 
 export interface SessionListRowVM {
   itemId: string;
@@ -23,6 +22,8 @@ export interface SessionListRowVM {
   /** "2/4", or just "3" for an unplanned extra. */
   progress: string;
   complete: boolean;
+  /** What its mark says to assistive tech: "complete"; nothing while it is not. */
+  markLabel: string | undefined;
   skipped: boolean;
   active: boolean;
 }
@@ -74,14 +75,16 @@ function buildListRowVM(item: PlanItem, activeId: string): SessionListRowVM {
     detail: item.skipped ? "Skipped today" : muscleList(item.exercise),
     progress: formatSetTally(item),
     complete: item.status === "done",
+    markLabel: item.status === "done" ? "complete" : undefined,
     skipped: item.skipped,
     active: item.id === activeId,
   };
 }
 
 function weightLabel(item: PlanItem, unit: WeightUnit): string {
-  if (item.exercise.tracking === "assisted_bodyweight") return `Assistance (${unit})`;
-  if (item.exercise.tracking === "weighted_bodyweight") return `Added weight (${unit})`;
+  const { tracking } = item.exercise;
+  if (isAssisted(tracking)) return `Assistance (${unit})`;
+  if (isBodyweightLoaded(tracking)) return `Added weight (${unit})`;
   return `Weight (${unit})`;
 }
 
@@ -122,34 +125,13 @@ interface SessionInput {
   unsaved: readonly string[];
 }
 
-const SUBTITLE = "One set, or as many as you have time for — switch exercises freely.";
-/** Within a week, a weekday names a day unambiguously; beyond, the date does. */
-const DAYS_NAMED_BY_WEEKDAY = 6;
-
-/** "Monday's", within the week before `today`; "Nov 2's" further back. */
-function dayPossessive(dateKey: string, today: string): string {
-  const date = parseDateKey(dateKey);
-  const recent = addDays(date, DAYS_NAMED_BY_WEEKDAY) >= parseDateKey(today);
-  const name = recent
-    ? weekdayName(date.getDay())
-    : `${monthShort(date.getMonth())} ${date.getDate()}`;
-  return `${name}'s`;
-}
-
-/** What the logger says under its title: which earlier day it continues, if it does. */
-function subtitle(plan: TodayPlan): string {
-  if (plan.continuesFrom === null) return SUBTITLE;
-  const day = plan.dayName ?? "day";
-  return `Continuing ${dayPossessive(plan.continuesFrom, plan.date)} ${day} — what was done then counts.`;
-}
-
 /** Null when the session's exercise is no longer in today's plan. */
 export function buildSessionVM(input: SessionInput): SessionVM | null {
   const { session, plan } = input;
   const item = plan.item(session.itemId);
   if (!item) return null;
   return {
-    subtitle: subtitle(plan),
+    subtitle: sessionSubtitle(plan),
     list: plan.items.map((other) => buildListRowVM(other, item.id)),
     form: buildSetFormVM(item, input),
     footer:

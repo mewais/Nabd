@@ -25,11 +25,10 @@ describe("LogSession", () => {
     // A dumbbell is never lighter than one step, and − never makes it heavier.
     expect(session.stepWeight(-1, 10).weight).toBe(15);
     expect(session.stepWeight(-1, 50).weight).toBe(25);
-    expect(session.withWeight(2.5).stepWeight(-1, 2.5).weight).toBe(2.5);
-    expect(session.withWeight(0).stepWeight(-1, 2.5).weight).toBe(0);
-    expect(session.withWeight(0).stepWeight(1, 2.5).weight).toBe(2.5);
-    expect(session.withWeight(12.3456).weight).toBe(12.346);
-    expect(session.withWeight(Number.NaN).weight).toBe(25);
+    expect(session.withWeight(2.5, 2.5).stepWeight(-1, 2.5).weight).toBe(2.5);
+    expect(session.withWeight(2.5, 2.5).stepWeight(1, 2.5).weight).toBe(5);
+    expect(session.withWeight(12.3456, 2.5).weight).toBe(12.346);
+    expect(session.withWeight(Number.NaN, 2.5).weight).toBe(25);
     expect(session.withReps(Number.NaN).reps).toBe(8);
     expect(session.withReps(9.9).reps).toBe(9);
   });
@@ -39,14 +38,24 @@ describe("LogSession", () => {
     expect(session.withReps(999).reps).toBe(999);
     expect(session.withReps(1000).reps).toBe(8);
     expect(session.withReps(999).stepReps(1).reps).toBe(999);
-    expect(session.withWeight(-1).weight).toBe(25);
-    expect(session.withWeight(1000).weight).toBe(1000);
-    expect(session.withWeight(99999).weight).toBe(25);
-    expect(session.withWeight(1000).stepWeight(1, 2.5).weight).toBe(1000);
+    expect(session.withWeight(1000, 2.5).weight).toBe(1000);
+    expect(session.withWeight(99999, 2.5).weight).toBe(25);
+    expect(session.withWeight(-1, 2.5).weight).toBe(25);
+    expect(session.withWeight(1000, 2.5).stepWeight(1, 2.5).weight).toBe(1000);
     // A hold is counted in seconds, of which a set can have many more.
     const hold = session.focus(plankItem, { reps: 45, weight: null });
     expect(hold.withReps(3600).reps).toBe(3600);
     expect(hold.withReps(6 * 60 * 60 + 1).reps).toBe(45);
+  });
+
+  it("holds a typed load to the same bounds as stepping: a dumbbell takes no less than one step", () => {
+    expect(session.withWeight(0, 2.5).weight).toBe(25);
+    expect(session.withWeight(1, 2.5).weight).toBe(25);
+    expect(session.withWeight(2.5, 2.5).weight).toBe(2.5);
+    expect(session.withWeight(2.5, 5).weight).toBe(25);
+    // An exercise that needs no load can be given none.
+    const hold = session.focus(plankItem, { reps: 45, weight: null });
+    expect(hold.withWeight(0, 2.5).weight).toBe(0);
   });
 
   it("keeps the trigger and the running rest when moving to another exercise", () => {

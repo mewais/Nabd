@@ -1,20 +1,16 @@
 import type { Locator, Page } from "@playwright/test";
+import { DialogObject } from "./region";
 
 /** The exercise library, whatever it was opened for. */
-export class Library {
-  readonly dialog: Locator;
+export class Library extends DialogObject {
   readonly search: Locator;
 
   constructor(page: Page) {
-    this.dialog = page.getByRole("dialog", {
-      name: /^(Add Exercise|Add to Pool|Log Something Else)/,
-    });
+    super(
+      page,
+      page.getByRole("dialog", { name: /^(Add Exercise|Add to Pool|Log Something Else)/ }),
+    );
     this.search = this.dialog.getByRole("searchbox", { name: "Search exercises" });
-  }
-
-  /** A button of the dialog by its exact name: "Close", "Create custom exercise", "Delete custom exercise". */
-  button(name: string): Locator {
-    return this.dialog.getByRole("button", { name, exact: true });
   }
 
   /** A chip of the muscle-group filter: "All", "Chest", "Back"… */

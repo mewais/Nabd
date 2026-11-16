@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
+import { COLUMN, GROW } from "./styles";
 import { COLOR, RADIUS, SPACE, TEXT, shade } from "./tokens";
-import type { Tone } from "./tokens";
+import type { Size, Tone } from "./tokens";
 
 export interface BarDatum {
   /** The caption under the bar; may be blank where only some bars are captioned. */
@@ -19,7 +20,7 @@ type BarTone = Extract<Tone, "neutral" | "accent" | "success">;
 interface BarChartProps {
   bars: readonly BarDatum[];
   /** `sm` under a headline figure, `lg` when the chart is the card. */
-  size?: keyof typeof HEIGHT;
+  size?: Extract<Size, "sm" | "md" | "lg">;
   tone?: BarTone;
   /** Names the chart for assistive tech. */
   ariaLabel: string;
@@ -36,19 +37,16 @@ const TONE_FILL: Record<BarTone, string> = {
 
 /** A fixed line box, so a bar with a blank caption still stands on the same baseline. */
 const CAPTION: CSSProperties = {
-  ...TEXT.monoCaption,
-  fontSize: TEXT.eyebrow.fontSize,
+  ...TEXT.monoMicro,
   lineHeight: "12px",
   minHeight: 12,
   whiteSpace: "nowrap",
 };
 
-const COLUMN: CSSProperties = {
-  flex: 1,
-  minWidth: 0,
+const BAR_COLUMN: CSSProperties = {
+  ...GROW,
+  ...COLUMN,
   height: "100%",
-  display: "flex",
-  flexDirection: "column",
   alignItems: "center",
   justifyContent: "flex-end",
   gap: SPACE.xs,
@@ -73,7 +71,7 @@ export function BarChart({
           role="listitem"
           aria-current={bar.highlight ? true : undefined}
           data-height-pct={bar.heightPct}
-          style={COLUMN}
+          style={BAR_COLUMN}
         >
           {bar.value !== undefined && <span style={CAPTION}>{bar.value}</span>}
           <div

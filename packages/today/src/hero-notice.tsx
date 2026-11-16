@@ -12,7 +12,7 @@ export function HeroNotice({ vm, actions }: HeroNoticeProps): JSX.Element {
   return (
     <Card padding="xxl">
       <Stack align="center" gap="md" paddingY="sm">
-        {vm.kind === "complete" && <CheckMark checked size="lg" />}
+        {vm.kind === "complete" && <CheckMark state="done" size="lg" />}
         <Stack align="center" gap="xs">
           <Text variant="headline" align="center">
             {vm.title}

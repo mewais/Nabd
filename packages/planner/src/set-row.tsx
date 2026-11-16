@@ -1,13 +1,13 @@
 import type { SetType } from "@nabd/domain";
-import { Badge, Grid, IconButton, Row, Stepper, Text } from "@nabd/design-system";
-import type { Tone } from "@nabd/design-system";
+import { Button, Grid, IconButton, Row, Stepper, Text } from "@nabd/design-system";
+import type { GridColumns, Tone } from "@nabd/design-system";
 import type { PrescriptionEdit } from "@nabd/program-editor";
 import type { SetRowVM } from "./set-block-vm";
 
 interface SetRowProps {
   vm: SetRowVM;
   /** The table's column template, shared with its header. */
-  columns: string;
+  columns: GridColumns;
   /** Whether the table has a load column (a set without a value leaves it empty). */
   hasIntensityColumn: boolean;
   onEdit: (change: PrescriptionEdit) => void;
@@ -24,17 +24,18 @@ export function SetRow({ vm, columns, hasIntensityColumn, onEdit }: SetRowProps)
   const { index, labels } = vm;
   return (
     <Grid columns={columns} gap="sm" align="center">
-      <Badge
+      <Button
+        variant="badge"
         tone={BADGE_TONES[vm.type]}
         title={vm.badgeTitle}
         onClick={() => onEdit((p) => p.cycleSetType(index))}
       >
         {vm.badge}
-      </Badge>
+      </Button>
       {/* A range that does not fit its column goes on to a second line rather than under the next one. */}
       <Row gap="xs" wrap>
         <Stepper
-          size="mini"
+          size="sm"
           ariaLabel={labels.amount}
           value={vm.amount}
           onStep={(direction) => onEdit((p) => p.stepAmount(index, direction))}
@@ -45,7 +46,7 @@ export function SetRow({ vm, columns, hasIntensityColumn, onEdit }: SetRowProps)
               –
             </Text>
             <Stepper
-              size="mini"
+              size="sm"
               ariaLabel={labels.upTo}
               value={vm.upTo}
               onStep={(direction) => onEdit((p) => p.stepUpTo(index, direction))}
@@ -58,7 +59,7 @@ export function SetRow({ vm, columns, hasIntensityColumn, onEdit }: SetRowProps)
           <span />
         ) : (
           <Stepper
-            size="mini"
+            size="sm"
             ariaLabel={labels.intensity}
             value={vm.intensity}
             onStep={(direction) => onEdit((p) => p.stepIntensity(index, direction))}

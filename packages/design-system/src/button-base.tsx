@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
+import { DIMMED_OPACITY } from "./tokens";
 
 /** The attributes a button's kind may set on it: its name, tooltip, and the state it exposes. */
 type ButtonSemantics = Pick<
@@ -37,13 +38,13 @@ const RESET: CSSProperties = {
   cursor: "pointer",
 };
 
-const DISABLED: CSSProperties = { cursor: "not-allowed", opacity: 0.5 };
+const DISABLED: CSSProperties = { cursor: "not-allowed", opacity: DIMMED_OPACITY };
 
 /**
  * Every button in the app is one of these: a real `<button>` that never submits
  * a form, stripped of the browser's look, dimmed while disabled, and ringed
  * while it has keyboard focus. The kinds of button (Button, IconButton,
- * RowButton…) only add their own look.
+ * RowButton, CardButton, and the controls built of them) only add their own look.
  */
 export function ButtonBase({
   children,

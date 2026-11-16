@@ -27,37 +27,44 @@ export const TRACK_NAMES: Record<TrackingType, string> = {
   reps_only: "Reps only",
 };
 
-/** Tracking types that record a weight value in the logger. */
-const WEIGHTED_TRACKS: ReadonlySet<TrackingType> = new Set<TrackingType>([
-  "weight_reps",
-  "weighted_bodyweight",
-  "assisted_bodyweight",
-  "weight_duration",
-]);
-
-/** Tracking types whose primary unit is time (seconds), not reps. */
-const TIME_TRACKS: ReadonlySet<TrackingType> = new Set<TrackingType>([
-  "duration",
-  "weight_duration",
-  "distance_duration",
-]);
-
-/** Tracking types whose load is added to (or taken off) the user's own bodyweight. */
-const BODYWEIGHT_LOAD_TRACKS: ReadonlySet<TrackingType> = new Set<TrackingType>([
-  "weighted_bodyweight",
-  "assisted_bodyweight",
-]);
-
-export const isWeighted = (t: TrackingType): boolean => WEIGHTED_TRACKS.has(t);
-export const isTimeBased = (t: TrackingType): boolean => TIME_TRACKS.has(t);
-/** The load is relative to bodyweight, so a load of zero is the plain exercise. */
-export const isBodyweightLoaded = (t: TrackingType): boolean => BODYWEIGHT_LOAD_TRACKS.has(t);
-/** The exercise cannot be done without picking a load (a bar, a dumbbell, a stack). */
-export const needsLoad = (t: TrackingType): boolean => isWeighted(t) && !isBodyweightLoaded(t);
-
 /** What a set is counted in: seconds for time-based tracking, reps otherwise. */
 export type Measure = "time" | "reps";
-export const measureOf = (t: TrackingType): Measure => (isTimeBased(t) ? "time" : "reps");
+
+/**
+ * What a set's load is, if it records one:
+ *  - `lifted`: a weight picked up (a bar, a dumbbell, a stack);
+ *  - `added`: weight added to the user's own body weight;
+ *  - `assistance`: help taken off the user's own body weight — help, not load;
+ *  - `none`: the set records no load.
+ */
+type LoadKind = "lifted" | "added" | "assistance" | "none";
+
+/** How each way of tracking counts a set and what its load is: every predicate below reads this. */
+const TRAITS: Record<TrackingType, { measure: Measure; load: LoadKind }> = {
+  weight_reps: { measure: "reps", load: "lifted" },
+  bodyweight_reps: { measure: "reps", load: "none" },
+  weighted_bodyweight: { measure: "reps", load: "added" },
+  assisted_bodyweight: { measure: "reps", load: "assistance" },
+  duration: { measure: "time", load: "none" },
+  weight_duration: { measure: "time", load: "lifted" },
+  distance_duration: { measure: "time", load: "none" },
+  reps_only: { measure: "reps", load: "none" },
+};
+
+/** The logger records a weight value for sets of it. */
+export const isWeighted = (t: TrackingType): boolean => TRAITS[t].load !== "none";
+/** Its sets are counted in seconds, not reps. */
+export const isTimeBased = (t: TrackingType): boolean => TRAITS[t].measure === "time";
+/** The load is relative to bodyweight, so a load of zero is the plain exercise. */
+export const isBodyweightLoaded = (t: TrackingType): boolean =>
+  TRAITS[t].load === "added" || TRAITS[t].load === "assistance";
+/** Its "load" is assistance: help, not load, so less of it is harder. */
+export const isAssisted = (t: TrackingType): boolean => TRAITS[t].load === "assistance";
+/** The exercise cannot be done without picking a load (a bar, a dumbbell, a stack). */
+export const needsLoad = (t: TrackingType): boolean => TRAITS[t].load === "lifted";
+
+/** What a set of it is counted in. */
+export const measureOf = (t: TrackingType): Measure => TRAITS[t].measure;
 
 /** Time-based amounts are entered and progressed in steps of this many seconds. */
 export const SECONDS_STEP = 5;

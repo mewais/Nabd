@@ -16,17 +16,17 @@ export function LibraryRow({ vm, actions }: LibraryRowProps): JSX.Element {
   );
   return (
     <Row as="li" gap="sm">
-      <RowButton variant="boxed" ariaLabel={vm.addLabel} onClick={() => actions.pick(vm.id)}>
+      <RowButton variant="inset" ariaLabel={vm.addLabel} onClick={() => actions.pick(vm.id)}>
         <Row as="span" gap="md">
           <TitleBlock
-            size="row"
+            size="md"
             title={vm.name}
             subtitle={vm.detail}
             tag={vm.custom ? customTag : undefined}
             inline
             grow
           />
-          <Icon name="plus" size={16} strokeWidth={2.6} tone="accent" />
+          <Icon name="plus" weight="heavy" tone="accent" />
         </Row>
       </RowButton>
       <IconButton

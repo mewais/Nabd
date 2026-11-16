@@ -11,15 +11,15 @@ interface ExerciseRowProps {
 export function ExerciseRow({ vm, actions }: ExerciseRowProps): JSX.Element {
   return (
     <RowButton
-      variant="nav"
-      current={vm.active}
+      variant="pick"
+      selected={vm.active}
       dimmed={vm.skipped}
       onClick={() => actions.focusItem(vm.itemId)}
     >
       <Row as="span" gap="sm">
-        <CheckMark checked={vm.complete} label={vm.complete ? "complete" : undefined} />
+        <CheckMark state={vm.complete ? "done" : "todo"} ariaLabel={vm.markLabel} />
         <TitleBlock
-          size="dense"
+          size="sm"
           title={vm.exercise}
           subtitle={vm.detail}
           tone={vm.active ? "accent" : "strong"}

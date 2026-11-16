@@ -1,67 +1,59 @@
-// Builders for the data a spec starts from (handed to the app through the demo
-// backend's snapshot seam): small plans and hand-written history.
+// The data a spec starts from (handed to the app through the demo backend's
+// snapshot seam), built with the unit suites' fixture kit (tests/support): the
+// same exercises by the same names, the same prescriptions. What is the specs'
+// own is that every row, slot and day goes by a readable id.
 
-import { ExerciseLibrary } from "@nabd/dataset";
 import type {
   CycledSlot,
   Day,
   ExercisePrescription,
   LoggedSet,
   MuscleKey,
-  Prescription,
   Program,
   SetSpec,
   Trigger,
 } from "@nabd/domain";
-import { loggedSet as setOf } from "@nabd/domain";
+import {
+  day as kitDay,
+  logged,
+  plan as kitPlan,
+  row,
+  slot as kitSlot,
+  workingSets,
+} from "../../tests/support/builders";
+import { CATALOG, catalogExercise } from "../../tests/support/exercises";
 import { at } from "./time";
 
-/** The catalog exercises the specs use, by the name the UI shows. */
-export const EXERCISE = {
-  bench: { id: "bench_press__dumbbell", name: "Dumbbell Bench Press" },
-  barbellBench: { id: "bench_press__barbell", name: "Barbell Bench Press" },
-  raise: { id: "lateral_raise__dumbbell", name: "Dumbbell Lateral Raise" },
-  curl: { id: "curl__dumbbell", name: "Dumbbell Curl" },
-  hammerCurl: { id: "hammer_curl__dumbbell", name: "Dumbbell Hammer Curl" },
-  squat: { id: "goblet_squat__dumbbell", name: "Dumbbell Goblet Squat" },
-  pullUp: { id: "pull_up__pullupbar", name: "Pull-Up" },
-  pushUp: { id: "push_up__bodyweight", name: "Push-Up" },
-  plank: { id: "plank__bodyweight", name: "Plank" },
-} as const;
+export { workingSets };
 
-/** `count` working sets of 8–12 reps. */
-export function workingSets(count: number): SetSpec[] {
-  return Array.from({ length: count }, (): SetSpec => ({ type: "working", amount: 8, upTo: 12 }));
-}
+type Catalog = typeof CATALOG;
 
-/** What every row of a spec's plan asks for unless it says otherwise: two sets of 8–12, 90 s rest. */
-const PRESCRIPTION: Prescription = {
-  repMode: "range",
-  intensity: "none",
-  rest: 90,
-  sets: workingSets(2),
-};
+/** The catalog exercises the specs use — those of the kit's `CATALOG` — with the name the UI shows. */
+export const EXERCISE = Object.fromEntries(
+  Object.entries(CATALOG).map(([key, id]) => [key, { id, name: catalogExercise(id).name }]),
+) as { [K in keyof Catalog]: { id: Catalog[K]; name: string } };
 
-/** A row of a fixed day; its id is the exercise's. */
+/** A row of a fixed day: two working sets of 8–12 unless `more` says otherwise; its id is the exercise's. */
 export function planned(
   exId: string,
   more: Partial<ExercisePrescription> = {},
 ): ExercisePrescription {
-  return { id: exId, exId, ...PRESCRIPTION, ...more };
+  return row(exId, workingSets(2), { id: exId, ...more });
 }
 
 /** A slot of a cycled day, rotating through `pool`; its id is the muscle's. */
 export function slot(muscle: MuscleKey, pool: string[]): CycledSlot {
-  return { id: muscle, muscle, pool, ...PRESCRIPTION };
+  return kitSlot(muscle, pool, workingSets(2), { id: muscle });
 }
 
+/** A day of `exercises`; its id is its name in lower case. */
 export function day(name: string, exercises: ExercisePrescription[], more: Partial<Day> = {}): Day {
-  return { id: name.toLowerCase(), name, weekday: null, exercises, slots: [], ...more };
+  return kitDay(name, { exercises, ...more });
 }
 
 /** A fixed plan whose days come round in order, unless `more` says otherwise. */
 export function plan(days: Day[], more: Partial<Program> = {}): Program {
-  return { name: "Desk plan", type: "fixed", schedule: "floating", days, ...more };
+  return kitPlan(days, { name: "Desk plan", ...more });
 }
 
 interface SetSeed {
@@ -78,20 +70,13 @@ interface SetSeed {
   type?: SetSpec["type"];
 }
 
-let seededSets = 0;
-
 /** A history row for a set of a catalog exercise, logged against its `planned` row. */
 export function loggedSet(exId: string, seed: SetSeed): LoggedSet {
-  const exercise = ExerciseLibrary.catalog.byId(exId);
-  if (!exercise) throw new Error(`the catalog has no exercise ${exId}`);
-  const details = {
-    id: `seeded-${++seededSets}`,
-    value: seed.reps,
-    weight: seed.kg,
+  return logged(catalogExercise(exId), at(seed.time ?? "10:00", seed.day), seed.reps, seed.kg, {
     trigger: seed.trigger ?? "manual",
     planItemId: exId,
     setType: seed.type ?? "working",
-  };
-  const counted = { date: seed.day, session: seed.session ?? seed.day };
-  return setOf(exercise, at(seed.time ?? "10:00", seed.day), details, counted);
+    date: seed.day,
+    session: seed.session ?? seed.day,
+  });
 }

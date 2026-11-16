@@ -1,6 +1,6 @@
 // A day that is not a workday owes nothing until a set is logged on it.
 
-import type { DayState, LoggedSet, Program } from "@nabd/domain";
+import type { DayState, LoggedSet, Program, Weekday } from "@nabd/domain";
 import { dateKey } from "@nabd/domain";
 import { TodayPlan, rollOver } from "@nabd/scheduling";
 import { carry, logged, nov, visit } from "../support/builders";
@@ -55,7 +55,7 @@ describe("a floating plan over a day off", () => {
 });
 
 describe("a weekday plan over a day off", () => {
-  const plan = (workDays: number[], logs = [benchOn(nov(21, 10))]) =>
+  const plan = (workDays: Weekday[], logs = [benchOn(nov(21, 10))]) =>
     TodayPlan.build({
       ...input(),
       program: pushPullOn(6),
@@ -67,7 +67,7 @@ describe("a weekday plan over a day off", () => {
 
   it("has no record of a day off that nothing was logged on", () => {
     expect(plan([1, 2, 3, 4, 5], []).ledger.record()).toBeNull();
-    expect(plan([1, 2, 3, 4, 5], []).ledger.record(true)).toBeNull();
+    expect(plan([1, 2, 3, 4, 5], []).ledger.closedRecord()).toBeNull();
   });
 
   it("has one as soon as a set is logged", () => {

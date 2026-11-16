@@ -1,5 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
+import { boxStyle } from "./layout";
+import type { BoxProps } from "./layout";
 import { Row } from "./row";
+import { COLUMN, dashed } from "./styles";
 import { TitleBlock } from "./title-block";
 import { COLOR, HAIRLINE, QUIET_BOX, RADIUS, RAISED_BOX, SPACE, tint, toneColor } from "./tokens";
 import type { Space, Tone } from "./tokens";
@@ -23,7 +26,7 @@ function variantStyle(variant: CardVariant, tone: Tone): CSSProperties {
     case "inset":
       return { ...QUIET_BOX, borderColor: color ?? COLOR.line, borderRadius: RADIUS.tile };
     case "dashed":
-      return { border: `1px dashed ${COLOR.line}`, borderRadius: RADIUS.tile };
+      return { border: dashed(), borderRadius: RADIUS.tile };
     case "frame":
       return {
         border: `2px solid ${color ?? COLOR.line}`,
@@ -33,7 +36,7 @@ function variantStyle(variant: CardVariant, tone: Tone): CSSProperties {
   }
 }
 
-interface CardProps {
+interface CardProps extends Pick<BoxProps, "as" | "grow" | "ariaLabel" | "children"> {
   variant?: CardVariant;
   /** Colours the outline of an `inset` or a `frame`. */
   tone?: Tone;
@@ -44,44 +47,35 @@ interface CardProps {
   action?: ReactNode;
   /** A header of the card's own making, in place of title, subtitle and action. */
   header?: ReactNode;
-  /**
-   * What the card is called, for a card without a text title. A card with a
-   * name — this, or its title — is a region assistive tech can find by it.
-   */
-  ariaLabel?: string;
   /** Inner padding, a step of the spacing scale. */
   padding?: Extract<Space, "sm" | "md" | "lg" | "xl" | "xxl">;
   /** The content runs edge to edge (a list, panes): only the header keeps the padding. */
   flush?: boolean;
   /** A hairline under the header. */
   divided?: boolean;
-  /** Lay the content out as a column, so a `Spacer` can push its last block to the bottom. */
-  stacked?: boolean;
-  /** Take the free space of the Row around it. */
-  grow?: boolean;
-  /** A list entry: render as an `li`. */
-  as?: "li";
-  children?: ReactNode;
 }
 
-/** A bordered panel: the box most of the app's content sits in. */
+/**
+ * A bordered panel: the box most of the app's content sits in. Its content
+ * is laid out as a column, so a `Spacer` can push the last block to the
+ * bottom. A card with a name — its `ariaLabel`, or its title — is a region
+ * assistive tech can find by it.
+ */
 export function Card(props: CardProps): JSX.Element {
   const { variant = "card", tone = "neutral", title, subtitle, action, header } = props;
   const { padding = "xl", flush = false, divided = false } = props;
   const name = props.ariaLabel ?? (typeof title === "string" ? title : undefined);
-  const Box = props.as ?? (name === undefined ? "div" : "section");
+  const as = props.as ?? (name === undefined ? "div" : "section");
+  const Tag = as;
   const hasHeader = title !== undefined || header !== undefined;
   return (
-    <Box
+    <Tag
       aria-label={name}
       style={{
+        ...boxStyle({ as, grow: props.grow, padding: flush ? "none" : padding }),
         ...variantStyle(variant, tone),
-        boxSizing: "border-box",
-        padding: flush ? 0 : SPACE[padding],
+        ...COLUMN,
         overflow: flush ? "hidden" : undefined,
-        listStyle: "none",
-        ...(props.stacked ? { display: "flex", flexDirection: "column" } : undefined),
-        ...(props.grow ? { flex: 1, minWidth: 0 } : undefined),
       }}
     >
       {hasHeader && (
@@ -101,6 +95,6 @@ export function Card(props: CardProps): JSX.Element {
         </div>
       )}
       {props.children}
-    </Box>
+    </Tag>
   );
 }

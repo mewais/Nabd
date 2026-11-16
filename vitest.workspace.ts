@@ -1,5 +1,6 @@
-// One test project per package that has tests: the suites of packages/<dir>
-// live apart from the code, under tests/<dir>/. A package that draws (it
+// One test project per package that has tests — the suites of packages/<dir>
+// live apart from the code, under tests/<dir>/ — and one for the local ESLint
+// rules, under tests/scripts/. A package that draws (it
 // depends on React) is tested in a DOM, any other in plain Node.
 //
 //   pnpm test                           every project
@@ -25,8 +26,8 @@ const tested = readdirSync(fromRoot("./packages")).filter((dir) =>
   existsSync(fromRoot(`./tests/${dir}`)),
 );
 
-export default defineWorkspace(
-  tested.map((dir) => ({
+export default defineWorkspace([
+  ...tested.map((dir) => ({
     extends: "./vitest.config.ts",
     test: {
       name: dir,
@@ -37,4 +38,14 @@ export default defineWorkspace(
       setupFiles: draws(dir) ? ["./scripts/vitest.setup.ts"] : [],
     },
   })),
-);
+  // The local ESLint rules (scripts/eslint/), which are not a package.
+  {
+    extends: "./vitest.config.ts",
+    test: {
+      name: "scripts",
+      root: fromRoot("./"),
+      include: ["tests/scripts/**/*.test.ts"],
+      environment: "node",
+    },
+  },
+]);

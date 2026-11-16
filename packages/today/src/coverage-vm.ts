@@ -1,5 +1,5 @@
 import type { MuscleStanding, MuscleVolume, Recommendation } from "@nabd/coverage";
-import { insight, standings } from "@nabd/coverage";
+import { CoverageReport } from "@nabd/coverage";
 import type { Coverage } from "@nabd/domain";
 import { MUSCLES_ANATOMICAL, formatMuscles } from "@nabd/domain";
 import type { MapStyle, MapView } from "@nabd/view";
@@ -27,12 +27,17 @@ export function buildCoverageVM(
   view: MapView,
   mapStyle: MapStyle,
 ): CoverageVM {
-  return { coverage, view, mapStyle, legend: standings(MUSCLES_ANATOMICAL, coverage, planned) };
+  return {
+    coverage,
+    view,
+    mapStyle,
+    legend: new CoverageReport(coverage, planned).standings(MUSCLES_ANATOMICAL),
+  };
 }
 
 /** What stands out in the week's coverage; empty when nothing does. */
 export function buildInsightVM(coverage: Coverage, planned: MuscleVolume): InsightRowVM[] {
-  const { rest, push } = insight(coverage, planned);
+  const { rest, push } = new CoverageReport(coverage, planned).insight();
   const rows: InsightRowVM[] = [];
   if (rest.length > 0) {
     rows.push({

@@ -1,7 +1,7 @@
 import type { LoggedSet, Program } from "@nabd/domain";
 import { dateKey } from "@nabd/domain";
 import { TodayPlan } from "@nabd/scheduling";
-import { logged, nov, row, threeSets, warmup, working } from "../support/builders";
+import { logged, nov, row, workingSets, warmup, working } from "../support/builders";
 import { EX } from "../support/exercises";
 import { benchRow, floatingPushPull, flyRow, pushPull, raiseRow } from "../support/programs";
 import { MONDAY, benchSet, build, dayState, input } from "./fixtures";
@@ -46,7 +46,7 @@ describe("TodayPlan for a fixed day", () => {
     ).toEqual([]);
     const orphan: Program = {
       ...pushPull,
-      days: [{ ...pushPull.days[0]!, exercises: [row("gone", threeSets()), benchRow] }],
+      days: [{ ...pushPull.days[0]!, exercises: [row("gone", workingSets(3)), benchRow] }],
     };
     expect(build([], dayState(MONDAY), orphan).items.map((i) => i.exercise.name)).toEqual([
       "Bench Press",
@@ -92,7 +92,7 @@ describe("TodayPlan for a fixed day", () => {
       const noWarmup: Program = {
         ...pushPull,
         days: [
-          { ...pushPull.days[0]!, exercises: [{ ...benchRow, sets: threeSets() }] },
+          { ...pushPull.days[0]!, exercises: [{ ...benchRow, sets: workingSets(3) }] },
           pushPull.days[1]!,
         ],
       };
@@ -202,7 +202,7 @@ describe("the completion record", () => {
   it("a floating day is only on record once it has a set, or the plan has moved past it", () => {
     const idle = build([], dayState(MONDAY), floatingPushPull);
     expect(idle.ledger.record()).toBeNull();
-    expect(idle.ledger.record(true)).toEqual({ date: dateKey(MONDAY), planned: 10, done: 0 });
+    expect(idle.ledger.closedRecord()).toEqual({ date: dateKey(MONDAY), planned: 10, done: 0 });
     expect(build([benchSet(9)], dayState(MONDAY), floatingPushPull).ledger.record()).toEqual({
       date: dateKey(MONDAY),
       planned: 10,

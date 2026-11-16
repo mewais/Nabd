@@ -1,6 +1,6 @@
 import { FormRow, Stepper } from "@nabd/design-system";
 import type { SettingsActions } from "./settings-actions";
-import type { StepperRowVM } from "./settings-vm";
+import type { StepperRowVM } from "./rows-vm";
 
 interface StepperRowProps {
   vm: StepperRowVM;

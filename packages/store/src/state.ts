@@ -1,26 +1,17 @@
-import type {
-  AppData,
-  DayRecord,
-  DayState,
-  Exercise,
-  LoggedSet,
-  PlatformCapabilities,
-  Program,
-  RotationState,
-  Settings,
-} from "@nabd/domain";
+import type { LoggedSet, PlatformCapabilities } from "@nabd/domain";
 import { DEFAULT_SETTINGS, EMPTY_PROGRAM, NO_CAPABILITIES, freshDayState } from "@nabd/domain";
 import type { Singletons } from "@nabd/ipc-client";
 import type { PendingNudge } from "@nabd/nudge";
 import type { LogSession } from "@nabd/session";
-import type { LibraryState, MapStyle, MapView, Notice, ProgressTab, Screen } from "@nabd/view";
-
-/** Something that cannot be undone, waiting for the user to say they mean it. */
-export type Confirmation =
-  /** Replace what is stored with the (already validated) contents of an import file. */
-  | { kind: "import"; data: AppData }
-  | { kind: "deleteDay"; dayId: string }
-  | { kind: "deleteExercise"; exId: string };
+import type {
+  Confirmation,
+  LibraryState,
+  MapStyle,
+  MapView,
+  Notice,
+  ProgressTab,
+  Screen,
+} from "@nabd/view";
 
 /**
  * Something stored that could not be read at boot. The app runs on a default
@@ -36,16 +27,13 @@ export interface LoadProblem {
 /** The two places a notice is shown: the banner over every screen, or Settings → Data. */
 export type NoticePlace = "appNotice" | "dataNotice";
 
-export interface NabdState {
+/**
+ * The app's state. What is persisted comes first: the stored singletons
+ * (`dayState`, today's bookkeeping, holds `paused`: nudges are off until the
+ * day ends) and the set history.
+ */
+export interface NabdState extends Singletons {
   booted: boolean;
-  // persisted
-  settings: Settings;
-  program: Program;
-  customExercises: Exercise[];
-  rotationState: RotationState;
-  /** Today's bookkeeping, `paused` (nudges are off until the day ends) included. */
-  dayState: DayState;
-  dayLog: DayRecord[];
   history: LoggedSet[];
   /** Ids of logged sets the backend has not accepted yet; they are retried until it does. */
   unsavedSets: string[];

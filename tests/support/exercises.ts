@@ -96,12 +96,17 @@ export type ExKey = keyof typeof EX;
 /** A library of exactly the made-up exercises. */
 export const LIBRARY = new ExerciseLibrary(Object.values(EX));
 
+/** The built-in exercises the suites and the end-to-end specs train on, by catalog id. */
 export const CATALOG = {
   bench: "bench_press__barbell",
   dumbbellBench: "bench_press__dumbbell",
   pushUp: "push_up__bodyweight",
   overheadPress: "overhead_press__barbell",
   fly: "fly__dumbbell",
+  raise: "lateral_raise__dumbbell",
+  curl: "curl__dumbbell",
+  hammerCurl: "hammer_curl__dumbbell",
+  gobletSquat: "goblet_squat__dumbbell",
   row: "row__barbell",
   plank: "plank__bodyweight",
   pullUp: "pull_up__pullupbar",

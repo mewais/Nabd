@@ -2,9 +2,10 @@ import type { ReactNode } from "react";
 import type { Direction } from "@nabd/domain";
 import { IconButton } from "./icon-button";
 import { Row } from "./row";
+import type { Size } from "./tokens";
 
-/** `large` for forms; `mini` for dense table rows. */
-export type StepperSize = "mini" | "large";
+/** `md` for forms; `sm` for dense table rows. */
+export type StepperSize = Extract<Size, "sm" | "md">;
 
 interface StepperFrameProps {
   /** − was pressed (-1), or + (+1). */
@@ -24,11 +25,12 @@ const inPhrase = (name: string): string => name.charAt(0).toLowerCase() + name.s
 /** The "− … +" around a stepper's value, each button named for what it steps ("Decrease reps"). */
 export function StepperFrame(props: StepperFrameProps): JSX.Element {
   const { onStep, size, name, namesGroup = false, children } = props;
-  const button = size === "mini" ? "mini" : "raised";
+  const button = size === "sm" ? "inset" : "raised";
   return (
-    <Row role="group" ariaLabel={namesGroup ? name : undefined} gap={size === "mini" ? "xs" : "md"}>
+    <Row role="group" ariaLabel={namesGroup ? name : undefined} gap={size === "sm" ? "xs" : "md"}>
       <IconButton
         variant={button}
+        size={size}
         icon="minus"
         ariaLabel={`Decrease ${inPhrase(name)}`}
         onClick={() => onStep(-1)}
@@ -36,6 +38,7 @@ export function StepperFrame(props: StepperFrameProps): JSX.Element {
       {children}
       <IconButton
         variant={button}
+        size={size}
         icon="plus"
         ariaLabel={`Increase ${inPhrase(name)}`}
         onClick={() => onStep(1)}

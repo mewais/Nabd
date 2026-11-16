@@ -17,7 +17,7 @@ interface SettingsModalProps {
 /** Every setting, grouped; each change is applied at once. */
 export function SettingsModal({ vm, actions }: SettingsModalProps): JSX.Element {
   return (
-    <ModalShell title="Settings" onClose={actions.close} width={540} layer="modalTop">
+    <ModalShell title="Settings" onClose={actions.close} width="md" layer="modalTop">
       <Stack gap="xxl" paddingX="xxl" paddingY="xl">
         <WorkdaySection vm={vm.workday} actions={actions} />
         <FormSection title="Nudges">

@@ -36,7 +36,7 @@ export function PrescriptionControls({ vm, onEdit }: PrescriptionControlsProps):
       <Spacer />
       <Labelled label="Rest">
         <Stepper
-          size="mini"
+          size="sm"
           ariaLabel="Rest"
           value={vm.rest}
           onStep={(direction) => onEdit((p) => p.stepRest(direction))}

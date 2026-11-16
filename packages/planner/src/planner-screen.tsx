@@ -11,26 +11,21 @@ interface PlannerScreenProps {
   actions: PlannerActions;
 }
 
-/** The coverage rail's width beside the editor. */
-const RAIL_WIDTH = 300;
 /**
- * The narrowest the editor may get beside the rail: what a set table with a
- * rep range and an intensity column needs. With less room (a window near its
- * smallest) the rail goes under the editor.
+ * The Plan screen: program header, week board, and the selected day beside the
+ * coverage rail — or above it, where the window leaves the editor less room
+ * than a set table with a rep range and an intensity column needs.
  */
-const EDITOR_MIN_WIDTH = 480;
-
-/** The Plan screen: program header, week board, and the selected day beside the coverage rail. */
 export function PlannerScreen({ vm, actions }: PlannerScreenProps): JSX.Element {
   return (
-    <Page width="wide">
+    <Page width="lg">
       <ProgramHeader vm={vm.header} actions={actions} />
       <WeekBoard vm={vm.board} actions={actions} />
       {vm.editor && (
         <WithSide
           side={<CoverageRail vm={vm.rail} />}
-          sideWidth={RAIL_WIDTH}
-          mainMinWidth={EDITOR_MIN_WIDTH}
+          sideWidth="rail"
+          mainMinWidth="editor"
           gap="lg"
         >
           <DayEditor vm={vm.editor} actions={actions} />

@@ -46,7 +46,7 @@ describe("Card", () => {
 
 describe("Page", () => {
   it("holds the screen's content", () => {
-    const page = renderRoot(<Page width="narrow">screen</Page>);
+    const page = renderRoot(<Page width="sm">screen</Page>);
     expect(page).toHaveTextContent("screen");
   });
 });
@@ -54,7 +54,7 @@ describe("Page", () => {
 describe("WithSide", () => {
   it("puts the main pane first, and lets the side pane go under it when the two do not fit", () => {
     const root = renderRoot(
-      <WithSide side={<aside>rail</aside>} sideWidth={300} mainMinWidth={480}>
+      <WithSide side={<aside>rail</aside>} sideWidth="rail" mainMinWidth="editor">
         <main>editor</main>
       </WithSide>,
     );

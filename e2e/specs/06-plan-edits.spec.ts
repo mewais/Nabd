@@ -2,11 +2,11 @@ import { EXERCISE, day, plan, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { at } from "../support/time";
 
-const { bench, curl, squat } = EXERCISE;
+const { dumbbellBench, curl, gobletSquat } = EXERCISE;
 
 const program = plan([
-  day("Push", [planned(bench.id), planned(curl.id)]),
-  day("Legs", [planned(squat.id)]),
+  day("Push", [planned(dumbbellBench.id), planned(curl.id)]),
+  day("Legs", [planned(gobletSquat.id)]),
 ]);
 
 test.beforeEach(async ({ app }) => {
@@ -15,7 +15,7 @@ test.beforeEach(async ({ app }) => {
   await today.startSet.click();
   await logger.log({ reps: 8, weight: 20 });
   await logger.done();
-  await expect(today.row(bench.name)).toContainText("1/2 sets");
+  await expect(today.row(dumbbellBench.name)).toContainText("1/2 sets");
 });
 
 test("switching the plan between fixed and cycled keeps today's sets", async ({ app }) => {
@@ -23,16 +23,16 @@ test("switching the plan between fixed and cycled keeps today's sets", async ({ 
 
   await shell.goTo("Plan");
   await planner.option("Plan type", "Cycled").click();
-  await expect(planner.card("Chest")).toContainText(bench.name);
+  await expect(planner.card("Chest")).toContainText(dumbbellBench.name);
   await shell.goTo("Today");
-  await expect(today.row(bench.name)).toContainText("1/2 sets");
+  await expect(today.row(dumbbellBench.name)).toContainText("1/2 sets");
   await expect(today.stat("Lifted today")).toContainText("160");
 
   await shell.goTo("Plan");
   await planner.option("Plan type", "Fixed").click();
-  await expect(planner.card(bench.name)).toBeVisible();
+  await expect(planner.card(dumbbellBench.name)).toBeVisible();
   await shell.goTo("Today");
-  await expect(today.row(bench.name)).toContainText("1/2 sets");
+  await expect(today.row(dumbbellBench.name)).toContainText("1/2 sets");
   await expect(shell.ring).toHaveAccessibleName("1 of 4 sets done today");
 });
 
@@ -40,11 +40,11 @@ test("deleting an exercise that has sets today keeps them listed and counted", a
   const { shell, today, planner } = app;
 
   await shell.goTo("Plan");
-  await planner.card(bench.name).getByRole("button", { name: "Remove exercise" }).click();
-  await expect(planner.card(bench.name)).toBeHidden();
+  await planner.card(dumbbellBench.name).getByRole("button", { name: "Remove exercise" }).click();
+  await expect(planner.card(dumbbellBench.name)).toBeHidden();
 
   await shell.goTo("Today");
-  await expect(today.row(bench.name)).toContainText("1 set");
+  await expect(today.row(dumbbellBench.name)).toContainText("1 set");
   await expect(today.stat("Lifted today")).toContainText("160");
   await expect(today.stat("This week")).toContainText("1");
   await expect(today.screen).toContainText("Up next · Set 1 of 2");
@@ -111,7 +111,7 @@ test("the logger never outlives its exercise: deleted under it, it moves on", as
   await library.close();
 
   // The logger is still there, on the exercise that owes the next set.
-  await expect(logger.exercise).toHaveText(bench.name);
+  await expect(logger.exercise).toHaveText(dumbbellBench.name);
   await expect(logger.listRow("Desk Dips")).toBeHidden();
   await logger.done();
   // With the logger closed, nudging goes on as before.
@@ -130,8 +130,8 @@ test("reordering floating days leaves today on the day it is on", async ({ app }
   await expect(planner.dayCard("Legs")).toContainText("Day 1");
 
   await shell.goTo("Today");
-  await expect(today.row(bench.name)).toContainText("1/2 sets");
-  await expect(today.row(squat.name)).toBeHidden();
+  await expect(today.row(dumbbellBench.name)).toContainText("1/2 sets");
+  await expect(today.row(gobletSquat.name)).toBeHidden();
 });
 
 test("moving the day the editor opened on keeps the editor on that day", async ({ app }) => {

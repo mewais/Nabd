@@ -1,12 +1,37 @@
 // @nabd/design-system — the theme, the design tokens and every presentational
-// primitive the screens are built from. No app logic.
+// primitive the screens are built from. No app logic: the two composites at the
+// end (AdviceCard inside NextSetBlock) draw a suggestion that Today and the
+// logger both show, and live here because screens cannot import each other.
 //
-// Screens compose these and write no CSS of their own: spacing, type and
-// colour are props that name a step of a scale (`gap="md"`, `variant="hint"`,
-// `tone="accent"`). ESLint holds them to it (scripts/eslint/styling.js).
+// Screens compose these and write no CSS of their own: spacing, type, colour
+// and size are props that name a step of a scale. ESLint holds them to it
+// (scripts/eslint/styling.js).
+//
+// CONVENTIONS — one vocabulary for every primitive:
+//
+//   tone       What a colour says, one `Tone` everywhere: its meaning (accent,
+//              success, info, danger), how much it stands out (strong, muted,
+//              faint), or onAccent. `neutral` is the component's own quiet colour.
+//   size       One `Size` scale, xs … xxl; each component takes the steps it comes
+//              in (`Extract<Size, "sm" | "md">`) and defaults to its usual one.
+//              Icons take `IconSize`, the same steps.
+//   width      Fixed widths are named after what they hold (`WIDTH`: "badge",
+//              "sidebar", "rail" …), never given in px: grid tracks, panes,
+//              columns. A modal or a page takes a `Size` step instead.
+//   selected   The chosen one of a set: a list row, a tile, a destination.
+//   on         A two-state switch that is on: Toggle, a toggling Button, a chip
+//              of a ChipGroup (whose `selected` lists the values that are on), a
+//              lit LiveDot. Progress through a task is a `state` (CheckMark).
+//   ariaLabel  The accessible name, wherever one is given; a sub-control's is
+//              `<part>AriaLabel` (Chip's `removeAriaLabel`).
+//   variant    The look, by what it is for. `inset` is the quiet filled box with
+//              a hairline wherever it appears (Card, IconButton, RowButton,
+//              StatTile); `add` is the one dashed "add another" button.
+//   onX        Events are `onClick`, `onChange(value)`, `onStep(direction)`,
+//              `onSet(value)`, `onToggle(value)`.
 
 export { COLOR } from "./tokens";
-export type { Space, TextRole, Tone } from "./tokens";
+export type { Tone } from "./tokens";
 
 export { ThemeProvider } from "./theme-provider";
 export { THEME_OPTIONS } from "./theme-options";
@@ -15,6 +40,7 @@ export { THEME_OPTIONS } from "./theme-options";
 export { Row } from "./row";
 export { Stack } from "./stack";
 export { Grid } from "./grid";
+export type { GridColumns } from "./grid";
 export { Columns } from "./columns";
 export { WithSide } from "./with-side";
 export { ScrollArea } from "./scroll-area";
@@ -24,7 +50,6 @@ export { Page } from "./page";
 
 // Text
 export { Text } from "./text";
-export type { TextTone } from "./text";
 export { TitleBlock } from "./title-block";
 export { EmptyNote } from "./empty-note";
 
@@ -52,11 +77,8 @@ export { Badge } from "./badge";
 
 // Controls
 export { Button } from "./button";
-export type { ButtonVariant } from "./button";
 export { IconButton } from "./icon-button";
 export { RowButton } from "./row-button";
-export { NavButton } from "./nav-button";
-export { ChipToggle } from "./chip-toggle";
 export { ChipGroup } from "./chip-group";
 export { optionsOf } from "./option";
 export type { Option } from "./option";
@@ -77,10 +99,8 @@ export { LineChart } from "./line-chart";
 export { MeterBar } from "./meter-bar";
 export { ProgressRing } from "./progress-ring";
 export { SplitBar } from "./split-bar";
-export type { SplitSegment } from "./split-bar";
 export { HeatCell } from "./heat-cell";
 export type { HeatLevel } from "./heat-cell";
 
 // Composites
-export { AdviceCard } from "./advice-card";
 export { NextSetBlock } from "./next-set-block";

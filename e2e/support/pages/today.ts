@@ -1,16 +1,16 @@
 import type { Locator, Page } from "@playwright/test";
 import { statTile } from "./controls";
+import { ScreenObject } from "./region";
 
 export type QueueAction = "Start" | "More" | "Skip" | "Restore" | "Remove";
 
 /** The Today screen: the headline card, the day's queue and the day's figures. */
-export class Today {
-  readonly screen: Locator;
+export class Today extends ScreenObject {
   readonly startSet: Locator;
   readonly logSomethingElse: Locator;
 
-  constructor(private readonly page: Page) {
-    this.screen = page.getByRole("main");
+  constructor(page: Page) {
+    super(page);
     this.startSet = this.screen.getByRole("button", { name: "Start set" });
     this.logSomethingElse = this.screen.getByRole("button", { name: "Log something else" });
   }

@@ -2,13 +2,11 @@
 
 import type { Option, SegOption } from "@nabd/design-system";
 import { optionsOf } from "@nabd/design-system";
-import type { Equipment, MuscleGroup, MuscleKey, TrackingType, WeightUnit } from "@nabd/domain";
+import type { Equipment, MuscleGroup, TrackingType, Weekday, WeightUnit } from "@nabd/domain";
 import {
   EQUIPMENT_KEYS,
   EQUIPMENT_NAMES,
-  MUSCLES_ANATOMICAL,
   MUSCLE_GROUPS,
-  MUSCLE_NAMES,
   TRACKING_KEYS,
   TRACK_NAMES,
   WEEK_ORDER,
@@ -21,11 +19,6 @@ export const EQUIPMENT_OPTIONS: readonly Option<Equipment>[] = optionsOf(
   EQUIPMENT_NAMES,
 );
 
-export const MUSCLE_OPTIONS: readonly Option<MuscleKey>[] = optionsOf(
-  MUSCLES_ANATOMICAL,
-  MUSCLE_NAMES,
-);
-
 export const TRACKING_OPTIONS: readonly Option<TrackingType>[] = optionsOf(
   TRACKING_KEYS,
   TRACK_NAMES,
@@ -34,18 +27,18 @@ export const TRACKING_OPTIONS: readonly Option<TrackingType>[] = optionsOf(
 /** The group filter's "no filter" choice. */
 export type GroupFilter = MuscleGroup | "all";
 
+/** A name that is its own label: a muscle group, a weight unit. */
+const asItself = (name: string): string => name;
+
 export const GROUP_OPTIONS: readonly Option<GroupFilter>[] = [
   { value: "all", label: "All" },
-  ...MUSCLE_GROUPS.map((group) => ({ value: group, label: group })),
+  ...optionsOf(MUSCLE_GROUPS, asItself),
 ];
 
-export const WEIGHT_UNIT_OPTIONS: readonly SegOption<WeightUnit>[] = WEIGHT_UNITS.map((unit) => ({
-  value: unit,
-  label: unit,
-}));
+export const WEIGHT_UNIT_OPTIONS: readonly SegOption<WeightUnit>[] = optionsOf(
+  WEIGHT_UNITS,
+  asItself,
+);
 
-/** Monday to Sunday, "Mon" … "Sun"; the value is the weekday number as text. */
-export const WEEKDAY_OPTIONS: readonly Option[] = WEEK_ORDER.map((weekday) => ({
-  value: String(weekday),
-  label: weekdayShort(weekday),
-}));
+/** The days one can work on, Monday to Sunday: "Mon" … "Sun". */
+export const WORKDAY_OPTIONS: readonly Option<Weekday>[] = optionsOf(WEEK_ORDER, weekdayShort);

@@ -3,7 +3,7 @@
  * patch each control applies, and what this computer offers.
  */
 
-import { DEFAULT_SETTINGS } from "@nabd/domain";
+import { DEFAULT_SETTINGS, WEEK_ORDER, weekdayShort } from "@nabd/domain";
 import type { Settings } from "@nabd/domain";
 import { buildSettingsVM } from "@nabd/modals";
 import type { SettingsVM } from "@nabd/modals";
@@ -54,8 +54,19 @@ describe("buildSettingsVM", () => {
   });
 
   it("carries the weekdays that are worked", () => {
-    expect(build().workday.days).toEqual([1, 2, 3, 4, 5]);
-    expect(build({ workDays: [0, 6] }).workday.days).toEqual([0, 6]);
+    expect(build().workday.days.selected).toEqual([1, 2, 3, 4, 5]);
+    expect(build({ workDays: [0, 6] }).workday.days.selected).toEqual([0, 6]);
+  });
+
+  it("offers every weekday, Monday first, as a chip carrying the patch that switches it", () => {
+    const { days } = build().workday;
+    expect(days.chips.map((chip) => chip.label)).toEqual(WEEK_ORDER.map(weekdayShort));
+    expect(days.chips.find((chip) => chip.value === 6)?.toggle).toEqual({
+      workDays: [1, 2, 3, 4, 5, 6],
+    });
+    expect(days.chips.find((chip) => chip.value === 3)?.toggle).toEqual({
+      workDays: [1, 2, 4, 5],
+    });
   });
 
   it("moves the nudge timings in steps of five", () => {
@@ -80,7 +91,10 @@ describe("buildSettingsVM", () => {
   it("carries the unit, the owned equipment and the theme", () => {
     const vm = build({ weightUnit: "lb", equipment: ["bodyweight", "barbell"], theme: "light" });
     expect(vm.training.unit).toBe("lb");
-    expect(vm.training.equipment).toEqual(["bodyweight", "barbell"]);
+    expect(vm.training.equipment.selected).toEqual(["bodyweight", "barbell"]);
+    expect(vm.training.equipment.chips.find((chip) => chip.value === "barbell")?.toggle).toEqual({
+      equipment: ["bodyweight"],
+    });
     expect(vm.appearance.theme).toBe("light");
   });
 

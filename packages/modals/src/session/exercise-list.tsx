@@ -21,7 +21,7 @@ export function ExerciseList({ vm, actions }: ExerciseListProps): JSX.Element {
             <ExerciseRow key={row.itemId} vm={row} actions={actions} />
           ))}
         </Stack>
-        <Button variant="ghost" size="sm" dashed block onClick={actions.logOther}>
+        <Button variant="add" size="sm" block onClick={actions.logOther}>
           + Something else
         </Button>
       </Stack>

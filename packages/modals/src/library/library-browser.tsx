@@ -33,7 +33,7 @@ export function LibraryBrowser({ vm, actions }: LibraryBrowserProps): JSX.Elemen
           ariaLabel="Muscle group"
           options={GROUP_OPTIONS}
           selected={[vm.group]}
-          onToggle={(group) => actions.filter({ group: group === "all" ? null : group })}
+          onToggle={({ value }) => actions.filter({ group: value === "all" ? null : value })}
         />
         {vm.scopeNote !== null && <Text variant="hint">{vm.scopeNote}</Text>}
       </Stack>
@@ -47,7 +47,7 @@ export function LibraryBrowser({ vm, actions }: LibraryBrowserProps): JSX.Elemen
               ))}
             </Stack>
           )}
-          <Button variant="ghost" tone="accent" dashed block onClick={() => actions.startDraft()}>
+          <Button variant="add" tone="accent" block onClick={() => actions.startDraft()}>
             Create custom exercise
           </Button>
         </Stack>

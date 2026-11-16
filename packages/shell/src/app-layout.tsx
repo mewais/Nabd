@@ -10,15 +10,10 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
-/** The sidebar's width, then whatever is left. */
-const COLUMNS = "250px minmax(0, 1fr)";
-/** One row, as tall as the window. */
-const ROWS = "minmax(0, 1fr)";
-
-/** The window: the sidebar beside a column of top bar, notice and screen. */
+/** The window, one row as tall as it: the sidebar beside a column of top bar, notice and screen. */
 export function AppLayout({ sidebar, topBar, notice, children }: AppLayoutProps): JSX.Element {
   return (
-    <Grid columns={COLUMNS} rows={ROWS} grow>
+    <Grid columns={["sidebar", 1]} rows="fill" grow>
       {sidebar}
       <Stack grow>
         {topBar}

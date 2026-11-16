@@ -76,19 +76,25 @@ describe("buildShellVM · sidebar", () => {
 
   it("turns today's sets into a count, a total and a percentage", () => {
     const { progress } = shellVM({ sets: { done: 3, planned: 12 } }).sidebar;
-    expect(progress).toEqual({ done: 3, totalLabel: "of 12 sets", pct: 25 });
+    expect(progress).toEqual({
+      done: 3,
+      totalLabel: "of 12 sets",
+      pct: 25,
+      ariaLabel: "3 of 12 sets done today",
+    });
   });
 
   it("counts one set in the singular and rounds the percentage", () => {
     const one = shellVM({ sets: { done: 1, planned: 1 } }).sidebar;
-    expect(one.progress).toEqual({ done: 1, totalLabel: "of 1 set", pct: 100 });
+    expect(one.progress).toMatchObject({ done: 1, totalLabel: "of 1 set", pct: 100 });
+    expect(one.progress.ariaLabel).toBe("1 of 1 set done today");
     const third = shellVM({ sets: { done: 1, planned: 3 } }).sidebar;
     expect(third.progress.pct).toBe(33);
   });
 
   it("shows an empty ring when nothing is planned", () => {
     const { progress } = shellVM({ sets: { done: 0, planned: 0 } }).sidebar;
-    expect(progress).toEqual({ done: 0, totalLabel: "of 0 sets", pct: 0 });
+    expect(progress).toMatchObject({ done: 0, totalLabel: "of 0 sets", pct: 0 });
   });
 });
 
@@ -117,8 +123,16 @@ describe("buildShellVM · theme, glass, pause and notice", () => {
   });
 
   it("reports whether nudges are paused", () => {
-    expect(shellVM({ paused: false }).topBar.paused).toBe(false);
-    expect(shellVM({ paused: true }).topBar.paused).toBe(true);
+    expect(shellVM({ paused: false }).topBar.pause).toEqual({
+      paused: false,
+      label: "Pause",
+      title: "Pause nudges",
+    });
+    expect(shellVM({ paused: true }).topBar.pause).toEqual({
+      paused: true,
+      label: "Resume",
+      title: "Resume nudges",
+    });
   });
 
   it("carries the app notice, or none", () => {

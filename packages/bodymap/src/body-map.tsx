@@ -1,10 +1,10 @@
 import type { CSSProperties } from "react";
 import type { Coverage } from "@nabd/domain";
-import { formatMuscles } from "@nabd/domain";
 import { COLOR } from "@nabd/design-system";
 import type { MapStyle, MapView } from "@nabd/view";
 import { BACK_MUSCLES, FRONT_MUSCLES, VIEWBOX } from "./drawing";
 import { regionCoverage } from "./regions";
+import { bodyLabel, regionLabel } from "./wording";
 
 /** One side of the body: a map view that shows a single drawing. */
 export type BodySide = Exclude<MapView, "both">;
@@ -35,7 +35,7 @@ export function BodyMap({ side, coverage, mapStyle = "heat" }: BodyMapProps): JS
       viewBox={VIEWBOX[side]}
       width={WIDTH}
       role="img"
-      aria-label={`Body, ${side}`}
+      aria-label={bodyLabel(side)}
       data-map-style={mapStyle}
     >
       {BODY_PARTS[side].map((part) => {
@@ -50,9 +50,7 @@ export function BodyMap({ side, coverage, mapStyle = "heat" }: BodyMapProps): JS
             // eslint-disable-next-line no-restricted-syntax -- an SVG region's paint is computed from its coverage
             style={paint}
           >
-            {region !== null && (
-              <title>{`${formatMuscles(region.muscles)} · ${Math.round(region.pct)}%`}</title>
-            )}
+            {region !== null && <title>{regionLabel(region.muscles, region.pct)}</title>}
             {outlines.map((d, index) => (
               <path key={index} d={d} />
             ))}

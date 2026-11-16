@@ -47,10 +47,9 @@ export function DayEditor({ vm, actions }: DayEditorProps): JSX.Element {
         {vm.rows.map(row)}
         {vm.type === "fixed" ? (
           <Button
-            variant="ghost"
+            variant="add"
             size="md"
             tone="accent"
-            dashed
             block
             onClick={() => actions.addExercise(dayId)}
           >

@@ -1,7 +1,6 @@
 import type { Direction, LoggedSet, SetDay, TrackingType, Trigger } from "@nabd/domain";
 import {
   MAX_AMOUNT,
-  MAX_LOAD_KG,
   SECONDS_STEP,
   boundedLoad,
   clamp,
@@ -77,9 +76,15 @@ export class LogSession {
     return whole >= 1 && whole <= this.mostReps ? this.with({ reps: whole }) : this;
   }
 
-  /** A load as typed, from nothing up to the most a set can record; anything else is ignored. */
-  withWeight(kg: number): LogSession {
-    return kg >= 0 && kg <= MAX_LOAD_KG ? this.with({ weight: roundKg(kg) }) : this;
+  /**
+   * A load as typed or applied, if it is one the exercise can be given (see
+   * `boundedLoad`, with `stepKg` the user's load step): a barbell or a dumbbell
+   * takes no less than one increment, no set more than it can record. Any
+   * other is a slip of the keyboard and leaves the draft as it was.
+   */
+  withWeight(kg: number, stepKg: number): LogSession {
+    const bounded = boundedLoad(kg, this.tracking, stepKg);
+    return bounded === roundKg(kg) ? this.with({ weight: bounded }) : this;
   }
 
   /** Step reps down or up by one; time-based exercises move in steps of seconds. */
@@ -96,7 +101,7 @@ export class LogSession {
    */
   stepWeight(direction: Direction, stepKg: number): LogSession {
     const stepped = boundedLoad(this.weight + direction * stepKg, this.tracking, stepKg);
-    return Math.sign(stepped - this.weight) === -direction ? this : this.withWeight(stepped);
+    return Math.sign(stepped - this.weight) === -direction ? this : this.with({ weight: stepped });
   }
 
   /** Start resting for `seconds` from `now`. */

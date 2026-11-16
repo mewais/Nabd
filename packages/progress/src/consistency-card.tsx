@@ -2,7 +2,7 @@ import { Card, Segmented } from "@nabd/design-system";
 import { CalendarView } from "./calendar-view";
 import { PROGRESS_TAB_OPTIONS } from "./options";
 import type { ProgressActions } from "./progress-actions";
-import type { ConsistencyVM } from "./stats-vm";
+import type { ConsistencyVM } from "./consistency-vm";
 import { WeeklyView } from "./weekly-view";
 
 interface ConsistencyCardProps {
@@ -24,7 +24,6 @@ export function ConsistencyCard({ vm, actions }: ConsistencyCardProps): JSX.Elem
           ariaLabel="Consistency view"
         />
       }
-      stacked
     >
       {vm.tab === "calendar" ? <CalendarView vm={vm.calendar} /> : <WeeklyView vm={vm.weekly} />}
     </Card>

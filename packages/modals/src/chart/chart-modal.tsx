@@ -15,7 +15,7 @@ export function ChartModal({ vm, actions }: ChartModalProps): JSX.Element {
       title={vm.exercise}
       subtitle={vm.subtitle}
       onClose={actions.close}
-      width={760}
+      width="lg"
       layer="modalOver"
     >
       <Stack gap="xl" paddingX="xxl" paddingY="xl">

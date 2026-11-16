@@ -2,11 +2,12 @@
 // spacing from the scale, a hairline on one side, and the element they render.
 
 import type { AriaRole, CSSProperties, ReactNode } from "react";
-import { COLOR, HAIRLINE, SPACE } from "./tokens";
+import { GROW } from "./styles";
+import { COLOR, DIMMED_OPACITY, HAIRLINE, SPACE } from "./tokens";
 import type { Space } from "./tokens";
 
 /** The elements a layout primitive can be, so structure stays semantic. */
-export type LayoutTag =
+type LayoutTag =
   | "div"
   | "span"
   | "section"
@@ -53,16 +54,14 @@ const EDGE_PROPERTY = {
 } as const satisfies Record<Side, keyof CSSProperties>;
 
 const LIST_RESET: CSSProperties = { margin: 0, listStyle: "none" };
-const DIMMED_OPACITY = 0.55;
 
 /** The style of the box itself; a primitive adds how it lays its children out. */
 export function boxStyle(props: BoxProps): CSSProperties {
   const { padding = "none", paddingX = padding, paddingY = padding, paddingTop = paddingY } = props;
   return {
     ...(props.as === "ul" || props.as === "li" ? LIST_RESET : undefined),
-    boxSizing: "border-box",
     padding: `${SPACE[paddingTop]}px ${SPACE[paddingX]}px ${SPACE[paddingY]}px`,
-    ...(props.grow ? { flex: 1, minWidth: 0, minHeight: 0 } : undefined),
+    ...(props.grow ? { ...GROW, minHeight: 0 } : undefined),
     ...(props.edge ? { [EDGE_PROPERTY[props.edge]]: HAIRLINE } : undefined),
     ...(props.surface ? { background: COLOR.surface } : undefined),
     ...(props.dimmed ? { opacity: DIMMED_OPACITY } : undefined),

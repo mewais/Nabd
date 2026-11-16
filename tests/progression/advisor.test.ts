@@ -1,10 +1,10 @@
 import { MAX_LOAD_KG, dateKey, kgFromDisplay } from "@nabd/domain";
 import type { Exercise, LoggedSet, SetSpec, TrackingType } from "@nabd/domain";
 import { ExerciseHistory, ProgressionAdvisor } from "@nabd/progression";
-import { exercise, logged, nov, prescription, threeSets, working } from "../support/builders";
+import { exercise, logged, nov, prescription, workingSets, working } from "../support/builders";
 
 const TODAY = dateKey(nov(16));
-const range8to12 = prescription(threeSets());
+const range8to12 = prescription(workingSets(3));
 
 interface AdviseOptions {
   setIndex?: number;

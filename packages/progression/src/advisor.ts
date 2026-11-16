@@ -1,18 +1,11 @@
 import type { SetSpec, TrackingType } from "@nabd/domain";
-import {
-  SECONDS_STEP,
-  boundedLoad,
-  isBodyweightLoaded,
-  isTimeBased,
-  isWeighted,
-  roundKg,
-  workingSets,
-} from "@nabd/domain";
+import { SECONDS_STEP, isAssisted, isTimeBased, isWeighted, workingSets } from "@nabd/domain";
 import { repGoal } from "./advice";
 import type { Advice, AdviceRequest, Progression, RepGoal } from "./advice";
-import type { ExerciseHistory, Performance } from "./history";
-import { MovedLoad, loadFor, prescribedIntensity } from "./intensity";
-import type { IntensityWaiting, PrescribedIntensity } from "./intensity";
+import type { Performance } from "./history";
+import { prescribedIntensity } from "./intensity";
+import { LoadSteps } from "./load-steps";
+import { IntensitySteering } from "./steering";
 
 /** Sessions that must miss the range in a row before backing the load off. */
 const STALL_SESSIONS = 2;
@@ -23,7 +16,7 @@ const WARMUP_SHARE = 0.5;
  * Double progression: earn reps inside the prescribed range first, then trade
  * them for load and start again at the bottom of the range. Where the plan
  * prescribes an RPE or a %1RM and there is a one-rep max to measure it
- * against, the load follows that instead (see {@link Advice}).
+ * against, the load follows that instead (see {@link IntensitySteering}).
  *
  * Loads are in kg, and every load suggested stays within what the log form
  * takes (`boundedLoad`). For assisted exercises the "load" is the
@@ -36,10 +29,13 @@ export class ProgressionAdvisor {
    *   bodyweight exercise's load adds to, so only with it can a %1RM or an
    *   RPE set that load.
    */
-  constructor(
-    private readonly loadStepKg: number,
-    private readonly bodyWeightKg: number | null = null,
-  ) {}
+  private readonly steps: LoadSteps;
+  private readonly steering: IntensitySteering;
+
+  constructor(loadStepKg: number, bodyWeightKg: number | null = null) {
+    this.steps = new LoadSteps(loadStepKg);
+    this.steering = new IntensitySteering(this.steps, bodyWeightKg);
+  }
 
   /** Advice for one set, compared against the same set of the previous session. */
   advise({ tracking, prescription, setIndex, history, session }: AdviceRequest): Advice {
@@ -61,7 +57,7 @@ export class ProgressionAdvisor {
         : this.progressFrom(tracking, goal, basis, stalled);
 
     const asked = prescribedIntensity(prescription, spec);
-    return this.steered(plain, tracking, asked, goal, history, session);
+    return this.steering.steer(plain, { tracking, asked, goal, history, session });
   }
 
   /** Where to begin with no history: the bottom of the range, load still to be found. */
@@ -80,12 +76,12 @@ export class ProgressionAdvisor {
   ): Progression {
     const repStep = isTimeBased(tracking) ? SECONDS_STEP : 1;
     const moreReps: Performance = { reps: basis.reps + repStep, weight: basis.weight };
-    const harder = this.stepLoad(tracking, basis.weight, "harder");
+    const harder = this.steps.step(tracking, basis.weight, "harder");
     const moreLoad = (reps: number): Performance | null =>
       harder === null ? null : { reps, weight: harder };
 
     if (basis.reps < goal.lo) {
-      const easier = stalled ? this.stepLoad(tracking, basis.weight, "easier") : null;
+      const easier = stalled ? this.steps.step(tracking, basis.weight, "easier") : null;
       return easier === null
         ? { kind: "reach_range", primary: { ...basis, reps: goal.lo }, alternative: null, basis }
         : { kind: "deload", primary: { reps: goal.lo, weight: easier }, alternative: null, basis };
@@ -100,86 +96,6 @@ export class ProgressionAdvisor {
   }
 
   /**
-   * `plain` with the prescribed intensity `asked` brought in. With an
-   * estimated one-rep max (from the latest session before `session`) its
-   * load becomes the primary target, for the bottom of the rep goal, and
-   * double progression's own target the alternative (the alternative it
-   * already had when the two agree). Without one the advice stays as it is,
-   * and says which intensity it is waiting to use, and for what. A hold, or
-   * an exercise with no load, ignores the intensity.
-   */
-  private steered(
-    plain: Progression,
-    tracking: TrackingType,
-    asked: PrescribedIntensity | null,
-    goal: RepGoal,
-    history: ExerciseHistory,
-    session: string,
-  ): Advice {
-    const moved = new MovedLoad(tracking, this.bodyWeightKg);
-    if (asked === null || !moved.isLift) return { ...plain, intensity: null };
-    const max = moved.isMeasurable
-      ? history.estimateBefore(session, (set) => moved.of(set))
-      : undefined;
-    if (max === undefined) {
-      return { ...plain, intensity: { ...asked, ...this.waiting(moved, history, session) } };
-    }
-    const weight = this.intensityLoad(tracking, moved.loadFor(loadFor(asked, max, goal.lo)));
-    if (weight === null) return { ...plain, intensity: null };
-    const primary: Performance = { reps: goal.lo, weight };
-    const agrees = primary.weight === plain.primary.weight && primary.reps === plain.primary.reps;
-    const alternative = agrees ? plain.alternative : plain.primary;
-    return { ...plain, primary, alternative, intensity: { ...asked, max } };
-  }
-
-  /** Why an intensity has no one-rep max to work from yet. */
-  private waiting(moved: MovedLoad, history: ExerciseHistory, session: string): IntensityWaiting {
-    if (!moved.isMeasurable) return { max: null, waitingFor: "bodyWeight" };
-    const hasHistory = history.sessionsBefore(session, 1).length > 0;
-    return { max: null, waitingFor: hasHistory ? "load" : "history" };
-  }
-
-  /** `kg` on the user's load step. */
-  private onStep(kg: number): number {
-    return roundKg(Math.round(kg / this.loadStepKg) * this.loadStepKg);
-  }
-
-  /** `kg` within the loads a set of `tracking` can be given (see `boundedLoad`). */
-  private bounded(tracking: TrackingType, kg: number): number {
-    return boundedLoad(kg, tracking, this.loadStepKg);
-  }
-
-  /**
-   * The load an intensity asks for, on the load step and within bounds. For a
-   * bodyweight exercise, whose plain form is no load at all, a load that
-   * rounds to nothing is no load worth suggesting: null, and the reps-first
-   * advice stands.
-   */
-  private intensityLoad(tracking: TrackingType, kg: number): number | null {
-    const load = this.onStep(kg);
-    return load <= 0 && isBodyweightLoaded(tracking) ? null : this.bounded(tracking, load);
-  }
-
-  /**
-   * The load one step harder or easier; null when the exercise has no load to
-   * change, or the load cannot go any further that way (no lighter than one
-   * step where a load is needed, no heavier than a set can record).
-   * Assistance is help, not load, so for an assisted exercise harder means
-   * less of it.
-   */
-  private stepLoad(
-    tracking: TrackingType,
-    weight: number | null,
-    change: "harder" | "easier",
-  ): number | null {
-    if (weight === null || !isWeighted(tracking)) return null;
-    const adds = (change === "harder") !== (tracking === "assisted_bodyweight");
-    const stepped = this.bounded(tracking, weight + (adds ? 1 : -1) * this.loadStepKg);
-    const moved = adds ? stepped > weight : stepped < weight;
-    return moved ? stepped : null;
-  }
-
-  /**
    * Where a warm-up starts when no warm-up of the exercise is on record but a
    * working set is: half of that set's load, rounded to the load step, for the
    * prescribed reps (the working set's own, with nothing prescribed).
@@ -187,9 +103,7 @@ export class ProgressionAdvisor {
    */
   warmupFrom(tracking: TrackingType, working: Performance, spec: SetSpec | null): Performance {
     const reps = spec?.amount ?? working.reps;
-    if (working.weight === null || tracking === "assisted_bodyweight") {
-      return { reps, weight: working.weight };
-    }
-    return { reps, weight: this.onStep(working.weight * WARMUP_SHARE) };
+    if (working.weight === null || isAssisted(tracking)) return { reps, weight: working.weight };
+    return { reps, weight: this.steps.onStep(working.weight * WARMUP_SHARE) };
   }
 }

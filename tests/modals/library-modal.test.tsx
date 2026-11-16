@@ -4,11 +4,13 @@
  */
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { LibraryModal } from "@nabd/modals";
+import type { ExerciseDraft } from "@nabd/domain";
+import { EQUIPMENT_KEYS } from "@nabd/domain";
+import { LibraryModal, buildLibraryVM } from "@nabd/modals";
 import type { LibraryActions, LibraryVM } from "@nabd/modals";
+import { LIBRARY } from "../support/exercises";
 
 type BrowseVM = Extract<LibraryVM, { mode: "browse" }>;
-type CreateVM = Extract<LibraryVM, { mode: "create" }>;
 
 const BROWSE: BrowseVM = {
   title: "Add Exercise",
@@ -37,18 +39,29 @@ const BROWSE: BrowseVM = {
   },
 };
 
-const CREATE: CreateVM = {
-  title: "Add Exercise",
-  mode: "create",
-  form: {
-    name: "Goblet Squat",
-    primary: ["quads"],
-    secondary: [],
-    equipment: "dumbbell",
-    tracking: "weight_reps",
-    canCreate: true,
-  },
-};
+/** The form for a custom exercise: `draft` over a dumbbell Goblet Squat for the quads. */
+function createVM(draft: Partial<ExerciseDraft> = {}): LibraryVM {
+  const vm = buildLibraryVM({
+    state: {
+      target: { kind: "exercise", dayId: "mon" },
+      search: "",
+      group: null,
+      draft: {
+        name: "Goblet Squat",
+        primary: ["quads"],
+        secondary: [],
+        equipment: "dumbbell",
+        tracking: "weight_reps",
+        ...draft,
+      },
+    },
+    pool: [],
+    library: LIBRARY,
+    owned: EQUIPMENT_KEYS,
+  });
+  if (vm === null) throw new Error("the library is open");
+  return vm;
+}
 
 function setup(vm: LibraryVM) {
   const actions: LibraryActions = {
@@ -161,8 +174,7 @@ describe("LibraryModal · browsing", () => {
 });
 
 describe("LibraryModal · creating a custom exercise", () => {
-  const creating = (form: Partial<CreateVM["form"]> = {}) =>
-    setup({ ...CREATE, form: { ...CREATE.form, ...form } });
+  const creating = (draft: Partial<ExerciseDraft> = {}) => setup(createVM(draft));
   const section = (title: string) => within(screen.getByRole("region", { name: title }));
 
   it("replaces the list and search with the form", () => {
@@ -234,7 +246,7 @@ describe("LibraryModal · creating a custom exercise", () => {
   });
 
   it("Create is disabled while the draft cannot be created", () => {
-    const actions = creating({ primary: [], canCreate: false });
+    const actions = creating({ primary: [] });
     const create = screen.getByRole("button", { name: "Create" });
     expect(create).toBeDisabled();
     fireEvent.click(create);

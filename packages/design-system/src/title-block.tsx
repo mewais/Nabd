@@ -2,11 +2,10 @@ import type { ReactNode } from "react";
 import { Row } from "./row";
 import { Stack } from "./stack";
 import { Text } from "./text";
-import type { TextTone } from "./text";
-import type { TextRole } from "./tokens";
+import type { Size, TextRole, Tone } from "./tokens";
 
-/** `card` heads a card or a section, `row` names a list entry or a setting, `dense` a row of a tight list. */
-type TitleBlockSize = "card" | "row" | "dense";
+/** `lg` heads a card or a section, `md` names a list entry or a setting, `sm` a row of a tight list. */
+type TitleBlockSize = Extract<Size, "sm" | "md" | "lg">;
 
 interface TitleBlockProps {
   title: ReactNode;
@@ -14,7 +13,7 @@ interface TitleBlockProps {
   subtitle?: ReactNode;
   size?: TitleBlockSize;
   /** Colours the title: `muted` for an entry that is not the current one, `accent` for the one that is. */
-  tone?: TextTone;
+  tone?: Tone;
   /** The subtitle is data (a date, a tally): set it in the mono face. */
   mono?: boolean;
   /** Keep both lines to one line each, cut short with an ellipsis. */
@@ -28,16 +27,16 @@ interface TitleBlockProps {
 }
 
 const TITLE_ROLE: Record<TitleBlockSize, TextRole> = {
-  card: "cardTitle",
-  row: "label",
-  dense: "rowLabel",
+  lg: "cardTitle",
+  md: "label",
+  sm: "rowLabel",
 };
 
 /** A title with its subtitle: the two lines that name a card, a row or a setting. */
 export function TitleBlock({
   title,
   subtitle,
-  size = "card",
+  size = "lg",
   tone = "neutral",
   mono = false,
   truncate = false,

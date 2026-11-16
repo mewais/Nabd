@@ -1,49 +1,38 @@
 import type { CSSProperties, ReactNode } from "react";
-import { ButtonBase } from "./button-base";
-import { COLOR, RADIUS, TEXT, tint, toneColor } from "./tokens";
+import { CENTERED } from "./styles";
+import { COLOR, FONT_WEIGHT, RADIUS, TEXT, tint, toneColor } from "./tokens";
 import type { Tone } from "./tokens";
 
 interface BadgeProps {
   /** One or two characters. */
   children?: ReactNode;
   tone?: Tone;
-  /** With this the badge is a button. */
-  onClick?: () => void;
-  /** Tooltip; for a button also what clicking does. */
+  /** Tooltip. */
   title?: string;
 }
 
 const SIZE = 24;
 
-function boxStyle(tone: Tone): CSSProperties {
+/** The look of a badge: a small square mono marker, tinted by its tone. Also a badge-shaped button's. */
+export function badgeStyle(tone: Tone): CSSProperties {
   const color = toneColor(tone);
   return {
     ...TEXT.monoCaption,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flex: "none",
+    ...CENTERED,
     width: SIZE,
     height: SIZE,
     borderRadius: RADIUS.chip,
-    fontWeight: 700,
+    fontWeight: FONT_WEIGHT.bold,
     background: color === null ? COLOR.surfaceAlt : tint(color, "soft"),
     color: color ?? COLOR.textFaint,
   };
 }
 
-/** A small square mono marker, such as a set's number in a table. */
-export function Badge({ children, tone = "neutral", onClick, title }: BadgeProps): JSX.Element {
-  if (!onClick) {
-    return (
-      <span title={title} style={boxStyle(tone)}>
-        {children}
-      </span>
-    );
-  }
+/** A small square mono marker, such as a set's number in a table. For one that can be pressed, use `Button variant="badge"`. */
+export function Badge({ children, tone = "neutral", title }: BadgeProps): JSX.Element {
   return (
-    <ButtonBase onClick={onClick} title={title} style={boxStyle(tone)}>
+    <span title={title} style={badgeStyle(tone)}>
       {children}
-    </ButtonBase>
+    </span>
   );
 }

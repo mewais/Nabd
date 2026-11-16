@@ -14,6 +14,7 @@
     "@nabd/ipc-client": "workspace:*",
     "@nabd/modals": "workspace:*",
     "@nabd/planner": "workspace:*",
+    "@nabd/program-editor": "workspace:*",
     "@nabd/progress": "workspace:*",
     "@nabd/shell": "workspace:*",
     "@nabd/store": "workspace:*",

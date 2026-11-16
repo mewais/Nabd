@@ -3,7 +3,6 @@
 
 export { createNabdStore } from "./store";
 export type { NabdActions, NabdStore } from "./slices";
-export type { Confirmation } from "./state";
 export {
   selectCoach,
   selectCoverage,

@@ -9,8 +9,8 @@ import type {
   ProgramType,
   Schedule,
 } from "@nabd/domain";
-import { MUSCLE_NAMES, plural } from "@nabd/domain";
-import { WEEKDAY_SLOTS, fitsWeekdaySchedule } from "@nabd/program-editor";
+import { DAYS_PER_WEEK, MUSCLE_NAMES, plural } from "@nabd/domain";
+import { fitsWeekdaySchedule } from "@nabd/program-editor";
 import { buildBoardVM } from "./board-vm";
 import type { BoardVM } from "./board-vm";
 import { buildEditorVM, resolvePlannerDay } from "./editor-vm";
@@ -63,7 +63,7 @@ interface PlannerInput {
 /** A weekday schedule holds one day per weekday, so a longer plan cannot switch to it. */
 function weekdayBlocked(program: Program): string | null {
   if (fitsWeekdaySchedule(program)) return null;
-  return `A week has room for ${WEEKDAY_SLOTS} days; this plan has ${program.days.length}`;
+  return `A week has room for ${DAYS_PER_WEEK} days; this plan has ${program.days.length}`;
 }
 
 function buildRailVM(volume: MuscleVolume): RailVM {

@@ -1,6 +1,6 @@
+import type { AdviceWording } from "@nabd/domain";
 import type { AdviceChoice } from "@nabd/view";
 import { AdviceCard } from "./advice-card";
-import type { AdviceText } from "./advice-card";
 import { Chip } from "./chip";
 import { Row } from "./row";
 import { Stack } from "./stack";
@@ -15,7 +15,7 @@ interface NextSetBlockProps {
   /** The plan's note on the exercise; empty when there is none. */
   notes: string;
   /** Null for a set that is not something to progress on. */
-  advice: AdviceText | null;
+  advice: AdviceWording | null;
   /** When given, the advice's targets can be applied. */
   onApplyAdvice?: (which: AdviceChoice) => void;
   /** `hero` (default) as a screen's headline; `form` at the head of a form, where the line is the accent. */

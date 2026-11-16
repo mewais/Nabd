@@ -2,16 +2,16 @@ import { EXERCISE, day, plan, loggedSet, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { bench, curl } = EXERCISE;
+const { dumbbellBench, curl } = EXERCISE;
 
 const TUESDAY = dayAfter(MONDAY);
 const WEDNESDAY = dayAfter(TUESDAY);
 
 /** A plan of 4 sets a day; Monday done in full and Tuesday by half, every set logged by hand at 10:00. */
 const stored = {
-  program: plan([day("Upper", [planned(bench.id), planned(curl.id)])]),
+  program: plan([day("Upper", [planned(dumbbellBench.id), planned(curl.id)])]),
   history: [MONDAY, TUESDAY].flatMap((date) =>
-    [1, 2, 3].map(() => loggedSet(bench.id, { day: date, reps: 8, kg: 20 })),
+    [1, 2, 3].map(() => loggedSet(dumbbellBench.id, { day: date, reps: 8, kg: 20 })),
   ),
   dayLog: [
     { date: MONDAY, planned: 4, done: 4 },
@@ -80,8 +80,8 @@ test("Progress reflects the days before and the day just worked", async ({ app }
   await test.step("a progression row opens the exercise's full history", async () => {
     await expect(progress.screen.getByRole("meter", { name: "Chest" })).toBeVisible();
     await expect(progress.progressionRow(curl.name)).toBeVisible();
-    await progress.progressionRow(bench.name).click();
-    const history = progress.history(bench.name);
+    await progress.progressionRow(dumbbellBench.name).click();
+    const history = progress.history(dumbbellBench.name);
     await expect(history).toContainText(`Since ${MONDAY} · 3 sessions`);
     await expect(history).toContainText("Personal best");
     await expect(history.getByRole("img", { name: /^Dumbbell Bench Press, / })).toBeVisible();

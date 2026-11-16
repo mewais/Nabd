@@ -1,7 +1,7 @@
 import type { StatFigure } from "@nabd/design-system";
 import type { WeightUnit } from "@nabd/domain";
 import { formatAmount, formatGain, plural } from "@nabd/domain";
-import type { ExerciseTrend } from "@nabd/progression";
+import type { ExerciseProgress } from "@nabd/progression";
 import { trendIn } from "@nabd/progression";
 
 /** Everything the full-history chart shows. */
@@ -19,8 +19,15 @@ export interface ChartVM {
   endLabel: string;
 }
 
-/** The chart of `trend`, an exercise called `exercise`, with loads shown in `unit`. */
-export function buildChartVM(exercise: string, trend: ExerciseTrend, unit: WeightUnit): ChartVM {
+/** The chart of exercise `exId`'s trend, with loads shown in `unit`; null when it has none. */
+export function buildChartVM(
+  progress: ExerciseProgress,
+  exId: string,
+  unit: WeightUnit,
+): ChartVM | null {
+  const trend = progress.trendOf(exId);
+  if (!trend) return null;
+  const exercise = progress.nameOf(exId);
   const shown = trendIn(trend, unit);
   return {
     exercise,

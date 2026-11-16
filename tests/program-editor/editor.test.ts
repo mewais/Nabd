@@ -1,5 +1,5 @@
 import type { Program } from "@nabd/domain";
-import { EMPTY_PROGRAM } from "@nabd/domain";
+import { EMPTY_PROGRAM, WEEK_ORDER } from "@nabd/domain";
 import {
   bench,
   fly,
@@ -81,10 +81,7 @@ describe("ProgramEditor — program and days", () => {
   });
 
   it("a weekday schedule takes at most one day per weekday", () => {
-    const week = apply(
-      EMPTY_PROGRAM,
-      ...[1, 2, 3, 4, 5, 6, 0].map((wd) => edit((e) => e.addDay(wd))),
-    );
+    const week = apply(EMPTY_PROGRAM, ...WEEK_ORDER.map((wd) => edit((e) => e.addDay(wd))));
     expect(week.days).toHaveLength(7);
     expect(apply(week, (e) => e.addDay(null))).toBe(week);
 

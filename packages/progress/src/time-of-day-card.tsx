@@ -1,7 +1,7 @@
 import { BarChart, Card, Chip, EmptyNote } from "@nabd/design-system";
 import { isEmpty } from "./empty-vm";
 import type { EmptyVM } from "./empty-vm";
-import type { TimeOfDayVM } from "./stats-vm";
+import type { TimeOfDayVM } from "./time-of-day-vm";
 
 interface TimeOfDayCardProps {
   vm: TimeOfDayVM | EmptyVM;

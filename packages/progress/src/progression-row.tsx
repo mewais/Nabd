@@ -1,9 +1,10 @@
 import { Chip, Grid, Icon, Row, RowButton, Sparkline, Text } from "@nabd/design-system";
+import type { GridColumns } from "@nabd/design-system";
 import type { ProgressActions } from "./progress-actions";
 import type { ProgressionRowVM } from "./progress-vm";
 
 /** The table's columns: exercise, trend, best, gain, chevron. */
-export const PROGRESSION_COLUMNS = "1.3fr 1.5fr 132px 132px 16px";
+export const PROGRESSION_COLUMNS: GridColumns = [1.3, 1.5, "figure", "figure", "icon"];
 
 interface ProgressionRowProps {
   vm: ProgressionRowVM;
@@ -20,15 +21,15 @@ export function ProgressionRow({ vm, actions }: ProgressionRowProps): JSX.Elemen
         </Text>
         <Sparkline series={vm.series} />
         <Row as="span" justify="end" gap="xs">
-          <Icon name="trophy" size={12} tone="accent" />
+          <Icon name="trophy" size="xs" tone="accent" />
           <Text as="span" variant="monoValue">
             {vm.best}
           </Text>
         </Row>
-        <Chip variant="box" tone={vm.up ? "success" : "neutral"}>
+        <Chip variant="entry" tone={vm.up ? "success" : "neutral"}>
           {vm.gain}
         </Chip>
-        <Icon name="chevron-right" size={14} tone="faint" />
+        <Icon name="chevron-right" size="sm" tone="faint" />
       </Grid>
     </RowButton>
   );

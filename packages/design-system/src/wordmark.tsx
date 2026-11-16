@@ -1,4 +1,4 @@
-import { COLOR, TEXT } from "./tokens";
+import { COLOR, FONT_WEIGHT, TEXT } from "./tokens";
 
 /**
  * The app's name in Latin and Arabic. The Arabic word is not letter-spaced:
@@ -7,8 +7,8 @@ import { COLOR, TEXT } from "./tokens";
 export function Wordmark(): JSX.Element {
   return (
     <div style={{ ...TEXT.heading, whiteSpace: "nowrap" }}>
-      Nabd <span style={{ color: COLOR.textFaint, fontWeight: 600 }}>·</span>{" "}
-      <span lang="ar" style={{ letterSpacing: 0, fontWeight: 700 }}>
+      Nabd <span style={{ color: COLOR.textFaint, fontWeight: FONT_WEIGHT.semibold }}>·</span>{" "}
+      <span lang="ar" style={{ letterSpacing: 0, fontWeight: FONT_WEIGHT.bold }}>
         نبض
       </span>
     </div>

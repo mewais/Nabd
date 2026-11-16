@@ -1,7 +1,14 @@
 // The week board: Mon–Sun for a weekday schedule, DAY 1..N plus "add" for a floating one.
 
-import type { Day, ExerciseLookup, Program, Schedule } from "@nabd/domain";
-import { MUSCLE_NAMES, WEEK_ORDER, exerciseName, weekdayName, weekdayShort } from "@nabd/domain";
+import type { Day, ExerciseLookup, Program, Schedule, Weekday } from "@nabd/domain";
+import {
+  MUSCLE_NAMES,
+  WEEK_ORDER,
+  exerciseName,
+  isFloating,
+  weekdayName,
+  weekdayShort,
+} from "@nabd/domain";
 import { dayOrdinal } from "./wording";
 
 interface BoardChipVM {
@@ -26,7 +33,7 @@ export interface RestColumnVM {
   kind: "rest";
   /** "Tue" */
   label: string;
-  weekday: number;
+  weekday: Weekday;
   /** "Add a day on Tuesday" */
   addLabel: string;
 }
@@ -69,7 +76,7 @@ export function buildBoardVM(
     };
   };
 
-  if (program.schedule === "floating") {
+  if (isFloating(program)) {
     return {
       schedule: "floating",
       columns: [

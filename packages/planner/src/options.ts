@@ -1,6 +1,6 @@
 // The planner's pickers: what each one offers.
 
-import type { Intensity, ProgramType, Schedule } from "@nabd/domain";
+import type { Intensity, ProgramType, Schedule, Weekday } from "@nabd/domain";
 import {
   INTENSITIES,
   INTENSITY_NAMES,
@@ -29,9 +29,9 @@ export function scheduleOptions(weekdayBlocked: string | null): SegOption<Schedu
   ];
 }
 
-/** Monday to Sunday, by initial; the value is the weekday number as text. */
-export const WEEKDAY_OPTIONS: readonly SegOption[] = WEEK_ORDER.map((weekday) => ({
-  value: String(weekday),
+/** Monday to Sunday, by initial, each named in full. */
+export const WEEKDAY_INITIAL_OPTIONS: readonly SegOption<Weekday>[] = WEEK_ORDER.map((weekday) => ({
+  value: weekday,
   label: weekdayInitial(weekday),
   ariaLabel: weekdayName(weekday),
   title: weekdayName(weekday),

@@ -14,7 +14,7 @@ export function SupersetToggle({ linked, onToggle }: SupersetToggleProps): JSX.E
     </Button>
   ) : (
     <Button variant="link" size="sm" tone="success" onClick={onToggle}>
-      <Icon name="link" size={13} />
+      <Icon name="link" size="sm" />
       Superset ↓
     </Button>
   );

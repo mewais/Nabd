@@ -1,9 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
+import { PageRegion } from "./region";
 
 export type Screen = "Today" | "Plan" | "Progress";
 
-/** The app chrome: sidebar, top bar, and the nudge toast that floats over every screen. */
-export class Shell {
+/** The app chrome — sidebar, top bar, and the nudge toast that floats over every screen; its buttons are the top bar's. */
+export class Shell extends PageRegion {
   readonly topBar: Locator;
   /** The clock and where nudging stands: "09:00 Next nudge at 09:50, sooner if you go idle". */
   readonly status: Locator;
@@ -18,10 +19,12 @@ export class Shell {
   /** The root element, which carries the theme. */
   readonly root: Locator;
 
-  constructor(private readonly page: Page) {
-    this.topBar = page
+  constructor(page: Page) {
+    const topBar = page
       .getByRole("banner")
       .filter({ has: page.getByRole("radiogroup", { name: "Theme" }) });
+    super(page, topBar);
+    this.topBar = topBar;
     this.status = this.topBar.getByRole("status");
     this.ring = page.getByRole("img", { name: /done today$/ });
     this.toast = page.getByRole("status").filter({ hasText: "Time to move" });
@@ -36,11 +39,6 @@ export class Shell {
 
   async goTo(screen: Screen): Promise<void> {
     await this.page.getByRole("navigation").getByRole("button", { name: screen }).click();
-  }
-
-  /** A top-bar button: "Pause", "Resume", "Settings". */
-  button(name: string): Locator {
-    return this.topBar.getByRole("button", { name, exact: true });
   }
 
   /** The top bar's theme choice: "Light" or "Dark". */

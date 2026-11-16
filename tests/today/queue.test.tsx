@@ -5,8 +5,8 @@
 
 import { fireEvent, screen } from "@testing-library/react";
 import type { TodayVM } from "@nabd/today";
-import { working } from "../support/builders";
-import { did, mondayProgram, planRow } from "../support/programs";
+import { slot, working } from "../support/builders";
+import { did, fullBodyMonday, mondayProgram, planRow } from "../support/programs";
 import { todayVM } from "./fixtures";
 import { queueCard, queueRow, renderToday } from "./render";
 
@@ -84,29 +84,8 @@ describe("Today · queue", () => {
 });
 
 describe("Today · muscle targets without exercises", () => {
-  const cycled = (pool: string[]) => ({
-    ...mondayProgram([]),
-    type: "cycled" as const,
-    days: [
-      {
-        id: "mon",
-        name: "Full body",
-        weekday: 1,
-        exercises: [],
-        slots: [
-          {
-            id: "s1",
-            muscle: "lats" as const,
-            pool,
-            repMode: "range" as const,
-            intensity: "none" as const,
-            rest: 90,
-            sets: [working(8, 12)],
-          },
-        ],
-      },
-    ],
-  });
+  const cycled = (pool: string[]) =>
+    fullBodyMonday([slot("lats", pool, [working(8, 12)], { id: "s1" })]);
 
   it("says which targets were left out of the queue", () => {
     renderToday(todayVM({ program: cycled([]) }));

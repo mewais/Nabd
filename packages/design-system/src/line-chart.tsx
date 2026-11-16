@@ -1,6 +1,6 @@
 import { roundTo } from "@nabd/domain";
 import { seriesScale } from "./series-scale";
-import { COLOR, FONT, FONT_SIZE, tint } from "./tokens";
+import { COLOR, FONT, TEXT, tint } from "./tokens";
 
 const BOX = { width: 680, height: 240, pad: 30 };
 const BASELINE = BOX.height - BOX.pad;
@@ -39,7 +39,13 @@ export function LineChart({ series, ariaLabel }: LineChartProps): JSX.Element {
             stroke={COLOR.line}
             strokeWidth={1}
           />
-          <text x={6} y={scale.y(level)} dy={4} fill={COLOR.textFaint} fontSize={FONT_SIZE.tiny}>
+          <text
+            x={6}
+            y={scale.y(level)}
+            dy={4}
+            fill={COLOR.textFaint}
+            fontSize={TEXT.monoCaption.fontSize}
+          >
             {tick(level)}
           </text>
         </g>

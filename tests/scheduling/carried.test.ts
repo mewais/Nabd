@@ -240,10 +240,18 @@ describe("the day that comes back", () => {
 
   it("is not on record until a set is logged that day, however much it carries", () => {
     expect(tuesday().ledger.record()).toBeNull();
-    expect(tuesday().ledger.record(true)).toEqual({ date: dateKey(TUESDAY), planned: 6, done: 0 });
+    expect(tuesday().ledger.closedRecord()).toEqual({
+      date: dateKey(TUESDAY),
+      planned: 6,
+      done: 0,
+    });
   });
 
   it("stands, so far, at what it owes: Progress shows what Today shows", () => {
-    expect(tuesday().ledger.soFar()).toEqual({ date: dateKey(TUESDAY), planned: 6, done: 0 });
+    expect(tuesday().ledger.closedRecord()).toEqual({
+      date: dateKey(TUESDAY),
+      planned: 6,
+      done: 0,
+    });
   });
 });

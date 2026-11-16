@@ -2,7 +2,7 @@ import { EXERCISE, day, loggedSet, plan, planned, workingSets } from "../support
 import { expect, test } from "../support/fixtures";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const { bench, pullUp } = EXERCISE;
+const { dumbbellBench, pullUp } = EXERCISE;
 
 const LAST_FRIDAY = dayAfter(MONDAY, -3);
 const TUESDAY = dayAfter(MONDAY);
@@ -12,11 +12,19 @@ test("a warm-up starts from the last warm-up, and the working set after it from 
 }) => {
   const { today, logger } = app;
   const program = plan([
-    day("Push", [planned(bench.id, { sets: [{ type: "warmup", amount: 12 }, ...workingSets(2)] })]),
+    day("Push", [
+      planned(dumbbellBench.id, { sets: [{ type: "warmup", amount: 12 }, ...workingSets(2)] }),
+    ]),
   ]);
   const history = [
-    loggedSet(bench.id, { day: LAST_FRIDAY, time: "10:00", reps: 12, kg: 10, type: "warmup" }),
-    loggedSet(bench.id, { day: LAST_FRIDAY, time: "10:05", reps: 10, kg: 20 }),
+    loggedSet(dumbbellBench.id, {
+      day: LAST_FRIDAY,
+      time: "10:00",
+      reps: 12,
+      kg: 10,
+      type: "warmup",
+    }),
+    loggedSet(dumbbellBench.id, { day: LAST_FRIDAY, time: "10:05", reps: 10, kg: 20 }),
   ];
   await app.launch(at("10:00"), { program, history });
   await today.startSet.click();
@@ -102,6 +110,6 @@ test("a bodyweight exercise is worded and advised in reps until weight is added"
 
 test("an exercise that needs a load asks for one the first time", async ({ app }) => {
   const { today } = app;
-  await app.launch(at("10:00"), { program: plan([day("Push", [planned(bench.id)])]) });
+  await app.launch(at("10:00"), { program: plan([day("Push", [planned(dumbbellBench.id)])]) });
   await expect(today.screen).toContainText("8 reps — pick a starting weight");
 });

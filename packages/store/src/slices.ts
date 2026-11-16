@@ -5,6 +5,7 @@ import type { AppData, Direction, ExerciseDraft, Settings } from "@nabd/domain";
 import type { ProgramEdit } from "@nabd/program-editor";
 import type {
   AdviceChoice,
+  Confirmation,
   LibraryState,
   LibraryTarget,
   MapStyle,
@@ -12,7 +13,7 @@ import type {
   ProgressTab,
   Screen,
 } from "@nabd/view";
-import type { Confirmation, NabdState } from "./state";
+import type { NabdState } from "./state";
 
 export interface DaySlice {
   /** Load persisted state from the backend and open today. Never rejects (see `loadProblems`). */

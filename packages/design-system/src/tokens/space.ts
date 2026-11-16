@@ -11,7 +11,6 @@ export const SPACE = {
   lg: 16,
   xl: 20,
   xxl: 24,
-  xxxl: 32,
 } as const;
 
 /** A step of the spacing scale. */

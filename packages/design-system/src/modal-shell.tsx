@@ -5,8 +5,9 @@ import { IconButton } from "./icon-button";
 import { Row } from "./row";
 import { Stack } from "./stack";
 import { Text } from "./text";
+import { CENTERED, COLUMN } from "./styles";
 import { COLOR, HAIRLINE, RADIUS, SHADOW, SPACE, Z } from "./tokens";
-import type { ModalLayer } from "./tokens";
+import type { ModalLayer, Size } from "./tokens";
 import { useEscapeKey } from "./use-escape-key";
 import { useFocusTrap } from "./use-focus-trap";
 
@@ -17,10 +18,10 @@ interface ModalShellProps {
   /** A line of context under the title. */
   subtitle?: ReactNode;
   onClose: () => void;
-  /** Panel width in px (it never exceeds the window). */
-  width: number;
-  /** A fixed panel height in px; by default the panel is as tall as its content. */
-  height?: number;
+  /** How wide the panel is (it never exceeds the window): a question, a form or a list, a workspace. */
+  width: ModalWidth;
+  /** The panel keeps its full height whatever it shows, so a list that shrinks does not make it jump; by default it is as tall as its content. */
+  tall?: boolean;
   /** Stacking layer; a modal opened over another modal needs a higher one. */
   layer?: ModalLayer;
   /** What stays put under the scrolling body: the dialog's closing actions. */
@@ -28,12 +29,17 @@ interface ModalShellProps {
   children?: ReactNode;
 }
 
+type ModalWidth = Extract<Size, "sm" | "md" | "lg">;
+
+/** Panel widths, in px. */
+const WIDTH: Record<ModalWidth, number> = { sm: 420, md: 560, lg: 760 };
+/** The height of a `tall` panel, in px. */
+const TALL_HEIGHT = 680;
+
 const BACKDROP: CSSProperties = {
+  ...CENTERED,
   position: "fixed",
   inset: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
   padding: SPACE.xl,
   background: COLOR.scrim,
 };
@@ -41,9 +47,7 @@ const BACKDROP: CSSProperties = {
 const PANEL: CSSProperties = {
   maxWidth: "100%",
   maxHeight: "90vh",
-  boxSizing: "border-box",
-  display: "flex",
-  flexDirection: "column",
+  ...COLUMN,
   overflow: "hidden",
   background: COLOR.modal,
   border: HAIRLINE,
@@ -59,8 +63,7 @@ const BODY: CSSProperties = {
   flex: 1,
   minHeight: 0,
   overflowY: "auto",
-  display: "flex",
-  flexDirection: "column",
+  ...COLUMN,
 };
 
 /**
@@ -71,7 +74,7 @@ const BODY: CSSProperties = {
  * was when it closes.
  */
 export function ModalShell(props: ModalShellProps): JSX.Element {
-  const { title, eyebrow, subtitle, onClose, width, height, layer = "modal", footer } = props;
+  const { title, eyebrow, subtitle, onClose, width, tall = false, layer = "modal", footer } = props;
   const titleId = useId();
   const trap = useFocusTrap<HTMLDivElement>();
   useEscapeKey(onClose);
@@ -91,7 +94,7 @@ export function ModalShell(props: ModalShellProps): JSX.Element {
         tabIndex={-1}
         onKeyDown={trap.onKeyDown}
         onClick={(event) => event.stopPropagation()}
-        style={{ ...PANEL, width, height }}
+        style={{ ...PANEL, width: WIDTH[width], height: tall ? TALL_HEIGHT : undefined }}
       >
         <Row as="header" align="start" gap="lg" paddingX="xxl" paddingY="xl" edge="bottom">
           <Stack gap="xs" grow>

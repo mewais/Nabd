@@ -1,9 +1,8 @@
-import type { WeightUnit } from "@nabd/domain";
+import type { AdviceWording, WeightUnit } from "@nabd/domain";
 import { muscleNames } from "@nabd/domain";
 import type { PlanItem } from "@nabd/scheduling";
 import type { Coach } from "./coach";
 import { describeAdvice, describeSetPosition, formatTarget } from "./wording";
-import type { AdviceWording } from "./wording";
 
 /** The next set of an exercise in words: everything Today and the logger say about it. */
 export interface NextSetWording {

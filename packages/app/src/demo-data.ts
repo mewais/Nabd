@@ -4,10 +4,11 @@
 import type { Day, ExercisePrescription, LoggedSet, Program, SetSpec } from "@nabd/domain";
 import { TRIGGERS, addDays, isWeighted, loggedSet } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
+import { initialPrescription } from "@nabd/program-editor";
 
 const working = (lo: number, hi: number): SetSpec => ({ type: "working", amount: lo, upTo: hi });
 
-/** A plan row of three working sets of `lo`–`hi`, unless `more` says otherwise. */
+/** A plan row of three working sets of `lo`–`hi`, as the planner prescribes them, unless `more` says otherwise. */
 function planned(
   exId: string,
   lo: number,
@@ -15,7 +16,7 @@ function planned(
   more: Partial<ExercisePrescription> = {},
 ): ExercisePrescription {
   const sets = [working(lo, hi), working(lo, hi), working(lo, hi)];
-  return { id: exId, exId, repMode: "range", intensity: "none", rest: 90, sets, ...more };
+  return { id: exId, exId, ...initialPrescription("reps"), sets, ...more };
 }
 
 /** The day's main lift: a warm-up, then three sets at RPE 8 with a long rest. */
@@ -28,7 +29,7 @@ function mainLift(exId: string, lo: number, hi: number): ExercisePrescription {
 /** Three timed holds of `seconds`. */
 function hold(exId: string, seconds: number): ExercisePrescription {
   const sets: SetSpec[] = [1, 2, 3].map(() => ({ type: "working", amount: seconds }));
-  return { id: exId, exId, repMode: "time", intensity: "none", rest: 60, sets };
+  return { id: exId, exId, ...initialPrescription("time"), sets };
 }
 
 const day = (id: string, name: string, exercises: ExercisePrescription[]): Day => ({

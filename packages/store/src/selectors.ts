@@ -146,7 +146,7 @@ export const selectExerciseProgress = memoize(
 const selectTodayRecord = memoize(
   (s) => [selectTodayPlan(s)] as const,
   (plan): DayRecord[] => {
-    const record = plan.ledger.soFar();
+    const record = plan.ledger.closedRecord();
     return record === null ? [] : [record];
   },
 );

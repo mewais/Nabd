@@ -10,7 +10,7 @@ interface RestCardProps {
 /** A weekday with no training day yet. */
 export function RestCard({ vm, actions }: RestCardProps): JSX.Element {
   return (
-    <Card variant="tile" padding="md" stacked>
+    <Card variant="tile" padding="md">
       <Stack gap="xs">
         <Text variant="eyebrow">{vm.label}</Text>
         <Text variant="label" tone="faint">
@@ -19,9 +19,8 @@ export function RestCard({ vm, actions }: RestCardProps): JSX.Element {
       </Stack>
       <Spacer />
       <Button
-        variant="ghost"
+        variant="add"
         size="sm"
-        dashed
         block
         ariaLabel={vm.addLabel}
         onClick={() => actions.edit((e) => e.addDay(vm.weekday))}
