@@ -17,6 +17,7 @@
     "types": ["node"],
     "paths": {
       "@nabd/domain": ["./packages/domain/src/index.ts"],
+      "@nabd/view": ["./packages/view/src/index.ts"],
       "@nabd/dataset": ["./packages/dataset/src/index.ts"],
       "@nabd/coverage": ["./packages/coverage/src/index.ts"],
       "@nabd/scheduling": ["./packages/scheduling/src/index.ts"],
@@ -34,8 +35,9 @@
       "@nabd/today": ["./packages/today/src/index.ts"],
       "@nabd/planner": ["./packages/planner/src/index.ts"],
       "@nabd/progress": ["./packages/progress/src/index.ts"],
-      "@nabd/modals": ["./packages/modals/src/index.ts"]
+      "@nabd/modals": ["./packages/modals/src/index.ts"],
+      "@nabd/app/*": ["./packages/app/src/*"]
     }
   },
-  "include": ["packages/*/src", "packages/*/*.ts", "tests", "e2e", "assets", "scripts/*.ts", "*.ts"]
+  "include": ["packages/*/src", "packages/*/*.ts", "tests", "e2e", "scripts/*.ts", "*.ts"]
 }

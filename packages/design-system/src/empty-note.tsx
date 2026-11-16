@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export interface EmptyNoteProps {
+interface EmptyNoteProps {
   children?: ReactNode;
 }
 

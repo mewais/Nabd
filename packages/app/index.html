@@ -24,7 +24,7 @@
       /* Until React has rendered, show the dark theme's background instead of a
          blank frame. Not on html/body: Glass needs those to stay transparent. */
       #root:empty {
-        background: oklch(0.21 0.014 265);
+        background: %PREPAINT_BACKGROUND%;
       }
       ::-webkit-scrollbar {
         width: 10px;

@@ -1,6 +1,6 @@
 import { DEFAULT_SETTINGS, EMPTY_PROGRAM } from "@nabd/domain";
 import { createMemoryBackend } from "@nabd/ipc-client";
-import { exercise, logged, nov } from "../support/domain-factories";
+import { exercise, logged, nov } from "../support/builders";
 
 describe("the in-memory backend", () => {
   it("starts with nothing saved, like a fresh install", async () => {

@@ -4,7 +4,7 @@ import type { LibraryActions } from "./library-actions";
 import { LibraryBrowser } from "./library-browser";
 import type { LibraryVM } from "./library-vm";
 
-export interface LibraryModalProps {
+interface LibraryModalProps {
   vm: LibraryVM;
   actions: LibraryActions;
 }
@@ -14,9 +14,9 @@ export function LibraryModal({ vm, actions }: LibraryModalProps): JSX.Element {
   return (
     <ModalShell title={vm.title} onClose={actions.close} width={560} height={680} layer="modalOver">
       {vm.mode === "browse" ? (
-        <LibraryBrowser browser={vm.browser} actions={actions} />
+        <LibraryBrowser vm={vm.browser} actions={actions} />
       ) : (
-        <ExerciseForm form={vm.form} actions={actions} />
+        <ExerciseForm vm={vm.form} actions={actions} />
       )}
     </ModalShell>
   );

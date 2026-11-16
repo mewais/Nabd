@@ -1,7 +1,7 @@
 import { ExerciseLibrary } from "@nabd/dataset";
 import { createNabdStore, selectStats, selectTodayPlan } from "@nabd/store";
-import { createDemoClient } from "../../packages/app/src/demo";
-import { DEMO_PROGRAM } from "../../packages/app/src/demo-data";
+import { createDemoClient } from "@nabd/app/demo";
+import { DEMO_PROGRAM } from "@nabd/app/demo-data";
 
 describe("the browser demo", () => {
   it("plans only exercises the catalog has", () => {

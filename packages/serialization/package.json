@@ -8,9 +8,10 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run --root ../.. --project serialization"
   },
   "dependencies": {
+    "@nabd/dataset": "workspace:*",
     "@nabd/domain": "workspace:*"
   }
 }

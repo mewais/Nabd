@@ -1,17 +1,17 @@
 import { Button, Chip } from "@nabd/design-system";
-import type { SlotCardVM } from "./editor-vm";
+import type { PoolEntryVM } from "./editor-vm";
 
 interface PoolChipsProps {
-  pool: SlotCardVM["pool"];
+  vm: PoolEntryVM[];
   onRemove: (exId: string) => void;
   onAdd: () => void;
 }
 
 /** The exercises a slot rotates through, each removable, and a way to add one. */
-export function PoolChips({ pool, onRemove, onAdd }: PoolChipsProps): JSX.Element {
+export function PoolChips({ vm, onRemove, onAdd }: PoolChipsProps): JSX.Element {
   return (
     <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
-      {pool.map((entry) => (
+      {vm.map((entry) => (
         <Chip
           key={entry.id}
           variant="box"

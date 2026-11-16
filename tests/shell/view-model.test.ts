@@ -1,5 +1,5 @@
 import type { ShellInput, ShellVM } from "@nabd/shell";
-import { nov } from "../support/domain-factories";
+import { nov } from "../support/builders";
 import { shellVM } from "./fixtures";
 
 describe("buildShellVM · greeting and date", () => {
@@ -90,7 +90,7 @@ describe("buildShellVM · theme, glass, pause and notice", () => {
   it("offers glass, and turns it on when the setting is on, where the platform has it", () => {
     const vm = shellVM({
       settings: { theme: "dark", glass: true, opacity: 0.7 },
-      glassSupported: true,
+      capabilities: { glass: true },
     });
     expect(vm.glass).toBe(true);
     expect(vm.topBar).toMatchObject({ glassAvailable: true, glass: true });
@@ -99,7 +99,7 @@ describe("buildShellVM · theme, glass, pause and notice", () => {
   it("neither offers nor applies a stored glass setting where the platform lacks it", () => {
     const vm = shellVM({
       settings: { theme: "dark", glass: true, opacity: 0.7 },
-      glassSupported: false,
+      capabilities: { glass: false },
     });
     expect(vm.glass).toBe(false);
     expect(vm.topBar).toMatchObject({ glassAvailable: false, glass: false });

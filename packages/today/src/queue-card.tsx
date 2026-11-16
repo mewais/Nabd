@@ -1,18 +1,17 @@
 import { Card, TEXT } from "@nabd/design-system";
 import { QueueRow } from "./queue-row";
-import type { QueueRowVM } from "./queue-vm";
+import type { QueueVM } from "./queue-vm";
+import type { TodayActions } from "./today-actions";
 
 interface QueueCardProps {
-  dayName: string | null;
-  rows: QueueRowVM[];
-  onStart: (itemId: string) => void;
-  onToggleSkip: (itemId: string) => void;
+  vm: QueueVM;
+  actions: Pick<TodayActions, "start" | "toggleSkip">;
 }
 
 /** Today's exercises in order. Any of them can be started, whatever the order. */
-export function QueueCard({ dayName, rows, onStart, onToggleSkip }: QueueCardProps): JSX.Element {
+export function QueueCard({ vm, actions }: QueueCardProps): JSX.Element {
   return (
-    <Card padding={0} style={{ overflow: "hidden" }}>
+    <Card ariaLabel="Today's rhythm" padding={0} style={{ overflow: "hidden" }}>
       <div
         style={{
           display: "flex",
@@ -22,11 +21,13 @@ export function QueueCard({ dayName, rows, onStart, onToggleSkip }: QueueCardPro
         }}
       >
         <div style={TEXT.cardTitle}>{"Today's rhythm"}</div>
-        {dayName !== null && <div style={TEXT.hint}>{dayName}</div>}
+        {vm.dayName !== null && <div style={TEXT.hint}>{vm.dayName}</div>}
       </div>
-      {rows.map((row) => (
-        <QueueRow key={row.id} row={row} onStart={onStart} onToggleSkip={onToggleSkip} />
-      ))}
+      <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+        {vm.rows.map((row) => (
+          <QueueRow key={row.id} vm={row} actions={actions} />
+        ))}
+      </ul>
     </Card>
   );
 }

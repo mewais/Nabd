@@ -2,7 +2,7 @@ import { seriesScale } from "./series-scale";
 
 const BOX = { width: 120, height: 34, pad: 5 };
 
-export interface SparklineProps {
+interface SparklineProps {
   /** The values, oldest first. */
   series: readonly number[];
   /** Describes the trend for assistive tech. */

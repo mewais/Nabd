@@ -4,6 +4,7 @@ import type {
   DayState,
   Exercise,
   LoggedSet,
+  PlatformCapabilities,
   Program,
   RotationState,
   Settings,
@@ -27,31 +28,24 @@ export type BootSnapshot = { [K in keyof Singletons]: unknown } & {
 };
 
 /** Why an export file is written: because the user asked, or to keep what an import replaces. */
-export type ExportPurpose = "manual" | "before_import";
+type ExportPurpose = "manual" | "before_import";
 
 /** What the tray menu shows. */
-export interface TrayState {
+interface TrayState {
   nextExercise: string | null;
   done: number;
   total: number;
   paused: boolean;
 }
 
-/** Tray menu actions the backend forwards to the frontend. */
-export type TrayAction = "start" | "pause";
-
-/** What this machine can do; features it lacks are not offered. */
-export interface PlatformCapabilities {
-  /** A tray icon exists, so closing the window hides it there instead of quitting. */
-  tray: boolean;
-  /** The window can be translucent ("Glass"). */
-  glass: boolean;
-  /** The OS reports system-wide idle time. */
-  idle: boolean;
-}
+/**
+ * Tray menu actions the backend forwards to the frontend, which owns the
+ * workout state — and, for "quit", whatever is still waiting to be saved.
+ */
+export type TrayAction = "start" | "pause" | "quit";
 
 /** An OS notification. */
-export interface DesktopNotification {
+interface DesktopNotification {
   title: string;
   body: string;
 }

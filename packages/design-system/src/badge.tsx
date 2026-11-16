@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { FONT, RADIUS, tint, toneColor } from "./tokens";
 import type { Tone } from "./tokens";
 
-export interface BadgeProps {
+interface BadgeProps {
   /** One or two characters. */
   children?: ReactNode;
   tone?: Tone;
@@ -13,8 +13,8 @@ export interface BadgeProps {
 }
 
 function toneStyle(tone: Tone): { background: string; color: string } {
-  if (tone === "neutral") return { background: "var(--surface2)", color: "var(--text3)" };
-  const color = toneColor(tone, "");
+  const color = toneColor(tone);
+  if (color === null) return { background: "var(--surface2)", color: "var(--text3)" };
   return { background: tint(color, 16), color };
 }
 

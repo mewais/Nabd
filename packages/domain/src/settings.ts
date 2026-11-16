@@ -5,8 +5,11 @@ import { WeightUnitSchema, kgFromDisplay } from "./weight";
 import type { WeightUnit } from "./weight";
 
 /** The two real themes (translucency is a separate modifier, not a theme). */
-const ThemeSchema = z.enum(["light", "dark"]);
+export const THEMES = ["light", "dark"] as const;
+const ThemeSchema = z.enum(THEMES);
 export type Theme = z.infer<typeof ThemeSchema>;
+
+export const THEME_NAMES: Record<Theme, string> = { light: "Light", dark: "Dark" };
 
 export const SettingsSchema = z.object({
   theme: ThemeSchema,
@@ -34,8 +37,24 @@ export const SettingsSchema = z.object({
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 
+/** The settings that are numbers, and so are stepped with −/+. */
+export type NumericSetting = {
+  [K in keyof Settings]: Settings[K] extends number ? K : never;
+}[keyof Settings];
+
+/** How far one press of −/+ moves each numeric setting, within the bounds of {@link SettingsSchema}. */
+export const SETTING_STEPS: Record<NumericSetting, number> = {
+  opacity: 0.05,
+  interval: 5,
+  minGap: 5,
+  idleNudge: 5,
+  workStart: 30,
+  workEnd: 30,
+  weightIncrement: 0.25,
+};
+
 /** The conventional plate jump in each unit: what a fresh install steps by. */
-export const DEFAULT_INCREMENT: Record<WeightUnit, number> = { kg: 2.5, lb: 5 };
+const DEFAULT_INCREMENT: Record<WeightUnit, number> = { kg: 2.5, lb: 5 };
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: "dark",

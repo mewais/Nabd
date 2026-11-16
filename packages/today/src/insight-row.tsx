@@ -1,21 +1,21 @@
-import { Swatch, TEXT } from "@nabd/design-system";
+import { RECOMMENDATION_TONES } from "@nabd/bodymap";
+import { Swatch, TEXT, toneColor } from "@nabd/design-system";
 import type { InsightRowVM } from "./coverage-vm";
 
-const DOT_COLOR: Record<InsightRowVM["kind"], string> = {
-  rest: "var(--accent3)",
-  push: "var(--accent)",
-};
+interface InsightRowProps {
+  vm: InsightRowVM;
+}
 
 /** One finding: a dot in the colour of its kind and a sentence with a bold opening. */
-export function InsightRow({ row }: { row: InsightRowVM }): JSX.Element {
+export function InsightRow({ vm }: InsightRowProps): JSX.Element {
   return (
     <div style={{ ...TEXT.body, display: "flex", gap: 11, alignItems: "flex-start" }}>
       <div style={{ display: "flex", height: "1.5em", alignItems: "center" }}>
-        <Swatch color={DOT_COLOR[row.kind]} size={9} />
+        <Swatch color={toneColor(RECOMMENDATION_TONES[vm.kind]) ?? "var(--text3)"} size={9} />
       </div>
       <div>
-        <b>{row.lead}</b>
-        {row.text}
+        <b>{vm.lead}</b>
+        {vm.text}
       </div>
     </div>
   );

@@ -2,7 +2,6 @@
 // (set tables, supersets, cycled slots) and the live coverage rail.
 
 export { PlannerScreen } from "./planner-screen";
-export type { PlannerScreenProps } from "./planner-screen";
-export { buildPlannerVM } from "./view-model";
-export type { PlannerInput, PlannerVM } from "./view-model";
-export type { PlannerActions } from "./actions";
+export { buildPlannerVM } from "./planner-vm";
+export type { PlannerVM } from "./planner-vm";
+export type { PlannerActions } from "./planner-actions";

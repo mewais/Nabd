@@ -1,7 +1,13 @@
 import { dateKey } from "@nabd/domain";
 import type { ExerciseLookup, LoggedSet, WeightUnit } from "@nabd/domain";
-import { ExerciseHistory, ExerciseProgress, assistedScore, estimatedMax } from "@nabd/progression";
-import { exercise, logged, lookupIn, nov } from "../support/domain-factories";
+import {
+  ExerciseHistory,
+  ExerciseProgress,
+  assistedScore,
+  estimatedMax,
+  trendIn,
+} from "@nabd/progression";
+import { exercise, logged, lookupIn, nov } from "../support/builders";
 
 describe("ExerciseHistory", () => {
   const squat = exercise();
@@ -70,8 +76,12 @@ describe("ExerciseHistory", () => {
 });
 
 describe("ExerciseProgress", () => {
+  /** Every trend with its figures as the user reads them in `unit`. */
   const trends = (sets: LoggedSet[], unit: WeightUnit, lookup: ExerciseLookup) =>
-    new ExerciseProgress(sets, lookup, unit).trends;
+    new ExerciseProgress(sets, lookup).trends.map((trend) => ({
+      ...trend,
+      ...trendIn(trend, unit),
+    }));
 
   const bench = exercise({ name: "Bench" });
   const pushUp = exercise({ name: "Push-Up", tracking: "bodyweight_reps" });
@@ -168,13 +178,13 @@ describe("ExerciseProgress", () => {
   });
 
   it("finds the trend of one exercise, and none for one never logged", () => {
-    const progress = new ExerciseProgress(history, library, "kg");
+    const progress = new ExerciseProgress(history, library);
     expect(progress.trendOf(pushUp.id)).toMatchObject({ exId: pushUp.id, series: [10, 14] });
     expect(progress.trendOf("never-logged")).toBeUndefined();
   });
 
   it("names an exercise from the library, else from its logged sets, else by its id", () => {
-    const progress = new ExerciseProgress(history, lookupIn([bench]), "kg");
+    const progress = new ExerciseProgress(history, lookupIn([bench]));
     expect(progress.nameOf(bench.id)).toBe("Bench");
     expect(progress.nameOf(pushUp.id)).toBe("Push-Up");
     expect(progress.nameOf("unknown")).toBe("unknown");

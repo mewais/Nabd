@@ -19,7 +19,22 @@ fn assert_versions_agree() {
     );
 }
 
+/// The window's title is the page's: `<title>` in the frontend's index.html,
+/// handed to the binary as `NABD_WINDOW_TITLE`.
+fn export_window_title() {
+    const INDEX_HTML: &str = "../packages/app/index.html";
+    println!("cargo:rerun-if-changed={INDEX_HTML}");
+    let page = fs::read_to_string(INDEX_HTML).expect("index.html is readable");
+    let title = page
+        .split_once("<title>")
+        .and_then(|(_, rest)| rest.split_once("</title>"))
+        .map(|(title, _)| title.trim())
+        .expect("index.html has a <title>");
+    println!("cargo:rustc-env=NABD_WINDOW_TITLE={title}");
+}
+
 fn main() {
     assert_versions_agree();
+    export_window_title();
     tauri_build::build();
 }

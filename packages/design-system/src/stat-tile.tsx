@@ -3,7 +3,8 @@ import type { CardVariant } from "./card";
 import { TEXT, toneColor } from "./tokens";
 import type { Tone } from "./tokens";
 
-export interface StatTileProps {
+/** One headline figure, as a view-model lists it. */
+export interface StatFigure {
   /** What the figure counts. */
   label: string;
   /** The figure, already formatted. */
@@ -12,6 +13,9 @@ export interface StatTileProps {
   unit?: string;
   /** Colours the figure. */
   tone?: Tone;
+}
+
+interface StatTileProps extends StatFigure {
   /** `card` on the page, `inset` inside a card or a modal. */
   variant?: Extract<CardVariant, "card" | "inset">;
 }
@@ -25,7 +29,7 @@ export function StatTile({
   variant = "card",
 }: StatTileProps): JSX.Element {
   return (
-    <Card variant={variant} padding={16} style={{ flex: 1, minWidth: 0 }}>
+    <Card variant={variant} ariaLabel={label} padding={16} style={{ flex: 1, minWidth: 0 }}>
       <div style={TEXT.cardSubtitle}>{label}</div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginTop: 6 }}>
         <span
@@ -33,7 +37,7 @@ export function StatTile({
             ...TEXT.monoValue,
             fontSize: 24,
             letterSpacing: "-0.02em",
-            color: toneColor(tone, "var(--text)"),
+            color: toneColor(tone) ?? "var(--text)",
           }}
         >
           {value}

@@ -1,13 +1,12 @@
-import { CATALOG } from "../support/catalog";
-import { BENCH, FLY, ROW, boot, flyRow } from "./harness";
-
-const { plank: PLANK } = CATALOG;
+import { CATALOG } from "../support/exercises";
+import { catalogFlyRow } from "../support/programs";
+import { boot } from "./fixtures";
 
 describe("the exercise library", () => {
   it("custom exercises can be created from a draft, used, and deleted everywhere", async () => {
     const app = await boot();
     app.get().openLibrary({ kind: "exercise", dayId: "push" });
-    app.get().startDraft(BENCH);
+    app.get().startDraft(CATALOG.bench);
     expect(app.get().library.draft).toMatchObject({
       name: "Barbell Bench Press (copy)",
       primary: ["chest"],
@@ -30,7 +29,7 @@ describe("the exercise library", () => {
 
     app.get().deleteCustomExercise(custom!.id);
     expect(app.get().customExercises).toEqual([]);
-    expect(app.plan().items.map((i) => i.exercise.id)).toEqual([BENCH, FLY]);
+    expect(app.plan().items.map((i) => i.exercise.id)).toEqual([CATALOG.bench, CATALOG.fly]);
     expect(app.data.customExercises).toEqual([]);
   });
 
@@ -49,15 +48,15 @@ describe("the exercise library", () => {
     app.get().editProgram((e) => e.setType("cycled"));
     const slot = app.get().program.days[0]!.slots[0]!;
     app.get().openLibrary({ kind: "pool", dayId: "push", slotId: slot.id, muscle: slot.muscle });
-    app.get().pickExercise(ROW);
-    expect(app.get().program.days[0]!.slots[0]!.pool).toContain(ROW);
+    app.get().pickExercise(CATALOG.row);
+    expect(app.get().program.days[0]!.slots[0]!.pool).toContain(CATALOG.row);
     expect(app.get().library.target).not.toBeNull();
   });
 
   it("opens with no search and no filter, whatever it was left with", async () => {
     const app = await boot();
     app.get().openLibrary({ kind: "extra" });
-    app.get().patchLibrary({ search: "press", group: "Chest" });
+    app.get().filterLibrary({ search: "press", group: "Chest" });
     app.get().closeLibrary();
     app.get().openLibrary({ kind: "exercise", dayId: "push" });
     expect(app.get().library).toEqual({
@@ -73,34 +72,34 @@ describe("the exercise library", () => {
     app.get().editProgram((e) => e.setType("cycled"));
     const slot = app.get().program.days[0]!.slots[0]!;
     app.get().openLibrary({ kind: "pool", dayId: "push", slotId: slot.id, muscle: slot.muscle });
-    app.get().pickExercise(PLANK);
-    expect(app.get().program.days[0]!.slots[0]!.pool).toEqual([BENCH, FLY]);
+    app.get().pickExercise(CATALOG.plank);
+    expect(app.get().program.days[0]!.slots[0]!.pool).toEqual([CATALOG.bench, CATALOG.fly]);
   });
 
   it("logging something else that today already plans goes to the planned exercise", async () => {
     const app = await boot();
-    app.get().toggleSkip(flyRow.id);
+    app.get().toggleSkip(catalogFlyRow.id);
     app.get().openLibrary({ kind: "extra" });
-    app.get().pickExercise(FLY);
+    app.get().pickExercise(CATALOG.fly);
     expect(app.get().dayState.extras).toEqual([]);
-    expect(app.get().session!.itemId).toBe(flyRow.id);
+    expect(app.get().session!.itemId).toBe(catalogFlyRow.id);
     // It was skipped: asking to log it brings it back.
-    expect(app.plan().item(flyRow.id)!.skipped).toBe(false);
+    expect(app.plan().item(catalogFlyRow.id)!.skipped).toBe(false);
     await app.get().logSet();
-    expect(app.plan().item(flyRow.id)!.done).toBe(1);
+    expect(app.plan().item(catalogFlyRow.id)!.done).toBe(1);
 
     // The same goes for an extra that is already there.
     app.get().openLibrary({ kind: "extra" });
-    app.get().pickExercise(ROW);
+    app.get().pickExercise(CATALOG.row);
     app.get().openLibrary({ kind: "extra" });
-    app.get().pickExercise(ROW);
+    app.get().pickExercise(CATALOG.row);
     expect(app.get().dayState.extras).toHaveLength(1);
   });
 
   it("an exercise outside the plan can be logged today; untouched, it can be removed", async () => {
     const app = await boot();
     app.get().openLibrary({ kind: "extra" });
-    app.get().pickExercise(ROW);
+    app.get().pickExercise(CATALOG.row);
     const extra = app.plan().items.at(-1)!;
     expect(extra.isExtra).toBe(true);
     expect(app.get().session!.itemId).toBe(extra.id);
@@ -109,7 +108,7 @@ describe("the exercise library", () => {
     app.get().toggleSkip(extra.id);
     expect(app.plan().items).toHaveLength(2);
 
-    app.get().pickExercise(ROW); // library is closed: nothing happens
+    app.get().pickExercise(CATALOG.row); // library is closed: nothing happens
     expect(app.plan().items).toHaveLength(2);
   });
 });

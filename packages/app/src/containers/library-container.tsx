@@ -1,17 +1,16 @@
 import { useMemo } from "react";
-import { LibraryModal, buildLibraryVM } from "@nabd/modals";
 import type { Program } from "@nabd/domain";
-import type { LibraryActions, LibraryPurpose } from "@nabd/modals";
+import { LibraryModal, buildLibraryVM } from "@nabd/modals";
+import type { LibraryActions } from "@nabd/modals";
 import { selectLibrary } from "@nabd/store";
-import type { LibraryTarget } from "@nabd/store";
+import type { LibraryTarget } from "@nabd/view";
 import { useActions, useNabd } from "../store-context";
 
-/** What the library is open for, with the pool a pool target adds to. */
-function purposeOf(target: LibraryTarget | null, program: Program): LibraryPurpose | null {
-  if (target?.kind !== "pool") return target;
+/** What the pool `target` adds to holds so far; empty for any other target. */
+function poolOf(target: LibraryTarget | null, program: Program): readonly string[] {
+  if (target?.kind !== "pool") return [];
   const slots = program.days.find((day) => day.id === target.dayId)?.slots ?? [];
-  const pool = slots.find((slot) => slot.id === target.slotId)?.pool ?? [];
-  return { kind: "pool", muscle: target.muscle, pool };
+  return slots.find((slot) => slot.id === target.slotId)?.pool ?? [];
 }
 
 /** The exercise library, while it is open. */
@@ -23,13 +22,13 @@ export function LibraryContainer(): JSX.Element | null {
   const owned = useNabd((s) => s.settings.equipment);
 
   const vm = useMemo(
-    () => buildLibraryVM({ ...state, target: purposeOf(state.target, program) }, library, owned),
+    () => buildLibraryVM({ state, pool: poolOf(state.target, program), library, owned }),
     [state, program, library, owned],
   );
   const actions = useMemo(
     (): LibraryActions => ({
       close: store.closeLibrary,
-      filter: store.patchLibrary,
+      filter: store.filterLibrary,
       pick: store.pickExercise,
       startDraft: store.startDraft,
       patchDraft: store.patchDraft,

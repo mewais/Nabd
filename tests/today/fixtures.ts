@@ -1,16 +1,15 @@
 // Scenarios for the Today suite, built on the shared training world.
 
 import { DEFAULT_SETTINGS, addDays } from "@nabd/domain";
-import type { MapStyle, MapView } from "@nabd/domain";
+import type { MapStyle, MapView } from "@nabd/view";
 import { MuscleVolume } from "@nabd/coverage";
 import { NudgePolicy } from "@nabd/nudge";
 import type { NudgeStatus } from "@nabd/nudge";
 import { buildTodayVM } from "@nabd/today";
 import type { TodayVM } from "@nabd/today";
-import { LIBRARY, NOW, buildWorld } from "../support/plan-fixtures";
-import type { WorldInput } from "../support/plan-fixtures";
-
-export { lastWeek, pushDay } from "../support/plan-fixtures";
+import { LIBRARY } from "../support/exercises";
+import { NOW, buildWorld } from "../support/world";
+import type { WorldInput } from "../support/world";
 
 /** Where nudging stands at `now` under the default settings, straight from the policy. */
 export function nudgeAt(

@@ -1,67 +1,51 @@
-import type { Coverage, MuscleKey } from "@nabd/domain";
-import { MUSCLES_ANATOMICAL, MUSCLE_NAMES } from "@nabd/domain";
-import type { MuscleVolume, Recommendation } from "@nabd/coverage";
-import { insight, recommendation } from "@nabd/coverage";
-import type { MapStyle, MapView } from "@nabd/domain";
-
-export interface LegendRowVM {
-  muscle: MuscleKey;
-  /** Coverage, 0–100. */
-  pct: number;
-  recommendation: Recommendation;
-}
+import type { MuscleStanding, MuscleVolume, Recommendation } from "@nabd/coverage";
+import { insight, standings } from "@nabd/coverage";
+import type { Coverage } from "@nabd/domain";
+import { MUSCLES_ANATOMICAL, formatMuscles } from "@nabd/domain";
+import type { MapStyle, MapView } from "@nabd/view";
 
 export interface CoverageVM {
   coverage: Coverage;
   view: MapView;
   mapStyle: MapStyle;
-  legend: LegendRowVM[];
+  /** Every muscle, in the order they are read down the body. */
+  legend: MuscleStanding[];
 }
 
+/** One finding about the week's coverage. */
 export interface InsightRowVM {
-  kind: "rest" | "push";
+  kind: Exclude<Recommendation, "none">;
   /** The bold opening, "Rest these". */
   lead: string;
   /** The rest of the sentence. */
   text: string;
 }
 
-export function buildCoverage(
+export function buildCoverageVM(
   coverage: Coverage,
   planned: MuscleVolume,
   view: MapView,
   mapStyle: MapStyle,
 ): CoverageVM {
-  return {
-    coverage,
-    view,
-    mapStyle,
-    legend: MUSCLES_ANATOMICAL.map((muscle) => ({
-      muscle,
-      pct: coverage[muscle],
-      recommendation: recommendation(muscle, coverage, planned),
-    })),
-  };
+  return { coverage, view, mapStyle, legend: standings(MUSCLES_ANATOMICAL, coverage, planned) };
 }
 
-const names = (muscles: MuscleKey[]): string => muscles.map((m) => MUSCLE_NAMES[m]).join(", ");
-
 /** What stands out in the week's coverage; empty when nothing does. */
-export function buildInsight(coverage: Coverage, planned: MuscleVolume): InsightRowVM[] {
+export function buildInsightVM(coverage: Coverage, planned: MuscleVolume): InsightRowVM[] {
   const { rest, push } = insight(coverage, planned);
   const rows: InsightRowVM[] = [];
   if (rest.length > 0) {
     rows.push({
       kind: "rest",
       lead: "Rest these",
-      text: ` — ${names(rest)} are well-trained this week.`,
+      text: ` — ${formatMuscles(rest)} are well-trained this week.`,
     });
   }
   if (push.length > 0) {
     rows.push({
       kind: "push",
       lead: "Push these",
-      text: ` — ${names(push)} are lagging. Good to prioritize.`,
+      text: ` — ${formatMuscles(push)} are lagging. Good to prioritize.`,
     });
   }
   return rows;

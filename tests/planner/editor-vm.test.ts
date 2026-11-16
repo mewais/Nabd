@@ -1,16 +1,7 @@
 import { EMPTY_PROGRAM } from "@nabd/domain";
-import {
-  BENCH,
-  DB_BENCH,
-  PLANK,
-  PUSH_UP,
-  cycledProgram,
-  dayOf,
-  editorOf,
-  fixedProgram,
-  floating,
-  vmOf,
-} from "./fixtures";
+import { CATALOG } from "../support/exercises";
+import { asFloating, officeStrength, rotationPlan } from "../support/programs";
+import { dayOf, editorOf, vmOf } from "./fixtures";
 
 /** What each editor row shows, compactly. */
 const rowNames = (rows: ReturnType<typeof editorOf>["rows"]): (string | string[])[] =>
@@ -18,7 +9,7 @@ const rowNames = (rows: ReturnType<typeof editorOf>["rows"]): (string | string[]
     row.kind === "exercise"
       ? row.exercise.name
       : row.kind === "superset"
-        ? row.members.map((m) => `${m.supersetTag} ${m.name}`)
+        ? row.superset.members.map((m) => `${m.supersetTag} ${m.name}`)
         : row.slot.muscleName,
   );
 
@@ -29,12 +20,12 @@ describe("editor view-model", () => {
   });
 
   it("edits the first day when none, or an unknown one, is selected", () => {
-    expect(editorOf(fixedProgram()).dayId).toBe("d-push");
-    expect(editorOf(fixedProgram(), "deleted-day").dayId).toBe("d-push");
+    expect(editorOf(officeStrength()).dayId).toBe("d-push");
+    expect(editorOf(officeStrength(), "deleted-day").dayId).toBe("d-push");
   });
 
   it("describes the selected day of a fixed weekday plan", () => {
-    expect(editorOf(fixedProgram(), "d-pull")).toMatchObject({
+    expect(editorOf(officeStrength(), "d-pull")).toMatchObject({
       dayId: "d-pull",
       name: "Pull",
       type: "fixed",
@@ -44,14 +35,14 @@ describe("editor view-model", () => {
   });
 
   it("places a floating day by its position in the plan", () => {
-    expect(editorOf(floating(fixedProgram()), "d-pull").placement).toEqual({
+    expect(editorOf(asFloating(officeStrength()), "d-pull").placement).toEqual({
       kind: "floating",
       label: "Day 2 · floating",
     });
   });
 
   it("describes an exercise by its library name, muscles and equipment", () => {
-    const editor = editorOf(fixedProgram(), "d-push");
+    const editor = editorOf(officeStrength(), "d-push");
     const first = editor.rows[0]!;
 
     expect(first.kind === "exercise" && first.exercise).toMatchObject({
@@ -69,14 +60,14 @@ describe("editor view-model", () => {
   });
 
   it("gathers consecutive superset members into one group tagged A1, A2", () => {
-    expect(rowNames(editorOf(fixedProgram(), "d-pull").rows)).toEqual([
+    expect(rowNames(editorOf(officeStrength(), "d-pull").rows)).toEqual([
       ["A1 Pull-Up", "A2 Cable Lat Pulldown"],
       "Barbell Deadlift",
     ]);
   });
 
   it("keeps two back-to-back supersets apart, lettered A and B, each row with an id of its own", () => {
-    const program = fixedProgram();
+    const program = officeStrength();
     const push = dayOf(program, "d-push");
     push.exercises[0]!.supersetId = "ss-a";
     push.exercises[1]!.supersetId = "ss-a";
@@ -91,7 +82,7 @@ describe("editor view-model", () => {
   });
 
   it("falls back to the exercise id when the library no longer has it", () => {
-    const program = fixedProgram();
+    const program = officeStrength();
     dayOf(program, "d-push").exercises[0]!.exId = "retired_custom_lift";
 
     const row = editorOf(program, "d-push").rows[0]!;
@@ -104,7 +95,7 @@ describe("editor view-model", () => {
   });
 
   it("lists each cycled slot with its target muscle and pool", () => {
-    const editor = editorOf(cycledProgram(), "d-upper");
+    const editor = editorOf(rotationPlan(), "d-upper");
 
     expect(editor.type).toBe("cycled");
     expect(editor.summary).toBe("2 muscles · 5 sets");
@@ -117,21 +108,21 @@ describe("editor view-model", () => {
       hint: "Targets Chest · cycles its pool",
       poolLabel: "Exercise pool · 3 exercises",
       pool: [
-        { id: BENCH, name: "Barbell Bench Press" },
-        { id: DB_BENCH, name: "Dumbbell Bench Press" },
-        { id: PUSH_UP, name: "Push-Up" },
+        { id: CATALOG.bench, name: "Barbell Bench Press" },
+        { id: CATALOG.dumbbellBench, name: "Dumbbell Bench Press" },
+        { id: CATALOG.pushUp, name: "Push-Up" },
       ],
     });
   });
 
   it("shows an unknown pool entry by its id", () => {
-    const program = cycledProgram();
+    const program = rotationPlan();
     dayOf(program, "d-core").slots[0]!.pool.push("mystery_hold");
 
     const row = editorOf(program, "d-core").rows[0]!;
 
     expect(row.kind === "slot" && row.slot.pool).toEqual([
-      { id: PLANK, name: "Plank" },
+      { id: CATALOG.plank, name: "Plank" },
       { id: "mystery_hold", name: "mystery_hold" },
     ]);
   });

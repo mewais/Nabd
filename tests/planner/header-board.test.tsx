@@ -3,7 +3,9 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { EMPTY_PROGRAM } from "@nabd/domain";
 import type { Program } from "@nabd/domain";
-import { BENCH, OHP, PLANK, dayOf, fixedProgram, floating } from "./fixtures";
+import { CATALOG } from "../support/exercises";
+import { asFloating, officeStrength } from "../support/programs";
+import { dayOf } from "./fixtures";
 import { button, renderPlanner } from "./render";
 
 const pressed = (name: string): string | null =>
@@ -14,7 +16,7 @@ const planType = (name: "Fixed" | "Cycled"): HTMLElement => button(name, 0);
 
 describe("ProgramHeader", () => {
   it("shows the program name and marks the current type and schedule", () => {
-    renderPlanner(fixedProgram());
+    renderPlanner(officeStrength());
 
     expect(screen.getByLabelText("Program name")).toHaveValue("Office Strength");
     expect(planType("Fixed")).toHaveAttribute("aria-pressed", "true");
@@ -24,32 +26,32 @@ describe("ProgramHeader", () => {
   });
 
   it("typing in the name renames the program", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     fireEvent.change(screen.getByLabelText("Program name"), { target: { value: "Winter Bulk" } });
 
     expect(planner.program().name).toBe("Winter Bulk");
-    expect(planner.program().days).toEqual(fixedProgram().days);
+    expect(planner.program().days).toEqual(officeStrength().days);
     expect(screen.getByLabelText("Program name")).toHaveValue("Winter Bulk");
   });
 
   it("switching to Cycled derives one slot per muscle group and shows slots instead of exercises", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     fireEvent.click(planType("Cycled"));
 
     expect(planner.program().type).toBe("cycled");
     expect(dayOf(planner.program(), "d-push").slots.map((s) => [s.muscle, s.pool])).toEqual([
-      ["chest", [BENCH]],
-      ["side_delts", [OHP]],
-      ["abs", [PLANK]],
+      ["chest", [CATALOG.bench]],
+      ["side_delts", [CATALOG.overheadPress]],
+      ["abs", [CATALOG.plank]],
     ]);
     expect(screen.getAllByText("Exercise pool · 1 exercise")).toHaveLength(3);
     expect(screen.queryByRole("button", { name: "Remove exercise" })).toBeNull();
   });
 
   it("switching back to Fixed shows the exercises again", () => {
-    const planner = renderPlanner({ ...fixedProgram(), type: "cycled" });
+    const planner = renderPlanner({ ...officeStrength(), type: "cycled" });
     expect(screen.getByRole("group", { name: "Add muscle" })).toBeInTheDocument();
 
     fireEvent.click(planType("Fixed"));
@@ -59,7 +61,7 @@ describe("ProgramHeader", () => {
   });
 
   it("switching to Floating turns the week into a numbered list, and back pins the days from today on", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     fireEvent.click(screen.getByRole("button", { name: "Floating" }));
 
@@ -76,8 +78,8 @@ describe("ProgramHeader", () => {
   });
 
   it("does not offer Weekdays to a floating plan with more days than a week", () => {
-    const eightDays: Program = floating({
-      ...fixedProgram(),
+    const eightDays: Program = asFloating({
+      ...officeStrength(),
       days: [...Array(8).keys()].map((i) => ({
         id: `d-${i}`,
         name: `Session ${i + 1}`,
@@ -99,7 +101,7 @@ describe("ProgramHeader", () => {
 
 describe("WeekBoard", () => {
   it("shows a card per training day and a free weekday with an add button for the others", () => {
-    renderPlanner(fixedProgram());
+    renderPlanner(officeStrength());
 
     for (const label of ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
@@ -109,7 +111,7 @@ describe("WeekBoard", () => {
   });
 
   it("adding a day on a free weekday puts a new day there", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     fireEvent.click(screen.getByRole("button", { name: "Add a day on Friday" }));
 
@@ -124,7 +126,7 @@ describe("WeekBoard", () => {
   });
 
   it("a full week offers no further day", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
     for (const weekday of ["Tuesday", "Thursday", "Friday", "Saturday", "Sunday"]) {
       fireEvent.click(screen.getByRole("button", { name: `Add a day on ${weekday}` }));
     }
@@ -134,21 +136,21 @@ describe("WeekBoard", () => {
   });
 
   it("marks the edited day's card, and clicking another card selects that day", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
     const cardOf = (dayName: string) => screen.getByText(dayName).closest("button");
     expect(cardOf("Push")).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(screen.getByText("Pull"));
 
     expect(planner.selectDay).toHaveBeenCalledWith("d-pull");
-    expect(planner.program()).toEqual(fixedProgram());
+    expect(planner.program()).toEqual(officeStrength());
     expect(cardOf("Pull")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByLabelText("Day name")).toHaveValue("Pull");
     expect(screen.getByText("3 exercises · 5 sets")).toBeInTheDocument();
   });
 
   it("the add tile of a floating plan appends an unscheduled day", () => {
-    const planner = renderPlanner(floating(fixedProgram()));
+    const planner = renderPlanner(asFloating(officeStrength()));
 
     fireEvent.click(screen.getByRole("button", { name: "Add day" }));
 
@@ -161,7 +163,7 @@ describe("WeekBoard", () => {
   });
 
   it("says how many exercises did not fit on a card", () => {
-    const program = fixedProgram();
+    const program = officeStrength();
     dayOf(program, "d-push").exercises.push(...dayOf(program, "d-pull").exercises);
 
     renderPlanner(program);

@@ -1,5 +1,5 @@
 import { exerciseOfSet } from "@nabd/domain";
-import { exercise, logged, nov } from "../support/domain-factories";
+import { exercise, logged, nov } from "../support/builders";
 
 describe("exerciseOfSet", () => {
   const carry = exercise({

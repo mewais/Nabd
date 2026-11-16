@@ -1,76 +1,50 @@
 import type { Coverage, MuscleKey } from "@nabd/domain";
-import { MUSCLES, clamp } from "@nabd/domain";
-
-/** The regions of the body-map drawing (assets/body) that show a tracked muscle. */
-type MuscleRegion =
-  | "abs"
-  | "adductors"
-  | "biceps"
-  | "calves"
-  | "chest"
-  | "deltoids"
-  | "forearm"
-  | "gluteal"
-  | "hamstring"
-  | "lower-back"
-  | "neck"
-  | "obliques"
-  | "quadriceps"
-  | "tibialis"
-  | "trapezius"
-  | "triceps"
-  | "upper-back";
+import { clamp } from "@nabd/domain";
 
 /**
- * Where each tracked muscle is drawn. The drawing is coarser than the muscle
- * list, so several muscles can share a region (the three delts); the region
- * then shows their mean coverage.
+ * The tracked muscles each region of the drawing (./drawing) shows. The
+ * drawing is coarser than the muscle list, so several muscles can share a
+ * region (the three delts); the region then shows their mean coverage.
  */
-const REGION_OF: Record<MuscleKey, MuscleRegion> = {
-  front_delts: "deltoids",
-  side_delts: "deltoids",
-  rear_delts: "deltoids",
-  neck: "neck",
-  upper_traps: "trapezius",
-  lower_traps: "trapezius",
-  rhomboids: "upper-back",
-  lats: "upper-back",
-  lower_back: "lower-back",
-  chest: "chest",
-  abs: "abs",
-  obliques: "obliques",
-  quads: "quadriceps",
-  hamstrings: "hamstring",
-  glutes: "gluteal",
-  abductors: "gluteal",
-  adductors: "adductors",
-  calves: "calves",
-  tibialis: "tibialis",
-  hip_flexors: "quadriceps",
-  biceps: "biceps",
-  triceps: "triceps",
-  forearms: "forearm",
-};
+const REGION_MUSCLES = {
+  deltoids: ["front_delts", "side_delts", "rear_delts"],
+  neck: ["neck"],
+  trapezius: ["upper_traps", "lower_traps"],
+  "upper-back": ["rhomboids", "lats"],
+  "lower-back": ["lower_back"],
+  chest: ["chest"],
+  abs: ["abs"],
+  obliques: ["obliques"],
+  quadriceps: ["quads", "hip_flexors"],
+  hamstring: ["hamstrings"],
+  gluteal: ["glutes", "abductors"],
+  adductors: ["adductors"],
+  calves: ["calves"],
+  tibialis: ["tibialis"],
+  biceps: ["biceps"],
+  triceps: ["triceps"],
+  forearm: ["forearms"],
+} as const satisfies Record<string, readonly MuscleKey[]>;
 
-const MUSCLES_BY_REGION = new Map<string, MuscleKey[]>();
-for (const muscle of MUSCLES) {
-  const region = REGION_OF[muscle];
-  MUSCLES_BY_REGION.set(region, [...(MUSCLES_BY_REGION.get(region) ?? []), muscle]);
-}
+/** A region of the drawing that shows a tracked muscle. */
+type MuscleRegion = keyof typeof REGION_MUSCLES;
 
-export interface RegionCoverage {
+/** The drawing also has regions that show no tracked muscle: head, hands, feet… */
+const isMuscleRegion = (slug: string): slug is MuscleRegion => Object.hasOwn(REGION_MUSCLES, slug);
+
+interface RegionCoverage {
   muscles: readonly MuscleKey[];
   /** Mean coverage of those muscles, 0–100. */
   pct: number;
 }
 
 /**
- * How covered a region of the drawing is. Null for regions that show no tracked
- * muscle (head, hands, feet…), which are always drawn neutral.
+ * How covered a region of the drawing is. Null for regions that show no
+ * tracked muscle, which are always drawn neutral.
  */
 export function regionCoverage(slug: string, coverage: Coverage): RegionCoverage | null {
-  const muscles = MUSCLES_BY_REGION.get(slug);
-  if (muscles === undefined) return null;
+  if (!isMuscleRegion(slug)) return null;
+  const muscles: readonly MuscleKey[] = REGION_MUSCLES[slug];
   const total = muscles.reduce((sum, muscle) => sum + clamp(coverage[muscle], 0, 100), 0);
   return { muscles, pct: total / muscles.length };
 }

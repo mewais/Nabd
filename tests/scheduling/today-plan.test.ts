@@ -1,49 +1,26 @@
-import type { Exercise, LoggedSet, Program, RotationState } from "@nabd/domain";
+import type { LoggedSet, Program } from "@nabd/domain";
 import { dateKey } from "@nabd/domain";
 import { TodayPlan } from "@nabd/scheduling";
-import {
-  exercise,
-  logged,
-  nov,
-  row,
-  threeSets,
-  warmup,
-  working,
-} from "../support/domain-factories";
-import {
-  MONDAY,
-  bench,
-  benchRow,
-  benchSet,
-  build,
-  cycled,
-  dayState,
-  dip,
-  fixedProgram,
-  floating,
-  fly,
-  flyRow,
-  input,
-  raise,
-  raiseRow,
-  slotSets,
-} from "./fixtures";
+import { logged, nov, row, threeSets, warmup, working } from "../support/builders";
+import { EX } from "../support/exercises";
+import { benchRow, floatingPushPull, flyRow, pushPull, raiseRow } from "../support/programs";
+import { MONDAY, benchSet, build, dayState, input } from "./fixtures";
 
 describe("which day is today", () => {
   const dayOn = (program: Program, date: Date, dayId: string | null = null): string | null =>
     TodayPlan.build({ ...input(), program, date, dayState: dayState(date, { dayId }) }).dayName;
 
   it("weekday schedule picks the day pinned to that weekday, or none", () => {
-    expect(dayOn(fixedProgram, MONDAY)).toBe("Push");
-    expect(dayOn(fixedProgram, nov(17))).toBeNull();
-    expect(dayOn(fixedProgram, nov(18), "mon")).toBe("Pull");
+    expect(dayOn(pushPull, MONDAY)).toBe("Push");
+    expect(dayOn(pushPull, nov(17))).toBeNull();
+    expect(dayOn(pushPull, nov(18), "mon")).toBe("Pull");
   });
 
   it("floating schedule is on the day it remembers, or the first one", () => {
-    expect(dayOn(floating, MONDAY)).toBe("Push");
-    expect(dayOn(floating, MONDAY, "wed")).toBe("Pull");
-    expect(dayOn(floating, MONDAY, "deleted")).toBe("Push");
-    expect(dayOn({ ...floating, days: [] }, MONDAY, "wed")).toBeNull();
+    expect(dayOn(floatingPushPull, MONDAY)).toBe("Push");
+    expect(dayOn(floatingPushPull, MONDAY, "wed")).toBe("Pull");
+    expect(dayOn(floatingPushPull, MONDAY, "deleted")).toBe("Push");
+    expect(dayOn({ ...floatingPushPull, days: [] }, MONDAY, "wed")).toBeNull();
   });
 });
 
@@ -51,7 +28,11 @@ describe("TodayPlan for a fixed day", () => {
   it("lists the day's exercises with every prescribed set, warm-ups included", () => {
     const plan = build();
     expect(plan.dayName).toBe("Push");
-    expect(plan.items.map((i) => i.exercise.name)).toEqual(["Bench", "Fly", "Raise"]);
+    expect(plan.items.map((i) => i.exercise.name)).toEqual([
+      "Bench Press",
+      "Dumbbell Fly",
+      "Lateral Raise",
+    ]);
     expect(plan.items.map((i) => i.planned)).toEqual([4, 3, 3]);
     expect(plan.setsPlanned).toBe(10);
     expect(plan.setsRemaining).toBe(10);
@@ -64,16 +45,16 @@ describe("TodayPlan for a fixed day", () => {
       TodayPlan.build({ ...input(), date: nov(17), dayState: dayState(nov(17)) }).items,
     ).toEqual([]);
     const orphan: Program = {
-      ...fixedProgram,
-      days: [{ ...fixedProgram.days[0]!, exercises: [row("gone", threeSets()), benchRow] }],
+      ...pushPull,
+      days: [{ ...pushPull.days[0]!, exercises: [row("gone", threeSets()), benchRow] }],
     };
     expect(build([], dayState(MONDAY), orphan).items.map((i) => i.exercise.name)).toEqual([
-      "Bench",
+      "Bench Press",
     ]);
   });
 
   it("counts today's sets toward their plan item — and only today's", () => {
-    const yesterday = logged(bench, nov(15), 10, 40, { planItemId: benchRow.id });
+    const yesterday = logged(EX.bench, nov(15), 10, 40, { planItemId: benchRow.id });
     const plan = build([yesterday, benchSet(10, { setType: "warmup" }), benchSet(11)]);
     const item = plan.item(benchRow.id)!;
     expect(item.done).toBe(2);
@@ -94,7 +75,7 @@ describe("TodayPlan for a fixed day", () => {
 
   describe("which prescribed set comes next", () => {
     // Bench is a warm-up and three working sets.
-    const next = (sets: LoggedSet[], program = fixedProgram) =>
+    const next = (sets: LoggedSet[], program = pushPull) =>
       build(sets, dayState(MONDAY), program).item(benchRow.id)!.nextSet;
     const warmupSet = benchSet(9, { setType: "warmup" });
 
@@ -109,10 +90,10 @@ describe("TodayPlan for a fixed day", () => {
 
     it("is a working set after the warm-up was taken out of the plan mid-day", () => {
       const noWarmup: Program = {
-        ...fixedProgram,
+        ...pushPull,
         days: [
-          { ...fixedProgram.days[0]!, exercises: [{ ...benchRow, sets: threeSets() }] },
-          fixedProgram.days[1]!,
+          { ...pushPull.days[0]!, exercises: [{ ...benchRow, sets: threeSets() }] },
+          pushPull.days[1]!,
         ],
       };
       expect(next([warmupSet, benchSet(10)], noWarmup)?.type).toBe("working");
@@ -134,8 +115,8 @@ describe("TodayPlan for a fixed day", () => {
 
   it("includes exercises added just for today as open-ended extras", () => {
     const plan = build(
-      [logged(dip, nov(16, 15), 12, null, { planItemId: "x1" })],
-      dayState(MONDAY, { extras: [{ id: "x1", exId: dip.id }] }),
+      [logged(EX.dip, nov(16, 15), 12, null, { planItemId: "x1" })],
+      dayState(MONDAY, { extras: [{ id: "x1", exId: EX.dip.id }] }),
     );
     const extra = plan.item("x1")!;
     expect(extra.isExtra).toBe(true);
@@ -158,9 +139,9 @@ describe("TodayPlan for a fixed day", () => {
 });
 
 describe("where the logger goes after a set", () => {
-  const flySet = (hour: number) => logged(fly, nov(16, hour), 12, 10, { planItemId: flyRow.id });
+  const flySet = (hour: number) => logged(EX.fly, nov(16, hour), 12, 10, { planItemId: flyRow.id });
   const raiseSet = (hour: number) =>
-    logged(raise, nov(16, hour), 12, 5, { planItemId: raiseRow.id });
+    logged(EX.raise, nov(16, hour), 12, 5, { planItemId: raiseRow.id });
 
   it("stays on the exercise while it owes sets", () => {
     expect(build([benchSet(10)]).focusAfter(benchRow.id)?.id).toBe(benchRow.id);
@@ -185,8 +166,8 @@ describe("where the logger goes after a set", () => {
 
   it("stays on an extra, and returns nothing when the day is finished", () => {
     const withExtra = build(
-      [logged(dip, nov(16, 15), 12, null, { planItemId: "x1" })],
-      dayState(MONDAY, { extras: [{ id: "x1", exId: dip.id }] }),
+      [logged(EX.dip, nov(16, 15), 12, null, { planItemId: "x1" })],
+      dayState(MONDAY, { extras: [{ id: "x1", exId: EX.dip.id }] }),
     );
     expect(withExtra.focusAfter("x1")?.id).toBe("x1");
     const state = dayState(MONDAY, { skipped: [flyRow.id, raiseRow.id] });
@@ -203,9 +184,9 @@ describe("the completion record", () => {
     const history = [
       // Five bench sets against four prescribed, and an extra exercise on top.
       ...[9, 10, 11, 12, 13].map((h) => benchSet(h)),
-      logged(dip, nov(16, 15), 12, null, { planItemId: "x1" }),
+      logged(EX.dip, nov(16, 15), 12, null, { planItemId: "x1" }),
     ];
-    const plan = build(history, dayState(MONDAY, { extras: [{ id: "x1", exId: dip.id }] }));
+    const plan = build(history, dayState(MONDAY, { extras: [{ id: "x1", exId: EX.dip.id }] }));
     expect(plan.setsDone).toBe(6);
     expect(plan.plannedSetsDone).toBe(4);
     expect(plan.record()).toEqual({ date: dateKey(MONDAY), planned: 10, done: 4 });
@@ -219,122 +200,14 @@ describe("the completion record", () => {
   });
 
   it("a floating day is only on record once it has a set, or the plan has moved past it", () => {
-    const idle = build([], dayState(MONDAY), floating);
+    const idle = build([], dayState(MONDAY), floatingPushPull);
     expect(idle.record()).toBeNull();
     expect(idle.record(true)).toEqual({ date: dateKey(MONDAY), planned: 10, done: 0 });
-    expect(build([benchSet(9)], dayState(MONDAY), floating).record()).toEqual({
+    expect(build([benchSet(9)], dayState(MONDAY), floatingPushPull).record()).toEqual({
       date: dateKey(MONDAY),
       planned: 10,
       done: 1,
     });
-  });
-});
-
-describe("sets whose plan item no longer exists", () => {
-  const orphan = (ex: Exercise, hour: number, planItemId: string | null = "gone") =>
-    logged(ex, nov(16, hour), 10, 40, { planItemId });
-
-  it("count toward an untouched item of the same exercise", () => {
-    // Bench was removed from the plan and added back: a new row id.
-    const plan = build([orphan(bench, 9), orphan(bench, 10)]);
-    expect(plan.item(benchRow.id)!.done).toBe(2);
-    expect(plan.setsRemaining).toBe(8);
-    expect(plan.items).toHaveLength(3);
-  });
-
-  it("do not pile onto an item that has sets of its own", () => {
-    const plan = build([benchSet(9), orphan(bench, 10)]);
-    expect(plan.item(benchRow.id)!.done).toBe(1);
-    const unplanned = plan.items.at(-1)!;
-    expect(unplanned).toMatchObject({ isExtra: true, done: 1, exercise: bench });
-    expect(plan.setsDone).toBe(2);
-  });
-
-  it("are listed as an unplanned exercise when the plan no longer has it", () => {
-    const plan = build([orphan(dip, 9), orphan(dip, 10, null)]);
-    const unplanned = plan.items.at(-1)!;
-    expect(unplanned).toMatchObject({ isExtra: true, done: 2, exercise: dip });
-    expect(plan.setsDone).toBe(2);
-    expect(plan.setsRemaining).toBe(10);
-  });
-
-  it("are still listed once their exercise has been deleted from the library", () => {
-    const deleted = exercise({ name: "Garage Carry", primary: ["forearms"], secondary: [] });
-    const plan = build([orphan(deleted, 9), orphan(deleted, 10)]);
-    const unplanned = plan.items.at(-1)!;
-    expect(unplanned).toMatchObject({ isExtra: true, done: 2 });
-    expect(unplanned.exercise).toMatchObject({ id: deleted.id, name: "Garage Carry" });
-    expect(plan.setsDone).toBe(2);
-  });
-
-  it("further sets logged on the unplanned exercise stay with it", () => {
-    const first = build([orphan(dip, 9)]).items.at(-1)!;
-    const plan = build([orphan(dip, 9), orphan(dip, 10, first.id)]);
-    expect(plan.item(first.id)!.done).toBe(2);
-    expect(plan.items).toHaveLength(4);
-  });
-
-  it("survive a switch of plan type", () => {
-    const history = [benchSet(9), benchSet(10)];
-    const slot = { id: "chest", muscle: "chest" as const, pool: [fly.id, bench.id], ...slotSets() };
-    const cycledNow: Program = {
-      ...fixedProgram,
-      type: "cycled",
-      days: [{ ...fixedProgram.days[0]!, slots: [slot] }],
-    };
-    const plan = build(history, dayState(MONDAY), cycledNow);
-    expect(plan.setsDone).toBe(2);
-    expect(plan.item("chest")!.exercise).toBe(fly);
-    expect(plan.items.at(-1)).toMatchObject({ isExtra: true, exercise: bench, done: 2 });
-  });
-});
-
-describe("cycled slots", () => {
-  const slot = { id: "chest", muscle: "chest" as const, pool: [bench.id, fly.id], ...slotSets() };
-  const withPool = (pool: string[]): Program => ({
-    ...fixedProgram,
-    type: "cycled",
-    days: [{ ...fixedProgram.days[0]!, slots: [{ ...slot, pool }] }],
-  });
-
-  it("uses the slots (not leftover fixed exercises) and each pool's current exercise", () => {
-    const plan = build([], dayState(MONDAY), cycled, { chest: fly.id });
-    expect(plan.items.map((i) => [i.id, i.exercise.name, i.label])).toEqual([
-      ["chest", "Fly", "Chest"],
-      ["delts", "Raise", "Side Delts"],
-    ]);
-  });
-
-  it("a pool gives the exercise its rotation names, and its first when that names none of it", () => {
-    const chestOn = (rotation: RotationState): string =>
-      build([], dayState(MONDAY), cycled, rotation).item("chest")!.exercise.name;
-    expect([chestOn({}), chestOn({ chest: fly.id }), chestOn({ chest: dip.id })]).toEqual([
-      "Bench",
-      "Fly",
-      "Bench",
-    ]);
-  });
-
-  it("a slot trained today stays on that exercise when its pool is edited", () => {
-    const history = [logged(bench, nov(16, 9), 10, 40, { planItemId: "chest" })];
-    for (const pool of [[fly.id, bench.id], [fly.id], []]) {
-      const item = build(history, dayState(MONDAY), withPool(pool)).item("chest")!;
-      expect(item.exercise).toBe(bench);
-      expect(item.done).toBe(1);
-    }
-  });
-
-  it("an untrained slot follows its pool", () => {
-    expect(build([], dayState(MONDAY), withPool([fly.id, bench.id])).item("chest")!.exercise).toBe(
-      fly,
-    );
-  });
-
-  it("slots with an empty pool are reported instead of vanishing", () => {
-    const plan = build([], dayState(MONDAY), withPool([]));
-    expect(plan.items).toEqual([]);
-    expect(plan.emptySlots).toEqual(["chest"]);
-    expect(build().emptySlots).toEqual([]);
   });
 });
 

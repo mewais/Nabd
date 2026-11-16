@@ -1,11 +1,15 @@
 import { BodyMapPair, MuscleBar } from "@nabd/bodymap";
 import { Card, EmptyNote } from "@nabd/design-system";
-import { isEmpty } from "./view-model";
-import type { HeatmapVM } from "./view-model";
+import { isEmpty } from "./empty-vm";
+import type { HeatmapVM } from "./progress-vm";
+
+interface HeatmapCardProps {
+  vm: HeatmapVM;
+}
 
 /** Last week's training on the body map, with a meter per trained muscle. */
-export function HeatmapCard({ heatmap }: { heatmap: HeatmapVM }): JSX.Element {
-  const { coverage, muscles } = heatmap;
+export function HeatmapCard({ vm }: HeatmapCardProps): JSX.Element {
+  const { coverage, muscles } = vm;
   return (
     <Card title="Sets per muscle" subtitle="7-day coverage">
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 26 }}>
@@ -15,8 +19,8 @@ export function HeatmapCard({ heatmap }: { heatmap: HeatmapVM }): JSX.Element {
             <EmptyNote>{muscles.empty}</EmptyNote>
           ) : (
             <div style={{ columnWidth: 260, columnGap: 26 }}>
-              {muscles.map((muscle) => (
-                <MuscleBar key={muscle.muscle} {...muscle} />
+              {muscles.map((standing) => (
+                <MuscleBar key={standing.muscle} {...standing} />
               ))}
             </div>
           )}

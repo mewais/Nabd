@@ -3,17 +3,17 @@ import type { LibraryActions } from "./library-actions";
 import type { LibraryRowVM } from "./library-vm";
 
 interface LibraryRowProps {
-  row: LibraryRowVM;
+  vm: LibraryRowVM;
   actions: Pick<LibraryActions, "pick" | "startDraft" | "deleteCustom">;
 }
 
 /** One exercise: press it to add it; duplicate it into the form; delete it if it is custom. */
-export function LibraryRow({ row, actions }: LibraryRowProps): JSX.Element {
+export function LibraryRow({ vm, actions }: LibraryRowProps): JSX.Element {
   return (
     <li style={{ display: "flex", alignItems: "center", gap: 7 }}>
       <RowButton
-        ariaLabel={row.addLabel}
-        onClick={() => actions.pick(row.id)}
+        ariaLabel={vm.addLabel}
+        onClick={() => actions.pick(vm.id)}
         style={{
           ...SURFACE2_BOX,
           flex: 1,
@@ -29,28 +29,28 @@ export function LibraryRow({ row, actions }: LibraryRowProps): JSX.Element {
       >
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ ...TEXT.label, display: "flex", alignItems: "center", gap: 7 }}>
-            {row.name}
-            {row.custom && (
+            {vm.name}
+            {vm.custom && (
               <Chip variant="tag" tone="accent">
                 CUSTOM
               </Chip>
             )}
           </span>
-          <span style={{ ...TEXT.cardSubtitle, display: "block", marginTop: 2 }}>{row.detail}</span>
+          <span style={{ ...TEXT.cardSubtitle, display: "block", marginTop: 2 }}>{vm.detail}</span>
         </span>
         <Icon name="plus" size={16} strokeWidth={2.6} stroke="var(--accent)" />
       </RowButton>
       <IconButton
         icon="copy"
         ariaLabel="Duplicate & edit"
-        onClick={() => actions.startDraft(row.id)}
+        onClick={() => actions.startDraft(vm.id)}
       />
-      {row.custom && (
+      {vm.custom && (
         <IconButton
           icon="trash"
           tone="danger"
           ariaLabel="Delete custom exercise"
-          onClick={() => actions.deleteCustom(row.id)}
+          onClick={() => actions.deleteCustom(vm.id)}
         />
       )}
     </li>

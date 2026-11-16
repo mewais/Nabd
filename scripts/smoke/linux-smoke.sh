@@ -87,7 +87,7 @@ APP_PID=""
 DRIVER_PID=""
 
 # One floating day with one set of one exercise, stored the way the app stores it.
-PLAN='{"name":"Smoke plan","type":"fixed","schedule":"floating","days":[{"id":"day","name":"Desk","weekday":null,"exercises":[{"id":"row","exId":"push_up__bodyweight","repMode":"range","intensity":"none","rest":60,"sets":[{"type":"working","a":8,"b":12}]}],"slots":[]}]}'
+PLAN='{"name":"Smoke plan","type":"fixed","schedule":"floating","days":[{"id":"day","name":"Desk","weekday":null,"exercises":[{"id":"row","exId":"push_up__bodyweight","repMode":"range","intensity":"none","rest":60,"sets":[{"type":"working","amount":8,"upTo":12}]}],"slots":[]}]}'
 
 # Results go to descriptor 3, which `outside` connects to the terminal. Stdout
 # and stderr are the session's chatter (D-Bus, WebKit, the window manager, the

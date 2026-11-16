@@ -1,16 +1,22 @@
-import type { Notice } from "@nabd/domain";
 import { SettingsSchema, hasWorkday, plural, withWeightUnit } from "@nabd/domain";
 import { parseImport } from "@nabd/serialization";
-import type { SettingsDataActions } from "./actions";
 import type { StoreContext } from "./context";
-import { applyAutostart, applyGlass } from "./desktop";
-import { errorText } from "./persistence";
+import { applyAutostart, applyGlass } from "./os";
+import type { SettingsDataSlice } from "./slices";
 
-export function settingsDataActions(ctx: StoreContext): SettingsDataActions {
-  const { get, set, client, save, flushSets } = ctx;
+/** The settings and the data behind them: the Settings dialog's side of the store. */
+export function settingsDataSlice(ctx: StoreContext): SettingsDataSlice {
+  const { get, set, client, save, flushSets, attempt, notify } = ctx;
 
-  /** The outcome of an import or export, shown in Settings where it was asked for. */
-  const report = (kind: Notice["kind"], text: string): void => set({ notice: { kind, text } });
+  /** What an export leaves out, for the notice that reports it; empty when it is complete. */
+  function exportGaps(allSaved: boolean): string {
+    const unsaved = allSaved ? [] : [`${plural(get().unsavedSets.length, "set")} not saved yet`];
+    const unreadable = get()
+      .loadProblems.filter((problem) => problem.source === "history")
+      .map((problem) => `${problem.detail} that could not be read`);
+    const gaps = [...unsaved, ...unreadable];
+    return gaps.length === 0 ? "" : ` — without ${gaps.join(", or ")}`;
+  }
 
   return {
     updateSettings: (patch) => {
@@ -31,24 +37,21 @@ export function settingsDataActions(ctx: StoreContext): SettingsDataActions {
       if (settings.glass !== before.glass) applyGlass(ctx, settings.glass);
     },
 
+    openSettings: () => set({ settingsOpen: true }),
+    // The import/export notice belongs to one visit of the Settings dialog.
+    closeSettings: () => set({ settingsOpen: false, dataNotice: null }),
+
     exportData: async () => {
-      const complete = await flushSets();
-      try {
-        const path = await client.exportData("manual");
-        const missing = plural(get().unsavedSets.length, "set");
-        report(
-          "info",
-          `Exported to ${path}${complete ? "" : ` — without ${missing} not saved yet`}`,
-        );
-      } catch (e) {
-        report("error", `Export failed: ${errorText(e)}`);
-      }
+      const allSaved = await flushSets();
+      const exported = await attempt("export", () => client.exportData("manual"), "dataNotice");
+      if (!exported.ok) return;
+      notify("info", `Exported to ${exported.value}${exportGaps(allSaved)}`, "dataNotice");
     },
 
     importData: (json) => {
       const result = parseImport(json);
       if (result.ok) set({ confirmation: { kind: "import", data: result.data } });
-      else report("error", `Import failed — ${result.errors[0]}`);
+      else notify("error", `Could not import: ${result.errors[0]}`, "dataNotice");
     },
 
     replaceData: async (imported) => {
@@ -59,17 +62,26 @@ export function settingsDataActions(ctx: StoreContext): SettingsDataActions {
         : imported;
       // What the import replaces is kept: saved in full, then written to a backup file.
       if (!(await flushSets())) {
-        report("error", "Import failed: some logged sets are not saved yet. Try again shortly.");
+        const why = "some logged sets are not saved yet. Try again shortly.";
+        notify("error", `Could not import: ${why}`, "dataNotice");
         return;
       }
-      try {
-        const backup = await client.exportData("before_import");
-        await client.importData(data);
-        await get().hydrate();
-        report("info", `Import complete. What it replaced was first saved to ${backup}`);
-      } catch (e) {
-        report("error", `Import failed: ${errorText(e)}`);
-      }
+      const imports = await attempt(
+        "import",
+        async () => {
+          const backup = await client.exportData("before_import");
+          await client.importData(data);
+          return backup;
+        },
+        "dataNotice",
+      );
+      if (!imports.ok) return;
+      await get().hydrate();
+      notify(
+        "info",
+        `Import complete. What it replaced was first saved to ${imports.value}`,
+        "dataNotice",
+      );
     },
   };
 }

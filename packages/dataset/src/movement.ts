@@ -18,10 +18,11 @@ export interface Movement {
   secondary: MuscleKey[];
   equipment: Equipment[];
   /**
-   * "unilateral" where a one-sided version is a real exercise; {@link compose}
-   * still leaves out the single-arm variants of two-handed equipment.
+   * Two-sided unless it says otherwise. "unilateral" where a one-sided version
+   * is a real exercise; {@link compose} still leaves out the single-arm
+   * variants of two-handed equipment.
    */
-  laterality: Laterality[];
+  laterality?: Laterality[];
   /** How sets are tracked, when it is not the default for the equipment. */
   tracking?: TrackingType;
   /**

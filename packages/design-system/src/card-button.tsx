@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { RADIUS, tint } from "./tokens";
 
-export interface CardButtonProps {
+interface CardButtonProps {
   children?: ReactNode;
   onClick: () => void;
   /** The one currently picked: drawn with an accent ring. */

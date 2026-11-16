@@ -1,8 +1,8 @@
 import { EQUIPMENT_KEYS, ExerciseSchema, MUSCLE_PRIMARY_GROUP, isTimeBased } from "@nabd/domain";
 import { ExerciseLibrary, compose } from "@nabd/dataset";
 import type { Movement } from "@nabd/dataset";
-import { exercise } from "../support/domain-factories";
-import { CATALOG, catalogLookup } from "../support/catalog";
+import { exercise } from "../support/builders";
+import { CATALOG, catalogLookup } from "../support/exercises";
 
 const catalog = ExerciseLibrary.catalog;
 

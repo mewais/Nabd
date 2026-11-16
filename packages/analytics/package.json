@@ -8,7 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run --root ../.. --project analytics"
   },
   "dependencies": {
     "@nabd/domain": "workspace:*"

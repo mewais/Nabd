@@ -13,7 +13,7 @@ pub struct TrayState {
     pub paused: bool,
 }
 
-/// Tray menu entry ids (Start and Pause are also the action names sent to the frontend).
+/// Tray menu entry ids (Start, Pause and Quit are also the action names sent to the frontend).
 pub const TRAY_STATUS: &str = "status";
 pub const TRAY_START: &str = "start";
 pub const TRAY_PAUSE: &str = "pause";
@@ -99,13 +99,15 @@ impl TrayCommand {
         matches!(self, Self::Start | Self::Open)
     }
 
-    /// The action name the frontend handles, for the commands it owns (the
-    /// workout state lives there).
+    /// The action name the frontend handles, for the commands it owns: the
+    /// workout state lives there, and so does whatever is still waiting to be
+    /// saved when the user quits.
     pub fn frontend_action(self) -> Option<&'static str> {
         match self {
             Self::Start => Some(TRAY_START),
             Self::Pause => Some(TRAY_PAUSE),
-            Self::Open | Self::Quit => None,
+            Self::Quit => Some(TRAY_QUIT),
+            Self::Open => None,
         }
     }
 }

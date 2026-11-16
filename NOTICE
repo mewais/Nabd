@@ -4,11 +4,11 @@ Licensed under the MIT License (see LICENSE).
 
 This product bundles the following third-party material:
 
-1. Anatomical body-map SVG path data — assets/body/bodydata.ts
+1. Anatomical body-map SVG path data — packages/bodymap/src/drawing/bodydata.ts
    Source: react-native-body-highlighter
            https://github.com/HichamELBSI/react-native-body-highlighter
    Copyright (c) 2022 ELABBASSI Hicham
-   License: MIT — a copy is included at assets/body/LICENSE.
+   License: MIT — a copy is included at packages/bodymap/src/drawing/LICENSE.
 
 2. Fonts — packages/app/public/fonts/*.woff2 (bundled with the app)
    Hanken Grotesk

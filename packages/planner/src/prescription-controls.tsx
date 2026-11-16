@@ -1,39 +1,26 @@
-import type { Intensity } from "@nabd/domain";
-import type { RepStyle } from "@nabd/program-editor";
 import { Segmented, Stepper } from "@nabd/design-system";
-import type { SegOption } from "@nabd/design-system";
-import type { PrescriptionActions } from "./actions";
+import type { PrescriptionEdit } from "@nabd/program-editor";
 import { Labelled } from "./labelled";
+import { INTENSITY_OPTIONS, REP_STYLE_OPTIONS } from "./options";
 import type { SetBlockVM } from "./set-block-vm";
 
 interface PrescriptionControlsProps {
-  block: SetBlockVM;
-  actions: PrescriptionActions;
+  vm: SetBlockVM;
+  onEdit: (change: PrescriptionEdit) => void;
 }
 
-const REP_STYLES: readonly SegOption<RepStyle>[] = [
-  { value: "range", label: "Range" },
-  { value: "fixed", label: "Fixed" },
-];
-
-const INTENSITIES: readonly SegOption<Intensity>[] = [
-  { value: "none", label: "None" },
-  { value: "rpe", label: "RPE" },
-  { value: "pct", label: "%1RM" },
-];
-
 /** How the sets of a prescription are written: rep style (where there is a choice), load mode and rest. */
-export function PrescriptionControls({ block, actions }: PrescriptionControlsProps): JSX.Element {
+export function PrescriptionControls({ vm, onEdit }: PrescriptionControlsProps): JSX.Element {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-      {block.repStyle !== null && (
+      {vm.repStyle !== null && (
         <Labelled label="Reps">
           <Segmented
             size="sm"
             ariaLabel="Rep mode"
-            options={REP_STYLES}
-            value={block.repStyle}
-            onChange={actions.setRepStyle}
+            options={REP_STYLE_OPTIONS}
+            value={vm.repStyle}
+            onChange={(style) => onEdit((p) => p.setRepStyle(style))}
           />
         </Labelled>
       )}
@@ -41,9 +28,9 @@ export function PrescriptionControls({ block, actions }: PrescriptionControlsPro
         <Segmented
           size="sm"
           ariaLabel="Load mode"
-          options={INTENSITIES}
-          value={block.intensity}
-          onChange={actions.setIntensity}
+          options={INTENSITY_OPTIONS}
+          value={vm.intensity}
+          onChange={(mode) => onEdit((p) => p.setIntensity(mode))}
         />
       </Labelled>
       <div style={{ marginLeft: "auto" }}>
@@ -51,9 +38,8 @@ export function PrescriptionControls({ block, actions }: PrescriptionControlsPro
           <Stepper
             size="mini"
             ariaLabel="Rest"
-            value={block.rest}
-            onDec={() => actions.stepRest(-1)}
-            onInc={() => actions.stepRest(1)}
+            value={vm.rest}
+            onStep={(direction) => onEdit((p) => p.stepRest(direction))}
           />
         </Labelled>
       </div>

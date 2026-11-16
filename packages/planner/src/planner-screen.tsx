@@ -1,13 +1,12 @@
 import { Page } from "@nabd/design-system";
-import type { PlannerActions } from "./actions";
 import { CoverageRail } from "./coverage-rail";
 import { DayEditor } from "./day-editor";
+import type { PlannerActions } from "./planner-actions";
+import type { PlannerVM } from "./planner-vm";
 import { ProgramHeader } from "./program-header";
-import { PlannerActionsProvider } from "./use-actions";
-import type { PlannerVM } from "./view-model";
 import { WeekBoard } from "./week-board";
 
-export interface PlannerScreenProps {
+interface PlannerScreenProps {
   vm: PlannerVM;
   actions: PlannerActions;
 }
@@ -15,17 +14,15 @@ export interface PlannerScreenProps {
 /** The Plan screen: program header, week board, and the selected day beside the coverage rail. */
 export function PlannerScreen({ vm, actions }: PlannerScreenProps): JSX.Element {
   return (
-    <PlannerActionsProvider value={actions}>
-      <Page maxWidth={1320}>
-        <ProgramHeader header={vm.header} />
-        <WeekBoard board={vm.board} />
-        {vm.editor && (
-          <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-            <DayEditor editor={vm.editor} />
-            <CoverageRail rail={vm.rail} />
-          </div>
-        )}
-      </Page>
-    </PlannerActionsProvider>
+    <Page maxWidth={1320}>
+      <ProgramHeader vm={vm.header} actions={actions} />
+      <WeekBoard vm={vm.board} actions={actions} />
+      {vm.editor && (
+        <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <DayEditor vm={vm.editor} actions={actions} />
+          <CoverageRail vm={vm.rail} />
+        </div>
+      )}
+    </Page>
   );
 }

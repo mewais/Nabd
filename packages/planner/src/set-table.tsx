@@ -1,12 +1,13 @@
 import { Button, Eyebrow, TextInput } from "@nabd/design-system";
-import type { PrescriptionActions } from "./actions";
+import type { PrescriptionEdit } from "@nabd/program-editor";
 import { PrescriptionControls } from "./prescription-controls";
 import type { SetBlockVM } from "./set-block-vm";
 import { SetRow } from "./set-row";
 
 interface SetTableProps {
-  block: SetBlockVM;
-  actions: PrescriptionActions;
+  vm: SetBlockVM;
+  /** A change to the prescription this table shows; whose it is, the owner knows. */
+  onEdit: (change: PrescriptionEdit) => void;
 }
 
 /** Badge, reps, [load], remove. */
@@ -16,8 +17,8 @@ const COLUMNS = {
 };
 
 /** A prescription's sets, with the controls that shape them and a note. */
-export function SetTable({ block, actions }: SetTableProps): JSX.Element {
-  const hasIntensityColumn = block.intensityHeader !== null;
+export function SetTable({ vm, onEdit }: SetTableProps): JSX.Element {
+  const hasIntensityColumn = vm.intensityHeader !== null;
   const columns = hasIntensityColumn ? COLUMNS.withIntensity : COLUMNS.plain;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 11, marginTop: 13 }}>
@@ -32,27 +33,32 @@ export function SetTable({ block, actions }: SetTableProps): JSX.Element {
           }}
         >
           <Eyebrow>Set</Eyebrow>
-          <Eyebrow>{block.repHeader}</Eyebrow>
-          {hasIntensityColumn && <Eyebrow>{block.intensityHeader}</Eyebrow>}
+          <Eyebrow>{vm.repHeader}</Eyebrow>
+          {hasIntensityColumn && <Eyebrow>{vm.intensityHeader}</Eyebrow>}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-          {block.rows.map((row) => (
+          {vm.rows.map((row) => (
             <SetRow
               key={row.index}
-              row={row}
+              vm={row}
               columns={columns}
               hasIntensityColumn={hasIntensityColumn}
-              actions={actions}
+              onEdit={onEdit}
             />
           ))}
         </div>
       </div>
-      <PrescriptionControls block={block} actions={actions} />
+      <PrescriptionControls vm={vm} onEdit={onEdit} />
       <div style={{ display: "flex", gap: 16 }}>
-        <Button variant="link" size="sm" onClick={actions.addSet}>
+        <Button variant="link" size="sm" onClick={() => onEdit((p) => p.addSet())}>
           + Add set
         </Button>
-        <Button variant="link" size="sm" tone="neutral" onClick={actions.addWarmup}>
+        <Button
+          variant="link"
+          size="sm"
+          tone="neutral"
+          onClick={() => onEdit((p) => p.addWarmup())}
+        >
           + Warmup
         </Button>
       </div>
@@ -60,8 +66,8 @@ export function SetTable({ block, actions }: SetTableProps): JSX.Element {
         size="sm"
         ariaLabel="Note"
         placeholder="Add a note (cues, setup, tempo…)"
-        value={block.notes}
-        onChange={actions.setNotes}
+        value={vm.notes}
+        onChange={(notes) => onEdit((p) => p.setNotes(notes))}
       />
     </div>
   );

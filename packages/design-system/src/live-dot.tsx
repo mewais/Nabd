@@ -1,7 +1,7 @@
 import { ANIMATION } from "./global-styles";
 import { RADIUS } from "./tokens";
 
-export interface LiveDotProps {
+interface LiveDotProps {
   /** Something needs attention now: the dot turns accent and pulses. */
   active: boolean;
 }

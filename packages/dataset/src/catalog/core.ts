@@ -8,8 +8,6 @@ export const CORE: Movement[] = [
     primary: ["abs"],
     secondary: ["obliques"],
     equipment: ["bodyweight", "cable", "machine"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Crunch", cable: "Cable Crunch", machine: "Machine Crunch" },
   },
   {
     id: "sit_up",
@@ -17,8 +15,6 @@ export const CORE: Movement[] = [
     primary: ["abs"],
     secondary: ["obliques"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Sit-Up" },
   },
   {
     id: "plank",
@@ -26,8 +22,6 @@ export const CORE: Movement[] = [
     primary: ["abs"],
     secondary: ["obliques"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Plank" },
     tracking: "duration",
   },
   {
@@ -36,8 +30,6 @@ export const CORE: Movement[] = [
     primary: ["abs"],
     secondary: ["obliques"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Ab Wheel Rollout" },
   },
   {
     id: "hollow_hold",
@@ -45,8 +37,6 @@ export const CORE: Movement[] = [
     primary: ["abs"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Hollow Hold" },
     tracking: "duration",
   },
   {
@@ -55,8 +45,6 @@ export const CORE: Movement[] = [
     primary: ["abs"],
     secondary: ["hip_flexors"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "V-Up" },
   },
   {
     id: "dead_bug",
@@ -64,8 +52,6 @@ export const CORE: Movement[] = [
     primary: ["abs"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Dead Bug" },
   },
   {
     id: "dragon_flag",
@@ -73,8 +59,6 @@ export const CORE: Movement[] = [
     primary: ["abs"],
     secondary: ["obliques"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Dragon Flag" },
   },
 
   // Obliques
@@ -84,7 +68,6 @@ export const CORE: Movement[] = [
     primary: ["obliques"],
     secondary: ["lower_back"],
     equipment: ["dumbbell", "cable", "barbell", "bands"],
-    laterality: ["bilateral"],
   },
   {
     id: "russian_twist",
@@ -92,8 +75,6 @@ export const CORE: Movement[] = [
     primary: ["obliques"],
     secondary: ["abs"],
     equipment: ["bodyweight", "dumbbell", "kettlebell"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Russian Twist" },
   },
   {
     id: "cable_woodchopper",
@@ -101,7 +82,6 @@ export const CORE: Movement[] = [
     primary: ["obliques"],
     secondary: ["abs"],
     equipment: ["cable", "bands"],
-    laterality: ["bilateral"],
   },
   {
     id: "side_plank",
@@ -109,8 +89,6 @@ export const CORE: Movement[] = [
     primary: ["obliques"],
     secondary: ["abs"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Side Plank" },
     tracking: "duration",
   },
   {
@@ -119,7 +97,5 @@ export const CORE: Movement[] = [
     primary: ["obliques"],
     secondary: ["abs"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Bicycle Crunch" },
   },
 ];

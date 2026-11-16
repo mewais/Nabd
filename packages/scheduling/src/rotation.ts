@@ -15,5 +15,5 @@ export function upNext(
 /** The pool member that follows `exId`, wrapping round; null when `exId` is not in the pool. */
 export function following(pool: readonly string[], exId: string): string | null {
   const position = pool.indexOf(exId);
-  return position === -1 ? null : pool[(position + 1) % pool.length]!;
+  return position === -1 ? null : (pool[(position + 1) % pool.length] ?? null);
 }

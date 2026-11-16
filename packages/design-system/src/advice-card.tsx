@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { AdviceChoice } from "@nabd/domain";
+import type { AdviceChoice } from "@nabd/view";
 import { Icon } from "./icon";
 import { COLOR, RADIUS, SURFACE2_BOX, TEXT } from "./tokens";
 
@@ -15,7 +15,7 @@ export interface AdviceText {
   basis: string | null;
 }
 
-export interface AdviceCardProps {
+interface AdviceCardProps {
   advice: AdviceText;
   /** When given, each target becomes a button that applies it. */
   onApply?: (which: AdviceChoice) => void;

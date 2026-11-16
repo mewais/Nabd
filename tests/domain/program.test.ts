@@ -1,6 +1,7 @@
-import { ProgramSchema, workingSets } from "@nabd/domain";
+import { ProgramSchema, firstDay, inWeekOrder, workingSets } from "@nabd/domain";
+import type { Day } from "@nabd/domain";
 
-const set = { type: "working", a: 8 };
+const set = { type: "working", amount: 8 };
 const row = { id: "p1", exId: "bench", repMode: "range", intensity: "pct", rest: 120, sets: [set] };
 const slot = {
   id: "slot1",
@@ -53,10 +54,12 @@ describe("ProgramSchema", () => {
   });
 
   it("a set is a warm-up, a working set or a drop set, with an optional range and intensity", () => {
-    expect(accepts(withRow({ sets: [{ type: "warmup", a: 5, b: 10, val: 70 }] }))).toBe(true);
-    expect(accepts(withRow({ sets: [{ type: "drop", a: 12 }] }))).toBe(true);
+    expect(
+      accepts(withRow({ sets: [{ type: "warmup", amount: 5, upTo: 10, intensity: 70 }] })),
+    ).toBe(true);
+    expect(accepts(withRow({ sets: [{ type: "drop", amount: 12 }] }))).toBe(true);
     expect(accepts(withRow({ sets: [{ a: 8 }] }))).toBe(false);
-    expect(accepts(withRow({ sets: [{ type: "amrap", a: 8 }] }))).toBe(false);
+    expect(accepts(withRow({ sets: [{ type: "amrap", amount: 8 }] }))).toBe(false);
   });
 
   it("a cycled slot targets one tracking muscle", () => {
@@ -68,10 +71,32 @@ describe("ProgramSchema", () => {
 describe("workingSets", () => {
   it("leaves out the warm-ups and keeps everything else", () => {
     const sets = [
-      { type: "warmup" as const, a: 10 },
-      { type: "working" as const, a: 8 },
-      { type: "drop" as const, a: 12 },
+      { type: "warmup" as const, amount: 10 },
+      { type: "working" as const, amount: 8 },
+      { type: "drop" as const, amount: 12 },
     ];
     expect(workingSets({ sets })).toEqual(sets.slice(1));
+  });
+});
+
+describe("the order of a plan's days", () => {
+  const day = (id: string, weekday: number | null): Day => ({
+    id,
+    name: id,
+    weekday,
+    exercises: [],
+    slots: [],
+  });
+  const days = [day("sun", 0), day("loose", null), day("wed", 3), day("mon", 1)];
+
+  it("a week runs from Monday to Sunday; days on no weekday come last", () => {
+    expect(inWeekOrder(days).map((d) => d.id)).toEqual(["mon", "wed", "sun", "loose"]);
+    expect(days.map((d) => d.id)).toEqual(["sun", "loose", "wed", "mon"]);
+  });
+
+  it("a weekday plan starts with its earliest day of the week, a floating one with its first", () => {
+    expect(firstDay({ schedule: "weekday", days })?.id).toBe("mon");
+    expect(firstDay({ schedule: "floating", days })?.id).toBe("sun");
+    expect(firstDay({ schedule: "weekday", days: [] })).toBeUndefined();
   });
 });

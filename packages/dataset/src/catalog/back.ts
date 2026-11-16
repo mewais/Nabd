@@ -8,9 +8,6 @@ export const BACK: Movement[] = [
     primary: ["lats"],
     secondary: ["biceps", "rhomboids", "lower_traps"],
     equipment: ["bodyweight", "pullupbar"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Pull-Up", pullupbar: "Pull-Up" },
-    tracking: "weighted_bodyweight",
   },
   {
     id: "chin_up",
@@ -18,9 +15,6 @@ export const BACK: Movement[] = [
     primary: ["lats"],
     secondary: ["biceps", "rhomboids"],
     equipment: ["bodyweight", "pullupbar"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Chin-Up", pullupbar: "Chin-Up" },
-    tracking: "weighted_bodyweight",
   },
   {
     id: "assisted_pull_up",
@@ -28,7 +22,6 @@ export const BACK: Movement[] = [
     primary: ["lats"],
     secondary: ["biceps", "rhomboids", "lower_traps"],
     equipment: ["machine"],
-    laterality: ["bilateral"],
     tracking: "assisted_bodyweight",
   },
   {
@@ -37,7 +30,6 @@ export const BACK: Movement[] = [
     primary: ["lats"],
     secondary: ["biceps", "rhomboids", "lower_traps"],
     equipment: ["cable", "machine", "bands"],
-    laterality: ["bilateral"],
   },
   {
     id: "straight_arm_pulldown",
@@ -45,7 +37,6 @@ export const BACK: Movement[] = [
     primary: ["lats"],
     secondary: [],
     equipment: ["cable", "bands"],
-    laterality: ["bilateral"],
   },
   {
     id: "row",
@@ -54,14 +45,7 @@ export const BACK: Movement[] = [
     secondary: ["biceps", "rear_delts", "lower_traps"],
     equipment: ["barbell", "dumbbell", "cable", "machine", "bands", "kettlebell"],
     laterality: ["bilateral", "unilateral"],
-    nameOverride: {
-      barbell: "Barbell Row",
-      dumbbell: "Dumbbell Row",
-      cable: "Seated Cable Row",
-      machine: "Machine Row",
-      bands: "Band Row",
-      kettlebell: "Kettlebell Row",
-    },
+    nameOverride: { cable: "Seated Cable Row" },
   },
   {
     id: "pendlay_row",
@@ -69,7 +53,6 @@ export const BACK: Movement[] = [
     primary: ["lats", "rhomboids"],
     secondary: ["biceps", "rear_delts", "lower_traps"],
     equipment: ["barbell"],
-    laterality: ["bilateral"],
   },
   {
     id: "t_bar_row",
@@ -77,7 +60,6 @@ export const BACK: Movement[] = [
     primary: ["lats", "rhomboids"],
     secondary: ["biceps", "rear_delts", "lower_traps"],
     equipment: ["barbell"],
-    laterality: ["bilateral"],
   },
   {
     id: "inverted_row",
@@ -85,8 +67,6 @@ export const BACK: Movement[] = [
     primary: ["rhomboids"],
     secondary: ["lats", "rear_delts", "biceps", "lower_traps"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Inverted Row" },
   },
   {
     id: "chest_supported_row",
@@ -94,7 +74,6 @@ export const BACK: Movement[] = [
     primary: ["rhomboids"],
     secondary: ["lats", "rear_delts", "biceps", "lower_traps"],
     equipment: ["dumbbell", "machine"],
-    laterality: ["bilateral"],
   },
 
   // Lower back, lower traps, rhomboids
@@ -104,7 +83,6 @@ export const BACK: Movement[] = [
     primary: ["lower_back", "glutes", "hamstrings"],
     secondary: ["lats", "quads", "forearms"],
     equipment: ["barbell"],
-    laterality: ["bilateral"],
   },
   {
     id: "sumo_deadlift",
@@ -112,7 +90,6 @@ export const BACK: Movement[] = [
     primary: ["glutes", "hamstrings"],
     secondary: ["quads", "lower_back", "adductors"],
     equipment: ["barbell"],
-    laterality: ["bilateral"],
   },
   {
     id: "hyperextension",
@@ -120,8 +97,6 @@ export const BACK: Movement[] = [
     primary: ["lower_back"],
     secondary: ["glutes", "hamstrings"],
     equipment: ["bodyweight", "machine"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Hyperextension", machine: "Machine Hyperextension" },
   },
   {
     id: "good_morning",
@@ -129,7 +104,6 @@ export const BACK: Movement[] = [
     primary: ["lower_back", "hamstrings"],
     secondary: ["glutes"],
     equipment: ["barbell"],
-    laterality: ["bilateral"],
   },
   {
     id: "cable_pull_through",
@@ -137,7 +111,6 @@ export const BACK: Movement[] = [
     primary: ["glutes"],
     secondary: ["hamstrings", "lower_back"],
     equipment: ["cable"],
-    laterality: ["bilateral"],
   },
   {
     id: "lower_trap_row",
@@ -145,7 +118,6 @@ export const BACK: Movement[] = [
     primary: ["lower_traps"],
     secondary: ["rhomboids"],
     equipment: ["cable", "bands"],
-    laterality: ["bilateral"],
   },
   {
     id: "serratus_slide",
@@ -153,8 +125,6 @@ export const BACK: Movement[] = [
     primary: ["lower_traps"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Serratus Wall Slide" },
   },
   {
     id: "prone_y_raise",
@@ -162,8 +132,6 @@ export const BACK: Movement[] = [
     primary: ["lower_traps"],
     secondary: ["rear_delts"],
     equipment: ["bodyweight", "dumbbell"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Prone Y Raise" },
   },
 
   // Upper traps
@@ -173,7 +141,6 @@ export const BACK: Movement[] = [
     primary: ["upper_traps"],
     secondary: [],
     equipment: ["barbell", "dumbbell", "cable", "smith", "kettlebell"],
-    laterality: ["bilateral"],
   },
   {
     id: "upright_row",
@@ -181,7 +148,6 @@ export const BACK: Movement[] = [
     primary: ["side_delts", "upper_traps"],
     secondary: ["biceps"],
     equipment: ["barbell", "dumbbell", "cable", "ezbar"],
-    laterality: ["bilateral"],
   },
   {
     id: "face_pull",
@@ -189,7 +155,6 @@ export const BACK: Movement[] = [
     primary: ["rear_delts", "rhomboids"],
     secondary: ["upper_traps", "biceps"],
     equipment: ["cable", "bands"],
-    laterality: ["bilateral"],
   },
   {
     id: "band_pull_apart",
@@ -197,7 +162,6 @@ export const BACK: Movement[] = [
     primary: ["rear_delts", "rhomboids"],
     secondary: ["lower_traps"],
     equipment: ["bands"],
-    laterality: ["bilateral"],
     nameOverride: { bands: "Band Pull-Apart" },
   },
   {
@@ -206,8 +170,6 @@ export const BACK: Movement[] = [
     primary: ["neck"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Neck Curl" },
   },
   {
     id: "neck_extension",
@@ -215,7 +177,5 @@ export const BACK: Movement[] = [
     primary: ["neck"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Neck Extension" },
   },
 ];

@@ -1,23 +1,25 @@
 import { Card, EmptyNote, TEXT } from "@nabd/design-system";
+import { isEmpty } from "./empty-vm";
+import type { EmptyVM } from "./empty-vm";
+import type { ProgressActions } from "./progress-actions";
+import type { ProgressionRowVM } from "./progress-vm";
 import { PROGRESSION_COLUMNS, ProgressionRow } from "./progression-row";
-import { isEmpty } from "./view-model";
-import type { ProgressVM } from "./view-model";
 
 interface ProgressionCardProps {
-  progression: ProgressVM["progression"];
-  onOpenChart: (exId: string) => void;
+  vm: ProgressionRowVM[] | EmptyVM;
+  actions: Pick<ProgressActions, "openChart">;
 }
 
 /** Every exercise with history: trend, personal best and gain since the first session. */
-export function ProgressionCard({ progression, onOpenChart }: ProgressionCardProps): JSX.Element {
-  const empty = isEmpty(progression);
+export function ProgressionCard({ vm, actions }: ProgressionCardProps): JSX.Element {
+  const empty = isEmpty(vm);
   return (
     <Card
       title="Progression & records"
       subtitle={`Trend & personal best${empty ? "" : " · click a row for full history"}`}
     >
-      {isEmpty(progression) ? (
-        <EmptyNote>{progression.empty}</EmptyNote>
+      {empty ? (
+        <EmptyNote>{vm.empty}</EmptyNote>
       ) : (
         <>
           <div style={{ ...PROGRESSION_COLUMNS, ...TEXT.eyebrow, padding: "0 2px 8px" }}>
@@ -26,8 +28,8 @@ export function ProgressionCard({ progression, onOpenChart }: ProgressionCardPro
             <span style={{ textAlign: "right" }}>Best</span>
             <span>Gain</span>
           </div>
-          {progression.map((row) => (
-            <ProgressionRow key={row.exId} row={row} onOpen={onOpenChart} />
+          {vm.map((row) => (
+            <ProgressionRow key={row.exId} vm={row} actions={actions} />
           ))}
         </>
       )}

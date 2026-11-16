@@ -5,8 +5,8 @@
 
 import { fireEvent, screen } from "@testing-library/react";
 import type { TodayVM } from "@nabd/today";
-import { working } from "../support/domain-factories";
-import { did, mondayProgram, planRow } from "../support/plan-fixtures";
+import { working } from "../support/builders";
+import { did, mondayProgram, planRow } from "../support/programs";
 import { todayVM } from "./fixtures";
 import { queueCard, queueRow, renderToday } from "./render";
 

@@ -24,7 +24,6 @@ export const ARMS: Movement[] = [
     primary: ["triceps"],
     secondary: [],
     equipment: ["barbell", "dumbbell", "ezbar"],
-    laterality: ["bilateral"],
   },
   {
     id: "close_grip_bench_press",
@@ -32,7 +31,6 @@ export const ARMS: Movement[] = [
     primary: ["triceps"],
     secondary: ["chest"],
     equipment: ["barbell", "smith"],
-    laterality: ["bilateral"],
   },
   {
     id: "triceps_dip",
@@ -40,9 +38,6 @@ export const ARMS: Movement[] = [
     primary: ["triceps"],
     secondary: ["chest", "front_delts"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Triceps Dip" },
-    tracking: "weighted_bodyweight",
   },
   {
     id: "bench_dip",
@@ -50,8 +45,6 @@ export const ARMS: Movement[] = [
     primary: ["triceps"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Bench Dip" },
   },
   {
     id: "diamond_push_up",
@@ -59,8 +52,6 @@ export const ARMS: Movement[] = [
     primary: ["triceps"],
     secondary: ["chest"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Diamond Push-Up" },
   },
 
   // Biceps
@@ -71,14 +62,7 @@ export const ARMS: Movement[] = [
     secondary: [],
     equipment: ["barbell", "dumbbell", "cable", "bands", "machine", "ezbar"],
     laterality: ["bilateral", "unilateral"],
-    nameOverride: {
-      barbell: "Barbell Curl",
-      dumbbell: "Dumbbell Curl",
-      cable: "Cable Curl",
-      bands: "Band Curl",
-      machine: "Preacher Curl",
-      ezbar: "EZ-Bar Curl",
-    },
+    nameOverride: { machine: "Preacher Curl" },
   },
   {
     id: "hammer_curl",
@@ -131,7 +115,6 @@ export const ARMS: Movement[] = [
     equipment: ["dumbbell", "kettlebell", "barbell"],
     laterality: ["bilateral", "unilateral"],
     tracking: "weight_duration",
-    nameOverride: { bodyweight: "Farmer Carry" },
   },
   {
     id: "reverse_wrist_curl",
@@ -147,7 +130,6 @@ export const ARMS: Movement[] = [
     primary: ["forearms"],
     secondary: [],
     equipment: ["pullupbar"],
-    laterality: ["bilateral"],
     tracking: "duration",
   },
   {
@@ -156,6 +138,5 @@ export const ARMS: Movement[] = [
     primary: ["forearms"],
     secondary: [],
     equipment: ["cable"],
-    laterality: ["bilateral"],
   },
 ];

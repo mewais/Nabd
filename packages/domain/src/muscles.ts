@@ -34,6 +34,9 @@ export type MuscleKey = (typeof MUSCLES)[number];
 
 export const MuscleKeySchema = z.enum(MUSCLES);
 
+/** How covered each muscle is, 0–100. Derived from history or from the plan, never stored. */
+export type Coverage = Record<MuscleKey, number>;
+
 /** Display names for each tracking muscle. */
 export const MUSCLE_NAMES: Record<MuscleKey, string> = {
   front_delts: "Front Delts",

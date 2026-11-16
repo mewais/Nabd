@@ -6,11 +6,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { ChartModal, buildChartVM } from "@nabd/modals";
 import type { ChartActions } from "@nabd/modals";
-import { benchHistory, trendOf } from "./chart-fixtures";
+import { benchHistory, trendOf } from "./fixtures";
+import { modalBackdrop } from "../support/dom";
 
 describe("ChartModal", () => {
   const setup = () => {
-    const vm = buildChartVM("Bench Press", trendOf(benchHistory(), "bench"));
+    const vm = buildChartVM("Bench Press", trendOf(benchHistory(), "bench"), "kg");
     const actions: ChartActions = { close: vi.fn() };
     render(<ChartModal vm={vm} actions={actions} />);
     return { vm, actions };
@@ -25,7 +26,7 @@ describe("ChartModal", () => {
 
   it("shows the headline numbers, each under its label", () => {
     setup();
-    const tile = (label: string) => screen.getByText(label).parentElement;
+    const tile = (label: string) => screen.getByRole("region", { name: label });
 
     expect(tile("Personal best")).toHaveTextContent("79.2 kg e1RM");
     expect(tile("Current")).toHaveTextContent("79.2 kg e1RM");
@@ -50,7 +51,7 @@ describe("ChartModal", () => {
     const { actions } = setup();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(actions.close).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole("dialog").parentElement as HTMLElement);
+    fireEvent.click(modalBackdrop());
     expect(actions.close).toHaveBeenCalledTimes(2);
   });
 });

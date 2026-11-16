@@ -8,7 +8,6 @@ export const HIPS: Movement[] = [
     primary: ["glutes"],
     secondary: ["hamstrings"],
     equipment: ["barbell", "dumbbell", "bands", "smith", "machine"],
-    laterality: ["bilateral"],
   },
   {
     id: "glute_bridge",
@@ -17,7 +16,6 @@ export const HIPS: Movement[] = [
     secondary: ["hamstrings"],
     equipment: ["bodyweight", "barbell", "bands"],
     laterality: ["bilateral", "unilateral"],
-    nameOverride: { bodyweight: "Glute Bridge" },
   },
   {
     id: "cable_kickback",
@@ -25,7 +23,6 @@ export const HIPS: Movement[] = [
     primary: ["glutes"],
     secondary: [],
     equipment: ["cable", "bands"],
-    laterality: ["bilateral"],
     nameOverride: { cable: "Cable Kickback", bands: "Band Kickback" },
   },
   {
@@ -34,7 +31,6 @@ export const HIPS: Movement[] = [
     primary: ["glutes"],
     secondary: ["hamstrings", "lower_back"],
     equipment: ["kettlebell"],
-    laterality: ["bilateral"],
     nameOverride: { kettlebell: "Kettlebell Swing" },
   },
   {
@@ -43,8 +39,6 @@ export const HIPS: Movement[] = [
     primary: ["glutes"],
     secondary: [],
     equipment: ["bodyweight", "cable"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Donkey Kick", cable: "Cable Donkey Kick" },
   },
 
   // Abductors
@@ -54,7 +48,6 @@ export const HIPS: Movement[] = [
     primary: ["abductors"],
     secondary: ["glutes"],
     equipment: ["machine", "cable", "bands"],
-    laterality: ["bilateral"],
   },
   {
     id: "lateral_band_walk",
@@ -62,7 +55,6 @@ export const HIPS: Movement[] = [
     primary: ["abductors"],
     secondary: ["glutes"],
     equipment: ["bands"],
-    laterality: ["bilateral"],
     nameOverride: { bands: "Lateral Band Walk" },
   },
   {
@@ -71,8 +63,6 @@ export const HIPS: Movement[] = [
     primary: ["abductors"],
     secondary: ["glutes"],
     equipment: ["bodyweight", "bands"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Clamshell" },
   },
 
   // Adductors
@@ -82,7 +72,6 @@ export const HIPS: Movement[] = [
     primary: ["adductors"],
     secondary: [],
     equipment: ["machine", "cable", "bands"],
-    laterality: ["bilateral"],
   },
   {
     id: "sumo_squat",
@@ -90,8 +79,6 @@ export const HIPS: Movement[] = [
     primary: ["adductors"],
     secondary: ["glutes", "quads"],
     equipment: ["bodyweight", "dumbbell", "barbell"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Sumo Squat" },
   },
   {
     id: "copenhagen_plank",
@@ -99,8 +86,6 @@ export const HIPS: Movement[] = [
     primary: ["adductors"],
     secondary: ["abs"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Copenhagen Plank" },
     tracking: "duration",
   },
 ];
@@ -112,8 +97,6 @@ export const HIP_FLEXORS: Movement[] = [
     primary: ["hip_flexors", "abs"],
     secondary: [],
     equipment: ["pullupbar", "bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { pullupbar: "Hanging Leg Raise", bodyweight: "Hanging Leg Raise" },
   },
   {
     id: "lying_leg_raise",
@@ -121,8 +104,6 @@ export const HIP_FLEXORS: Movement[] = [
     primary: ["hip_flexors", "abs"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Lying Leg Raise" },
   },
   {
     id: "mountain_climber",
@@ -130,8 +111,6 @@ export const HIP_FLEXORS: Movement[] = [
     primary: ["hip_flexors"],
     secondary: ["abs"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Mountain Climber" },
   },
   {
     id: "hip_flexor_march",
@@ -139,7 +118,5 @@ export const HIP_FLEXORS: Movement[] = [
     primary: ["hip_flexors"],
     secondary: [],
     equipment: ["bodyweight", "cable"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Hip Flexor March" },
   },
 ];

@@ -18,11 +18,7 @@ describe("ProgressScreen — KPIs", () => {
   it("shows each KPI's label, value and unit", () => {
     renderScreen();
 
-    const tile = (label: string): HTMLElement => {
-      const card = screen.getByText(label).parentElement;
-      if (!card) throw new Error(`no tile for ${label}`);
-      return card;
-    };
+    const tile = (label: string): HTMLElement => screen.getByRole("region", { name: label });
     expect(tile("Current streak")).toHaveTextContent("3days");
     expect(tile("Completion this wk")).toHaveTextContent("50%");
     expect(tile("Sets this week")).toHaveTextContent("6sets");
@@ -84,7 +80,9 @@ describe("ProgressScreen — completion", () => {
   it("shows this week's percentage and a bar for each of the last seven days", () => {
     renderScreen();
 
-    expect(screen.getByText("this week").parentElement).toHaveTextContent("50%");
+    expect(screen.getByRole("region", { name: "Completion rate" })).toHaveTextContent(
+      "50%this week",
+    );
     expect(screen.getByText("Last 7 days")).toBeInTheDocument();
     expect(bars("Completion by day").map((bar) => bar.textContent)).toEqual(
       ["T", "F", "S", "S", "M", "T", "W"], // prettier-ignore
@@ -108,7 +106,7 @@ describe("ProgressScreen — triggers", () => {
   it("lists every trigger with its share", () => {
     renderScreen();
 
-    const share = (label: string) => screen.getByText(label).parentElement;
+    const share = (label: string) => screen.getByRole("listitem", { name: label });
     expect(share("Idle detected")).toHaveTextContent("56%");
     expect(share("Timer")).toHaveTextContent("22%");
     expect(share("Manual")).toHaveTextContent("22%");

@@ -6,5 +6,5 @@ target
 src-tauri/gen
 pnpm-lock.yaml
 # vendored
-assets/body/bodydata.ts
+packages/bodymap/src/drawing/bodydata.ts
 packages/app/public/fonts

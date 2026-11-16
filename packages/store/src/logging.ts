@@ -1,72 +1,20 @@
 import { kgFromDisplay, loadStepKg, toggled } from "@nabd/domain";
-import type { LoggedSet } from "@nabd/domain";
 import { NudgePolicy } from "@nabd/nudge";
-import type { PlanItem } from "@nabd/scheduling";
 import { LogSession } from "@nabd/session";
-import type { LoggingActions } from "./actions";
 import type { StoreContext } from "./context";
-import { beginDay } from "./day";
+import {
+  addExtra,
+  editSession,
+  sessionAfter,
+  sessionForLogging,
+  sessionItem,
+} from "./open-session";
+import { beginDay } from "./rollover";
 import { selectCoach, selectTodayPlan } from "./selectors";
+import type { LoggingSlice } from "./slices";
 
-/** Add an exercise to today outside the plan; returns its item in today's queue. */
-export function addExtra({ get, newId, save }: StoreContext, exId: string): PlanItem | undefined {
-  const { dayState } = get();
-  const extra = { id: newId(), exId };
-  save("dayState", { ...dayState, extras: [...dayState.extras, extra] });
-  return selectTodayPlan(get()).item(extra.id);
-}
-
-export function loggingActions(ctx: StoreContext): LoggingActions {
+export function loggingSlice(ctx: StoreContext): LoggingSlice {
   const { get, set, client, now, newId, attempt, save, saveSet } = ctx;
-
-  /** Apply a change to the open session, if there is one. */
-  function editSession(change: (session: LogSession) => LogSession): void {
-    const { session } = get();
-    if (session) set({ session: change(session) });
-  }
-
-  /** The open session's exercise, if the session and the exercise both still exist. */
-  function sessionItem(): PlanItem | null {
-    const { session } = get();
-    return session ? (selectTodayPlan(get()).item(session.itemId) ?? null) : null;
-  }
-
-  /**
-   * The open session and its exercise, on today's plan. If midnight passed
-   * with the logger open, the day is rolled over first and the draft moves to
-   * today's queue (as an extra when today does not plan that exercise), so a
-   * set is never stamped with one day's date and another day's plan item.
-   */
-  function sessionForLogging(): { session: LogSession; item: PlanItem } | null {
-    const { session } = get();
-    const item = sessionItem();
-    if (!session || !item) return null;
-    if (!beginDay(ctx)) return { session, item };
-
-    const plan = selectTodayPlan(get());
-    const exId = item.exercise.id;
-    const target =
-      plan.item(item.id) ?? plan.items.find((i) => i.exercise.id === exId) ?? addExtra(ctx, exId);
-    if (!target) return null;
-    const moved = session.focus(target, session);
-    set({ session: moved });
-    return { session: moved, item: target };
-  }
-
-  /**
-   * After `logged`, a set of `item`: rest, then on to whatever the plan says
-   * comes next. The form keeps its numbers only while the next set is more of
-   * the same; another exercise, or another kind of set of this one (the
-   * warm-up is over, a drop set follows), starts from its own numbers.
-   */
-  function sessionAfter(session: LogSession, item: PlanItem, logged: LoggedSet): LogSession {
-    const rested = session.resting(new Date(logged.ts), item.prescription?.rest ?? 0);
-    const next = selectTodayPlan(get()).focusAfter(item.id);
-    if (next === null) return rested;
-    const moreOfTheSame =
-      next.id === item.id && (next.nextSet?.type ?? "working") === logged.setType;
-    return moreOfTheSame ? rested : rested.focus(next, selectCoach(get()).startFor(next));
-  }
 
   return {
     openSession: (itemId) => {
@@ -85,44 +33,44 @@ export function loggingActions(ctx: StoreContext): LoggingActions {
       });
     },
 
+    openSessionOn: (exId) => {
+      const existing = selectTodayPlan(get()).items.find((item) => item.exercise.id === exId);
+      if (existing?.skipped) get().toggleSkip(existing.id);
+      get().openSession((existing ?? addExtra(ctx, exId))?.id);
+    },
+
     closeSession: () => set({ session: null }),
 
     focusItem: (itemId) => {
       const item = selectTodayPlan(get()).item(itemId);
-      if (item) editSession((s) => s.focus(item, selectCoach(get()).startFor(item)));
+      if (item) editSession(ctx, (s) => s.focus(item, selectCoach(get()).startFor(item)));
     },
 
-    stepReps: (direction) => {
-      const item = sessionItem();
-      if (item) editSession((s) => s.stepReps(item, direction));
-    },
+    stepReps: (direction) => editSession(ctx, (s) => s.stepReps(direction)),
 
     stepWeight: (direction) =>
-      editSession((s) => s.stepWeight(direction, loadStepKg(get().settings))),
+      editSession(ctx, (s) => s.stepWeight(direction, loadStepKg(get().settings))),
 
-    setReps: (reps) => {
-      const item = sessionItem();
-      if (item) editSession((s) => s.withReps(item, reps));
-    },
+    setReps: (reps) => editSession(ctx, (s) => s.withReps(reps)),
 
     setWeight: (displayValue) =>
-      editSession((s) => s.withWeight(kgFromDisplay(displayValue, get().settings.weightUnit))),
+      editSession(ctx, (s) => s.withWeight(kgFromDisplay(displayValue, get().settings.weightUnit))),
 
     applyAdvice: (which) => {
-      const item = sessionItem();
+      const item = sessionItem(ctx);
       const target = item && selectCoach(get()).adviceFor(item)?.[which];
-      if (target) editSession((s) => s.withReps(item, target.reps).withWeight(target.weight ?? 0));
+      if (target) editSession(ctx, (s) => s.withReps(target.reps).withWeight(target.weight ?? 0));
     },
 
     logSet: async () => {
-      const entry = sessionForLogging();
+      const entry = sessionForLogging(ctx);
       if (!entry) return;
       const { session, item } = entry;
-      const at = now();
-      const logged = session.toLoggedSet(item, newId(), at);
+      // The set counts toward the day that is open, whatever the clock says (see beginDay).
+      const logged = session.toLoggedSet(item, newId(), now(), get().dayState.date);
       // Show the set first; saving must never be able to stall the logger.
       set((s) => ({ history: [...s.history, logged], snoozedUntil: null, pendingNudge: null }));
-      set({ session: sessionAfter(session, item, logged) });
+      set({ session: sessionAfter(ctx, session, item, logged) });
       await saveSet(logged);
     },
 
@@ -131,7 +79,7 @@ export function loggingActions(ctx: StoreContext): LoggingActions {
       // A set the backend never got has nothing to delete there.
       if (get().unsavedSets.includes(setId)) forget();
       // Otherwise the backend goes first: a set that could not be deleted stays on screen.
-      else if (await attempt("undo that set", () => client.deleteSet(setId))) forget();
+      else if ((await attempt("undo that set", () => client.deleteSet(setId))).ok) forget();
     },
 
     toggleSkip: (itemId) => {

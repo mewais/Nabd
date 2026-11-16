@@ -6,9 +6,9 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { EMPTY_PROGRAM } from "@nabd/domain";
 import type { TodayVM } from "@nabd/today";
-import { did, mondayProgram, planRow } from "../support/plan-fixtures";
-import { nov, working } from "../support/domain-factories";
-import { lastWeek, nudgeAt, pushDay, todayVM } from "./fixtures";
+import { nov, working } from "../support/builders";
+import { did, lastWeek, mondayProgram, planRow, pushDay } from "../support/programs";
+import { nudgeAt, todayVM } from "./fixtures";
 import { nextSetCard, renderToday } from "./render";
 
 /** Monday after the bench warm-up: a working set is next and a nudge is due. */

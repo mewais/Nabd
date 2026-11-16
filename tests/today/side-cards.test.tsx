@@ -5,9 +5,9 @@
 
 import { fireEvent, screen, within } from "@testing-library/react";
 import { EMPTY_PROGRAM } from "@nabd/domain";
-import { did } from "../support/plan-fixtures";
-import { nov } from "../support/domain-factories";
-import { pushDay, todayVM } from "./fixtures";
+import { nov } from "../support/builders";
+import { did, pushDay } from "../support/programs";
+import { todayVM } from "./fixtures";
 import type { TodayOptions } from "./fixtures";
 import { renderToday } from "./render";
 
@@ -51,7 +51,7 @@ describe("Today · muscle coverage", () => {
     const meter = (muscle: string) => screen.getByRole("meter", { name: muscle });
     expect(screen.getAllByRole("meter")).toHaveLength(23);
     expect(meter("Chest")).toHaveAttribute("aria-valuetext", "75%");
-    expect(within(meter("Chest").parentElement ?? document.body).getByText("Rest")).toBeTruthy();
+    expect(within(screen.getByRole("group", { name: "Chest" })).getByText("Rest")).toBeTruthy();
     expect(meter("Quads")).toHaveAttribute("aria-valuetext", "0%");
   });
 });
@@ -86,7 +86,7 @@ describe("Today · stats", () => {
       did("p-bench", "bench", 9, 60),
     ];
     renderToday(todayVM({ program: pushDay(), history }, { unit: "lb" }));
-    const tile = (label: string) => screen.getByText(label).parentElement;
+    const tile = (label: string) => screen.getByRole("region", { name: label });
 
     expect(tile("Streak")).toHaveTextContent("2days");
     expect(tile("This week")).toHaveTextContent("2sets");

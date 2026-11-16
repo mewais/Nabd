@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { MUSCLE_NAMES, MuscleKeySchema, MuscleGroupSchema, type MuscleKey } from "./muscles";
+import type { MuscleKey } from "./muscles";
+import { MUSCLE_NAMES, MuscleKeySchema, MuscleGroupSchema } from "./muscles";
 import { EquipmentSchema } from "./equipment";
 import { TrackingTypeSchema } from "./tracking";
 
@@ -17,6 +18,9 @@ export const ExerciseSchema = z.object({
 
 export type Exercise = z.infer<typeof ExerciseSchema>;
 
+/** The user's custom exercises, as they are stored and exported. */
+export const CustomExercisesSchema = z.array(ExerciseSchema);
+
 /** Finds an exercise by id; undefined once it is no longer in the library. */
 export type ExerciseLookup = (exId: string) => Exercise | undefined;
 
@@ -28,4 +32,22 @@ export function musclesOf(exercise: Pick<Exercise, "primary" | "secondary">): Mu
 /** Display names of the muscles an exercise works, primary ones first. */
 export function muscleNames(exercise: Pick<Exercise, "primary" | "secondary">): string[] {
   return musclesOf(exercise).map((muscle) => MUSCLE_NAMES[muscle]);
+}
+
+/** Muscles as one phrase: "Chest, Front Delts, Triceps". */
+export function formatMuscles(muscles: readonly MuscleKey[]): string {
+  return muscles.map((muscle) => MUSCLE_NAMES[muscle]).join(", ");
+}
+
+/** The muscles an exercise works as one phrase, primary ones first. */
+export function muscleList(exercise: Pick<Exercise, "primary" | "secondary">): string {
+  return formatMuscles(musclesOf(exercise));
+}
+
+/**
+ * What to call exercise `exId`: its name, else `fallback` — by default the id
+ * itself — once the library no longer has it.
+ */
+export function exerciseName(lookup: ExerciseLookup, exId: string, fallback = exId): string {
+  return lookup(exId)?.name ?? fallback;
 }

@@ -1,6 +1,6 @@
 import { RADIUS, SURFACE2_BOX } from "./tokens";
 
-export interface TextInputProps {
+interface TextInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;

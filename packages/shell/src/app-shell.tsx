@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import { ThemeProvider } from "@nabd/design-system";
-import type { ShellActions } from "./actions";
 import { AppLayout } from "./app-layout";
 import { NoticeBanner } from "./notice-banner";
+import type { ShellActions } from "./shell-actions";
+import type { ShellVM } from "./shell-vm";
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
-import type { ShellVM } from "./view-model";
 
-export interface AppShellProps {
+interface AppShellProps {
   vm: ShellVM;
   actions: ShellActions;
   /** The current screen, and whatever floats over it. */
@@ -19,9 +19,9 @@ export function AppShell({ vm, actions, children }: AppShellProps): JSX.Element 
   return (
     <ThemeProvider theme={vm.theme} glass={vm.glass} opacity={vm.opacity}>
       <AppLayout
-        sidebar={<Sidebar vm={vm.sidebar} onNavigate={actions.navigate} />}
+        sidebar={<Sidebar vm={vm.sidebar} actions={actions} />}
         topBar={<TopBar vm={vm.topBar} actions={actions} />}
-        notice={vm.notice && <NoticeBanner notice={vm.notice} onDismiss={actions.dismissNotice} />}
+        notice={vm.notice && <NoticeBanner vm={vm.notice} actions={actions} />}
       >
         {children}
       </AppLayout>

@@ -1,24 +1,25 @@
 import { Card, Chip, FONT, IconButton, TEXT } from "@nabd/design-system";
 import type { ExerciseCardVM } from "./editor-vm";
 import { MoveButtons } from "./move-buttons";
+import type { PlannerActions } from "./planner-actions";
 import { SetTable } from "./set-table";
 import { SupersetToggle } from "./superset-toggle";
-import { useExerciseActions, usePrescriptionActions } from "./use-actions";
 
 interface ExerciseCardProps {
+  vm: ExerciseCardVM;
   dayId: string;
-  exercise: ExerciseCardVM;
+  actions: Pick<PlannerActions, "edit">;
 }
 
 /** One exercise of a fixed day: what it is, its set table, and its superset link. */
-export function ExerciseCard({ dayId, exercise }: ExerciseCardProps): JSX.Element {
-  const actions = useExerciseActions(dayId, exercise.id);
-  const prescription = usePrescriptionActions(dayId, "exercise", exercise.id);
+export function ExerciseCard({ vm, dayId, actions }: ExerciseCardProps): JSX.Element {
+  const { edit } = actions;
+  const rowId = vm.id;
   return (
-    <section aria-label={exercise.name}>
+    <section aria-label={vm.name}>
       <Card variant="tile" padding={14}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          {exercise.supersetTag !== null && (
+          {vm.supersetTag !== null && (
             <span
               style={{
                 fontFamily: FONT.mono,
@@ -27,27 +28,34 @@ export function ExerciseCard({ dayId, exercise }: ExerciseCardProps): JSX.Elemen
                 color: "var(--accent2)",
               }}
             >
-              {exercise.supersetTag}
+              {vm.supersetTag}
             </span>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={TEXT.cardTitle}>{exercise.name}</div>
-            <div style={{ ...TEXT.cardSubtitle, marginTop: 3 }}>{exercise.muscles}</div>
+            <div style={TEXT.cardTitle}>{vm.name}</div>
+            <div style={{ ...TEXT.cardSubtitle, marginTop: 3 }}>{vm.muscles}</div>
           </div>
-          {exercise.equipment !== "" && <Chip variant="tag">{exercise.equipment}</Chip>}
-          <MoveButtons onMove={actions.move} />
+          {vm.equipment !== "" && <Chip variant="tag">{vm.equipment}</Chip>}
+          <MoveButtons
+            onMove={(direction) => edit((e) => e.moveExercise(dayId, rowId, direction))}
+          />
           <IconButton
             icon="close"
             variant="plain"
             ariaLabel="Remove exercise"
-            onClick={actions.remove}
+            onClick={() => edit((e) => e.removeExercise(dayId, rowId))}
           />
         </div>
-        <SetTable block={exercise.block} actions={prescription} />
+        <SetTable
+          vm={vm.block}
+          onEdit={(change) =>
+            edit((e) => e.editPrescription(dayId, { kind: "exercise", id: rowId }, change))
+          }
+        />
         <div style={{ marginTop: 10 }}>
           <SupersetToggle
-            linked={exercise.supersetTag !== null}
-            onToggle={actions.toggleSuperset}
+            linked={vm.supersetTag !== null}
+            onToggle={() => edit((e) => e.toggleSuperset(dayId, rowId))}
           />
         </div>
       </Card>

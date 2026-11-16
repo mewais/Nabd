@@ -1,19 +1,20 @@
 import type {
   Day,
+  Direction,
   ExerciseLookup,
-  ExercisePrescription,
-  Intensity,
   MuscleKey,
   Prescription,
   Program,
   ProgramType,
   Schedule,
 } from "@nabd/domain";
-import { WEEK_ORDER, measureOf, poolMeasure } from "@nabd/domain";
+import { WEEK_ORDER, inWeekOrder, measureOf, poolMeasure } from "@nabd/domain";
 import { deriveSlots } from "./derive-slots";
 import { normalize } from "./normalize";
-import * as prescriptions from "./prescription-edits";
-import type { RepStyle } from "./prescription-edits";
+import { PrescriptionEditor } from "./prescription-editor";
+import { movingBlocks, shift, shiftById, without } from "./reorder";
+import type { Identified } from "./reorder";
+import type { PrescriptionEdit } from "./prescription-editor";
 
 /** Points at the prescription being edited: a fixed exercise row or a cycled slot. */
 export interface EditRef {
@@ -35,30 +36,12 @@ export type ProgramEdit = (editor: ProgramEditor) => Program;
 /** Days a weekday schedule has room for: one per weekday, as a further day could never come up. */
 export const WEEKDAY_SLOTS = WEEK_ORDER.length;
 
-/** Whether `program` could run on a weekday schedule: it has no more days than a week. */
-export function fitsWeekdaySchedule(program: Pick<Program, "days">): boolean {
-  return program.days.length <= WEEKDAY_SLOTS;
-}
-
-/** Move the element at `index` one place up (-1) or down (+1), if there is room. */
-function shift<T>(list: T[], index: number, direction: number): void {
-  const target = index + direction;
-  if (index < 0 || target < 0 || target >= list.length) return;
-  [list[index], list[target]] = [list[target]!, list[index]!];
-}
-
-/** A day's rows as the blocks that move together: each superset, and each exercise on its own. */
-function movingBlocks(rows: readonly ExercisePrescription[]): ExercisePrescription[][] {
-  const blocks: ExercisePrescription[][] = [];
-  for (const row of rows) {
-    const last = blocks.at(-1);
-    if (last && row.supersetId !== undefined && last[0]?.supersetId === row.supersetId) {
-      last.push(row);
-    } else {
-      blocks.push([row]);
-    }
-  }
-  return blocks;
+/**
+ * Whether `program` could run on a weekday schedule — with `added` more days,
+ * if any: it would have no more days than a week.
+ */
+export function fitsWeekdaySchedule(program: Pick<Program, "days">, added = 0): boolean {
+  return program.days.length + added <= WEEKDAY_SLOTS;
 }
 
 /**
@@ -88,16 +71,12 @@ export class ProgramEditor {
     });
   }
 
-  private editPrescription(
-    dayId: string,
-    ref: EditRef,
-    change: (prescription: Prescription) => void,
-  ): Program {
+  /** Change the prescription `ref` points at (see {@link PrescriptionEditor} for the changes). */
+  editPrescription(dayId: string, ref: EditRef, edit: PrescriptionEdit): Program {
     return this.editDay(dayId, (day) => {
-      const list: (Prescription & { id: string })[] =
-        ref.kind === "slot" ? day.slots : day.exercises;
+      const list: (Prescription & Identified)[] = ref.kind === "slot" ? day.slots : day.exercises;
       const prescription = list.find((p) => p.id === ref.id);
-      if (prescription) change(prescription);
+      if (prescription) edit(new PrescriptionEditor(prescription));
     });
   }
 
@@ -134,9 +113,7 @@ export class ProgramEditor {
     return this.edit((draft) => {
       draft.schedule = schedule;
       if (schedule === "floating") {
-        const weekPosition = (day: Day): number =>
-          day.weekday === null ? WEEKDAY_SLOTS : WEEK_ORDER.indexOf(day.weekday);
-        draft.days.sort((a, b) => weekPosition(a) - weekPosition(b));
+        draft.days = inWeekOrder(draft.days);
         for (const day of draft.days) day.weekday = null;
         return;
       }
@@ -155,8 +132,8 @@ export class ProgramEditor {
 
   /** Add an empty day; a weekday schedule that is already full stays as it is. */
   addDay(weekday: number | null): Program {
-    const { schedule, days } = this.program;
-    if (schedule === "weekday" && days.length >= WEEKDAY_SLOTS) return this.program;
+    const full = this.program.schedule === "weekday" && !fitsWeekdaySchedule(this.program, 1);
+    if (full) return this.program;
     return this.edit((draft) => {
       draft.days.push({ id: this.newId(), name: "New day", weekday, exercises: [], slots: [] });
     });
@@ -164,7 +141,7 @@ export class ProgramEditor {
 
   removeDay(dayId: string): Program {
     return this.edit((draft) => {
-      draft.days = draft.days.filter((d) => d.id !== dayId);
+      draft.days = without(draft.days, dayId);
     });
   }
 
@@ -184,14 +161,8 @@ export class ProgramEditor {
   }
 
   /** Move a day earlier (-1) or later (+1) in the floating order. */
-  moveDay(dayId: string, direction: number): Program {
-    return this.edit((draft) => {
-      shift(
-        draft.days,
-        draft.days.findIndex((d) => d.id === dayId),
-        direction,
-      );
-    });
+  moveDay(dayId: string, direction: Direction): Program {
+    return this.edit((draft) => shiftById(draft.days, dayId, direction));
   }
 
   // ----- Fixed-mode exercises -----
@@ -203,14 +174,14 @@ export class ProgramEditor {
       day.exercises.push({
         id: this.newId(),
         exId: exercise.id,
-        ...prescriptions.defaultPrescription(measureOf(exercise.tracking)),
+        ...PrescriptionEditor.initial(measureOf(exercise.tracking)),
       });
     });
   }
 
   removeExercise(dayId: string, rowId: string): Program {
     return this.editDay(dayId, (day) => {
-      day.exercises = day.exercises.filter((e) => e.id !== rowId);
+      day.exercises = without(day.exercises, rowId);
     });
   }
 
@@ -222,17 +193,17 @@ export class ProgramEditor {
    *  - a member moved out past the edge of its superset leaves it (is unlinked)
    *    and stays where it is, now on its own.
    */
-  moveExercise(dayId: string, rowId: string, direction: number): Program {
+  moveExercise(dayId: string, rowId: string, direction: Direction): Program {
     return this.editDay(dayId, (day) => {
       const blocks = movingBlocks(day.exercises);
       const at = blocks.findIndex((block) => block.some((row) => row.id === rowId));
       const block = blocks[at];
-      if (!block) return;
-      const position = block.findIndex((row) => row.id === rowId);
-      const target = position + direction;
+      const row = block?.find((member) => member.id === rowId);
+      if (!block || !row) return;
+      const target = block.indexOf(row) + direction;
       if (block.length === 1) shift(blocks, at, direction);
-      else if (target >= 0 && target < block.length) shift(block, position, direction);
-      else delete block[position]!.supersetId;
+      else if (target >= 0 && target < block.length) shiftById(block, rowId, direction);
+      else delete row.supersetId;
       day.exercises = blocks.flat();
     });
   }
@@ -270,30 +241,19 @@ export class ProgramEditor {
 
   addSlot(dayId: string, muscle: MuscleKey): Program {
     return this.editDay(dayId, (day) => {
-      day.slots.push({
-        id: this.newId(),
-        muscle,
-        pool: [],
-        ...prescriptions.defaultPrescription("reps"),
-      });
+      day.slots.push({ id: this.newId(), muscle, pool: [], ...PrescriptionEditor.initial("reps") });
     });
   }
 
   removeSlot(dayId: string, slotId: string): Program {
     return this.editDay(dayId, (day) => {
-      day.slots = day.slots.filter((s) => s.id !== slotId);
+      day.slots = without(day.slots, slotId);
     });
   }
 
   /** Move a slot earlier (-1) or later (+1) in its day. */
-  moveSlot(dayId: string, slotId: string, direction: number): Program {
-    return this.editDay(dayId, (day) => {
-      shift(
-        day.slots,
-        day.slots.findIndex((s) => s.id === slotId),
-        direction,
-      );
-    });
+  moveSlot(dayId: string, slotId: string, direction: Direction): Program {
+    return this.editDay(dayId, (day) => shiftById(day.slots, slotId, direction));
   }
 
   /**
@@ -317,60 +277,6 @@ export class ProgramEditor {
     return this.editDay(dayId, (day) => {
       const slot = day.slots.find((s) => s.id === slotId);
       if (slot) slot.pool = slot.pool.filter((id) => id !== exId);
-    });
-  }
-
-  // ----- Prescriptions (an exercise row or a cycled slot; see prescription-edits.ts) -----
-
-  setRepStyle(dayId: string, ref: EditRef, style: RepStyle): Program {
-    return this.editPrescription(dayId, ref, (p) => prescriptions.setRepStyle(p, style));
-  }
-
-  setIntensity(dayId: string, ref: EditRef, mode: Intensity): Program {
-    return this.editPrescription(dayId, ref, (p) => prescriptions.setIntensity(p, mode));
-  }
-
-  stepRest(dayId: string, ref: EditRef, direction: number): Program {
-    return this.editPrescription(dayId, ref, (p) => prescriptions.stepRest(p, direction));
-  }
-
-  addSet(dayId: string, ref: EditRef): Program {
-    return this.editPrescription(dayId, ref, prescriptions.addSet);
-  }
-
-  addWarmup(dayId: string, ref: EditRef): Program {
-    return this.editPrescription(dayId, ref, prescriptions.addWarmup);
-  }
-
-  removeSet(dayId: string, ref: EditRef, index: number): Program {
-    return this.editPrescription(dayId, ref, (p) => prescriptions.removeSet(p, index));
-  }
-
-  cycleSetType(dayId: string, ref: EditRef, index: number): Program {
-    return this.editPrescription(dayId, ref, (p) => prescriptions.cycleSetType(p, index));
-  }
-
-  stepRep(
-    dayId: string,
-    ref: EditRef,
-    index: number,
-    which: "a" | "b",
-    direction: number,
-  ): Program {
-    return this.editPrescription(dayId, ref, (p) =>
-      prescriptions.stepRep(p, index, which, direction),
-    );
-  }
-
-  stepIntensity(dayId: string, ref: EditRef, index: number, direction: number): Program {
-    return this.editPrescription(dayId, ref, (p) =>
-      prescriptions.stepIntensity(p, index, direction),
-    );
-  }
-
-  setNotes(dayId: string, ref: EditRef, notes: string): Program {
-    return this.editPrescription(dayId, ref, (p) => {
-      p.notes = notes;
     });
   }
 }

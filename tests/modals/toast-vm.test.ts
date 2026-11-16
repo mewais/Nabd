@@ -4,8 +4,9 @@
  */
 
 import { buildToastVM } from "@nabd/modals";
-import { buildWorld, did, pushDay } from "../support/plan-fixtures";
-import { nov } from "../support/domain-factories";
+import { nov } from "../support/builders";
+import { did, pushDay } from "../support/programs";
+import { buildWorld } from "../support/world";
 
 describe("buildToastVM", () => {
   /** Bench Press with its warm-up done: the next set is 2 of 3. */
@@ -19,7 +20,7 @@ describe("buildToastVM", () => {
       title: "Time to move",
       reason: "Interval's up",
       exercise: "Bench Press",
-      detail: "Chest · set 2 of 3",
+      detail: "Chest · Set 2 of 3",
     });
   });
 

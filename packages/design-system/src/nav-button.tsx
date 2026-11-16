@@ -1,7 +1,7 @@
 import { Icon } from "./icon";
 import type { IconName } from "./icon-paths";
 
-export interface NavButtonProps {
+interface NavButtonProps {
   icon: IconName;
   label: string;
   /** This is the destination being shown. */

@@ -10,7 +10,7 @@ export interface SegOption<V extends string = string> extends Option<V> {
   disabled?: boolean;
 }
 
-export interface SegmentedProps<V extends string = string> {
+interface SegmentedProps<V extends string = string> {
   options: readonly SegOption<V>[];
   value: V;
   onChange: (value: V) => void;

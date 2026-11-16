@@ -1,7 +1,7 @@
 import { ChipToggle } from "./chip-toggle";
 import type { Option } from "./option";
 
-export interface ChipGroupProps<V extends string> {
+interface ChipGroupProps<V extends string> {
   options: readonly Option<V>[];
   /** The values that are on: one for a filter, any number for a multi-select. */
   selected: readonly V[];

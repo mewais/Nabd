@@ -1,44 +1,39 @@
-import type { Recommendation } from "@nabd/coverage";
-import { MUSCLE_NAMES, type MuscleKey } from "@nabd/domain";
-import { FONT, MeterBar } from "@nabd/design-system";
+import type { MuscleStanding, Recommendation } from "@nabd/coverage";
+import { MUSCLE_NAMES } from "@nabd/domain";
+import { Eyebrow, MeterBar } from "@nabd/design-system";
+import type { Tone } from "@nabd/design-system";
 
-export interface MuscleBarProps {
-  muscle: MuscleKey;
-  /** Coverage, 0–100. */
-  pct: number;
-  /** Whether the muscle is due a rest or a push (from the coverage engine). */
-  recommendation: Recommendation;
-}
+/** One muscle's standing, as the coverage engine reports it. */
+type MuscleBarProps = MuscleStanding;
 
-const TAGS: Record<Recommendation, { text: string; color: string }> = {
-  rest: { text: "Rest", color: "var(--accent3)" },
-  push: { text: "Push", color: "var(--accent)" },
-  none: { text: "", color: "var(--text3)" },
+/** What a recommendation is called, where it is worth saying. */
+const RECOMMENDATION_NAMES: Record<Recommendation, string> = {
+  rest: "Rest",
+  push: "Push",
+  none: "",
+};
+
+/** The colour a recommendation is shown in, wherever it appears. */
+export const RECOMMENDATION_TONES: Record<Recommendation, Tone> = {
+  rest: "info",
+  push: "accent",
+  none: "neutral",
 };
 
 /** One muscle's coverage as a meter, tagged "Rest" or "Push" when it stands out. */
 export function MuscleBar({ muscle, pct, recommendation }: MuscleBarProps): JSX.Element {
-  const tag = TAGS[recommendation];
   return (
     <MeterBar
       label={MUSCLE_NAMES[muscle]}
       pct={pct}
       value={`${Math.round(pct)}%`}
       trailing={
-        <span
-          style={{
-            width: 38,
-            flex: "none",
-            textAlign: "right",
-            fontFamily: FONT.mono,
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: "0.04em",
-            color: tag.color,
-          }}
+        <Eyebrow
+          tone={RECOMMENDATION_TONES[recommendation]}
+          style={{ width: 38, flex: "none", textAlign: "right" }}
         >
-          {tag.text}
-        </span>
+          {RECOMMENDATION_NAMES[recommendation]}
+        </Eyebrow>
       }
     />
   );

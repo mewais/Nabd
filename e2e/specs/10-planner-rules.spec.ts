@@ -75,7 +75,7 @@ test("a stored plan that prescribes reps as time, or time as reps, is put right 
   const { today } = app;
   const stored = plan([
     day("Push", [
-      planned(bench.id, { repMode: "time", sets: [{ type: "working", a: 45 }] }),
+      planned(bench.id, { repMode: "time", sets: [{ type: "working", amount: 45 }] }),
       planned(plank.id),
     ]),
   ]);

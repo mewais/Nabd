@@ -1,10 +1,12 @@
 import { Eyebrow, RADIUS, TEXT, tint } from "@nabd/design-system";
-import type { ExerciseCardVM } from "./editor-vm";
+import type { SupersetVM } from "./editor-vm";
 import { ExerciseCard } from "./exercise-card";
+import type { PlannerActions } from "./planner-actions";
 
 interface SupersetGroupProps {
+  vm: SupersetVM;
   dayId: string;
-  members: ExerciseCardVM[];
+  actions: Pick<PlannerActions, "edit">;
 }
 
 const SUPERSET_COLOR = "var(--accent2)";
@@ -13,7 +15,7 @@ const SUPERSET_COLOR = "var(--accent2)";
  * Exercises done back to back, framed together — and kept together: the hint
  * says how moving a member behaves (the rule is ProgramEditor.moveExercise's).
  */
-export function SupersetGroup({ dayId, members }: SupersetGroupProps): JSX.Element {
+export function SupersetGroup({ vm, dayId, actions }: SupersetGroupProps): JSX.Element {
   return (
     <div
       style={{
@@ -28,8 +30,8 @@ export function SupersetGroup({ dayId, members }: SupersetGroupProps): JSX.Eleme
         <span style={TEXT.hint}>Moves as one. Move an exercise past its edge to unlink it.</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-        {members.map((member) => (
-          <ExerciseCard key={member.id} dayId={dayId} exercise={member} />
+        {vm.members.map((member) => (
+          <ExerciseCard key={member.id} vm={member} dayId={dayId} actions={actions} />
         ))}
       </div>
     </div>

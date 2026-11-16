@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 
-export interface RowButtonProps {
+interface RowButtonProps {
   children?: ReactNode;
   onClick: () => void;
   /** Accessible name, when the row's content is not enough. */

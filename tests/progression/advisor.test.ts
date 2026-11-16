@@ -1,14 +1,7 @@
 import { dateKey, kgFromDisplay } from "@nabd/domain";
 import type { Exercise, LoggedSet, SetSpec, TrackingType } from "@nabd/domain";
 import { ExerciseHistory, ProgressionAdvisor } from "@nabd/progression";
-import {
-  exercise,
-  logged,
-  nov,
-  prescription,
-  threeSets,
-  working,
-} from "../support/domain-factories";
+import { exercise, logged, nov, prescription, threeSets, working } from "../support/builders";
 
 const TODAY = dateKey(nov(16));
 const range8to12 = prescription(threeSets());
@@ -149,14 +142,14 @@ describe("other ways of tracking", () => {
 
   it("holds: five more seconds until the target time is reached, then keep going", () => {
     const plank = ofType("duration");
-    const plan = prescription([{ type: "working", a: 45 }], { repMode: "time" });
+    const plan = prescription([{ type: "working", amount: 45 }], { repMode: "time" });
     expect(advise(plank, [logged(plank, nov(9), 30, null)], { plan }).primary.reps).toBe(45);
     expect(advise(plank, [logged(plank, nov(9), 45, null)], { plan }).primary.reps).toBe(50);
   });
 
   it("loaded holds trade time for load at the target", () => {
     const carry = ofType("weight_duration");
-    const plan = prescription([{ type: "working", a: 40 }], { repMode: "time" });
+    const plan = prescription([{ type: "working", amount: 40 }], { repMode: "time" });
     expect(advise(carry, [logged(carry, nov(9), 40, 20)], { plan }).primary).toEqual({
       reps: 40,
       weight: 22.5,
@@ -177,5 +170,38 @@ describe("the goal a set is measured against", () => {
   it("an unplanned exercise uses the default window", () => {
     const ex = exercise();
     expect(advise(ex, [logged(ex, nov(9), 12, 10)], { plan: null }).kind).toBe("add_load");
+  });
+});
+
+describe("where a first warm-up starts", () => {
+  const advisor = new ProgressionAdvisor(2.5);
+  const warmup: SetSpec = { type: "warmup", amount: 12 };
+
+  it("is half the last working load, on the load step, for the reps the warm-up asks", () => {
+    expect(advisor.warmupFrom("weight_reps", { reps: 8, weight: 60 }, warmup)).toEqual({
+      reps: 12,
+      weight: 30,
+    });
+    // Half of 52.5 kg is 26.25 kg, which no 2.5 kg plate jump reaches: 27.5 kg is the nearest.
+    expect(advisor.warmupFrom("weight_reps", { reps: 8, weight: 52.5 }, warmup).weight).toBe(27.5);
+    expect(
+      new ProgressionAdvisor(1.134).warmupFrom("weight_reps", { reps: 8, weight: 11.34 }, warmup),
+    ).toEqual({
+      reps: 12,
+      weight: 5.67,
+    });
+  });
+
+  it("keeps the working reps when no warm-up is prescribed", () => {
+    expect(advisor.warmupFrom("weight_reps", { reps: 8, weight: 60 }, null).reps).toBe(8);
+  });
+
+  it("has no load to halve on an unweighted exercise, and leaves assistance as it was", () => {
+    expect(
+      advisor.warmupFrom("bodyweight_reps", { reps: 12, weight: null }, warmup).weight,
+    ).toBeNull();
+    expect(advisor.warmupFrom("assisted_bodyweight", { reps: 6, weight: 20 }, warmup).weight).toBe(
+      20,
+    );
   });
 });

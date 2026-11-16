@@ -4,17 +4,21 @@
 
 import { useState } from "react";
 import { render, screen, within } from "@testing-library/react";
-import type { Program } from "@nabd/domain";
+import { lookup, vmOf } from "./fixtures";
 import { ProgramEditor } from "@nabd/program-editor";
-import type { PlanToday } from "@nabd/program-editor";
 import { PlannerScreen } from "@nabd/planner";
 import type { PlannerActions } from "@nabd/planner";
-import { lookup, vmOf } from "./fixtures";
+import type { Program } from "@nabd/domain";
+import type { PlanToday } from "@nabd/program-editor";
 
 /** The planner is used on a Monday, on which the plan is on its first day. */
 const TODAY: PlanToday = { weekday: 1, dayId: null };
 
-export function renderPlanner(initial: Program, editDayId: string | null = null) {
+/** `plannerDayId`: the day the editor opens on; like the app, the harness always has one (the first, unless told). */
+export function renderPlanner(
+  initial: Program,
+  plannerDayId: string | null = initial.days[0]?.id ?? null,
+) {
   let current = initial;
   let nextId = 0;
   const newId = (): string => `new-${++nextId}`;
@@ -27,7 +31,7 @@ export function renderPlanner(initial: Program, editDayId: string | null = null)
 
   function Harness(): JSX.Element {
     const [program, setProgram] = useState(initial);
-    const [selected, setSelected] = useState(editDayId);
+    const [selected, setSelected] = useState(plannerDayId);
     const actions: PlannerActions = {
       ...spies,
       edit: (edit) => {

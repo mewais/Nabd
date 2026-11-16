@@ -1,13 +1,13 @@
 import { BodyMapPair } from "@nabd/bodymap";
 import { Card, MeterBar } from "@nabd/design-system";
-import type { RailVM } from "./view-model";
+import type { RailVM } from "./planner-vm";
 
 interface CoverageRailProps {
-  rail: RailVM;
+  vm: RailVM;
 }
 
 /** What the plan trains: the body map, and sets per muscle against full weekly coverage. */
-export function CoverageRail({ rail }: CoverageRailProps): JSX.Element {
+export function CoverageRail({ vm }: CoverageRailProps): JSX.Element {
   return (
     <Card
       title="Weekly coverage"
@@ -15,9 +15,9 @@ export function CoverageRail({ rail }: CoverageRailProps): JSX.Element {
       padding="18px 16px"
       style={{ width: 300, flex: "none", boxSizing: "border-box" }}
     >
-      <BodyMapPair coverage={rail.coverage} />
+      <BodyMapPair coverage={vm.coverage} />
       <div style={{ borderTop: "1px solid var(--line)", marginTop: 10, paddingTop: 10 }}>
-        {rail.bars.map((bar) => (
+        {vm.bars.map((bar) => (
           <MeterBar
             key={bar.muscle}
             label={bar.name}

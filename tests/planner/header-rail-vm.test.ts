@@ -1,6 +1,7 @@
 import { EMPTY_PROGRAM } from "@nabd/domain";
 import type { Program } from "@nabd/domain";
-import { cycledProgram, fixedProgram, floating, vmOf } from "./fixtures";
+import { asFloating, officeStrength, rotationPlan } from "../support/programs";
+import { vmOf } from "./fixtures";
 
 /** A floating plan with this many (empty) days. */
 const floatingPlanOf = (days: number): Program => ({
@@ -17,36 +18,27 @@ const floatingPlanOf = (days: number): Program => ({
 
 describe("header view-model", () => {
   it("carries the program's name, type and schedule", () => {
-    expect(vmOf(cycledProgram()).header).toMatchObject({
+    expect(vmOf(rotationPlan()).header).toMatchObject({
       name: "Rotation",
       type: "cycled",
       schedule: "weekday",
     });
   });
 
-  it("offers both schedules while the plan fits in a week", () => {
-    expect(vmOf(floatingPlanOf(7)).header.scheduleOptions).toEqual([
-      { value: "weekday", label: "Weekdays" },
-      { value: "floating", label: "Floating" },
-    ]);
+  it("lets a plan that fits in a week switch to weekdays", () => {
+    expect(vmOf(floatingPlanOf(7)).header.weekdayBlocked).toBeNull();
   });
 
-  it("does not offer weekdays to a floating plan longer than a week, and says why", () => {
-    const [weekdays, floatingOption] = vmOf(floatingPlanOf(8)).header.scheduleOptions;
-
-    expect(weekdays).toEqual({
-      value: "weekday",
-      label: "Weekdays",
-      disabled: true,
-      title: "A week has room for 7 days; this plan has 8",
-    });
-    expect(floatingOption).toEqual({ value: "floating", label: "Floating" });
+  it("blocks weekdays for a floating plan longer than a week, and says why", () => {
+    expect(vmOf(floatingPlanOf(8)).header.weekdayBlocked).toBe(
+      "A week has room for 7 days; this plan has 8",
+    );
   });
 });
 
 describe("coverage rail view-model", () => {
   it("lists the muscles the plan trains, most sets first, against full weekly coverage", () => {
-    const { bars, coverage } = vmOf(fixedProgram()).rail;
+    const { bars, coverage } = vmOf(officeStrength()).rail;
 
     // Bench 3 working sets + OHP 3: front delts are secondary to one, primary to the other.
     const chest = bars.find((bar) => bar.muscle === "chest");
@@ -59,7 +51,7 @@ describe("coverage rail view-model", () => {
   });
 
   it("writes fractional and single sets naturally", () => {
-    const values = vmOf(floating(cycledProgram())).rail.bars.map((bar) => bar.value);
+    const values = vmOf(asFloating(rotationPlan())).rail.bars.map((bar) => bar.value);
 
     expect(values).toContain("1 set");
     expect(values.some((value) => /^\d+\.\d+ sets$/.test(value))).toBe(true);

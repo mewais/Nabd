@@ -23,8 +23,6 @@ export const SHOULDERS: Movement[] = [
     primary: ["front_delts"],
     secondary: ["triceps"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Pike Push-Up" },
   },
   {
     id: "lateral_raise",

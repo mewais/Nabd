@@ -1,4 +1,6 @@
-import type { BootSnapshot, IpcClient, PlatformCapabilities } from "./client";
+import type { PlatformCapabilities } from "@nabd/domain";
+import { NO_CAPABILITIES } from "@nabd/domain";
+import type { BootSnapshot, IpcClient } from "./client";
 
 /** A backend that lives in memory, with what it holds open to inspection. */
 export interface MemoryBackend {
@@ -6,8 +8,6 @@ export interface MemoryBackend {
   /** What a real backend would have on disk; the client reads and writes it. */
   data: BootSnapshot;
 }
-
-const NO_CAPABILITIES: PlatformCapabilities = { tray: false, glass: false, idle: false };
 
 const idOf = (row: unknown): unknown =>
   typeof row === "object" && row !== null && "id" in row ? row.id : undefined;

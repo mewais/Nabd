@@ -13,13 +13,13 @@ import { MUSCLES, exerciseOfSet, isWarmup, workingSets } from "@nabd/domain";
 export type Recommendation = "rest" | "push" | "none";
 
 /** The muscles most worth resting and most worth pushing, most pressing first. */
-export interface VolumeInsight {
+interface VolumeInsight {
   rest: MuscleKey[];
   push: MuscleKey[];
 }
 
 /** Weekly sets that count as fully covering a muscle. */
-export const FULL_COVERAGE_SETS = 16;
+const FULL_COVERAGE_SETS = 16;
 const SECONDARY_WEIGHT = 0.5;
 const COVERAGE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const REST_AT_PCT = 66;
@@ -119,6 +119,27 @@ export function recommendation(
 ): Recommendation {
   if (actual[muscle] >= REST_AT_PCT) return "rest";
   return actual[muscle] <= PUSH_AT_PCT && planned.of(muscle) > 0 ? "push" : "none";
+}
+
+/** Where one muscle stands this week: how covered it is, and what to do about it. */
+export interface MuscleStanding {
+  muscle: MuscleKey;
+  /** Coverage, 0–100. */
+  pct: number;
+  recommendation: Recommendation;
+}
+
+/** The standing of each of `muscles`, in the order given. */
+export function standings(
+  muscles: readonly MuscleKey[],
+  actual: Coverage,
+  planned: MuscleVolume,
+): MuscleStanding[] {
+  return muscles.map((muscle) => ({
+    muscle,
+    pct: actual[muscle],
+    recommendation: recommendation(muscle, actual, planned),
+  }));
 }
 
 /** The most over- and under-trained muscles ({@link recommendation}). */

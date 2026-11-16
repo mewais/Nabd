@@ -3,41 +3,17 @@ import type {
   DayRecord,
   DayState,
   Exercise,
-  ExerciseDraft,
   LoggedSet,
-  MapStyle,
-  MapView,
-  MuscleGroup,
-  MuscleKey,
-  Notice,
+  PlatformCapabilities,
   Program,
-  ProgressTab,
   RotationState,
-  Screen,
   Settings,
 } from "@nabd/domain";
-import { DEFAULT_SETTINGS, EMPTY_PROGRAM, freshDayState } from "@nabd/domain";
-import type { PlatformCapabilities, Singletons } from "@nabd/ipc-client";
+import { DEFAULT_SETTINGS, EMPTY_PROGRAM, NO_CAPABILITIES, freshDayState } from "@nabd/domain";
+import type { Singletons } from "@nabd/ipc-client";
 import type { PendingNudge } from "@nabd/nudge";
 import type { LogSession } from "@nabd/session";
-
-/** What picking an exercise in the library does. */
-export type LibraryTarget =
-  /** Add it to a fixed day. */
-  | { kind: "exercise"; dayId: string }
-  /** Add it to a cycled slot's pool. */
-  | { kind: "pool"; dayId: string; slotId: string; muscle: MuscleKey }
-  /** Do it today, outside the plan. */
-  | { kind: "extra" };
-
-/** Exercise-library modal state; `target` null means the modal is closed. */
-export interface LibraryState {
-  target: LibraryTarget | null;
-  search: string;
-  group: MuscleGroup | null;
-  /** The custom-exercise form, when it is showing. */
-  draft: ExerciseDraft | null;
-}
+import type { LibraryState, MapStyle, MapView, Notice, ProgressTab, Screen } from "@nabd/view";
 
 /** Something that cannot be undone, waiting for the user to say they mean it. */
 export type Confirmation =
@@ -57,6 +33,9 @@ export interface LoadProblem {
   detail: string;
 }
 
+/** The two places a notice is shown: the banner over every screen, or Settings → Data. */
+export type NoticePlace = "appNotice" | "dataNotice";
+
 export interface NabdState {
   booted: boolean;
   // persisted
@@ -64,6 +43,7 @@ export interface NabdState {
   program: Program;
   customExercises: Exercise[];
   rotationState: RotationState;
+  /** Today's bookkeeping, `paused` (nudges are off until the day ends) included. */
   dayState: DayState;
   dayLog: DayRecord[];
   history: LoggedSet[];
@@ -76,8 +56,6 @@ export interface NabdState {
   // clock + nudging
   now: Date;
   idleSeconds: number;
-  /** Mirrors `dayState.paused`, which is the persisted copy. */
-  paused: boolean;
   snoozedUntil: Date | null;
   /** Since when there has been work to nudge about (see NudgeContext.activeSince). */
   activeSince: Date | null;
@@ -90,12 +68,12 @@ export interface NabdState {
   mapView: MapView;
   mapStyle: MapStyle;
   settingsOpen: boolean;
-  /** The outcome of the last import/export, shown in Settings. */
-  notice: Notice | null;
+  /** The outcome of the last import or export, shown in Settings. */
+  dataNotice: Notice | null;
   /** Something the user must know wherever they are: unreadable data, a failed save. */
   appNotice: Notice | null;
   /** The day open in the planner's editor; null until the planner is opened, or with no days. */
-  planEditDay: string | null;
+  plannerDayId: string | null;
   library: LibraryState;
   /** The destructive action being confirmed. */
   confirmation: Confirmation | null;
@@ -115,11 +93,10 @@ export function initialState(now: Date): NabdState {
     dayLog: [],
     history: [],
     unsavedSets: [],
-    capabilities: { tray: false, glass: false, idle: false },
+    capabilities: NO_CAPABILITIES,
     loadProblems: [],
     now,
     idleSeconds: 0,
-    paused: false,
     snoozedUntil: null,
     activeSince: null,
     pendingNudge: null,
@@ -128,9 +105,9 @@ export function initialState(now: Date): NabdState {
     mapView: "both",
     mapStyle: "heat",
     settingsOpen: false,
-    notice: null,
+    dataNotice: null,
     appNotice: null,
-    planEditDay: null,
+    plannerDayId: null,
     library: { target: null, search: "", group: null, draft: null },
     confirmation: null,
     progressTab: "calendar",

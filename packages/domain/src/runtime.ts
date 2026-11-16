@@ -1,18 +1,31 @@
 import { z } from "zod";
-import { MUSCLE_PRIMARY_GROUP, MuscleKeySchema, type MuscleKey } from "./muscles";
+import { MUSCLE_PRIMARY_GROUP, MuscleKeySchema } from "./muscles";
 import { SetTypeSchema } from "./program";
 import { dateKey } from "./dates";
-import { musclesOf, type Exercise } from "./exercise";
+import type { Exercise } from "./exercise";
+import { musclesOf } from "./exercise";
 
-/** What prompted a logged set. */
-const TriggerSchema = z.enum(["idle", "timer", "manual"]);
+/** What prompted a logged set: an idle moment, the timer, or the user's own initiative. */
+export const TRIGGERS = ["idle", "timer", "manual"] as const;
+const TriggerSchema = z.enum(TRIGGERS);
 export type Trigger = z.infer<typeof TriggerSchema>;
+
+export const TRIGGER_NAMES: Record<Trigger, string> = {
+  idle: "Idle detected",
+  timer: "Timer",
+  manual: "Manual",
+};
 
 /** A persisted, completed set (one row of history). */
 export const LoggedSetSchema = z.object({
   id: z.string(),
   exId: z.string(),
   exercise: z.string(),
+  /**
+   * The exercise's group when the set was logged. A record only — nothing reads
+   * it back — so it is not held to today's list of groups: a history row must
+   * never become unreadable over a label.
+   */
   group: z.string(),
   muscles: z.array(MuscleKeySchema),
   /** Reps, or seconds for time-based exercises. */
@@ -31,13 +44,19 @@ export const LoggedSetSchema = z.object({
 export type LoggedSet = z.infer<typeof LoggedSetSchema>;
 
 /** What a history row records beyond its exercise and its moment. */
-export type SetDetails = Pick<
-  LoggedSet,
-  "id" | "value" | "weight" | "trigger" | "planItemId" | "setType"
->;
+type SetDetails = Pick<LoggedSet, "id" | "value" | "weight" | "trigger" | "planItemId" | "setType">;
 
-/** The history row for a set of `exercise` performed at `at`. */
-export function loggedSet(exercise: Exercise, at: Date, details: SetDetails): LoggedSet {
+/**
+ * The history row for a set of `exercise` performed at `at`. It counts toward
+ * the day `date` — the day that was open when it was logged, which is `at`'s
+ * own calendar day unless the clock has been set back since.
+ */
+export function loggedSet(
+  exercise: Exercise,
+  at: Date,
+  details: SetDetails,
+  date = dateKey(at),
+): LoggedSet {
   return {
     ...details,
     exId: exercise.id,
@@ -45,7 +64,7 @@ export function loggedSet(exercise: Exercise, at: Date, details: SetDetails): Lo
     group: exercise.group,
     muscles: musclesOf(exercise),
     ts: at.toISOString(),
-    date: dateKey(at),
+    date,
   };
 }
 
@@ -71,9 +90,6 @@ export function exerciseOfSet(set: LoggedSet): Exercise | null {
 
 /** A warm-up says nothing about volume or progress, so most counts leave it out. */
 export const isWarmup = (set: Pick<LoggedSet, "setType">): boolean => set.setType === "warmup";
-
-/** Per-muscle 0–100 coverage. */
-export type Coverage = Record<MuscleKey, number>;
 
 /**
  * Where each cycled pool stands: the id of the exercise that is up next, keyed

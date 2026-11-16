@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { clamp } from "@nabd/domain";
 import { FONT, RADIUS } from "./tokens";
 
-export interface MeterBarProps {
+interface MeterBarProps {
   label: string;
   /** How full the bar is, 0–100 (clamped). */
   pct: number;
@@ -24,7 +24,11 @@ export function MeterBar({
 }: MeterBarProps): JSX.Element {
   const filled = Math.round(clamp(pct, 0, 100));
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0" }}>
+    <div
+      role="group"
+      aria-label={label}
+      style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0" }}
+    >
       <span style={{ width: 74, flex: "none", fontSize: 12.5 }}>{label}</span>
       <div
         role="meter"

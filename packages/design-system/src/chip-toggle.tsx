@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { RADIUS, tint } from "./tokens";
 
-export interface ChipToggleProps {
+interface ChipToggleProps {
   active: boolean;
   onToggle: () => void;
   children?: ReactNode;

@@ -4,21 +4,22 @@ import type { PlannerActions } from "@nabd/planner";
 import { selectLibrary, selectPlannedVolume } from "@nabd/store";
 import { useActions, useNabd } from "../store-context";
 
+/** The Plan screen. */
 export function PlannerContainer(): JSX.Element {
   const store = useActions();
   const program = useNabd((s) => s.program);
-  const editDayId = useNabd((s) => s.planEditDay);
+  const plannerDayId = useNabd((s) => s.plannerDayId);
   const library = useNabd(selectLibrary);
   const volume = useNabd(selectPlannedVolume);
 
   const vm = useMemo(
-    () => buildPlannerVM({ program, editDayId, volume, lookup: library.lookup }),
-    [program, editDayId, volume, library],
+    () => buildPlannerVM({ program, plannerDayId, volume, lookup: library.lookup }),
+    [program, plannerDayId, volume, library],
   );
   const actions = useMemo(
     (): PlannerActions => ({
       edit: store.editProgram,
-      selectDay: store.selectPlanDay,
+      selectDay: store.selectPlannerDay,
       removeDay: (dayId) => store.ask({ kind: "deleteDay", dayId }),
       addExercise: (dayId) => store.openLibrary({ kind: "exercise", dayId }),
       addPoolExercise: (dayId, slotId, muscle) =>

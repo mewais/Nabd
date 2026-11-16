@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import type { CalendarLevel } from "@nabd/analytics";
 import { FONT, RADIUS, Swatch, TEXT, shade } from "@nabd/design-system";
-import type { CalendarVM } from "./view-model";
+import type { CalendarVM } from "./stats-vm";
 
 const LEVEL_COLORS: Record<CalendarLevel, { background: string; text: string }> = {
   future: { background: "transparent", text: "transparent" },
@@ -24,25 +24,29 @@ const CELL: CSSProperties = {
   userSelect: "none",
 };
 
+interface CalendarViewProps {
+  vm: CalendarVM;
+}
+
 /** The current month as a grid of days, tinted by how much was trained on each. */
-export function CalendarView({ calendar }: { calendar: CalendarVM }): JSX.Element {
+export function CalendarView({ vm }: CalendarViewProps): JSX.Element {
   return (
     <div>
-      <div style={{ ...TEXT.caption, marginBottom: 10 }}>{calendar.month}</div>
+      <div style={{ ...TEXT.caption, marginBottom: 10 }}>{vm.month}</div>
       <div style={{ ...WEEK_GRID, marginBottom: 6 }}>
-        {calendar.weekdays.map((weekday, index) => (
+        {vm.weekdays.map((weekday, index) => (
           <div key={index} style={{ ...TEXT.caption, fontSize: 9.5, textAlign: "center" }}>
             {weekday}
           </div>
         ))}
       </div>
       <div style={WEEK_GRID}>
-        {calendar.cells.map(({ day, level }) => (
+        {vm.cells.map(({ day, level }) => (
           <div
             key={day}
             style={{
               ...CELL,
-              gridColumnStart: day === 1 ? calendar.firstWeekday + 1 : undefined,
+              gridColumnStart: day === 1 ? vm.firstWeekday + 1 : undefined,
               background: LEVEL_COLORS[level].background,
               color: LEVEL_COLORS[level].text,
             }}

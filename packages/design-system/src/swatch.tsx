@@ -1,6 +1,6 @@
 import { RADIUS } from "./tokens";
 
-export interface SwatchProps {
+interface SwatchProps {
   /** Any CSS colour. */
   color: string;
   /** `dot` marks a row's state; `square` keys a chart's legend. */

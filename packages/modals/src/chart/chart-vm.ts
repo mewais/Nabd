@@ -1,19 +1,15 @@
-import type { Tone } from "@nabd/design-system";
+import type { StatFigure } from "@nabd/design-system";
+import type { WeightUnit } from "@nabd/domain";
 import { formatAmount, formatGain, plural } from "@nabd/domain";
 import type { ExerciseTrend } from "@nabd/progression";
-
-export interface ChartStatVM {
-  label: string;
-  value: string;
-  tone: Tone;
-}
+import { trendIn } from "@nabd/progression";
 
 /** Everything the full-history chart shows. */
 export interface ChartVM {
   exercise: string;
   /** "Since 2026-11-02 · 7 sessions". */
   subtitle: string;
-  stats: ChartStatVM[];
+  stats: StatFigure[];
   /** Best set of each session, oldest first. */
   series: number[];
   /** Names the chart for assistive tech. */
@@ -23,18 +19,19 @@ export interface ChartVM {
   endLabel: string;
 }
 
-export function buildChartVM(exercise: string, trend: ExerciseTrend): ChartVM {
-  const { series, unit } = trend;
+/** The chart of `trend`, an exercise called `exercise`, with loads shown in `unit`. */
+export function buildChartVM(exercise: string, trend: ExerciseTrend, unit: WeightUnit): ChartVM {
+  const shown = trendIn(trend, unit);
   return {
     exercise,
-    subtitle: `Since ${trend.since} · ${plural(series.length, "session")}`,
+    subtitle: `Since ${trend.since} · ${plural(shown.series.length, "session")}`,
     stats: [
-      { label: "Personal best", value: formatAmount(trend.best, unit), tone: "accent" },
-      { label: "Current", value: formatAmount(trend.current, unit), tone: "neutral" },
-      { label: "All-time gain", value: formatGain(trend.gain, unit), tone: "success" },
+      { label: "Personal best", value: formatAmount(shown.best, shown.unit), tone: "accent" },
+      { label: "Current", value: formatAmount(shown.current, shown.unit), tone: "neutral" },
+      { label: "All-time gain", value: formatGain(shown.gain, shown.unit), tone: "success" },
     ],
-    series,
-    chartLabel: `${exercise}, ${unit} per session`,
+    series: shown.series,
+    chartLabel: `${exercise}, ${shown.unit} per session`,
     startLabel: trend.since,
     endLabel: "Now",
   };

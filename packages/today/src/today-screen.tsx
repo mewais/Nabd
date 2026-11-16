@@ -1,14 +1,15 @@
 import type { CSSProperties } from "react";
 import { Page, StatTile } from "@nabd/design-system";
-import type { TodayActions } from "./actions";
 import { CoverageCard } from "./coverage-card";
-import { HeroCard } from "./hero-card";
+import { HeroNotice } from "./hero-notice";
 import { InsightCard } from "./insight-card";
+import { NextSetCard } from "./next-set-card";
 import { PlanNote } from "./plan-note";
 import { QueueCard } from "./queue-card";
-import type { TodayVM } from "./view-model";
+import type { TodayActions } from "./today-actions";
+import type { TodayVM } from "./today-vm";
 
-export interface TodayScreenProps {
+interface TodayScreenProps {
   vm: TodayVM;
   actions: TodayActions;
 }
@@ -28,29 +29,17 @@ export function TodayScreen({ vm, actions }: TodayScreenProps): JSX.Element {
     <Page>
       <div style={COLUMNS}>
         <div style={COLUMN}>
-          <HeroCard
-            vm={vm.hero}
-            onStart={() => actions.start()}
-            onSnooze={actions.snooze}
-            onLogOther={actions.logOther}
-          />
-          {vm.emptySlotsNote !== null && <PlanNote text={vm.emptySlotsNote} />}
-          {vm.queue.length > 0 && (
-            <QueueCard
-              dayName={vm.dayName}
-              rows={vm.queue}
-              onStart={actions.start}
-              onToggleSkip={actions.toggleSkip}
-            />
+          {vm.hero.kind === "next" ? (
+            <NextSetCard vm={vm.hero} actions={actions} />
+          ) : (
+            <HeroNotice vm={vm.hero} actions={actions} />
           )}
+          {vm.emptySlotsNote !== null && <PlanNote text={vm.emptySlotsNote} />}
+          {vm.queue.rows.length > 0 && <QueueCard vm={vm.queue} actions={actions} />}
         </div>
         <div style={COLUMN}>
-          <CoverageCard
-            vm={vm.coverage}
-            onMapView={actions.setMapView}
-            onMapStyle={actions.setMapStyle}
-          />
-          <InsightCard rows={vm.insight} />
+          <CoverageCard vm={vm.coverage} actions={actions} />
+          <InsightCard vm={vm.insight} />
           <div style={{ display: "flex", gap: 12 }}>
             {vm.stats.map((stat) => (
               <StatTile key={stat.label} {...stat} />

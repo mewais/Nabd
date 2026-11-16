@@ -2,9 +2,10 @@ import type { DayRecord, DayState, Program, RotationState } from "@nabd/domain";
 import { addDays, freshDayState, parseDateKey, startOfDay } from "@nabd/domain";
 import { dayAfter } from "./floating";
 import { following } from "./rotation";
-import { TodayPlan, type TodayPlanInput } from "./today-plan";
+import { TodayPlan } from "./today-plan";
+import type { TodayPlanInput } from "./today-plan";
 
-export interface Rollover {
+interface Rollover {
   dayState: DayState;
   rotation: RotationState;
   /**

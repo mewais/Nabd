@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
 import { Card, RADIUS, TEXT } from "@nabd/design-system";
-import type { DayProgressVM } from "./view-model";
+import type { DayProgressVM } from "./shell-vm";
 
 interface DayProgressRingProps {
-  progress: DayProgressVM;
+  vm: DayProgressVM;
 }
 
 const RING_SIZE = 108;
@@ -18,8 +18,8 @@ const CENTRED: CSSProperties = {
 };
 
 /** Today's sets as a ring that fills as they get done. */
-export function DayProgressRing({ progress }: DayProgressRingProps): JSX.Element {
-  const { done, totalLabel, pct } = progress;
+export function DayProgressRing({ vm }: DayProgressRingProps): JSX.Element {
+  const { done, totalLabel, pct } = vm;
   return (
     <Card
       variant="inset"

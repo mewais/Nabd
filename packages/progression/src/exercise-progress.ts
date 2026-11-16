@@ -1,4 +1,5 @@
-import type { ExerciseLookup, LoggedSet, WeightUnit } from "@nabd/domain";
+import type { ExerciseLookup, LoggedSet } from "@nabd/domain";
+import { exerciseName } from "@nabd/domain";
 import { exerciseTrends } from "./trend";
 import type { ExerciseTrend } from "./trend";
 
@@ -11,9 +12,8 @@ export class ExerciseProgress {
   constructor(
     history: readonly LoggedSet[],
     private readonly lookup: ExerciseLookup,
-    unit: WeightUnit,
   ) {
-    this.trends = exerciseTrends(history, unit, (exId) => lookup(exId)?.tracking);
+    this.trends = exerciseTrends(history, (exId) => lookup(exId)?.tracking);
     this.loggedNames = new Map(history.map((set) => [set.exId, set.exercise]));
   }
 
@@ -23,6 +23,6 @@ export class ExerciseProgress {
 
   /** A deleted custom exercise still has history, so its logged name is the fallback. */
   nameOf(exId: string): string {
-    return this.lookup(exId)?.name ?? this.loggedNames.get(exId) ?? exId;
+    return exerciseName(this.lookup, exId, this.loggedNames.get(exId));
   }
 }

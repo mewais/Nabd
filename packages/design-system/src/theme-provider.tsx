@@ -4,7 +4,7 @@ import { GlobalStyles } from "./global-styles";
 import { themeStyle } from "./theme";
 import { FONT } from "./tokens";
 
-export interface ThemeProviderProps {
+interface ThemeProviderProps {
   theme: Theme;
   /** Translucent window: use the theme's glass material over a frosted tint. */
   glass: boolean;

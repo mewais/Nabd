@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { NotificationToast, buildToastVM } from "@nabd/modals";
+import { Toast, buildToastVM } from "@nabd/modals";
 import type { ToastActions } from "@nabd/modals";
 import { selectNudgeStatus, selectTodayPlan } from "@nabd/store";
 import { useActions, useNabd } from "../store-context";
@@ -20,5 +20,5 @@ export function ToastContainer(): JSX.Element | null {
     [store],
   );
 
-  return vm && <NotificationToast vm={vm} actions={actions} />;
+  return vm && <Toast vm={vm} actions={actions} />;
 }

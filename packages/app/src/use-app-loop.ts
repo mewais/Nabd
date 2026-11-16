@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import type { StoreApi } from "zustand";
-import type { IpcClient } from "@nabd/ipc-client";
+import type { IpcClient, TrayAction } from "@nabd/ipc-client";
+import { buildToastVM, nudgeNotification } from "@nabd/modals";
 import type { NabdStore } from "@nabd/store";
-import { buildToastVM } from "@nabd/modals";
 import { selectNudgeStatus, selectPendingNudge, selectTodayPlan } from "@nabd/store";
 import { startAppClock } from "./app-clock";
 import { useNabd } from "./store-context";
@@ -25,13 +25,18 @@ function useClock(store: StoreApi<NabdStore>, client: IpcClient): void {
   }, [store, client]);
 }
 
+/** What each tray menu action asks of the store. */
+const TRAY_ACTIONS: Record<TrayAction, (store: NabdStore) => void> = {
+  start: (store) => store.openSession(),
+  pause: (store) => store.togglePause(),
+  // Like Settings → Quit: whatever waits to be saved is saved first.
+  quit: (store) => store.quit(),
+};
+
 /** Act on the tray menu, and keep it showing what is next. */
 function useTray(store: StoreApi<NabdStore>, client: IpcClient): void {
   useEffect(() => {
-    const subscription = client.onTrayAction((action) => {
-      if (action === "start") store.getState().openSession();
-      else store.getState().togglePause();
-    });
+    const subscription = client.onTrayAction((action) => TRAY_ACTIONS[action](store.getState()));
     return () =>
       bestEffort(
         "stop following the tray",
@@ -40,7 +45,7 @@ function useTray(store: StoreApi<NabdStore>, client: IpcClient): void {
   }, [store, client]);
 
   const plan = useNabd(selectTodayPlan);
-  const paused = useNabd((s) => s.paused);
+  const paused = useNabd((s) => s.dayState.paused);
   const nextExercise = plan.nextItem?.exercise.name ?? null;
   const done = plan.plannedSetsDone;
   const total = plan.setsPlanned;
@@ -62,8 +67,7 @@ function useNudgeNotification(store: StoreApi<NabdStore>, client: IpcClient): vo
     const state = store.getState();
     const toast = buildToastVM(selectTodayPlan(state).nextItem, selectNudgeStatus(state));
     if (toast === null) return;
-    const notification = { title: toast.title, body: `${toast.exercise} — ${toast.reason}` };
-    bestEffort("show the nudge notification", client.notifyNudge(notification));
+    bestEffort("show the nudge notification", client.notifyNudge(nudgeNotification(toast)));
   }, [store, client, pending]);
 }
 

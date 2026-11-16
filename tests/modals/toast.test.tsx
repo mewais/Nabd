@@ -1,12 +1,12 @@
 /**
- * @nabd/modals — NotificationToast: the "time to move" nudge.
+ * @nabd/modals — Toast: the "time to move" nudge.
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { NotificationToast } from "@nabd/modals";
+import { Toast } from "@nabd/modals";
 import type { ToastActions, ToastVM } from "@nabd/modals";
 
-describe("NotificationToast", () => {
+describe("Toast", () => {
   const VM: ToastVM = {
     title: "Time to move",
     reason: "You've gone quiet",
@@ -15,7 +15,7 @@ describe("NotificationToast", () => {
   };
   const setup = () => {
     const actions: ToastActions = { start: vi.fn(), snooze: vi.fn() };
-    render(<NotificationToast vm={VM} actions={actions} />);
+    render(<Toast vm={VM} actions={actions} />);
     return actions;
   };
 

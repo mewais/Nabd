@@ -1,18 +1,24 @@
 import { Button, FormRow, FormSection } from "@nabd/design-system";
+import type { SettingsActions } from "./settings-actions";
 
 interface NotificationsSectionProps {
-  onTest: () => void;
+  actions: Pick<SettingsActions, "sendTestNotification">;
 }
 
 /** A way to check that the desktop shows Nabd's notifications. */
-export function NotificationsSection({ onTest }: NotificationsSectionProps): JSX.Element {
+export function NotificationsSection({ actions }: NotificationsSectionProps): JSX.Element {
   return (
     <FormSection title="Notifications">
       <FormRow
         title="Desktop notification"
         hint="A set due while Nabd is in the background is announced by your desktop."
       >
-        <Button variant="ghost" size="sm" onClick={onTest} style={{ flex: "none" }}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={actions.sendTestNotification}
+          style={{ flex: "none" }}
+        >
           Send test notification
         </Button>
       </FormRow>

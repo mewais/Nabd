@@ -13,9 +13,9 @@ export interface BarDatum {
 }
 
 /** What the bars that are not highlighted look like. */
-export type BarTone = Extract<Tone, "neutral" | "accent" | "success">;
+type BarTone = Extract<Tone, "neutral" | "accent" | "success">;
 
-export interface BarChartProps {
+interface BarChartProps {
   bars: readonly BarDatum[];
   /** Chart height in px, captions included. */
   height: number;
@@ -58,6 +58,7 @@ export function BarChart({
           key={index}
           role="listitem"
           aria-current={bar.highlight ? true : undefined}
+          data-height-pct={bar.heightPct}
           style={{
             flex: 1,
             minWidth: 0,

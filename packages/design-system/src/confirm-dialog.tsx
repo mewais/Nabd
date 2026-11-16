@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Button } from "./button";
 import { ModalShell } from "./modal-shell";
 
-export interface ConfirmDialogProps {
+interface ConfirmDialogProps {
   /** The question: "Delete Push?". */
   title: string;
   /** What saying yes does, and what it leaves alone. */

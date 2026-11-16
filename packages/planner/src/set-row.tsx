@@ -1,66 +1,64 @@
+import type { SetType } from "@nabd/domain";
 import { Badge, IconButton, Stepper, TEXT } from "@nabd/design-system";
 import type { Tone } from "@nabd/design-system";
-import type { PrescriptionActions } from "./actions";
-import type { SetBadgeKind, SetRowVM } from "./set-block-vm";
+import type { PrescriptionEdit } from "@nabd/program-editor";
+import type { SetRowVM } from "./set-block-vm";
 
 interface SetRowProps {
-  row: SetRowVM;
+  vm: SetRowVM;
   /** The table's column template, shared with its header. */
   columns: string;
   /** Whether the table has a load column (a set without a value leaves it empty). */
   hasIntensityColumn: boolean;
-  actions: PrescriptionActions;
+  onEdit: (change: PrescriptionEdit) => void;
 }
 
-const BADGE_TONES: Record<SetBadgeKind, Tone> = {
-  warm: "neutral",
-  work: "accent",
+const BADGE_TONES: Record<SetType, Tone> = {
+  warmup: "neutral",
+  working: "accent",
   drop: "info",
 };
 
 /** One set: its type badge, reps (or a range, or seconds), load, and a remove ×. */
-export function SetRow({ row, columns, hasIntensityColumn, actions }: SetRowProps): JSX.Element {
-  const { index, labels } = row;
+export function SetRow({ vm, columns, hasIntensityColumn, onEdit }: SetRowProps): JSX.Element {
+  const { index, labels } = vm;
   return (
     <div style={{ display: "grid", gridTemplateColumns: columns, gap: 9, alignItems: "center" }}>
       <Badge
-        tone={BADGE_TONES[row.badgeKind]}
-        title={row.badgeTitle}
-        onClick={() => actions.cycleSetType(index)}
+        tone={BADGE_TONES[vm.type]}
+        title={vm.badgeTitle}
+        onClick={() => onEdit((p) => p.cycleSetType(index))}
       >
-        {row.badgeLabel}
+        {vm.badge}
       </Badge>
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <Stepper
           size="mini"
-          ariaLabel={labels.low}
-          value={row.low}
-          onDec={() => actions.stepRep(index, "a", -1)}
-          onInc={() => actions.stepRep(index, "a", 1)}
+          ariaLabel={labels.amount}
+          value={vm.amount}
+          onStep={(direction) => onEdit((p) => p.stepAmount(index, direction))}
         />
-        {row.high !== null && (
+        {vm.upTo !== null && (
           <>
             <span style={TEXT.hint}>–</span>
             <Stepper
               size="mini"
-              ariaLabel={labels.high}
-              value={row.high}
-              onDec={() => actions.stepRep(index, "b", -1)}
-              onInc={() => actions.stepRep(index, "b", 1)}
+              ariaLabel={labels.upTo}
+              value={vm.upTo}
+              onStep={(direction) => onEdit((p) => p.stepUpTo(index, direction))}
             />
           </>
         )}
       </div>
       {hasIntensityColumn &&
-        (row.intensity === null ? (
+        (vm.intensity === null ? (
           <span />
         ) : (
           <Stepper
             size="mini"
             ariaLabel={labels.intensity}
-            value={row.intensity}
-            onDec={() => actions.stepIntensity(index, -1)}
-            onInc={() => actions.stepIntensity(index, 1)}
+            value={vm.intensity}
+            onStep={(direction) => onEdit((p) => p.stepIntensity(index, direction))}
           />
         ))}
       <div style={{ justifySelf: "end" }}>
@@ -68,7 +66,7 @@ export function SetRow({ row, columns, hasIntensityColumn, actions }: SetRowProp
           icon="close"
           variant="plain"
           ariaLabel={labels.remove}
-          onClick={() => actions.removeSet(index)}
+          onClick={() => onEdit((p) => p.removeSet(index))}
         />
       </div>
     </div>

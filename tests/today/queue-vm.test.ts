@@ -1,0 +1,101 @@
+/** @nabd/today — buildTodayVM, the queue: today's exercises and what can be done with each. */
+
+import { working } from "../support/builders";
+import { did, mondayProgram, planRow } from "../support/programs";
+import { todayVM } from "./fixtures";
+
+describe("buildTodayVM · queue", () => {
+  const program = () =>
+    mondayProgram(
+      [
+        planRow("p-bench", "bench", [working(8, 12), working(8, 12)]),
+        planRow("p-pushup", "pushup", [working(10, 15), working(10, 15)], { supersetId: "ss1" }),
+        planRow("p-dip", "dip", [working(6, 10), working(6, 10)], { supersetId: "ss1" }),
+        planRow("p-row", "row", [working(8, 12)]),
+        planRow("p-plank", "plank", [working(30)], { repMode: "time" }),
+      ],
+      "Upper body",
+    );
+  const queue = () =>
+    todayVM({
+      program: program(),
+      skipped: ["p-row"],
+      extras: [
+        { id: "x-curl", exId: "curl" },
+        { id: "x-pullup", exId: "pullup" },
+      ],
+      history: [
+        did("p-bench", "bench", 10, 60),
+        did("p-bench", "bench", 9, 60),
+        did("p-pushup", "pushup", 12, null),
+        did("x-pullup", "pullup", 8, 20),
+        did("x-pullup", "pullup", 7, 20),
+      ],
+    });
+  const row = (id: string) => {
+    const found = queue().queue.rows.find((r) => r.id === id);
+    if (!found) throw new Error(`no queue row "${id}"`);
+    return found;
+  };
+
+  it("lists the day's exercises in plan order, extras last, under the day's name", () => {
+    const vm = queue();
+    expect(vm.queue.dayName).toBe("Upper body");
+    expect(vm.queue.rows.map((r) => r.exercise)).toEqual([
+      "Bench Press",
+      "Push-Up",
+      "Weighted Dip",
+      "Barbell Row",
+      "Plank",
+      "Dumbbell Curl",
+      "Assisted Pull-Up",
+    ]);
+  });
+
+  it("describes each row by its group and the muscles it works", () => {
+    expect(row("p-bench").sub).toBe("Chest · Chest, Triceps, Front Delts");
+    expect(row("p-plank").sub).toBe("Abs · Abs, Obliques");
+  });
+
+  it("a finished exercise is done and can no longer be skipped", () => {
+    expect(row("p-bench")).toMatchObject({ state: "done", badge: "2/2 sets", skipLabel: null });
+  });
+
+  it("the first exercise still owing sets is next; later ones are pending", () => {
+    expect(row("p-pushup")).toMatchObject({ state: "next", badge: "1/2 sets", skipLabel: "Skip" });
+    expect(row("p-dip")).toMatchObject({ state: "pending", badge: "0/2 sets", skipLabel: "Skip" });
+    expect(row("p-plank")).toMatchObject({ state: "pending", badge: "0/1 set" });
+    expect(queue().queue.rows.filter((r) => r.state === "next")).toHaveLength(1);
+  });
+
+  it("marks superset partners A1/A2 and every other row with its place in the day", () => {
+    expect(row("p-bench").marker).toBe("01");
+    expect(row("p-pushup").marker).toBe("A1");
+    expect(row("p-dip").marker).toBe("A2");
+    expect(row("p-row").marker).toBe("04");
+    expect(row("x-curl").marker).toBe("06");
+  });
+
+  it("anything not skipped can be started; a finished exercise takes more sets", () => {
+    expect(row("p-pushup").startLabel).toBe("Start");
+    expect(row("x-curl").startLabel).toBe("Start");
+    expect(row("p-bench").startLabel).toBe("More");
+    expect(row("p-row").startLabel).toBeNull();
+  });
+
+  it("a skipped exercise says so and offers to restore it", () => {
+    expect(row("p-row")).toMatchObject({
+      state: "skipped",
+      badge: "Skipped",
+      skipLabel: "Restore",
+    });
+  });
+
+  it("an untouched extra shows a bare set count and can be removed", () => {
+    expect(row("x-curl")).toMatchObject({ state: "pending", badge: "0 sets", skipLabel: "Remove" });
+  });
+
+  it("an extra with logged sets is done and can no longer be removed", () => {
+    expect(row("x-pullup")).toMatchObject({ state: "done", badge: "2 sets", skipLabel: null });
+  });
+});

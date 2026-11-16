@@ -2,9 +2,8 @@
 // domain engines, and persists through the IPC client.
 
 export { createNabdStore } from "./store";
-export type { StoreDeps } from "./context";
-export type { NabdActions, NabdStore } from "./actions";
-export type { Confirmation, LibraryState, LibraryTarget, LoadProblem, NabdState } from "./state";
+export type { NabdActions, NabdStore } from "./slices";
+export type { Confirmation } from "./state";
 export {
   selectCoach,
   selectCoverage,

@@ -12,7 +12,7 @@ test("a warm-up starts from the last warm-up, and the working set after it from 
 }) => {
   const { today, logger } = app;
   const program = plan([
-    day("Push", [planned(bench.id, { sets: [{ type: "warmup", a: 12 }, ...workingSets(2)] })]),
+    day("Push", [planned(bench.id, { sets: [{ type: "warmup", amount: 12 }, ...workingSets(2)] })]),
   ]);
   const history = [
     loggedSet(bench.id, { day: LAST_FRIDAY, time: "10:00", reps: 12, kg: 10, type: "warmup" }),

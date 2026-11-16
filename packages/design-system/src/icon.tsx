@@ -1,6 +1,7 @@
-import { ICON_PATHS, type IconName } from "./icon-paths";
+import { ICON_PATHS } from "./icon-paths";
+import type { IconName } from "./icon-paths";
 
-export interface IconProps {
+interface IconProps {
   name: IconName;
   /** Width and height in px. */
   size?: number;

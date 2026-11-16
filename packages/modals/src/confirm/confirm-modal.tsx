@@ -2,7 +2,7 @@ import { ConfirmDialog } from "@nabd/design-system";
 import type { ConfirmActions } from "./confirm-actions";
 import type { ConfirmVM } from "./confirm-vm";
 
-export interface ConfirmModalProps {
+interface ConfirmModalProps {
   vm: ConfirmVM;
   actions: ConfirmActions;
 }

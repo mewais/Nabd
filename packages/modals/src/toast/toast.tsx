@@ -2,13 +2,13 @@ import { ANIMATION, Button, Card, Eyebrow, LiveDot, SHADOW, TEXT, Z } from "@nab
 import type { ToastActions } from "./toast-actions";
 import type { ToastVM } from "./toast-vm";
 
-export interface NotificationToastProps {
+interface ToastProps {
   vm: ToastVM;
   actions: ToastActions;
 }
 
 /** The in-app nudge: a card in the corner naming the set that is due. */
-export function NotificationToast({ vm, actions }: NotificationToastProps): JSX.Element {
+export function Toast({ vm, actions }: ToastProps): JSX.Element {
   return (
     <Card
       padding={18}

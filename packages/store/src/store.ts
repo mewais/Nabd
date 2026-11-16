@@ -1,21 +1,28 @@
 import { createStore } from "zustand/vanilla";
 import type { StoreApi } from "zustand";
-import type { NabdStore } from "./actions";
+import { confirmSlice } from "./confirm";
 import type { StoreContext, StoreCore, StoreDeps } from "./context";
-import { confirmActions } from "./confirm";
-import { dayActions } from "./day";
-import { desktopActions } from "./desktop";
-import { libraryActions } from "./library";
-import { loggingActions } from "./logging";
-import { nudgeActions } from "./nudge";
+import { daySlice } from "./day";
+import { desktopSlice } from "./desktop";
+import { librarySlice } from "./library";
+import { loggingSlice } from "./logging";
+import { nudgeSlice } from "./nudge";
 import { createPersistence } from "./persistence";
-import { planActions } from "./plan";
-import { settingsDataActions } from "./settings-data";
+import { planSlice } from "./plan";
+import { settingsDataSlice } from "./settings-data";
 import { settle } from "./settle";
+import type { NabdStore } from "./slices";
 import { initialState } from "./state";
-import { viewActions } from "./view";
+import { viewSlice } from "./view";
 
-/** Create the app store: state + actions, persisting through `deps.client`. */
+/**
+ * Create the app store: state + actions, persisting through `deps.client`.
+ *
+ * One file per slice. A slice never imports another slice: what one needs of
+ * another it asks for like the UI does, through `get().action()`, and what two
+ * of them share lives in a helper module (persistence, rollover, open-session,
+ * os, selectors).
+ */
 export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
   return createStore<NabdStore>((setState, get) => {
     const set: StoreCore["set"] = (change) =>
@@ -27,15 +34,15 @@ export function createNabdStore(deps: StoreDeps): StoreApi<NabdStore> {
     const ctx: StoreContext = { ...core, ...createPersistence(core) };
     return {
       ...initialState(deps.now()),
-      ...dayActions(ctx),
-      ...nudgeActions(ctx),
-      ...loggingActions(ctx),
-      ...planActions(ctx),
-      ...libraryActions(ctx),
-      ...settingsDataActions(ctx),
-      ...confirmActions(ctx),
-      ...viewActions(ctx),
-      ...desktopActions(ctx),
+      ...daySlice(ctx),
+      ...nudgeSlice(ctx),
+      ...loggingSlice(ctx),
+      ...planSlice(ctx),
+      ...librarySlice(ctx),
+      ...settingsDataSlice(ctx),
+      ...confirmSlice(ctx),
+      ...viewSlice(ctx),
+      ...desktopSlice(ctx),
     };
   });
 }

@@ -3,9 +3,9 @@ import { IconButton } from "./icon-button";
 import { ELLIPSIS, FONT, RADIUS, SURFACE2_BOX, tint, toneColor } from "./tokens";
 import type { Tone } from "./tokens";
 
-export type ChipVariant = "pill" | "tag" | "box";
+type ChipVariant = "pill" | "tag" | "box";
 
-export interface ChipProps {
+interface ChipProps {
   children?: ReactNode;
   /**
    * - `pill` (default): a rounded label.
@@ -67,7 +67,7 @@ export function Chip({
   removeLabel = "Remove",
 }: ChipProps): JSX.Element {
   return (
-    <span style={variantStyle(variant, tone === "neutral" ? null : toneColor(tone, ""))}>
+    <span style={variantStyle(variant, toneColor(tone))}>
       {variant === "box" ? <span style={ELLIPSIS}>{children}</span> : children}
       {onRemove && (
         <IconButton icon="close" ariaLabel={removeLabel} variant="plain" onClick={onRemove} />

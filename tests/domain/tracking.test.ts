@@ -9,7 +9,7 @@ import {
   needsLoad,
   poolMeasure,
 } from "@nabd/domain";
-import { exercise, lookupIn } from "../support/domain-factories";
+import { exercise, lookupIn } from "../support/builders";
 
 describe("tracking types", () => {
   it("every tracking type has a name", () => {

@@ -9,9 +9,9 @@ import type { Tone } from "./tokens";
  * - `mini`: the small square used in dense rows (reorder arrows).
  * - `plain`: the bare glyph (remove ×).
  */
-export type IconButtonVariant = "boxed" | "mini" | "plain";
+type IconButtonVariant = "boxed" | "mini" | "plain";
 
-export interface IconButtonProps {
+interface IconButtonProps {
   icon: IconName;
   /** Accessible name; also the tooltip. */
   ariaLabel: string;
@@ -81,7 +81,7 @@ export function IconButton({
         name={icon}
         size={iconSize}
         strokeWidth={2.2}
-        stroke={toneColor(tone, "currentColor")}
+        stroke={toneColor(tone) ?? "currentColor"}
       />
     </button>
   );

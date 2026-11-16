@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { TEXT } from "./tokens";
 
-export interface FormRowProps {
+interface FormRowProps {
   title: string;
   /** One line explaining the setting. */
   hint: string;

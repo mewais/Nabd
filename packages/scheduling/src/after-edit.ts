@@ -42,7 +42,7 @@ export function dayIdAfterEdit(
  * The day the planner has open after an edit: a day the edit added, else the
  * selected day while it survives, else its neighbour.
  */
-export function selectedDayAfterEdit(
+export function plannerDayAfterEdit(
   before: Program,
   after: Program,
   selected: string | null,

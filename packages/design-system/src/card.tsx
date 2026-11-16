@@ -22,13 +22,18 @@ const VARIANTS: Record<CardVariant, CSSProperties> = {
   inset: { ...SURFACE2_BOX, borderRadius: RADIUS.tile },
 };
 
-export interface CardProps {
+interface CardProps {
   variant?: CardVariant;
   /** With a title the card gets a header row. */
   title?: ReactNode;
   subtitle?: ReactNode;
   /** A control or note at the right of the header. */
   action?: ReactNode;
+  /**
+   * What the card is called, for a card without a text title. A card with a
+   * name — this, or its title — is a region assistive tech can find by it.
+   */
+  ariaLabel?: string;
   /** Lay the content out as a column, so its last block can sit at the bottom. */
   stacked?: boolean;
   /** Inner padding; 0 for edge-to-edge content such as lists. */
@@ -44,13 +49,17 @@ export function Card({
   title,
   subtitle,
   action,
+  ariaLabel,
   stacked = false,
   padding = 20,
   style,
   children,
 }: CardProps): JSX.Element {
+  const name = ariaLabel ?? (typeof title === "string" ? title : undefined);
+  const Box = name === undefined ? "div" : "section";
   return (
-    <div
+    <Box
+      aria-label={name}
       style={{
         ...VARIANTS[variant],
         ...(stacked ? STACKED : undefined),
@@ -70,6 +79,6 @@ export function Card({
         </div>
       )}
       {children}
-    </div>
+    </Box>
   );
 }

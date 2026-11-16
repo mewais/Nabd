@@ -1,24 +1,22 @@
 // The set table of one prescription (an exercise row or a cycled slot).
 
 import type { Intensity, Prescription, SetSpec, SetType } from "@nabd/domain";
-import { formatDuration } from "@nabd/domain";
+import { INTENSITY_NAMES, SET_TYPE_NAMES, formatDuration } from "@nabd/domain";
 import type { RepStyle } from "@nabd/program-editor";
-
-export type SetBadgeKind = "warm" | "work" | "drop";
 
 export interface SetRowVM {
   index: number;
+  type: SetType;
   /** Names of the row's controls, by its place in the table: "Set 2 reps", "Remove set 2". */
-  labels: { low: string; high: string; intensity: string; remove: string };
+  labels: { amount: string; upTo: string; intensity: string; remove: string };
   /** "W" / "1".. / "D" */
-  badgeLabel: string;
-  badgeKind: SetBadgeKind;
+  badge: string;
   /** "Warm-up — click to change" */
   badgeTitle: string;
   /** Reps, the bottom of a rep range, or seconds: "8" / "45s". */
-  low: string;
+  amount: string;
   /** The top of a rep range, when reps are a range. */
-  high: string | null;
+  upTo: string | null;
   /** "8" (RPE) / "70%" (%1RM); null when load is not prescribed. */
   intensity: string | null;
 }
@@ -41,41 +39,33 @@ export interface SetBlockVM {
   notes: string;
 }
 
-const SET_KINDS: Record<SetType, { kind: SetBadgeKind; name: string; letter: string | null }> = {
-  warmup: { kind: "warm", name: "Warm-up", letter: "W" },
-  drop: { kind: "drop", name: "Drop set", letter: "D" },
-  working: { kind: "work", name: "Working", letter: null },
-};
-
-const INTENSITY_HEADERS: Record<Intensity, string | null> = {
-  none: null,
-  rpe: "RPE",
-  pct: "%1RM",
-};
+/** The letter that marks a set that is not a working set; working sets are numbered. */
+const SET_TYPE_LETTERS: Record<SetType, string | null> = { warmup: "W", drop: "D", working: null };
 
 function intensityText(set: SetSpec, intensity: Intensity): string | null {
-  if (intensity === "none" || set.val === undefined) return null;
-  return intensity === "pct" ? `${set.val}%` : `${set.val}`;
+  if (intensity === "none" || set.intensity === undefined) return null;
+  return intensity === "pct" ? `${set.intensity}%` : `${set.intensity}`;
 }
 
-export function buildSetBlock(prescription: Prescription): SetBlockVM {
+export function buildSetBlockVM(prescription: Prescription): SetBlockVM {
   const { repMode, intensity, rest, sets, notes } = prescription;
+  const intensityHeader = intensity === "none" ? null : INTENSITY_NAMES[intensity];
   let workingCount = 0;
   const rows = sets.map((set, index): SetRowVM => {
-    const { kind, name, letter } = SET_KINDS[set.type];
+    const place = `Set ${index + 1}`;
     return {
       index,
+      type: set.type,
       labels: {
-        low: `Set ${index + 1} ${repMode === "time" ? "seconds" : "reps"}`,
-        high: `Set ${index + 1} top of range`,
-        intensity: `Set ${index + 1} ${INTENSITY_HEADERS[intensity] ?? "load"}`,
+        amount: `${place} ${repMode === "time" ? "seconds" : "reps"}`,
+        upTo: `${place} top of range`,
+        intensity: `${place} ${intensityHeader ?? "load"}`,
         remove: `Remove set ${index + 1}`,
       },
-      badgeLabel: letter ?? String(++workingCount),
-      badgeKind: kind,
-      badgeTitle: `${name} — click to change`,
-      low: repMode === "time" ? `${set.a}s` : `${set.a}`,
-      high: repMode === "range" && set.b !== undefined ? `${set.b}` : null,
+      badge: SET_TYPE_LETTERS[set.type] ?? String(++workingCount),
+      badgeTitle: `${SET_TYPE_NAMES[set.type]} — click to change`,
+      amount: repMode === "time" ? `${set.amount}s` : `${set.amount}`,
+      upTo: repMode === "range" && set.upTo !== undefined ? `${set.upTo}` : null,
       intensity: intensityText(set, intensity),
     };
   });
@@ -84,7 +74,7 @@ export function buildSetBlock(prescription: Prescription): SetBlockVM {
     repStyle: repMode === "time" ? null : repMode,
     intensity,
     repHeader: repMode === "time" ? "Time" : "Reps",
-    intensityHeader: INTENSITY_HEADERS[intensity],
+    intensityHeader,
     rest: formatDuration(rest),
     notes: notes ?? "",
   };

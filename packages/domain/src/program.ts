@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ExerciseLookup } from "./exercise";
+import { WEEK_ORDER } from "./dates";
 import { MuscleKeySchema } from "./muscles";
 import { measureOf } from "./tracking";
 import type { Measure } from "./tracking";
@@ -8,22 +9,38 @@ import type { Measure } from "./tracking";
 const RepModeSchema = z.enum(["range", "fixed", "time"]);
 export type RepMode = z.infer<typeof RepModeSchema>;
 
-/** How load is prescribed. */
-const IntensitySchema = z.enum(["none", "rpe", "pct"]);
+/** How load is prescribed: not at all, as an RPE, or as a percentage of the one-rep max. */
+export const INTENSITIES = ["none", "rpe", "pct"] as const;
+const IntensitySchema = z.enum(INTENSITIES);
 export type Intensity = z.infer<typeof IntensitySchema>;
 
-export const SetTypeSchema = z.enum(["warmup", "working", "drop"]);
+export const INTENSITY_NAMES: Record<Intensity, string> = {
+  none: "None",
+  rpe: "RPE",
+  pct: "%1RM",
+};
+
+/** The kinds of set, in the order the planner cycles through them. */
+export const SET_TYPES = ["working", "warmup", "drop"] as const;
+export const SetTypeSchema = z.enum(SET_TYPES);
 export type SetType = z.infer<typeof SetTypeSchema>;
 
+export const SET_TYPE_NAMES: Record<SetType, string> = {
+  working: "Working set",
+  warmup: "Warm-up",
+  drop: "Drop set",
+};
+
 /**
- * One prescribed set. `a` = reps / seconds / low end of a range; `b` = high end
- * (range mode only); `val` = RPE (5–10) or %1RM (40–100) when intensity != none.
+ * One prescribed set: `amount` reps or seconds — the low end of the range when
+ * `upTo` gives its high end (range mode only) — at `intensity`, an RPE (5–10)
+ * or a %1RM (40–100), when the prescription prescribes load.
  */
 const SetSpecSchema = z.object({
   type: SetTypeSchema,
-  a: z.number(),
-  b: z.number().optional(),
-  val: z.number().optional(),
+  amount: z.number(),
+  upTo: z.number().optional(),
+  intensity: z.number().optional(),
 });
 export type SetSpec = z.infer<typeof SetSpecSchema>;
 
@@ -123,6 +140,22 @@ export const ProgramSchema = z.object({
   days: z.array(DaySchema),
 });
 export type Program = z.infer<typeof ProgramSchema>;
+
+/** `days` in the order they run through the week, Monday first; days on no weekday come last. */
+export function inWeekOrder(days: readonly Day[]): Day[] {
+  const weekPosition = (day: Day): number =>
+    day.weekday === null ? WEEK_ORDER.length : WEEK_ORDER.indexOf(day.weekday);
+  return [...days].sort((a, b) => weekPosition(a) - weekPosition(b));
+}
+
+/**
+ * The day a plan starts with: the earliest in the week, Monday first, for a
+ * weekday schedule; the first in order for a floating one. Undefined in an
+ * empty plan.
+ */
+export function firstDay(program: Pick<Program, "schedule" | "days">): Day | undefined {
+  return program.schedule === "floating" ? program.days[0] : inWeekOrder(program.days)[0];
+}
 
 /** The program a fresh install starts with. */
 export const EMPTY_PROGRAM: Program = {

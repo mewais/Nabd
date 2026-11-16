@@ -1,11 +1,11 @@
 import { parseDateKey } from "@nabd/domain";
 import { ProgramEditor } from "@nabd/program-editor";
-import { dayIdAfterEdit, rotationAfterEdit, selectedDayAfterEdit } from "@nabd/scheduling";
-import type { PlanActions } from "./actions";
+import { dayIdAfterEdit, plannerDayAfterEdit, rotationAfterEdit } from "@nabd/scheduling";
 import type { StoreContext } from "./context";
 import { selectLibrary, selectTodayPlan } from "./selectors";
+import type { PlanSlice } from "./slices";
 
-export function planActions({ get, set, newId, persistTogether }: StoreContext): PlanActions {
+export function planSlice({ get, set, newId, persistTogether }: StoreContext): PlanSlice {
   return {
     editProgram: (edit) => {
       const s = get();
@@ -26,7 +26,7 @@ export function planActions({ get, set, newId, persistTogether }: StoreContext):
         program: edited,
         dayState,
         rotationState,
-        planEditDay: selectedDayAfterEdit(program, edited, s.planEditDay),
+        plannerDayId: plannerDayAfterEdit(program, edited, s.plannerDayId),
       });
       persistTogether("your plan", {
         program: edited,
@@ -35,6 +35,6 @@ export function planActions({ get, set, newId, persistTogether }: StoreContext):
       });
     },
 
-    selectPlanDay: (dayId) => set({ planEditDay: dayId }),
+    selectPlannerDay: (plannerDayId) => set({ plannerDayId }),
   };
 }

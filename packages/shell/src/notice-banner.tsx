@@ -1,14 +1,15 @@
 import { Button, RADIUS, SURFACE2_BOX } from "@nabd/design-system";
-import type { Notice } from "@nabd/domain";
+import type { Notice } from "@nabd/view";
+import type { ShellActions } from "./shell-actions";
 
 interface NoticeBannerProps {
-  notice: Notice;
-  onDismiss: () => void;
+  vm: Notice;
+  actions: Pick<ShellActions, "dismissNotice">;
 }
 
 /** Something the user must know wherever they are in the app, until they dismiss it. */
-export function NoticeBanner({ notice, onDismiss }: NoticeBannerProps): JSX.Element {
-  const isError = notice.kind === "error";
+export function NoticeBanner({ vm, actions }: NoticeBannerProps): JSX.Element {
+  const isError = vm.kind === "error";
   return (
     <div
       role={isError ? "alert" : "status"}
@@ -24,8 +25,8 @@ export function NoticeBanner({ notice, onDismiss }: NoticeBannerProps): JSX.Elem
         fontSize: 13.5,
       }}
     >
-      <span style={{ flex: 1, wordBreak: "break-word" }}>{notice.text}</span>
-      <Button variant="link" tone="neutral" size="sm" onClick={onDismiss}>
+      <span style={{ flex: 1, wordBreak: "break-word" }}>{vm.text}</span>
+      <Button variant="link" tone="neutral" size="sm" onClick={actions.dismissNotice}>
         Dismiss
       </Button>
     </div>

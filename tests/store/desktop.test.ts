@@ -1,4 +1,4 @@
-import { boot } from "./harness";
+import { boot } from "./fixtures";
 
 describe("the desktop", () => {
   it("quits and sends a test notification through the backend", async () => {

@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { Chip, Icon, RowButton, Sparkline, TEXT } from "@nabd/design-system";
-import type { ProgressionRowVM } from "./view-model";
+import type { ProgressActions } from "./progress-actions";
+import type { ProgressionRowVM } from "./progress-vm";
 
 /** The table's columns: exercise, trend, best, gain, chevron. */
 export const PROGRESSION_COLUMNS: CSSProperties = {
@@ -11,19 +12,19 @@ export const PROGRESSION_COLUMNS: CSSProperties = {
 };
 
 interface ProgressionRowProps {
-  row: ProgressionRowVM;
-  onOpen: (exId: string) => void;
+  vm: ProgressionRowVM;
+  actions: Pick<ProgressActions, "openChart">;
 }
 
 /** One exercise: its trend line, personal best and gain. Pressing it opens the full history. */
-export function ProgressionRow({ row, onOpen }: ProgressionRowProps): JSX.Element {
+export function ProgressionRow({ vm, actions }: ProgressionRowProps): JSX.Element {
   return (
     <RowButton
-      onClick={() => onOpen(row.exId)}
+      onClick={() => actions.openChart(vm.exId)}
       style={{ ...PROGRESSION_COLUMNS, padding: "13px 2px", borderTop: "1px solid var(--line)" }}
     >
-      <span style={{ fontSize: 13.5, fontWeight: 600 }}>{row.exercise}</span>
-      <Sparkline series={row.series} />
+      <span style={{ fontSize: 13.5, fontWeight: 600 }}>{vm.exercise}</span>
+      <Sparkline series={vm.series} />
       <span
         style={{
           ...TEXT.monoValue,
@@ -35,10 +36,10 @@ export function ProgressionRow({ row, onOpen }: ProgressionRowProps): JSX.Elemen
         }}
       >
         <Icon name="trophy" size={12} stroke="var(--accent)" />
-        {row.best}
+        {vm.best}
       </span>
-      <Chip variant="box" tone={row.up ? "success" : "neutral"}>
-        {row.gain}
+      <Chip variant="box" tone={vm.up ? "success" : "neutral"}>
+        {vm.gain}
       </Chip>
       <Icon name="chevron-right" size={14} stroke="var(--text3)" />
     </RowButton>

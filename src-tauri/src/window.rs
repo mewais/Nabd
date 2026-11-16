@@ -15,11 +15,13 @@ use crate::error::AppResult;
 
 /// The label the capability file grants the app's commands to.
 const MAIN_WINDOW: &str = "main";
-const TITLE: &str = "Nabḍ · نبض";
+/// The page's own `<title>` (see build.rs).
+const TITLE: &str = env!("NABD_WINDOW_TITLE");
 const SIZE: (f64, f64) = (1280.0, 820.0);
 const MIN_SIZE: (f64, f64) = (980.0, 640.0);
 /// What an opaque window shows until the page has painted: the dark theme's
-/// background, so a launch does not flash white.
+/// background (`--bg` in the design system's theme.ts, here as the sRGB the
+/// window API takes), so a launch does not flash white.
 const BACKGROUND: Color = Color(0x15, 0x18, 0x1f, 0xff);
 
 /// Create the main window, hidden: the launch decides whether it is shown.

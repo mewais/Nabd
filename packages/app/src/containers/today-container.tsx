@@ -11,6 +11,7 @@ import { TodayScreen, buildTodayVM } from "@nabd/today";
 import type { TodayActions } from "@nabd/today";
 import { useActions, useNabd } from "../store-context";
 
+/** The Today screen. */
 export function TodayContainer(): JSX.Element {
   const store = useActions();
   const plan = useNabd(selectTodayPlan);

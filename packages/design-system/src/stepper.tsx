@@ -1,12 +1,13 @@
 import { useState } from "react";
 import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
+import type { Direction } from "@nabd/domain";
 import { RADIUS, SURFACE2_BOX, TEXT } from "./tokens";
 
-export type StepperSize = "mini" | "large";
+type StepperSize = "mini" | "large";
 
 interface StepperBaseProps {
-  onDec: () => void;
-  onInc: () => void;
+  /** − was pressed (-1), or + (+1). */
+  onStep: (direction: Direction) => void;
   /** `large` (default) for forms; `mini` for dense table rows. */
   size?: StepperSize;
   /** What is being stepped: names the typed input, or the group when there is none. */
@@ -28,7 +29,7 @@ interface TypedStepperProps extends StepperBaseProps {
   onEnter?: () => void;
 }
 
-export type StepperProps = DisplayStepperProps | TypedStepperProps;
+type StepperProps = DisplayStepperProps | TypedStepperProps;
 
 interface SizeSpec {
   gap: number;
@@ -89,8 +90,7 @@ function typedNumber(text: string): number | null {
 }
 
 interface FrameProps {
-  onDec: () => void;
-  onInc: () => void;
+  onStep: (direction: Direction) => void;
   size: StepperSize;
   /** Names the group, when the value inside does not carry the name itself. */
   groupLabel?: string | undefined;
@@ -99,7 +99,7 @@ interface FrameProps {
 }
 
 /** The "− … +" around a stepper's value. */
-function Frame({ onDec, onInc, size, groupLabel, children }: FrameProps): JSX.Element {
+function Frame({ onStep, size, groupLabel, children }: FrameProps): JSX.Element {
   const spec = SIZES[size];
   const buttonStyle = { ...BUTTON, ...spec.button };
   return (
@@ -108,11 +108,11 @@ function Frame({ onDec, onInc, size, groupLabel, children }: FrameProps): JSX.El
       aria-label={groupLabel}
       style={{ display: "flex", alignItems: "center", gap: spec.gap }}
     >
-      <button type="button" aria-label="decrease" onClick={onDec} style={buttonStyle}>
+      <button type="button" aria-label="decrease" onClick={() => onStep(-1)} style={buttonStyle}>
         −
       </button>
       {children(spec)}
-      <button type="button" aria-label="increase" onClick={onInc} style={buttonStyle}>
+      <button type="button" aria-label="increase" onClick={() => onStep(1)} style={buttonStyle}>
         +
       </button>
     </div>
@@ -132,16 +132,14 @@ function TypedStepper(props: TypedStepperProps): JSX.Element {
   const { value, onSet, onEnter, ariaLabel, size = "large" } = props;
   const [draft, setDraft] = useState<string | null>(null);
 
-  const stepping = (move: () => void) => (): void => {
+  const step = (direction: Direction): void => {
     setDraft(null);
-    move();
+    props.onStep(direction);
   };
-  const onDec = stepping(props.onDec);
-  const onInc = stepping(props.onInc);
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.key === "ArrowUp" || event.key === "ArrowDown") {
       event.preventDefault();
-      (event.key === "ArrowUp" ? onInc : onDec)();
+      step(event.key === "ArrowUp" ? 1 : -1);
     } else if (event.key === "Enter" && (draft === null || typedNumber(draft) !== null)) {
       setDraft(null);
       onEnter?.();
@@ -149,7 +147,7 @@ function TypedStepper(props: TypedStepperProps): JSX.Element {
   };
 
   return (
-    <Frame onDec={onDec} onInc={onInc} size={size}>
+    <Frame onStep={step} size={size}>
       {() => (
         <input
           type="text"
@@ -175,9 +173,9 @@ function TypedStepper(props: TypedStepperProps): JSX.Element {
 /** A "− value +" control. With `onSet` the value can also be typed. */
 export function Stepper(props: StepperProps): JSX.Element {
   if (props.onSet !== undefined) return <TypedStepper {...props} />;
-  const { value, onDec, onInc, size = "large", ariaLabel } = props;
+  const { value, onStep, size = "large", ariaLabel } = props;
   return (
-    <Frame onDec={onDec} onInc={onInc} size={size} groupLabel={ariaLabel}>
+    <Frame onStep={onStep} size={size} groupLabel={ariaLabel}>
       {(spec) => (
         <span style={{ ...TEXT.monoValue, ...spec.value, textAlign: "center" }}>{value}</span>
       )}

@@ -1,10 +1,10 @@
 import { Button, FONT, Swatch, TEXT } from "@nabd/design-system";
 import type { QueueRowVM } from "./queue-vm";
+import type { TodayActions } from "./today-actions";
 
 interface QueueRowProps {
-  row: QueueRowVM;
-  onStart: (itemId: string) => void;
-  onToggleSkip: (itemId: string) => void;
+  vm: QueueRowVM;
+  actions: Pick<TodayActions, "start" | "toggleSkip">;
 }
 
 type RowState = QueueRowVM["state"];
@@ -24,10 +24,11 @@ const BADGE_COLOR: Record<RowState, string> = {
 };
 
 /** One exercise of the day: where it stands and what can be done with it. */
-export function QueueRow({ row, onStart, onToggleSkip }: QueueRowProps): JSX.Element {
-  const { state } = row;
+export function QueueRow({ vm, actions }: QueueRowProps): JSX.Element {
+  const { state } = vm;
   return (
-    <div
+    <li
+      aria-label={vm.exercise}
       data-state={state}
       style={{
         display: "flex",
@@ -47,30 +48,30 @@ export function QueueRow({ row, onStart, onToggleSkip }: QueueRowProps): JSX.Ele
           flex: "none",
         }}
       >
-        {row.marker}
+        {vm.marker}
       </span>
       <Swatch color={DOT_COLOR[state]} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...TEXT.label, color: state === "next" ? "var(--text)" : "var(--text2)" }}>
-          {row.exercise}
+          {vm.exercise}
         </div>
-        <div style={{ ...TEXT.cardSubtitle, marginTop: 1 }}>{row.sub}</div>
+        <div style={{ ...TEXT.cardSubtitle, marginTop: 1 }}>{vm.sub}</div>
       </div>
       <span
         style={{ fontFamily: FONT.mono, fontSize: 12, color: BADGE_COLOR[state], flex: "none" }}
       >
-        {row.badge}
+        {vm.badge}
       </span>
-      {row.skipLabel !== null && (
-        <Button variant="ghost" size="sm" onClick={() => onToggleSkip(row.id)}>
-          {row.skipLabel}
+      {vm.skipLabel !== null && (
+        <Button variant="ghost" size="sm" onClick={() => actions.toggleSkip(vm.id)}>
+          {vm.skipLabel}
         </Button>
       )}
-      {row.startLabel !== null && (
-        <Button variant="ghost" size="sm" tone="accent" onClick={() => onStart(row.id)}>
-          {row.startLabel}
+      {vm.startLabel !== null && (
+        <Button variant="ghost" size="sm" tone="accent" onClick={() => actions.start(vm.id)}>
+          {vm.startLabel}
         </Button>
       )}
-    </div>
+    </li>
   );
 }

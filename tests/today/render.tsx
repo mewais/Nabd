@@ -19,21 +19,15 @@ export function renderToday(vm: TodayVM): { actions: TodayActions; container: HT
 
 /** Queries scoped to the queue card. */
 export function queueCard() {
-  const card = screen.getByText("Today's rhythm").parentElement?.parentElement;
-  if (!card) throw new Error("no queue on screen");
-  return within(card);
+  return within(screen.getByRole("region", { name: "Today's rhythm" }));
 }
 
 /** Queries scoped to the queue row of one exercise. */
 export function queueRow(exercise: string) {
-  const row = queueCard().getByText(exercise).closest<HTMLElement>("[data-state]");
-  if (!row) throw new Error(`no queue row for "${exercise}"`);
-  return within(row);
+  return within(queueCard().getByRole("listitem", { name: exercise }));
 }
 
 /** Queries scoped to the card that presents the next set. */
 export function nextSetCard() {
-  const card = screen.getByRole("button", { name: "Start set" }).parentElement?.parentElement;
-  if (!card) throw new Error("no next set on screen");
-  return within(card);
+  return within(screen.getByRole("region", { name: "Next set" }));
 }

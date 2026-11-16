@@ -1,33 +1,27 @@
 import { ChipGroup, FormRow, FormSection, Segmented } from "@nabd/design-system";
-import type { SegOption } from "@nabd/design-system";
 import { toggled } from "@nabd/domain";
-import type { WeightUnit } from "@nabd/domain";
-import { EQUIPMENT_OPTIONS } from "../equipment-options";
-import type { SettingsPatch, SettingsVM } from "./settings-vm";
+import { EQUIPMENT_OPTIONS, WEIGHT_UNIT_OPTIONS } from "../options";
+import type { SettingsActions } from "./settings-actions";
+import type { SettingsVM } from "./settings-vm";
 import { StepperRow } from "./stepper-row";
 
-const UNIT_OPTIONS: readonly SegOption<WeightUnit>[] = [
-  { value: "kg", label: "kg" },
-  { value: "lb", label: "lb" },
-];
-
 interface TrainingSectionProps {
-  training: SettingsVM["training"];
-  onChange: (patch: SettingsPatch) => void;
+  vm: SettingsVM["training"];
+  actions: Pick<SettingsActions, "change">;
 }
 
 /** How loads are shown and stepped, and what equipment the library may offer. */
-export function TrainingSection({ training, onChange }: TrainingSectionProps): JSX.Element {
+export function TrainingSection({ vm, actions }: TrainingSectionProps): JSX.Element {
   return (
     <FormSection title="Training">
       <FormRow title="Weight unit" hint="Show and enter weights in this unit.">
         <Segmented
-          options={UNIT_OPTIONS}
-          value={training.unit}
-          onChange={(weightUnit) => onChange({ weightUnit })}
+          options={WEIGHT_UNIT_OPTIONS}
+          value={vm.unit}
+          onChange={(weightUnit) => actions.change({ weightUnit })}
         />
       </FormRow>
-      <StepperRow row={training.increment} onChange={onChange} />
+      <StepperRow vm={vm.increment} actions={actions} />
       <FormRow
         stacked
         title="My equipment"
@@ -35,8 +29,8 @@ export function TrainingSection({ training, onChange }: TrainingSectionProps): J
       >
         <ChipGroup
           options={EQUIPMENT_OPTIONS}
-          selected={training.equipment}
-          onToggle={(key) => onChange({ equipment: toggled(training.equipment, key) })}
+          selected={vm.equipment}
+          onToggle={(key) => actions.change({ equipment: toggled(vm.equipment, key) })}
         />
       </FormRow>
     </FormSection>

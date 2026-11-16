@@ -1,11 +1,9 @@
-import { z } from "zod";
-import type { ZodTypeAny } from "zod";
-import type { Notice } from "@nabd/domain";
+import type { ZodTypeAny, z } from "zod";
 import {
+  CustomExercisesSchema,
   DayLogSchema,
   DayStateSchema,
   EMPTY_PROGRAM,
-  ExerciseSchema,
   LoggedSetSchema,
   ProgramSchema,
   RotationStateSchema,
@@ -16,31 +14,30 @@ import {
 import { ExerciseLibrary } from "@nabd/dataset";
 import type { BootSnapshot, Singletons } from "@nabd/ipc-client";
 import { normalized } from "@nabd/program-editor";
-import { upgradeDayState, upgradeRotation, upgradeSettings } from "@nabd/serialization";
+import { upgradeStored } from "@nabd/serialization";
+import type { Notice } from "@nabd/view";
+import { STORED_NAMES } from "./persistence";
 import type { LoadProblem, NabdState } from "./state";
 
 type Persisted = Pick<NabdState, keyof Singletons | "history">;
 
-/** How each stored thing is named to the user. */
-export const STORED_NAMES: Record<LoadProblem["source"], string> = {
-  program: "your plan",
-  settings: "your settings",
-  customExercises: "your custom exercises",
-  rotationState: "your exercise rotation",
-  dayState: "today's progress",
-  dayLog: "your completion log",
-  history: "your logged sets",
-  everything: "your data",
-};
+const SINGLETONS = [
+  "program",
+  "settings",
+  "customExercises",
+  "rotationState",
+  "dayState",
+  "dayLog",
+] as const satisfies readonly (keyof Singletons)[];
 
 /** What the boot snapshot held, read into state. */
-export interface Loaded {
+interface Loaded {
   state: Persisted;
   problems: LoadProblem[];
   /**
    * Stored values that were readable but not in today's shape (an older
-   * version's, or breaking a rule) and were put right in reading: they are
-   * written back, so the stored copy is put right too.
+   * version's — see @nabd/serialization — or breaking a rule) and were put
+   * right in reading: they are written back, so the stored copy is put right too.
    */
   repaired: (keyof Singletons)[];
   /** Settings that could not be kept and are back at their defaults. */
@@ -56,7 +53,8 @@ export interface Loaded {
  */
 export function readSnapshot(snapshot: BootSnapshot, now: Date): Loaded {
   const problems: LoadProblem[] = [];
-  const repaired: (keyof Singletons)[] = [];
+  const stored = upgradeStored(snapshot);
+  const repaired = new Set(SINGLETONS.filter((key) => stored[key] !== snapshot[key]));
 
   function read<S extends ZodTypeAny>(
     source: keyof Singletons,
@@ -67,8 +65,9 @@ export function readSnapshot(snapshot: BootSnapshot, now: Date): Loaded {
     if (value === null || value === undefined) return fallback;
     const parsed = schema.safeParse(value);
     if (parsed.success) return parsed.data;
-    const issue = parsed.error.errors[0]!;
-    problems.push({ source, detail: `${issue.path.join(".") || "value"}: ${issue.message}` });
+    const [issue] = parsed.error.errors;
+    const where = issue?.path.join(".") || "value";
+    problems.push({ source, detail: `${where}: ${issue?.message ?? "not valid"}` });
     return fallback;
   }
 
@@ -88,39 +87,30 @@ export function readSnapshot(snapshot: BootSnapshot, now: Date): Loaded {
     return sets;
   }
 
-  const storedSettings = upgradeSettings(snapshot.settings);
-  const { settings, reset: resetSettings } = salvageSettings(storedSettings);
-  if (storedSettings !== snapshot.settings || resetSettings.length > 0) repaired.push("settings");
+  const { settings, reset: resetSettings } = salvageSettings(stored.settings);
+  if (resetSettings.length > 0) repaired.add("settings");
 
   const customExercises = read(
     "customExercises",
-    z.array(ExerciseSchema),
-    snapshot.customExercises,
+    CustomExercisesSchema,
+    stored.customExercises,
     [],
   );
-  const storedProgram = read("program", ProgramSchema, snapshot.program, EMPTY_PROGRAM);
+  const storedProgram = read("program", ProgramSchema, stored.program, EMPTY_PROGRAM);
   const { lookup } = ExerciseLibrary.catalog.withCustom(customExercises);
   const program = normalized(storedProgram, lookup);
-  if (program !== storedProgram) repaired.push("program");
-
-  const storedRotation = upgradeRotation(snapshot.rotationState, snapshot.program);
-  if (storedRotation !== snapshot.rotationState) repaired.push("rotationState");
+  if (program !== storedProgram) repaired.add("program");
 
   const state: Persisted = {
     settings,
     program,
     customExercises,
-    rotationState: read("rotationState", RotationStateSchema, storedRotation, {}),
-    dayState: read(
-      "dayState",
-      DayStateSchema,
-      upgradeDayState(snapshot.dayState, snapshot.program),
-      freshDayState(now),
-    ),
-    dayLog: read("dayLog", DayLogSchema, snapshot.dayLog, []),
-    history: readHistory(snapshot.history, snapshot.unreadableSets ?? 0),
+    rotationState: read("rotationState", RotationStateSchema, stored.rotationState, {}),
+    dayState: read("dayState", DayStateSchema, stored.dayState, freshDayState(now)),
+    dayLog: read("dayLog", DayLogSchema, stored.dayLog, []),
+    history: readHistory(stored.history, stored.unreadableSets ?? 0),
   };
-  return { state, problems, repaired, resetSettings };
+  return { state, problems, repaired: [...repaired], resetSettings };
 }
 
 /**

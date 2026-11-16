@@ -8,39 +8,41 @@ import type { Equipment } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
 import { buildLibraryVM } from "@nabd/modals";
 import type { LibraryVM } from "@nabd/modals";
-import { EX, LIBRARY } from "../support/plan-fixtures";
-import { exercise } from "../support/domain-factories";
+import type { LibraryState } from "@nabd/view";
+import { exercise } from "../support/builders";
+import { EX, LIBRARY } from "../support/exercises";
 
-type LibraryState = Parameters<typeof buildLibraryVM>[0];
+/** What the library is asked to show: its state, and (for a pool target) what the pool holds. */
+type Scenario = Partial<LibraryState> & { pool?: string[]; library?: ExerciseLibrary };
 
-const state = (over: Partial<LibraryState> = {}): LibraryState => ({
-  target: { kind: "extra" },
-  search: "",
-  group: null,
-  draft: null,
-  ...over,
-});
+function libraryVM(
+  { pool = [], library = LIBRARY, ...state }: Scenario = {},
+  owned: readonly Equipment[] = EQUIPMENT_KEYS,
+): LibraryVM | null {
+  const closed = { target: { kind: "extra" as const }, search: "", group: null, draft: null };
+  return buildLibraryVM({ state: { ...closed, ...state }, pool, library, owned });
+}
 
-function browse(over: Partial<LibraryState> = {}, owned: readonly Equipment[] = EQUIPMENT_KEYS) {
-  const vm = buildLibraryVM(state(over), LIBRARY, owned);
+function browse(over: Scenario = {}, owned?: readonly Equipment[]) {
+  const vm = libraryVM(over, owned);
   if (vm?.mode !== "browse") throw new Error("expected the browser");
   return vm.browser;
 }
 
-const names = (over: Partial<LibraryState> = {}, owned?: readonly Equipment[]): string[] =>
+const names = (over: Scenario = {}, owned?: readonly Equipment[]): string[] =>
   browse(over, owned).rows.map((row) => row.name);
 
 describe("buildLibraryVM", () => {
   it("is null while the library is closed", () => {
-    expect(buildLibraryVM(state({ target: null }), LIBRARY, EQUIPMENT_KEYS)).toBeNull();
+    expect(libraryVM({ target: null })).toBeNull();
   });
 
   it("is titled by what picking an exercise will do", () => {
     const title = (target: LibraryState["target"]): string | undefined =>
-      buildLibraryVM(state({ target }), LIBRARY, EQUIPMENT_KEYS)?.title;
+      libraryVM({ target })?.title;
 
-    expect(title({ kind: "exercise" })).toBe("Add Exercise");
-    expect(title({ kind: "pool", muscle: "rear_delts", pool: [] })).toBe(
+    expect(title({ kind: "exercise", dayId: "d" })).toBe("Add Exercise");
+    expect(title({ kind: "pool", dayId: "d", slotId: "s", muscle: "rear_delts" })).toBe(
       "Add to Pool — Rear Delts",
     );
     expect(title({ kind: "extra" })).toBe("Log Something Else");
@@ -58,10 +60,9 @@ describe("buildLibraryVM", () => {
 
   it("flags custom exercises", () => {
     const mine = exercise({ id: "mine", name: "Desk Push-Up", custom: true });
-    const vm = buildLibraryVM(state(), new ExerciseLibrary([EX.bench, mine]), EQUIPMENT_KEYS);
-    if (vm?.mode !== "browse") throw new Error("expected the browser");
+    const { rows } = browse({ library: new ExerciseLibrary([EX.bench, mine]) });
 
-    expect(vm.browser.rows.map((row) => [row.name, row.custom])).toEqual([
+    expect(rows.map((row) => [row.name, row.custom])).toEqual([
       ["Bench Press", false],
       ["Desk Push-Up", true],
     ]);
@@ -83,8 +84,9 @@ describe("buildLibraryVM", () => {
   });
 
   describe("opened to add to a cycled pool", () => {
-    const pool = (members: string[]): Partial<LibraryState> => ({
-      target: { kind: "pool", muscle: "abs", pool: members },
+    const pool = (members: string[]): Scenario => ({
+      target: { kind: "pool", dayId: "d", slotId: "s", muscle: "abs" },
+      pool: members,
     });
 
     it("offers everything while the pool is empty", () => {
@@ -124,7 +126,7 @@ describe("buildLibraryVM", () => {
       tracking: "weight_reps",
     };
     const form = (over: Partial<Draft> = {}): Extract<LibraryVM, { mode: "create" }> => {
-      const vm = buildLibraryVM(state({ draft: { ...draft, ...over } }), LIBRARY, EQUIPMENT_KEYS);
+      const vm = libraryVM({ draft: { ...draft, ...over } });
       if (vm?.mode !== "create") throw new Error("expected the form");
       return vm;
     };

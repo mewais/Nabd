@@ -1,6 +1,6 @@
 import { COLOR, RADIUS } from "./tokens";
 
-export interface ToggleProps {
+interface ToggleProps {
   on: boolean;
   onChange: (on: boolean) => void;
   /** Names the switch for assistive tech. */

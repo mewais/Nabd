@@ -18,8 +18,8 @@ export class Today {
   /** An exercise's line in the queue: marker, name, "1/3 sets" badge and its buttons. */
   row(exercise: string): Locator {
     return this.screen
-      .locator("[data-state]")
-      .filter({ has: this.page.getByText(exercise, { exact: true }) });
+      .getByRole("region", { name: "Today's rhythm" })
+      .getByRole("listitem", { name: exercise, exact: true });
   }
 
   rowButton(exercise: string, action: QueueAction): Locator {

@@ -50,6 +50,11 @@ async function captureAll(theme) {
 
   await goTo("Plan");
   await shot("plan-fixed");
+  await button("Delete day").click();
+  await shot("confirm");
+  await dialog(/^Delete /)
+    .getByRole("button", { name: "Cancel" })
+    .click();
   await button("+ Add exercise").click();
   await shot("library");
   await button("Create custom exercise").click();

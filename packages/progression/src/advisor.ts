@@ -36,9 +36,11 @@ const DEFAULT_REP_GOAL: RepGoal = { lo: 8, hi: 12 };
 const DEFAULT_TIME_GOAL: RepGoal = { lo: 30, hi: 30 };
 /** Sessions that must miss the range in a row before backing the load off. */
 const STALL_SESSIONS = 2;
+/** The share of the last working load a first warm-up starts from. */
+const WARMUP_SHARE = 0.5;
 
 /** What the advisor is asked about: one set of one exercise in a session. */
-export interface AdviceRequest {
+interface AdviceRequest {
   tracking: TrackingType;
   /** Null for an exercise done outside the plan. */
   prescription: Prescription | null;
@@ -52,7 +54,7 @@ export interface AdviceRequest {
 /** The goal a prescribed set asks for; a default window when nothing is prescribed. */
 function repGoal(spec: SetSpec | null, tracking: TrackingType): RepGoal {
   if (spec === null) return isTimeBased(tracking) ? DEFAULT_TIME_GOAL : DEFAULT_REP_GOAL;
-  return { lo: spec.a, hi: spec.b ?? spec.a };
+  return { lo: spec.amount, hi: spec.upTo ?? spec.amount };
 }
 
 /**
@@ -99,12 +101,12 @@ export class ProgressionAdvisor {
   ): Advice {
     const repStep = isTimeBased(tracking) ? SECONDS_STEP : 1;
     const moreReps: Performance = { reps: basis.reps + repStep, weight: basis.weight };
-    const harder = this.harderLoad(tracking, basis.weight);
+    const harder = this.stepLoad(tracking, basis.weight, "harder");
     const moreLoad = (reps: number): Performance | null =>
       harder === null ? null : { reps, weight: harder };
 
     if (basis.reps < goal.lo) {
-      const easier = stalled ? this.easierLoad(tracking, basis.weight) : null;
+      const easier = stalled ? this.stepLoad(tracking, basis.weight, "easier") : null;
       return easier === null
         ? { kind: "reach_range", primary: { ...basis, reps: goal.lo }, alternative: null, basis }
         : { kind: "deload", primary: { reps: goal.lo, weight: easier }, alternative: null, basis };
@@ -118,17 +120,34 @@ export class ProgressionAdvisor {
     return { kind: "add_reps", primary: moreReps, alternative: moreLoad(basis.reps), basis };
   }
 
-  /** One step harder, or null when this exercise has no load to change. */
-  private harderLoad(tracking: TrackingType, weight: number | null): number | null {
+  /**
+   * The load one step harder or easier; null when the exercise has no load to
+   * change, or the load cannot go any lower. Assistance is help, not load, so
+   * for an assisted exercise harder means less of it.
+   */
+  private stepLoad(
+    tracking: TrackingType,
+    weight: number | null,
+    change: "harder" | "easier",
+  ): number | null {
     if (weight === null || !isWeighted(tracking)) return null;
-    if (tracking !== "assisted_bodyweight") return roundKg(weight + this.loadStepKg);
+    const adds = (change === "harder") !== (tracking === "assisted_bodyweight");
+    if (adds) return roundKg(weight + this.loadStepKg);
     return weight > 0 ? roundKg(Math.max(0, weight - this.loadStepKg)) : null;
   }
 
-  /** One step easier, or null when the load cannot go any lower. */
-  private easierLoad(tracking: TrackingType, weight: number | null): number | null {
-    if (weight === null || !isWeighted(tracking)) return null;
-    if (tracking === "assisted_bodyweight") return roundKg(weight + this.loadStepKg);
-    return weight > 0 ? roundKg(Math.max(0, weight - this.loadStepKg)) : null;
+  /**
+   * Where a warm-up starts when no warm-up of the exercise is on record but a
+   * working set is: half of that set's load, rounded to the load step, for the
+   * prescribed reps (the working set's own, with nothing prescribed).
+   * Assistance stays as it was: halving it would make the warm-up the harder set.
+   */
+  warmupFrom(tracking: TrackingType, working: Performance, spec: SetSpec | null): Performance {
+    const reps = spec?.amount ?? working.reps;
+    if (working.weight === null || tracking === "assisted_bodyweight") {
+      return { reps, weight: working.weight };
+    }
+    const steps = Math.round((working.weight * WARMUP_SHARE) / this.loadStepKg);
+    return { reps, weight: roundKg(steps * this.loadStepKg) };
   }
 }

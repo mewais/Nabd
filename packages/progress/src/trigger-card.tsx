@@ -1,7 +1,8 @@
 import { Card, EmptyNote, RADIUS, Swatch, TEXT } from "@nabd/design-system";
 import type { Trigger } from "@nabd/domain";
-import { isEmpty } from "./view-model";
-import type { ProgressVM, TriggerShareVM } from "./view-model";
+import { isEmpty } from "./empty-vm";
+import type { EmptyVM } from "./empty-vm";
+import type { TriggerShareVM } from "./stats-vm";
 
 const TRIGGER_COLORS: Record<Trigger, string> = {
   idle: "var(--accent)",
@@ -9,7 +10,12 @@ const TRIGGER_COLORS: Record<Trigger, string> = {
   manual: "var(--accent3)",
 };
 
-function TriggerSplit({ shares }: { shares: readonly TriggerShareVM[] }): JSX.Element {
+interface TriggerSplitProps {
+  vm: readonly TriggerShareVM[];
+}
+
+/** The triggers as one split bar, and what each colour stands for. */
+function TriggerSplit({ vm }: TriggerSplitProps): JSX.Element {
   return (
     <>
       <div
@@ -22,32 +28,45 @@ function TriggerSplit({ shares }: { shares: readonly TriggerShareVM[] }): JSX.El
           overflow: "hidden",
         }}
       >
-        {shares.map(({ trigger, pct }) => (
+        {vm.map(({ trigger, pct }) => (
           <div key={trigger} style={{ width: `${pct}%`, background: TRIGGER_COLORS[trigger] }} />
         ))}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 11, marginTop: "auto" }}>
-        {shares.map(({ trigger, label, share }) => (
-          <div key={trigger} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <ul
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 11,
+          margin: "auto 0 0",
+          padding: 0,
+          listStyle: "none",
+        }}
+      >
+        {vm.map(({ trigger, label, share }) => (
+          <li
+            key={trigger}
+            aria-label={label}
+            style={{ display: "flex", alignItems: "center", gap: 10 }}
+          >
             <Swatch shape="square" color={TRIGGER_COLORS[trigger]} size={11} />
             <span style={{ flex: 1, fontSize: 13 }}>{label}</span>
             <span style={{ ...TEXT.monoValue, fontSize: 13 }}>{share}</span>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </>
   );
 }
 
+interface TriggerCardProps {
+  vm: TriggerShareVM[] | EmptyVM;
+}
+
 /** What prompted the logged sets: an idle moment, the timer, or the user. */
-export function TriggerCard({ triggers }: { triggers: ProgressVM["triggers"] }): JSX.Element {
+export function TriggerCard({ vm }: TriggerCardProps): JSX.Element {
   return (
     <Card title="What prompts a set" subtitle="Idle detection vs timer vs manual" stacked>
-      {isEmpty(triggers) ? (
-        <EmptyNote>{triggers.empty}</EmptyNote>
-      ) : (
-        <TriggerSplit shares={triggers} />
-      )}
+      {isEmpty(vm) ? <EmptyNote>{vm.empty}</EmptyNote> : <TriggerSplit vm={vm} />}
     </Card>
   );
 }

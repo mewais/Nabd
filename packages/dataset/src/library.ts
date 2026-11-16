@@ -4,7 +4,7 @@ import { MOVEMENTS } from "./catalog";
 import { compose } from "./compose";
 
 /** Filters for browsing the library; every field is optional. */
-export interface LibraryQuery {
+interface LibraryQuery {
   /** Case-insensitive substring of the exercise name. */
   text?: string;
   group?: MuscleGroup;

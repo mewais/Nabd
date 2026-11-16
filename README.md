@@ -32,7 +32,9 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
     floating starts on today's weekday's day (the first day, on a rest day); going
     weekdays pins the current day to today and the days after it to the weekdays that
     follow;
-  - deleting a day or a custom exercise, and importing over what is stored, ask first.
+  - deleting a day or a custom exercise, and importing over what is stored, ask first;
+  - the planner opens on today's day — on a rest day, on the plan's first day (the
+    earliest in the week, Monday first, for a weekday plan).
 - **Today** is derived, never stored: the plan for the day, plus the sets logged today.
   Edit the plan and Today changes immediately; restart the app and nothing is lost. A
   set whose exercise has since left the plan (or the library) is still listed and
@@ -63,13 +65,25 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   exercise). A set beyond an exercise's prescription keeps the form on that exercise.
   Reps and weight can be stepped (− / +, or ↑ / ↓ in the field: one rep, five seconds,
   one weight increment) or typed — a field can be emptied and retyped, and goes back to
-  its last number if left empty — and Enter logs the set. Weights are shown to two
-  decimals, so quarter-kilo steps read exactly.
+  its last number if left empty — and Enter logs the set. A weight reads exactly as it
+  was entered, to two decimals, so quarter steps read exactly; shown in the other unit
+  it is a conversion, rounded to one decimal (20 kg is "44.1 lb"). The form's own
+  field always holds two decimals, so it can be stepped by the finest increment.
 - **Nothing logged is lost quietly.** A set the database would not take stays in the
   list, marked "not saved yet", and is retried on every clock beat, after any save that
-  works, and before an export or Settings → Quit. Before an import replaces anything, a
-  backup export (`nabd-backup-before-import-…json`) is written next to your exports.
+  works, and before an export or quitting — from Settings or from the tray menu alike
+  (the tray's Quit is carried out by the window, which saves first; if the window
+  cannot answer within three seconds the app exits anyway). A set counts toward the
+  day that is open when it is logged, so it stays in today's list even if the clock is
+  set back meanwhile. Before an import replaces anything, a backup export
+  (`nabd-backup-before-import-…json`) is written next to your exports; an export says
+  so when it had to leave out sets that are not saved yet, or that could not be read.
   Stored settings are read field by field, so one bad value only resets itself.
+- **Older data is brought along.** Whatever an earlier version stored, or exported, is
+  upgraded as it is read (and written back in today's shape): the field names of
+  prescribed sets (export format 3), the old "translucent" theme, plans and rotations
+  that pointed at positions instead of ids, and exercises the catalog has since retired
+  — a single-arm variant of two-handed equipment becomes the two-handed exercise.
 - **Suggestions** use double progression against the same set of your previous session:
   inside your rep range → one more rep (or, alternatively, the same reps with more
   load); at the top → more load, back at the bottom of the range; below it → hold the
@@ -80,8 +94,10 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   or 13 reps" at the top of the range — and only an exercise that needs a bar or a
   dumbbell asks you to pick a starting weight. Warm-ups are left out of progression,
   volume and trends; the form remembers your last warm-up separately, and starts each
-  kind of set (warm-up, working, drop) from its own numbers. An exercise's trend has one
-  unit: an estimated 1RM once it has ever been loaded, reps or seconds until then.
+  kind of set (warm-up, working, drop) from its own numbers. A first warm-up, with none
+  on record, starts from half the last working load, rounded to your weight increment,
+  for the reps the plan asks. An exercise's trend has one unit: an estimated 1RM once
+  it has ever been loaded, reps or seconds until then.
 - **Closing the window hides it**; the app lives in the tray (Start next set, Pause
   nudges, Open, Quit). Where the desktop shows no tray icons (stock GNOME without the
   AppIndicator extension) the app is an ordinary window: closing it quits, and "Start
@@ -122,8 +138,9 @@ provides it) and stable Rust (`rustup`), plus per platform:
 Where the OS cannot report idle time, "idle" means no keyboard or mouse activity inside
 the Nabḍ window, and Settings says so (also when the desktop's idle service is lost, or
 comes back, while the app is running). A login launch always starts in the tray (if there
-is one); "Start minimized" does the same for launches by hand. macOS is not a supported
-target yet.
+is one); "Start minimized" does the same for launches by hand. Windows and Linux are the
+only targets: building for anything else (macOS included) stops with a compile error that
+says so.
 
 ## Quick start
 
@@ -144,6 +161,15 @@ pnpm lint               # ESLint + Prettier
 pnpm lint:rust          # rustfmt + clippy, over the whole Cargo workspace
 pnpm check              # all of the above
 ```
+
+Besides the usual rules, ESLint enforces two things about this code base
+(`eslint.config.js`, `scripts/eslint/`): the dependency direction between packages
+described under [Layout](#layout), and one import style — types come in their own
+`import type { … }` statement, and a module is imported once per kind.
+
+The app's version is written in `package.json` (which `tauri.conf.json` and the UI
+read) and in `src-tauri/Cargo.toml`; `src-tauri/build.rs` refuses to build when the
+two differ. The same build script takes the window's title from the page's `<title>`.
 
 ## End-to-end tests
 
@@ -167,7 +193,8 @@ the in-memory backend of `pnpm dev`. Two things make them deterministic:
 
 `e2e/support/` has the fixture (`app`), one page object per screen and modal, and the
 builders for plans and history; the browser runs in a non-UTC time zone so "today" is
-tested as the user's calendar day. A spec marked `test.fail` documents designed behaviour
+tested as the user's calendar day. Page objects find things the way a person does — by
+role and name — never by style. A spec marked `test.fail` documents designed behaviour
 the app does not have yet: it starts failing the day the app is fixed, and the mark comes
 off. No spec is marked at present.
 
@@ -195,37 +222,45 @@ idle time, autostart, and everything Windows-specific.
 
 `scripts/visual/capture.mjs` drives the browser demo through every screen and modal, in
 both themes, and saves screenshots; `scripts/visual/make-icon.mjs` renders the app
-icon's source image from the in-app logo.
+icon's source image (`src-tauri/icons/source.png`) from the in-app logo, from which
+`pnpm tauri icon` makes the icons the bundle uses.
 
 ## Layout
 
 Code lives in `packages/` (TypeScript, one `@nabd/<name>` package per directory) and
 `src-tauri/` (Rust); tests live apart from the code, under `tests/<package>/` and
-`tests/rust/<crate>/`, with shared fixtures in `tests/support/` and
-`tests/rust/common/`. The `paths` block of `tsconfig.json` is the single map of package
+`tests/rust/<crate>/`. The `paths` block of `tsconfig.json` is the single map of package
 locations; `workspace.config.ts` turns it into the aliases Vite and Vitest resolve
-through.
+through, and `vitest.workspace.ts` makes one test project of every package that has a
+`tests/<package>/` directory (in a DOM if the package depends on React, in Node
+otherwise).
 
 ```
 packages/
-  domain          the shared vocabulary: types + zod schemas, settings, muscle and
-                  equipment tables, local-date, number and text helpers
+  domain          the shared vocabulary: the persisted model (types + zod schemas) with
+                  its name tables and rules, settings, what a machine can do, and the
+                  small helpers everything is written with (local dates, numbers,
+                  lists, JSON, text)
+  view            what the user is looking at, as types only: screen, map view, tab,
+                  notice, the library's state — shared by the store and the screens
   dataset         ExerciseLibrary: movement catalog × equipment × laterality
   coverage        MuscleVolume: sets per muscle, from the plan or from history
   scheduling      TodayPlan / PlanItem (today's queue) and day rollover
-  progression     ProgressionAdvisor, ExerciseHistory, ExerciseProgress (trends)
+  progression     ProgressionAdvisor, ExerciseHistory, ExerciseProgress (trends, in kg)
   session         LogSession (the set being entered), Coach, wording
   nudge           NudgePolicy: when to say "time to move"
   analytics       TrainingStats: streaks, completion, time of day, triggers
-  program-editor  ProgramEditor: every planner mutation, immutably, and the rules a
-                  program obeys however it was edited, stored or imported
-  serialization   validates + migrates an import file; upgrades values stored by older
-                  versions
+  program-editor  ProgramEditor and PrescriptionEditor: every planner mutation,
+                  immutably, and the rules a program obeys however it was edited,
+                  stored or imported
+  serialization   upgrades whatever an older version stored or exported to today's
+                  shape, and validates an import file
   ipc-client      the typed boundary to the Rust backend, and an in-memory stand-in
   store           Zustand store, one file per slice: state, actions, memoized selectors,
                   and what holds after every change (settle.ts)
   design-system   theme, tokens and every presentational primitive
-  bodymap         the anatomical SVG map and its per-muscle meter
+  bodymap         the anatomical SVG map (its vendored drawing in src/drawing/) and the
+                  per-muscle meter
   shell           the app chrome: sidebar, top bar, notice banner
   today           the Today screen
   planner         the Plan screen
@@ -237,30 +272,73 @@ src-tauri/
   crates/persistence   Store: SQLite, the singletons and the set history, migrations
   crates/native        the pure decisions behind native features (tray model,
                        notifications, capabilities, launch/close, idle backends)
-  crates/ipc           Commands: what the frontend can ask of the stored data
-  src/                 the Tauri binary: commands/, tray, window, clock, glass,
-                       autostart, export, and idle/ (one backend per platform API)
-tests/                 tests/<package>/, tests/rust/<crate>/, tests/support/
+  crates/ipc           DataCommands: what the frontend can ask of the stored data
+  src/                 the Tauri binary: commands/, db, error, tray, window, clock,
+                       glass, autostart, notifications, export, platform/ (what differs
+                       between Linux and Windows) and idle/ (one backend per platform API)
+  build.rs             the version check and the window title (see Checks)
+tests/                 tests/<package>/, tests/rust/<crate>/, and the shared kits:
+                       tests/support/ (builders, exercises, programs, world, dom) and
+                       tests/rust/common/
 e2e/                   Playwright specs of the whole UI, with their page objects
-scripts/               the Vitest setup file, the visual scripts and the Linux smoke test
-assets/body/           the vendored body-map drawing
+scripts/               the Vitest setup file, the local ESLint rules, the visual scripts
+                       and the Linux smoke test
 ```
 
-Dependencies only point one way: `domain` ← engines (`dataset` … `serialization`) ←
-`store`, and `design-system` ← `bodymap` ← screens. Engines know nothing about React or
-the store. Every screen package (`shell`, `today`, `planner`, `progress`, `modals`) has
-the same shape: an `index.ts` that only exports, a pure `build…VM` function that turns
-domain objects into exactly what is rendered, an actions interface saying what the
-screen asks of the app, and presentational components taking `{ vm, actions }`. Screens
-never import the store; the containers in `packages/app/src/containers/` connect the
-two (select state → build the view-model → bind the actions). The store is the only
-place that persists.
+**Dependencies only point one way**, and ESLint refuses an import that does not
+(`scripts/eslint/layers.js`):
+
+```
+domain ← view ← engines (dataset … serialization) ← ipc-client ← store
+domain ← view ← design-system ← bodymap ← screens (shell, today, planner, progress, modals)
+```
+
+Engines know nothing about React or the store; screens use the engines but never the
+store or the backend; only `app` joins the two sides, in
+`packages/app/src/containers/` (select state → build the view-model → bind the
+actions). The store is the only place that persists. View vocabulary lives in `view`
+rather than `domain` so that the engines never see it, and so that neither the store
+nor a screen has to declare the other's types.
+
+**Every screen package** (`shell`, `today`, `planner`, `progress`, `modals`) has the
+same shape:
+
+- `index.ts` only exports: the root component, its `build…VM` function, and the types
+  the app (or a test) needs of them.
+- View-models are in `<name>-vm.ts`: the `<Name>VM` types and a pure
+  `build<Name>VM` function that turns domain objects into exactly what is rendered,
+  every word already written. The screen's own is `<screen>-vm.ts`.
+- `<screen>-actions.ts` declares `<Screen>Actions`: what the screen asks of the app.
+- `options.ts` holds the package's pickers (what each `Segmented`, `Dropdown` or chip
+  group offers), built with `optionsOf(keys, NAMES)` where the names are a domain table;
+  `wording.ts` holds any text helpers.
+- Components are one per file, named after the file, each with a `<Name>Props`
+  interface, and take their props by one rule:
+  - **`vm`** — the view-model, or the part of it, that the component draws. Anything
+    else it needs is a plain, named value (`dayId`, `columns`, `text`).
+  - **`actions`** — the screen's actions interface, or a `Pick<>` of it, for a
+    component that calls the screen's asks itself (the root, and any section or row
+    below it).
+  - **`onX` callbacks** — instead of `actions`, never beside it — for a component whose
+    events mean what its parent says they mean: the parent supplies the closure
+    (`MoveButtons.onMove`, `SetTable.onEdit`, `StepperCard.onStep`).
+  - Nothing is passed through React context.
+
+In the planner every change to the program is a `ProgramEdit` — `(editor) =>
+editor.moveDay(id, 1)` — handed to the one `edit` action; a change to a prescription is a
+`PrescriptionEdit` handed to `editor.editPrescription`. Each operation is declared once,
+on `ProgramEditor` or `PrescriptionEditor`, and written out where the user triggers it.
+
+In the store, the actions are grouped as slices (`DaySlice`, `LoggingSlice`, … in
+`slices.ts`, one file each). A slice never imports another slice: what it needs of
+another it asks for through `get().action()`, and what two of them share lives in a
+helper module (`persistence`, `rollover`, `open-session`, `os`, `selectors`).
 
 ## Credits
 
 - Body-map SVG paths vendored from
   [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter)
-  (MIT, © 2022 ELABBASSI Hicham) — `assets/body/LICENSE`.
+  (MIT, © 2022 ELABBASSI Hicham) — `packages/bodymap/src/drawing/LICENSE`.
 - Bundled fonts: Hanken Grotesk and JetBrains Mono (SIL Open Font License 1.1) —
   `packages/app/public/fonts/OFL.txt`.
 - Full attribution is in `NOTICE`.

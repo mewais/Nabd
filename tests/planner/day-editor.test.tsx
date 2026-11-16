@@ -3,17 +3,9 @@
 
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { Program } from "@nabd/domain";
-import {
-  BENCH,
-  DB_BENCH,
-  OHP,
-  PLANK,
-  PUSH_UP,
-  cycledProgram,
-  dayOf,
-  fixedProgram,
-  floating,
-} from "./fixtures";
+import { CATALOG } from "../support/exercises";
+import { asFloating, officeStrength, rotationPlan } from "../support/programs";
+import { dayOf } from "./fixtures";
 import { button, card, renderPlanner } from "./render";
 
 const exIds = (program: Program, dayId: string): string[] =>
@@ -28,7 +20,7 @@ const press = (scope: ReturnType<typeof card>, name: string | RegExp): void => {
 
 describe("DayEditor — fixed day", () => {
   it("shows the day's name, summary and one card per exercise", () => {
-    renderPlanner(fixedProgram());
+    renderPlanner(officeStrength());
 
     expect(screen.getByLabelText("Day name")).toHaveValue("Push");
     expect(screen.getByText("3 exercises · 9 sets")).toBeInTheDocument();
@@ -36,11 +28,12 @@ describe("DayEditor — fixed day", () => {
       card("Barbell Bench Press").getByText("Chest, Front Delts, Triceps"),
     ).toBeInTheDocument();
     expect(card("Plank").getByText("BODYWEIGHT")).toBeInTheDocument();
-    expect(screen.getAllByRole("region")).toHaveLength(3);
+    const editor = within(screen.getByRole("region", { name: "Day editor" }));
+    expect(editor.getAllByRole("region")).toHaveLength(3);
   });
 
   it("renaming the day updates the program and the board", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     fireEvent.change(screen.getByLabelText("Day name"), { target: { value: "Push A" } });
 
@@ -49,7 +42,7 @@ describe("DayEditor — fixed day", () => {
   });
 
   it("marks the day's weekday, and another weekday moves the day there", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
     const weekday = (name: string) =>
       within(screen.getByRole("group", { name: "Weekday" })).getByRole("button", { name });
     expect(weekday("Monday")).toHaveAttribute("aria-pressed", "true");
@@ -61,7 +54,7 @@ describe("DayEditor — fixed day", () => {
   });
 
   it("moving onto an occupied weekday swaps the two days", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     fireEvent.click(screen.getByRole("button", { name: "Wednesday" }));
 
@@ -72,56 +65,64 @@ describe("DayEditor — fixed day", () => {
   });
 
   it("Move later swaps an exercise with the next one, Move earlier brings it back", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     press(card("Barbell Bench Press"), "Move later");
-    expect(exIds(planner.program(), "d-push")).toEqual([OHP, BENCH, PLANK]);
+    expect(exIds(planner.program(), "d-push")).toEqual([
+      CATALOG.overheadPress,
+      CATALOG.bench,
+      CATALOG.plank,
+    ]);
 
     press(card("Barbell Bench Press"), "Move earlier");
-    expect(exIds(planner.program(), "d-push")).toEqual([BENCH, OHP, PLANK]);
+    expect(exIds(planner.program(), "d-push")).toEqual([
+      CATALOG.bench,
+      CATALOG.overheadPress,
+      CATALOG.plank,
+    ]);
   });
 
   it("moving the first exercise earlier or the last one later changes nothing", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     press(card("Barbell Bench Press"), "Move earlier");
     press(card("Plank"), "Move later");
 
-    expect(planner.program()).toEqual(fixedProgram());
+    expect(planner.program()).toEqual(officeStrength());
   });
 
   it("× on an exercise removes it from the day", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     press(card("Barbell Overhead Press"), "Remove exercise");
 
-    expect(exIds(planner.program(), "d-push")).toEqual([BENCH, PLANK]);
+    expect(exIds(planner.program(), "d-push")).toEqual([CATALOG.bench, CATALOG.plank]);
     expect(exIds(planner.program(), "d-pull")).toHaveLength(3);
     expect(screen.queryByText("Barbell Overhead Press")).toBeNull();
   });
 
   it("+ Add exercise asks the app to open the library for this day", () => {
-    const planner = renderPlanner(fixedProgram(), "d-pull");
+    const planner = renderPlanner(officeStrength(), "d-pull");
 
     fireEvent.click(screen.getByRole("button", { name: "+ Add exercise" }));
 
     expect(planner.addExercise).toHaveBeenCalledWith("d-pull");
-    expect(planner.program()).toEqual(fixedProgram());
+    expect(planner.program()).toEqual(officeStrength());
   });
 
   it("Delete day asks the app to delete it — which confirms first — and removes nothing itself", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     fireEvent.click(screen.getByRole("button", { name: "Delete day" }));
     expect(planner.removeDay).toHaveBeenCalledWith("d-push");
-    expect(planner.program()).toEqual(fixedProgram());
+    expect(planner.program()).toEqual(officeStrength());
     expect(screen.getByLabelText("Day name")).toHaveValue("Push");
   });
 });
 
 describe("DayEditor — supersets", () => {
   it("frames linked exercises under a Superset heading with A1/A2 tags", () => {
-    renderPlanner(fixedProgram(), "d-pull");
+    renderPlanner(officeStrength(), "d-pull");
 
     expect(screen.getByText("Superset")).toBeInTheDocument();
     expect(card("Pull-Up").getByText("A1")).toBeInTheDocument();
@@ -133,7 +134,7 @@ describe("DayEditor — supersets", () => {
   });
 
   it("Superset ↓ links an exercise with the one below it", () => {
-    const planner = renderPlanner(fixedProgram());
+    const planner = renderPlanner(officeStrength());
 
     press(card("Barbell Bench Press"), "Superset ↓");
 
@@ -145,7 +146,7 @@ describe("DayEditor — supersets", () => {
   });
 
   it.each(["Pull-Up", "Cable Lat Pulldown"])("Unlink on %s dissolves the superset", (member) => {
-    const planner = renderPlanner(fixedProgram(), "d-pull");
+    const planner = renderPlanner(officeStrength(), "d-pull");
 
     press(card(member), "Unlink");
 
@@ -156,20 +157,24 @@ describe("DayEditor — supersets", () => {
 
 describe("DayEditor — floating schedule", () => {
   it("shows the day's position instead of the weekday picker", () => {
-    renderPlanner(floating(fixedProgram()), "d-pull");
+    renderPlanner(asFloating(officeStrength()), "d-pull");
 
     expect(screen.getByText("Day 2 · floating")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Weekday" })).toBeNull();
   });
 
   it("the day's own arrows reorder the days, leaving its exercises alone", () => {
-    const planner = renderPlanner(floating(fixedProgram()), "d-push");
+    const planner = renderPlanner(asFloating(officeStrength()), "d-push");
 
     fireEvent.click(button("Move later", 0));
 
     expect(planner.program().days.map((d) => d.id)).toEqual(["d-pull", "d-push"]);
     expect(screen.getByText("Day 2 · floating")).toBeInTheDocument();
-    expect(exIds(planner.program(), "d-push")).toEqual([BENCH, OHP, PLANK]);
+    expect(exIds(planner.program(), "d-push")).toEqual([
+      CATALOG.bench,
+      CATALOG.overheadPress,
+      CATALOG.plank,
+    ]);
 
     fireEvent.click(button("Move earlier", 0));
 
@@ -179,7 +184,7 @@ describe("DayEditor — floating schedule", () => {
 
 describe("DayEditor — cycled day", () => {
   it("shows each slot's target muscle and pool, and a muscle picker instead of + Add exercise for the day", () => {
-    renderPlanner(cycledProgram());
+    renderPlanner(rotationPlan());
 
     expect(screen.getByText("2 muscles · 5 sets")).toBeInTheDocument();
     expect(card("Chest").getByText("Targets Chest · cycles its pool")).toBeInTheDocument();
@@ -193,7 +198,7 @@ describe("DayEditor — cycled day", () => {
   });
 
   it("picking a muscle adds a slot for it with an empty pool", () => {
-    const planner = renderPlanner(cycledProgram());
+    const planner = renderPlanner(rotationPlan());
 
     fireEvent.click(screen.getByRole("button", { name: "Calves" }));
 
@@ -205,28 +210,28 @@ describe("DayEditor — cycled day", () => {
   });
 
   it("× on a pool entry removes that exercise from that slot's pool", () => {
-    const planner = renderPlanner(cycledProgram());
+    const planner = renderPlanner(rotationPlan());
 
     press(card("Chest"), "Remove Dumbbell Bench Press from pool");
 
     const [chest, lats] = dayOf(planner.program(), "d-upper").slots;
-    expect(chest!.pool).toEqual([BENCH, PUSH_UP]);
-    expect(chest!.pool).not.toContain(DB_BENCH);
+    expect(chest!.pool).toEqual([CATALOG.bench, CATALOG.pushUp]);
+    expect(chest!.pool).not.toContain(CATALOG.dumbbellBench);
     expect(lats!.pool).toHaveLength(2);
   });
 
   it("+ Add exercise in a slot asks the app to open the library for that slot and muscle", () => {
-    const planner = renderPlanner(cycledProgram());
+    const planner = renderPlanner(rotationPlan());
 
     press(card("Lats"), "+ Add exercise");
 
     expect(planner.addPoolExercise).toHaveBeenCalledWith("d-upper", "s-lats", "lats");
     expect(planner.addExercise).not.toHaveBeenCalled();
-    expect(planner.program()).toEqual(cycledProgram());
+    expect(planner.program()).toEqual(rotationPlan());
   });
 
   it("Move later swaps a slot with the next one", () => {
-    const planner = renderPlanner(cycledProgram());
+    const planner = renderPlanner(rotationPlan());
 
     press(card("Chest"), "Move later");
 
@@ -237,7 +242,7 @@ describe("DayEditor — cycled day", () => {
   });
 
   it("× on a slot removes it", () => {
-    const planner = renderPlanner(cycledProgram());
+    const planner = renderPlanner(rotationPlan());
 
     press(card("Chest"), "Remove slot");
 
@@ -248,7 +253,7 @@ describe("DayEditor — cycled day", () => {
 
 describe("CoverageRail", () => {
   it("lists the planned sets per muscle as meters next to the editor", () => {
-    renderPlanner(fixedProgram());
+    renderPlanner(officeStrength());
 
     expect(screen.getByText("Weekly coverage")).toBeInTheDocument();
     const chest = screen.getByRole("meter", { name: "Chest" });

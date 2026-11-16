@@ -7,7 +7,7 @@ const BASELINE = BOX.height - BOX.pad;
 const LEFT = BOX.pad;
 const RIGHT = BOX.width - BOX.pad;
 
-export interface LineChartProps {
+interface LineChartProps {
   /** The values, oldest first. */
   series: readonly number[];
   /** Describes the chart for assistive tech. */

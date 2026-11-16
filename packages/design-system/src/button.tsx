@@ -9,9 +9,9 @@ import type { Tone } from "./tokens";
  * - `link`: bare coloured text, for inline actions.
  */
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "link";
-export type ButtonSize = "sm" | "md" | "lg";
+type ButtonSize = "sm" | "md" | "lg";
 
-export interface ButtonProps {
+interface ButtonProps {
   children?: ReactNode;
   onClick?: () => void;
   variant?: ButtonVariant;
@@ -40,7 +40,7 @@ const SIZES: Record<ButtonSize, CSSProperties> = {
 };
 
 function variantStyle(variant: ButtonVariant, tone: Tone, dashed: boolean): CSSProperties {
-  const color = toneColor(tone, "var(--text2)");
+  const color = toneColor(tone) ?? "var(--text2)";
   switch (variant) {
     case "primary":
       return { background: color, color: COLOR.onAccent, border: "none", fontWeight: 700 };

@@ -3,7 +3,7 @@
 
 import type { Day, ExerciseLookup, Measure, Program } from "@nabd/domain";
 import { measureOf, poolMeasure } from "@nabd/domain";
-import { setMeasure } from "./prescription-edits";
+import { PrescriptionEditor } from "./prescription-editor";
 
 /**
  * Keep supersets together: the members of each superset follow its first
@@ -36,13 +36,13 @@ function alignMeasures(day: Day, lookup: ExerciseLookup): void {
   };
   for (const row of day.exercises) {
     const measure = measureOfExercise(row.exId);
-    if (measure !== null) setMeasure(row, measure);
+    if (measure !== null) new PrescriptionEditor(row).countIn(measure);
   }
   for (const slot of day.slots) {
     const measure = poolMeasure(slot.pool, lookup);
     if (measure === null) continue;
     slot.pool = slot.pool.filter((exId) => (measureOfExercise(exId) ?? measure) === measure);
-    setMeasure(slot, measure);
+    new PrescriptionEditor(slot).countIn(measure);
   }
 }
 

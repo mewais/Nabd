@@ -1,6 +1,6 @@
 import { buildShellVM } from "@nabd/shell";
 import type { ShellActions, ShellInput, ShellVM } from "@nabd/shell";
-import { nov } from "../support/domain-factories";
+import { nov } from "../support/builders";
 
 /** Monday morning, mid-plan, waiting for the next nudge, on a platform with glass. */
 function shellInput(overrides: Partial<ShellInput> = {}): ShellInput {
@@ -8,7 +8,7 @@ function shellInput(overrides: Partial<ShellInput> = {}): ShellInput {
     now: nov(16, 10, 30),
     screen: "today",
     settings: { theme: "dark", glass: false, opacity: 0.7 },
-    glassSupported: true,
+    capabilities: { glass: true },
     paused: false,
     nudge: { state: "waiting", at: nov(16, 11, 20), idleFrom: nov(16, 10, 45) },
     sets: { done: 3, planned: 12 },

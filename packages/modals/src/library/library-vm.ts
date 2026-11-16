@@ -1,43 +1,25 @@
-import type { Option } from "@nabd/design-system";
-import type {
-  Equipment,
-  Exercise,
-  ExerciseDraft,
-  Measure,
-  MuscleGroup,
-  MuscleKey,
-} from "@nabd/domain";
+import type { ExerciseLibrary } from "@nabd/dataset";
+import type { Equipment, Exercise, ExerciseDraft, Measure } from "@nabd/domain";
 import {
   EQUIPMENT_NAMES,
-  MUSCLES_ANATOMICAL,
-  MUSCLE_GROUPS,
   MUSCLE_NAMES,
-  TRACKING_KEYS,
   TRACK_NAMES,
   isCompleteDraft,
-  muscleNames,
+  muscleList,
   poolMeasure,
 } from "@nabd/domain";
-import type { ExerciseLibrary } from "@nabd/dataset";
+import type { LibraryState, LibraryTarget } from "@nabd/view";
+import type { GroupFilter } from "../options";
 
-/** What picking an exercise will do; it decides the modal's title and what is offered. */
-export type LibraryPurpose =
-  | { kind: "exercise" }
-  /** `pool`: what the slot's pool holds so far. */
-  | { kind: "pool"; muscle: MuscleKey; pool: readonly string[] }
-  | { kind: "extra" };
-
-/** The library modal's state; `target` null means it is closed. */
-export interface LibraryInput {
-  target: LibraryPurpose | null;
-  search: string;
-  group: MuscleGroup | null;
-  /** The custom-exercise form, while it is showing. */
-  draft: ExerciseDraft | null;
+interface LibraryInput {
+  /** The library as the user has it open. */
+  state: LibraryState;
+  /** What the pool being added to holds so far; empty for any other target. */
+  pool: readonly string[];
+  library: ExerciseLibrary;
+  /** Only exercises for equipment the user owns are offered. */
+  owned: readonly Equipment[];
 }
-
-/** The group filter's "no filter" choice. */
-export type GroupFilter = MuscleGroup | "all";
 
 export interface LibraryRowVM {
   id: string;
@@ -67,22 +49,9 @@ export type LibraryVM =
   | { title: string; mode: "browse"; browser: LibraryBrowserVM }
   | { title: string; mode: "create"; form: ExerciseFormVM };
 
-export const GROUP_OPTIONS: readonly Option<GroupFilter>[] = [
-  { value: "all", label: "All" },
-  ...MUSCLE_GROUPS.map((group) => ({ value: group, label: group })),
-];
-export const MUSCLE_OPTIONS = MUSCLES_ANATOMICAL.map((value) => ({
-  value,
-  label: MUSCLE_NAMES[value],
-}));
-export const TRACKING_OPTIONS = TRACKING_KEYS.map((value) => ({
-  value,
-  label: TRACK_NAMES[value],
-}));
-
 const EMPTY_NOTE = "No exercises match — check the filter, or your equipment in Settings.";
 
-function titleFor(target: LibraryPurpose): string {
+function titleFor(target: LibraryTarget): string {
   switch (target.kind) {
     case "exercise":
       return "Add Exercise";
@@ -95,7 +64,7 @@ function titleFor(target: LibraryPurpose): string {
 
 function row(exercise: Exercise): LibraryRowVM {
   const detail = [
-    muscleNames(exercise).join(", "),
+    muscleList(exercise),
     TRACK_NAMES[exercise.tracking],
     EQUIPMENT_NAMES[exercise.equipment],
   ];
@@ -113,27 +82,17 @@ const SCOPE_NOTES: Record<Measure, string> = {
   time: "This pool is timed, like its first exercise, so only timed exercises are offered.",
 };
 
-/**
- * The one kind of exercise `target` can take: a cycled pool shares one
- * prescription, so once it has an exercise it only takes more of that measure.
- */
-function measureFor(target: LibraryPurpose, library: ExerciseLibrary): Measure | null {
-  return target.kind === "pool" ? poolMeasure(target.pool, library.lookup) : null;
-}
-
-/** The library modal for `state`; null while it is closed. Only exercises for `owned` equipment are offered. */
-export function buildLibraryVM(
-  state: LibraryInput,
-  library: ExerciseLibrary,
-  owned: readonly Equipment[],
-): LibraryVM | null {
+/** The library modal; null while it is closed. */
+export function buildLibraryVM({ state, pool, library, owned }: LibraryInput): LibraryVM | null {
   const { target, search, group, draft } = state;
   if (target === null) return null;
   const title = titleFor(target);
   if (draft !== null) {
     return { title, mode: "create", form: { ...draft, canCreate: isCompleteDraft(draft) } };
   }
-  const measure = measureFor(target, library);
+  // A cycled pool shares one prescription, so once it has an exercise it only
+  // takes more of that measure.
+  const measure = poolMeasure(pool, library.lookup);
   const rows = library
     .find({
       text: search,

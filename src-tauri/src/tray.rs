@@ -1,6 +1,9 @@
 //! The tray icon and its menu. What the menu says and what each entry does is
 //! decided in `nabd-native`; this renders it and carries the commands out.
 
+use std::thread;
+use std::time::Duration;
+
 use nabd_native::{TrayCommand, TrayState};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -10,9 +13,12 @@ use crate::error::AppResult;
 use crate::window;
 
 const TRAY_ID: &str = "nabd-tray";
-/// Carries a tray action ("start" | "pause") to the frontend, which owns the
-/// workout state.
+/// Carries a tray action ("start" | "pause" | "quit") to the frontend, which
+/// owns the workout state.
 const TRAY_ACTION_EVENT: &str = "tray-action";
+/// How long the frontend gets to answer a tray Quit — it saves what is still
+/// waiting to be saved, then asks to exit — before the app exits regardless.
+const QUIT_GRACE: Duration = Duration::from_secs(3);
 
 /// Create the tray icon. On Windows a left click opens the window and the
 /// menu is on right click; Linux indicators only ever open their menu, and
@@ -77,6 +83,16 @@ fn run_menu_entry<R: Runtime>(app: &AppHandle<R>, id: &str) {
         let _ = app.emit(TRAY_ACTION_EVENT, action);
     }
     if command == TrayCommand::Quit {
-        app.exit(0);
+        exit_after_grace(app);
     }
+}
+
+/// Quit is the frontend's to carry out (see `QUIT_GRACE`); this is the
+/// fallback for a frontend that cannot answer, so Quit always quits.
+fn exit_after_grace<R: Runtime>(app: &AppHandle<R>) {
+    let app = app.clone();
+    thread::spawn(move || {
+        thread::sleep(QUIT_GRACE);
+        app.exit(0);
+    });
 }

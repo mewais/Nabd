@@ -2,7 +2,6 @@
 // why sets get logged, muscle coverage, and per-exercise progression.
 
 export { ProgressScreen } from "./progress-screen";
-export type { ProgressScreenProps } from "./progress-screen";
-export type { ProgressActions } from "./actions";
-export { buildProgressVM } from "./view-model";
-export type { ProgressInput, ProgressVM } from "./view-model";
+export type { ProgressActions } from "./progress-actions";
+export { buildProgressVM } from "./progress-vm";
+export type { ProgressVM } from "./progress-vm";

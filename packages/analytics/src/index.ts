@@ -3,7 +3,7 @@
 import type { DayRecord, LoggedSet, Trigger } from "@nabd/domain";
 import { addDays, dateKey, startOfDay, startOfWeek } from "@nabd/domain";
 
-export interface HourBucket {
+interface HourBucket {
   hour: number;
   count: number;
 }
@@ -17,12 +17,12 @@ export interface CalendarCell {
   level: CalendarLevel;
 }
 
-export interface WeekBar {
+interface WeekBar {
   weekStart: Date;
   sets: number;
 }
 
-export interface DayCompletion {
+interface DayCompletion {
   date: Date;
   /** 0–100, or null when nothing was planned that day. */
   pct: number | null;

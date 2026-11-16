@@ -1,24 +1,19 @@
 import type { WeightUnit } from "@nabd/domain";
-import { muscleNames, plural } from "@nabd/domain";
-import type { PlanItem, TodayPlan } from "@nabd/scheduling";
-import type { AdviceWording, Coach } from "@nabd/session";
-import { describeNextSet } from "@nabd/session";
+import { plural } from "@nabd/domain";
 import type { NudgeStatus, NudgeSummary } from "@nabd/nudge";
 import { SNOOZE_MINUTES, summarizeNudge } from "@nabd/nudge";
+import type { PlanItem, TodayPlan } from "@nabd/scheduling";
+import type { Coach, NextSetWording } from "@nabd/session";
+import { describeNextSet } from "@nabd/session";
 
 /** The set to do next. */
 export interface NextSetVM {
   kind: "next";
   /** "Up next · Set 2 of 4" */
   kicker: string;
-  exercise: string;
+  /** The exercise's heading in the plan: its group, or a cycled slot's muscle. */
   label: string;
-  muscleNames: string[];
-  /** What the plan asks for this set; null for an unplanned extra. */
-  target: string | null;
-  notes: string;
-  /** Null for a warm-up, which is not something to progress on. */
-  advice: AdviceWording | null;
+  set: NextSetWording;
   /** Where nudging stands; while a set is due the nudge can be snoozed. */
   nudge: NudgeSummary;
   snoozeLabel: string;
@@ -41,14 +36,21 @@ export interface HeroNoticeVM {
 
 export type HeroVM = NextSetVM | HeroNoticeVM;
 
-function nextSet(item: PlanItem, coach: Coach, nudge: NudgeStatus, unit: WeightUnit): NextSetVM {
+export interface HeroInput {
+  plan: TodayPlan;
+  coach: Coach;
+  nudge: NudgeStatus;
+  unit: WeightUnit;
+  hasProgram: boolean;
+}
+
+function nextSet(item: PlanItem, { coach, nudge, unit }: HeroInput): NextSetVM {
+  const set = describeNextSet(item, coach, unit);
   return {
     kind: "next",
-    kicker: `Up next · Set ${item.done + 1} of ${item.planned}`,
-    exercise: item.exercise.name,
+    kicker: `Up next · ${set.position}`,
     label: item.label,
-    muscleNames: muscleNames(item.exercise),
-    ...describeNextSet(item, coach, unit),
+    set,
     nudge: summarizeNudge(nudge),
     snoozeLabel: `Snooze ${SNOOZE_MINUTES}m`,
   };
@@ -87,14 +89,7 @@ function notice(plan: TodayPlan, hasProgram: boolean): HeroNoticeVM {
   };
 }
 
-export function buildHero(input: {
-  plan: TodayPlan;
-  coach: Coach;
-  nudge: NudgeStatus;
-  unit: WeightUnit;
-  hasProgram: boolean;
-}): HeroVM {
-  const { plan, coach, nudge, unit, hasProgram } = input;
-  const item = plan.nextItem;
-  return item === null ? notice(plan, hasProgram) : nextSet(item, coach, nudge, unit);
+export function buildHeroVM(input: HeroInput): HeroVM {
+  const item = input.plan.nextItem;
+  return item === null ? notice(input.plan, input.hasProgram) : nextSet(item, input);
 }

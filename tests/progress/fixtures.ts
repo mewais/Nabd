@@ -2,23 +2,16 @@
 // local time. Everything is built with local-time Date constructors and
 // dateKey(), so the suite does not depend on the machine's time zone.
 
-import type {
-  Coverage,
-  DayRecord,
-  LoggedSet,
-  MuscleKey,
-  ProgressTab,
-  SetType,
-  Trigger,
-} from "@nabd/domain";
+import type { Coverage, DayRecord, LoggedSet, MuscleKey, SetType, Trigger } from "@nabd/domain";
 import { MUSCLES, dateKey } from "@nabd/domain";
 import { TrainingStats } from "@nabd/analytics";
 import { MuscleVolume } from "@nabd/coverage";
 import { ExerciseProgress } from "@nabd/progression";
 import { buildProgressVM } from "@nabd/progress";
 import type { ProgressVM } from "@nabd/progress";
-import { CATALOG, catalogExercise, catalogLookup } from "../support/catalog";
-import { dayRecord, logged, nov } from "../support/domain-factories";
+import type { ProgressTab } from "@nabd/view";
+import { dayRecord, logged, nov } from "../support/builders";
+import { CATALOG, catalogExercise, catalogLookup } from "../support/exercises";
 
 export const { bench: BENCH, pullUp: PULL_UP, plank: PLANK } = CATALOG;
 
@@ -93,7 +86,8 @@ export function progressVM({
   for (const muscle of targets) planned.add(muscle, 3);
   return buildProgressVM({
     stats: new TrainingStats(sets, log, now),
-    progress: new ExerciseProgress(sets, catalogLookup, "kg"),
+    progress: new ExerciseProgress(sets, catalogLookup),
+    unit: "kg",
     coverage,
     planned,
     today: dateKey(now),

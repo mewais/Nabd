@@ -1,0 +1,35 @@
+import type { LoggedSet, Program } from "@nabd/domain";
+import { dateKey, freshDayState } from "@nabd/domain";
+import { ProgressionAdvisor } from "@nabd/progression";
+import { TodayPlan } from "@nabd/scheduling";
+import type { PlanItem } from "@nabd/scheduling";
+import { Coach } from "@nabd/session";
+import { exercise, lookupIn, nov, row, warmup, working } from "../support/builders";
+
+export const TODAY = nov(16);
+export const curl = exercise({ name: "Curl" });
+export const plank = exercise({ name: "Plank", tracking: "duration" });
+export const curlRow = row(curl.id, [warmup(15), working(8, 12), working(8, 12)]);
+export const plankRow = row(plank.id, [working(45)], { repMode: "time" });
+
+export const program: Program = {
+  name: "P",
+  type: "fixed",
+  schedule: "floating",
+  days: [{ id: "d", name: "D", weekday: null, exercises: [curlRow, plankRow], slots: [] }],
+};
+
+export function itemsFor(history: LoggedSet[]): { curlItem: PlanItem; plankItem: PlanItem } {
+  const plan = TodayPlan.build({
+    program,
+    date: TODAY,
+    dayState: freshDayState(TODAY),
+    rotation: {},
+    history,
+    lookup: lookupIn([curl, plank]),
+  });
+  return { curlItem: plan.item(curlRow.id)!, plankItem: plan.item(plankRow.id)! };
+}
+
+export const coachFor = (history: LoggedSet[]): Coach =>
+  new Coach(history, new ProgressionAdvisor(2.5), dateKey(TODAY));

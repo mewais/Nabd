@@ -5,25 +5,23 @@ import { click } from "./render";
 
 describe("Stepper", () => {
   it("shows the value between a decrease and an increase button", () => {
-    const onDec = vi.fn();
-    const onInc = vi.fn();
-    render(<Stepper value="50 min" onDec={onDec} onInc={onInc} />);
+    const onStep = vi.fn();
+    render(<Stepper value="50 min" onStep={onStep} />);
 
     expect(screen.getByText("50 min")).toBeInTheDocument();
     click("decrease");
-    expect(onDec).toHaveBeenCalledTimes(1);
-    expect(onInc).not.toHaveBeenCalled();
+    expect(onStep.mock.calls).toEqual([[-1]]);
     click("increase");
-    expect(onInc).toHaveBeenCalledTimes(1);
+    expect(onStep.mock.calls).toEqual([[-1], [1]]);
   });
 
   it("names the group after what it steps", () => {
-    render(<Stepper value="90s" onDec={vi.fn()} onInc={vi.fn()} size="mini" ariaLabel="Rest" />);
+    render(<Stepper value="90s" onStep={vi.fn()} size="mini" ariaLabel="Rest" />);
     expect(screen.getByRole("group", { name: "Rest" })).toHaveTextContent("90s");
   });
 
   it("offers no input unless the value can be typed", () => {
-    render(<Stepper value={8} onDec={vi.fn()} onInc={vi.fn()} />);
+    render(<Stepper value={8} onStep={vi.fn()} />);
     expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 
@@ -34,8 +32,7 @@ describe("Stepper", () => {
       return (
         <Stepper
           value={value}
-          onDec={() => setValue(value - 2.5)}
-          onInc={() => setValue(value + 2.5)}
+          onStep={(direction) => setValue(value + direction * 2.5)}
           onSet={(typed) => {
             if (typed <= max) setValue(typed);
           }}

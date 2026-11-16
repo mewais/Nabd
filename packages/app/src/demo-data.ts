@@ -1,11 +1,11 @@
 // What the browser demo starts with: a small Push / Pull / Legs plan and two
 // weeks of made-up history, so every screen has something to show.
 
-import type { Day, ExercisePrescription, LoggedSet, Program, SetSpec, Trigger } from "@nabd/domain";
-import { addDays, isWeighted, loggedSet } from "@nabd/domain";
+import type { Day, ExercisePrescription, LoggedSet, Program, SetSpec } from "@nabd/domain";
+import { TRIGGERS, addDays, isWeighted, loggedSet } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
 
-const working = (lo: number, hi: number): SetSpec => ({ type: "working", a: lo, b: hi });
+const working = (lo: number, hi: number): SetSpec => ({ type: "working", amount: lo, upTo: hi });
 
 /** A plan row of three working sets of `lo`–`hi`, unless `more` says otherwise. */
 function planned(
@@ -20,14 +20,14 @@ function planned(
 
 /** The day's main lift: a warm-up, then three sets at RPE 8 with a long rest. */
 function mainLift(exId: string, lo: number, hi: number): ExercisePrescription {
-  const hard = (): SetSpec => ({ ...working(lo, hi), val: 8 });
-  const sets: SetSpec[] = [{ type: "warmup", a: hi + 2 }, hard(), hard(), hard()];
+  const hard = (): SetSpec => ({ ...working(lo, hi), intensity: 8 });
+  const sets: SetSpec[] = [{ type: "warmup", amount: hi + 2 }, hard(), hard(), hard()];
   return planned(exId, lo, hi, { intensity: "rpe", rest: 150, sets });
 }
 
 /** Three timed holds of `seconds`. */
 function hold(exId: string, seconds: number): ExercisePrescription {
-  const sets: SetSpec[] = [1, 2, 3].map(() => ({ type: "working", a: seconds }));
+  const sets: SetSpec[] = [1, 2, 3].map(() => ({ type: "working", amount: seconds }));
   return { id: exId, exId, repMode: "time", intensity: "none", rest: 60, sets };
 }
 
@@ -72,7 +72,6 @@ export const DEMO_PROGRAM: Program = {
 const HISTORY_DAYS = 14;
 const SETS_PER_EXERCISE = 3;
 const HOUR_MS = 3_600_000;
-const TRIGGERS: readonly Trigger[] = ["idle", "timer", "manual"];
 
 /** Every other day for two weeks: one program day's exercises, slowly progressing. */
 export function demoHistory(now: Date): LoggedSet[] {

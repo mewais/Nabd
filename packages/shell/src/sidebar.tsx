@@ -1,19 +1,19 @@
 import { NavButton } from "@nabd/design-system";
 import { BrandLockup } from "./brand-lockup";
 import { DayProgressRing } from "./day-progress-ring";
-import type { Screen } from "@nabd/domain";
-import { NAV_ITEMS } from "./nav-items";
-import type { SidebarVM } from "./view-model";
+import { NAV_ITEMS } from "./options";
+import type { ShellActions } from "./shell-actions";
+import type { SidebarVM } from "./shell-vm";
 
 interface SidebarProps {
   vm: SidebarVM;
-  onNavigate: (screen: Screen) => void;
+  actions: Pick<ShellActions, "navigate">;
 }
 
 const WIDTH = 250;
 
 /** The left rail: brand, the screens, and today's progress at the bottom. */
-export function Sidebar({ vm, onNavigate }: SidebarProps): JSX.Element {
+export function Sidebar({ vm, actions }: SidebarProps): JSX.Element {
   return (
     <aside
       style={{
@@ -36,11 +36,11 @@ export function Sidebar({ vm, onNavigate }: SidebarProps): JSX.Element {
             icon={item.icon}
             label={item.label}
             active={item.screen === vm.screen}
-            onClick={() => onNavigate(item.screen)}
+            onClick={() => actions.navigate(item.screen)}
           />
         ))}
       </nav>
-      <DayProgressRing progress={vm.progress} />
+      <DayProgressRing vm={vm.progress} />
     </aside>
   );
 }

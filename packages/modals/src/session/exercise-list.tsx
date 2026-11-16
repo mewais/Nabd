@@ -1,15 +1,15 @@
 import { Button, Eyebrow } from "@nabd/design-system";
 import { ExerciseRow } from "./exercise-row";
+import type { SessionActions } from "./session-actions";
 import type { SessionListRowVM } from "./session-vm";
 
 interface ExerciseListProps {
-  rows: SessionListRowVM[];
-  onPick: (itemId: string) => void;
-  onLogOther: () => void;
+  vm: SessionListRowVM[];
+  actions: Pick<SessionActions, "focusItem" | "logOther">;
 }
 
 /** The logger's left pane: today's exercises, and a way to log one that is not planned. */
-export function ExerciseList({ rows, onPick, onLogOther }: ExerciseListProps): JSX.Element {
+export function ExerciseList({ vm, actions }: ExerciseListProps): JSX.Element {
   return (
     <nav
       aria-label="Today's exercises"
@@ -24,11 +24,18 @@ export function ExerciseList({ rows, onPick, onLogOther }: ExerciseListProps): J
     >
       <Eyebrow style={{ marginBottom: 10, padding: "0 4px" }}>{"Today's exercises"}</Eyebrow>
       <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        {rows.map((row) => (
-          <ExerciseRow key={row.itemId} row={row} onPick={onPick} />
+        {vm.map((row) => (
+          <ExerciseRow key={row.itemId} vm={row} actions={actions} />
         ))}
       </div>
-      <Button variant="ghost" size="sm" dashed block onClick={onLogOther} style={{ marginTop: 10 }}>
+      <Button
+        variant="ghost"
+        size="sm"
+        dashed
+        block
+        onClick={actions.logOther}
+        style={{ marginTop: 10 }}
+      >
         + Something else
       </Button>
     </nav>

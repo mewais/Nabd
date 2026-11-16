@@ -57,10 +57,12 @@ function nameOf(movement: Movement, equipment: Equipment, unilateral: boolean): 
   return `${LEG_MUSCLES.has(movement.primary[0]) ? "Single-Leg" : "Single-Arm"} ${name}`;
 }
 
+const BILATERAL: NonNullable<Movement["laterality"]> = ["bilateral"];
+
 /** One exercise per equipment × laterality the movement can really be done with. */
 function variantsOf(movement: Movement): Exercise[] {
   return movement.equipment.flatMap((equipment) =>
-    movement.laterality.flatMap((laterality): Exercise[] => {
+    (movement.laterality ?? BILATERAL).flatMap((laterality): Exercise[] => {
       const unilateral = laterality === "unilateral";
       if (!isRealVariant(movement, equipment, unilateral)) return [];
       const exercise: Exercise = {

@@ -65,9 +65,9 @@ const TONE_COLOR: Record<Exclude<Tone, "neutral">, string> = {
   danger: COLOR.danger,
 };
 
-/** The colour of `tone`, with `neutral` standing for the given quiet colour. */
-export function toneColor(tone: Tone, neutral: string): string {
-  return tone === "neutral" ? neutral : TONE_COLOR[tone];
+/** The colour of `tone`; null for `neutral`, which is each component's own quiet colour. */
+export function toneColor(tone: Tone): string | null {
+  return tone === "neutral" ? null : TONE_COLOR[tone];
 }
 
 /** A translucent wash of a colour, e.g. `tint("var(--accent)", 15)`. */

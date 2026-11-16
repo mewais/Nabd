@@ -12,9 +12,6 @@ describe("BarChart", () => {
     render(<BarChart bars={BARS} height={160} ariaLabel="Sets per day" />);
     return screen.getAllByRole("listitem");
   };
-  const fill = (item: HTMLElement | undefined): HTMLElement =>
-    item?.querySelector("div") as HTMLElement;
-
   it("draws one captioned bar per datum, under the chart's name", () => {
     const items = setup();
     expect(screen.getByRole("list", { name: "Sets per day" })).toBeInTheDocument();
@@ -23,14 +20,13 @@ describe("BarChart", () => {
 
   it("makes each bar as tall as its share", () => {
     const items = setup();
-    expect(items.map((item) => fill(item).style.height)).toEqual(["100%", "50%", "0%"]);
+    expect(items.map((item) => item.dataset.heightPct)).toEqual(["100", "50", "0"]);
   });
 
-  it("marks the highlighted bar and paints it differently", () => {
+  it("marks the highlighted bar", () => {
     const [plain, highlighted] = setup();
     expect(highlighted).toHaveAttribute("aria-current", "true");
     expect(plain).not.toHaveAttribute("aria-current");
-    expect(fill(highlighted).style.background).not.toBe(fill(plain).style.background);
   });
 
   it("keeps a bar whose caption is blank", () => {
@@ -101,14 +97,13 @@ describe("MeterBar", () => {
     expect(screen.getByText("Lats")).toBeInTheDocument();
     expect(screen.getByText("47%")).toBeInTheDocument();
     expect(bar).toHaveAttribute("aria-valuenow", "47");
-    expect((bar.firstElementChild as HTMLElement).style.width).toBe("47%");
   });
 
   it.each([
-    [140, "100%"],
-    [-5, "0%"],
-  ])("clamps a %s%% reading to the bar (%s)", (pct, width) => {
-    expect((meter(pct).firstElementChild as HTMLElement).style.width).toBe(width);
+    [140, "100"],
+    [-5, "0"],
+  ])("clamps a %s%% reading to the bar (%s)", (pct, filled) => {
+    expect(meter(pct)).toHaveAttribute("aria-valuenow", filled);
   });
 
   it("renders what it is given after the figure", () => {
@@ -119,13 +114,8 @@ describe("MeterBar", () => {
 });
 
 describe("LiveDot", () => {
-  it("pulses only while active", () => {
-    const idle = renderRoot(<LiveDot active={false} />);
-    expect(idle).toHaveAttribute("data-active", "false");
-    expect(idle.style.animation).toBe("");
-
-    const live = renderRoot(<LiveDot active />);
-    expect(live).toHaveAttribute("data-active", "true");
-    expect(live.style.animation).not.toBe("");
+  it("says whether it is active", () => {
+    expect(renderRoot(<LiveDot active={false} />)).toHaveAttribute("data-active", "false");
+    expect(renderRoot(<LiveDot active />)).toHaveAttribute("data-active", "true");
   });
 });

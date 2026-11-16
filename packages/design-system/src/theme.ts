@@ -99,6 +99,13 @@ const MATERIALS: Record<Theme, { solid: Material; glass: Material; glassTintRgb:
   },
 };
 
+/**
+ * What the window shows before the app has painted: the dark theme's
+ * background, so a launch does not flash white. The app's index.html takes it
+ * from here (packages/app/vite.config.ts).
+ */
+export const PREPAINT_BACKGROUND = MATERIALS.dark.solid["--bg"];
+
 const GLASS_FROST = "blur(34px) saturate(1.7)";
 
 /**

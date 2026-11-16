@@ -28,7 +28,7 @@ export class Progress {
 
   /** A line of "What prompts a set": "Idle detected", "Timer" or "Manual", with its share. */
   trigger(label: string): Locator {
-    return this.screen.getByText(label, { exact: true }).locator("xpath=..");
+    return this.screen.getByRole("listitem", { name: label, exact: true });
   }
 
   /** An exercise's line in "Progression & records". */

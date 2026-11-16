@@ -8,7 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run --root ../.. --project today"
   },
   "dependencies": {
     "@nabd/analytics": "workspace:*",
@@ -18,7 +18,8 @@
     "@nabd/domain": "workspace:*",
     "@nabd/nudge": "workspace:*",
     "@nabd/scheduling": "workspace:*",
-    "@nabd/session": "workspace:*"
+    "@nabd/session": "workspace:*",
+    "@nabd/view": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.3.1"

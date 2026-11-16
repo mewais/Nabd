@@ -5,15 +5,9 @@
 
 import type { LoggedSet } from "@nabd/domain";
 import { buildSessionVM } from "@nabd/modals";
-import {
-  buildWorld,
-  did,
-  lastWeek,
-  mondayProgram,
-  planRow,
-  pushDay,
-} from "../support/plan-fixtures";
-import { nov, working } from "../support/domain-factories";
+import { nov, working } from "../support/builders";
+import { did, lastWeek, mondayProgram, planRow, pushDay } from "../support/programs";
+import { buildWorld } from "../support/world";
 import { openSession, sessionVM } from "./fixtures";
 
 const warmedUp = () => [...lastWeek(), did("p-bench", "bench", 10, 40, { setType: "warmup" })];
@@ -33,11 +27,11 @@ describe("buildSessionVM", () => {
   it("starts on the warm-up: its target, no advice, the form pre-filled with the last warm-up", () => {
     const { form } = sessionVM({ program: pushDay(), history: lastWeek() }, "p-bench");
 
-    expect(form.exercise).toBe("Bench Press");
+    expect(form.set.exercise).toBe("Bench Press");
     expect(form.setLine).toBe("Set 1 of 3 · Warm-up · 10 reps");
-    expect(form.notes).toBe("Pause at the chest");
-    expect(form.muscleNames).toEqual(["Chest", "Triceps", "Front Delts"]);
-    expect(form.advice).toBeNull();
+    expect(form.set.notes).toBe("Pause at the chest");
+    expect(form.set.muscleNames).toEqual(["Chest", "Triceps", "Front Delts"]);
+    expect(form.set.advice).toBeNull();
     // Last week's warm-up, not last week's working set.
     expect(form).toMatchObject({
       repsLabel: "Reps",
@@ -53,7 +47,7 @@ describe("buildSessionVM", () => {
     const { form } = sessionVM({ program: pushDay(), history: warmedUp() }, "p-bench");
 
     expect(form.setLine).toBe("Set 2 of 3 · Working set · 8–12 reps · RPE 8");
-    expect(form.advice).toEqual({
+    expect(form.set.advice).toEqual({
       primary: "9 × 60 kg",
       alternative: "8 × 62.5 kg",
       reason: "Inside your range — beat last time.",
@@ -68,8 +62,8 @@ describe("buildSessionVM", () => {
 
     expect(form.weightLabel).toBe("Weight (lb)");
     expect(form.weight).toBe(132.28);
-    expect(form.advice?.primary).toBe("9 × 132.28 lb");
-    expect(form.logged.map((s) => s.text)).toEqual(["10 × 88.18 lb"]);
+    expect(form.set.advice?.primary).toBe("9 × 132.3 lb");
+    expect(form.logged.map((s) => s.text)).toEqual(["10 × 88.2 lb"]);
   });
 
   it("lists this exercise's sets from today, oldest first, numbered, with ids to undo them", () => {
@@ -147,9 +141,9 @@ describe("buildSessionVM", () => {
     };
     const vm = sessionVM(input, "x-curl");
 
-    expect(vm.form.exercise).toBe("Dumbbell Curl");
+    expect(vm.form.set.exercise).toBe("Dumbbell Curl");
     expect(vm.form.setLine).toBe("Set 3");
-    expect(vm.form.notes).toBe("");
+    expect(vm.form.set.notes).toBe("");
     expect(vm.list.find((r) => r.itemId === "x-curl")).toMatchObject({
       progress: "2",
       active: true,
@@ -226,7 +220,7 @@ describe("buildSessionVM", () => {
     const dip = sessionVM({ program, history }, "p-dip", { unit: "lb" }).form;
     expect(dip.weightLabel).toBe("Added weight (lb)");
     expect(dip.weight).toBe(22.05);
-    expect(dip.logged.map((s) => s.text)).toEqual(["8 + 22.05 lb"]);
+    expect(dip.logged.map((s) => s.text)).toEqual(["8 + 22 lb"]);
   });
 
   it("counts down the rest after a set, then drops the label", () => {

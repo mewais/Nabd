@@ -12,7 +12,7 @@ const HEART_STROKES = [
   { d: "M19.4 14.8 C20.6 18 20.8 22 19.7 26", stroke: ACCENT, width: 1.3 },
 ];
 
-export interface BrandMarkProps {
+interface BrandMarkProps {
   /** Side of the square, in px. */
   size?: number;
 }

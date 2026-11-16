@@ -1,7 +1,8 @@
 // The set table of one exercise (or slot), driven through the planner.
 
 import { fireEvent, screen } from "@testing-library/react";
-import { cycledProgram, dayOf, fixedProgram } from "./fixtures";
+import { officeStrength, rotationPlan } from "../support/programs";
+import { dayOf } from "./fixtures";
 import { card, renderPlanner, stepper } from "./render";
 
 const BENCH_CARD = "Barbell Bench Press";
@@ -14,7 +15,7 @@ const press = (scope: ReturnType<typeof card>, name: string | RegExp): void => {
 
 /** The planner on Monday's "Push" day, and that day's exercise rows after every edit. */
 function renderPush() {
-  const planner = renderPlanner(fixedProgram());
+  const planner = renderPlanner(officeStrength());
   const [bench, ohp, plank] = [0, 1, 2].map(
     (index) => () => dayOf(planner.program(), "d-push").exercises[index]!,
   );
@@ -27,7 +28,7 @@ describe("SetTable", () => {
     const bench = card(BENCH_CARD);
 
     expect(bench.getByTitle("Warm-up — click to change")).toHaveTextContent("W");
-    expect(bench.getAllByTitle("Working — click to change").map((b) => b.textContent)).toEqual([
+    expect(bench.getAllByTitle("Working set — click to change").map((b) => b.textContent)).toEqual([
       "1",
       "2",
     ]);
@@ -68,19 +69,19 @@ describe("SetTable", () => {
   });
 
   it.each([
-    ["Set 2 reps", "increase", { a: 9, b: 10, val: 8 }],
-    ["Set 2 reps", "decrease", { a: 7, b: 10, val: 8 }],
-    ["Set 2 top of range", "increase", { a: 8, b: 11, val: 8 }],
-    ["Set 2 top of range", "decrease", { a: 8, b: 9, val: 8 }],
-    ["Set 2 RPE", "increase", { a: 8, b: 10, val: 8.5 }],
-    ["Set 2 RPE", "decrease", { a: 8, b: 10, val: 7.5 }],
+    ["Set 2 reps", "increase", { amount: 9, upTo: 10, intensity: 8 }],
+    ["Set 2 reps", "decrease", { amount: 7, upTo: 10, intensity: 8 }],
+    ["Set 2 top of range", "increase", { amount: 8, upTo: 11, intensity: 8 }],
+    ["Set 2 top of range", "decrease", { amount: 8, upTo: 9, intensity: 8 }],
+    ["Set 2 RPE", "increase", { amount: 8, upTo: 10, intensity: 8.5 }],
+    ["Set 2 RPE", "decrease", { amount: 8, upTo: 10, intensity: 7.5 }],
   ])("%s → %s edits only its own value", (group, direction, expected) => {
     const { bench } = renderPush();
 
     fireEvent.click(stepper(card(BENCH_CARD), group).getByRole("button", { name: direction }));
 
     expect(bench().sets[1]).toMatchObject(expected);
-    expect(bench().sets[0]).toEqual({ type: "warmup", a: 10, b: 12, val: 6 });
+    expect(bench().sets[0]).toEqual({ type: "warmup", amount: 10, upTo: 12, intensity: 6 });
   });
 
   it("× removes that set", () => {
@@ -88,7 +89,7 @@ describe("SetTable", () => {
 
     press(card(BENCH_CARD), "Remove set 2");
 
-    expect(bench().sets.map((s) => [s.type, s.a])).toEqual([
+    expect(bench().sets.map((s) => [s.type, s.amount])).toEqual([
       ["warmup", 10],
       ["working", 6],
       ["drop", 12],
@@ -100,11 +101,11 @@ describe("SetTable", () => {
 
     press(card(OHP_CARD), "+ Add set");
     expect(ohp().sets).toHaveLength(4);
-    expect(ohp().sets.at(-1)).toEqual({ type: "working", a: 5, val: 75 });
+    expect(ohp().sets.at(-1)).toEqual({ type: "working", amount: 5, intensity: 75 });
 
     press(card(OHP_CARD), "+ Warmup");
     expect(ohp().sets).toHaveLength(5);
-    expect(ohp().sets[0]).toMatchObject({ type: "warmup", a: 5 });
+    expect(ohp().sets[0]).toMatchObject({ type: "warmup", amount: 5 });
     expect(bench().sets).toHaveLength(4);
     expect(screen.getByText("3 exercises · 11 sets")).toBeInTheDocument();
   });
@@ -123,12 +124,12 @@ describe("SetTable", () => {
 
   it("switching the load mode starts every set from the new scale", () => {
     const { bench } = renderPush();
-    expect(bench().sets.map((s) => s.val)).toEqual([6, 8, 8.5, 9]);
+    expect(bench().sets.map((s) => s.intensity)).toEqual([6, 8, 8.5, 9]);
 
     press(card(BENCH_CARD), "%1RM");
 
     // An RPE of 8.5 must not come back as 8.5% of a one-rep max.
-    expect(bench().sets.map((s) => s.val)).toEqual([70, 70, 70, 70]);
+    expect(bench().sets.map((s) => s.intensity)).toEqual([70, 70, 70, 70]);
   });
 
   it("switching load to %1RM gives every set a percentage, None clears it", () => {
@@ -136,11 +137,11 @@ describe("SetTable", () => {
 
     press(card(PLANK_CARD), "%1RM");
     expect(plank().intensity).toBe("pct");
-    expect(plank().sets.map((s) => s.val)).toEqual([70, 70]);
+    expect(plank().sets.map((s) => s.intensity)).toEqual([70, 70]);
 
     press(card(BENCH_CARD), "None");
     expect(bench().intensity).toBe("none");
-    expect(bench().sets.every((s) => s.val === undefined)).toBe(true);
+    expect(bench().sets.every((s) => s.intensity === undefined)).toBe(true);
   });
 
   it("the Rest stepper moves rest in 15 s steps", () => {
@@ -166,7 +167,7 @@ describe("SetTable", () => {
   });
 
   it("edits a cycled slot's prescription inside a slot card", () => {
-    const planner = renderPlanner(cycledProgram());
+    const planner = renderPlanner(rotationPlan());
 
     press(card("Lats"), "+ Add set");
 

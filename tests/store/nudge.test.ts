@@ -1,12 +1,17 @@
 import type { BootSnapshot } from "@nabd/ipc-client";
 import { selectNudgeStatus, selectPendingNudge } from "@nabd/store";
-import { nov } from "../support/domain-factories";
-import { BENCH, FLY, benchRow, boot, fakeBackend, flyRow, program } from "./harness";
+import { nov } from "../support/builders";
+import { CATALOG } from "../support/exercises";
+import { catalogBenchRow, catalogFlyRow, catalogPushPull } from "../support/programs";
+import { boot, fakeBackend } from "./fixtures";
 
 describe("nudging", () => {
   // Workday 09:00–18:00, timer 50 min, minimum gap 15 min, idle after 30 s.
-  const bootAt = (hour: number, minute = 0, initial: Partial<BootSnapshot> = { program }) =>
-    boot(initial, fakeBackend(initial), nov(16, hour, minute));
+  const bootAt = (
+    hour: number,
+    minute = 0,
+    initial: Partial<BootSnapshot> = { program: catalogPushPull },
+  ) => boot(initial, fakeBackend(initial), nov(16, hour, minute));
 
   it("is quiet before work, counts down, nudges on the timer, and resets after a set", async () => {
     const app = await bootAt(8);
@@ -15,7 +20,7 @@ describe("nudging", () => {
     expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 9, 50) });
     app.advanceTo(nov(16, 9, 50));
     expect(selectNudgeStatus(app.get())).toEqual({ state: "due", reason: "timer" });
-    await app.log(benchRow.id, 1);
+    await app.log(catalogBenchRow.id, 1);
     expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 10, 40) });
   });
 
@@ -33,7 +38,7 @@ describe("nudging", () => {
     app.advanceTo(nov(16, 15));
     expect(selectNudgeStatus(app.get()).state).toBe("nothing_left");
     app.get().editProgram((e) => e.addDay(1));
-    app.get().editProgram((e) => e.addExercise(app.get().program.days[0]!.id, BENCH));
+    app.get().editProgram((e) => e.addExercise(app.get().program.days[0]!.id, CATALOG.bench));
     // At once, not from the next beat of the clock: nothing is ever due for the hours before.
     expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 15, 50) });
     app.advanceTo(nov(16, 15, 1));
@@ -43,7 +48,9 @@ describe("nudging", () => {
   it("an import or a schedule switch that brings work starts the count there and then too", async () => {
     const imported = await bootAt(9, 0, {});
     imported.advanceTo(nov(16, 15));
-    await imported.importFile(JSON.stringify({ app: "Nabd", version: 2, program }));
+    await imported.importFile(
+      JSON.stringify({ app: "Nabd", version: 2, program: catalogPushPull }),
+    );
     expect(selectNudgeStatus(imported.get())).toMatchObject({
       state: "waiting",
       at: nov(16, 15, 50),
@@ -51,9 +58,9 @@ describe("nudging", () => {
 
     // A weekday plan whose only day is Tuesday: Monday is a rest day until the plan goes floating.
     const tuesdayOnly = {
-      ...program,
+      ...catalogPushPull,
       schedule: "weekday",
-      days: [{ ...program.days[0]!, weekday: 2 }],
+      days: [{ ...catalogPushPull.days[0]!, weekday: 2 }],
     };
     const switched = await bootAt(9, 0, { program: tuesdayOnly });
     switched.advanceTo(nov(16, 15));
@@ -92,15 +99,15 @@ describe("nudging", () => {
   it("starting any exercise from the Today screen answers the pending nudge too", async () => {
     const app = await bootAt(9);
     app.advanceTo(nov(16, 9, 50));
-    app.get().openSession(flyRow.id);
+    app.get().openSession(catalogFlyRow.id);
     await app.get().logSet();
-    expect(app.get().history[0]).toMatchObject({ exId: FLY, trigger: "timer" });
+    expect(app.get().history[0]).toMatchObject({ exId: CATALOG.fly, trigger: "timer" });
   });
 
   it("a session opened with no nudge pending is manual", async () => {
     const app = await bootAt(9);
     app.advanceTo(nov(16, 9, 30));
-    await app.log(benchRow.id, 1);
+    await app.log(catalogBenchRow.id, 1);
     expect(app.get().history[0]!.trigger).toBe("manual");
   });
 
@@ -186,8 +193,8 @@ describe("nudging", () => {
 
   it("has nothing to nudge about once the day is done", async () => {
     const app = await boot();
-    await app.log(benchRow.id, 3);
-    await app.log(flyRow.id, 3);
+    await app.log(catalogBenchRow.id, 3);
+    await app.log(catalogFlyRow.id, 3);
     expect(selectNudgeStatus(app.get()).state).toBe("nothing_left");
   });
 
@@ -197,11 +204,11 @@ describe("nudging", () => {
     expect(first.data.dayState).toMatchObject({ paused: true });
 
     const sameDay = await boot({}, { client: first.client, data: first.data });
-    expect(sameDay.get().paused).toBe(true);
+    expect(sameDay.get().dayState.paused).toBe(true);
     expect(selectNudgeStatus(sameDay.get()).state).toBe("paused");
 
     sameDay.advanceTo(nov(17, 9, 30));
-    expect(sameDay.get().paused).toBe(false);
+    expect(sameDay.get().dayState.paused).toBe(false);
     expect(sameDay.data.dayState).toMatchObject({ paused: false });
   });
 });

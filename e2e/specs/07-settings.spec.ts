@@ -1,3 +1,4 @@
+import { APPDATA_VERSION } from "@nabd/domain";
 import { step } from "../support/pages/controls";
 import { EXERCISE, day, plan, loggedSet, planned } from "../support/data";
 import { expect, test } from "../support/fixtures";
@@ -80,8 +81,8 @@ test("the weight unit and increment re-render weights and reshape suggestions", 
   await test.step("pounds: the usual 2.5 kg step becomes the usual 5 lb step", async () => {
     await settings.option("Weight unit", "lb").click();
     await expect(settings.row("Weight increment")).toContainText("−5 lb+");
-    await expect(today.screen).toContainText("Try 9 × 44.09 lb or 8 × 49.09 lb");
-    await expect(today.screen).toContainText("Last time: 8 × 44.09 lb");
+    await expect(today.screen).toContainText("Try 9 × 44.1 lb or 8 × 49.1 lb");
+    await expect(today.screen).toContainText("Last time: 8 × 44.1 lb");
     await expect(today.stat("Lifted today")).toContainText("lb");
   });
 
@@ -234,27 +235,30 @@ test("export says where the file went; import asks first, then reports what it d
 
   await test.step("a file that is not JSON, or not Nabd's, is refused with nothing to confirm", async () => {
     await settings.importData("not json");
-    await expect(settings.notice).toHaveText("Import failed — This file is not valid JSON.");
+    await expect(settings.notice).toHaveText("Could not import: This file is not valid JSON.");
     await expect(confirm.dialog).toBeHidden();
     await settings.importData("[]");
-    await expect(settings.notice).toHaveText("Import failed — This file is not a Nabd export.");
+    await expect(settings.notice).toHaveText("Could not import: This file is not a Nabd export.");
   });
 
   await test.step("a file from a newer version", async () => {
-    await settings.importData(JSON.stringify({ app: "Nabd", version: 3 }));
+    await settings.importData(JSON.stringify({ app: "Nabd", version: APPDATA_VERSION + 1 }));
     await expect(settings.notice).toHaveText(
-      "Import failed — This file was exported by a newer version of Nabd. Update the app to import it.",
+      "Could not import: This file was exported by a newer version of Nabd. Update the app to import it.",
     );
     await expect(today.row(bench.name)).toBeVisible();
   });
 
   const imported = plan([day("Legs", [planned(squat.id)])]);
+  // An export of the previous version: its prescribed sets go by their old field names.
   const file = JSON.stringify({
     app: "Nabd",
     version: 2,
     program: imported,
     settings: { interval: 30 },
-  });
+  })
+    .replaceAll('"amount":', '"a":')
+    .replaceAll('"upTo":', '"b":');
 
   await test.step("a valid file is not applied until the user says so", async () => {
     await settings.importData(file);

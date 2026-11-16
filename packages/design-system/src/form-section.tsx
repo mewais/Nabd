@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Eyebrow } from "./eyebrow";
 
-export interface FormSectionProps {
+interface FormSectionProps {
   title: string;
   children?: ReactNode;
 }

@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { COLOR, ELLIPSIS, Icon, RADIUS, RowButton, TEXT, tint } from "@nabd/design-system";
+import type { SessionActions } from "./session-actions";
 import type { SessionListRowVM } from "./session-vm";
 
 const MARK_SIZE = 18;
@@ -19,14 +20,18 @@ function rowStyle(row: SessionListRowVM): CSSProperties {
 }
 
 interface ExerciseRowProps {
-  row: SessionListRowVM;
-  onPick: (itemId: string) => void;
+  vm: SessionListRowVM;
+  actions: Pick<SessionActions, "focusItem">;
 }
 
 /** One of today's exercises in the logger's list; pressing it switches the form to it. */
-export function ExerciseRow({ row, onPick }: ExerciseRowProps): JSX.Element {
+export function ExerciseRow({ vm, actions }: ExerciseRowProps): JSX.Element {
   return (
-    <RowButton current={row.active} onClick={() => onPick(row.itemId)} style={rowStyle(row)}>
+    <RowButton
+      current={vm.active}
+      onClick={() => actions.focusItem(vm.itemId)}
+      style={rowStyle(vm)}
+    >
       <span
         style={{
           display: "flex",
@@ -37,11 +42,11 @@ export function ExerciseRow({ row, onPick }: ExerciseRowProps): JSX.Element {
           width: MARK_SIZE,
           height: MARK_SIZE,
           borderRadius: RADIUS.round,
-          background: row.complete ? "var(--accent2)" : "var(--surface)",
-          border: row.complete ? "none" : "1px solid var(--line)",
+          background: vm.complete ? "var(--accent2)" : "var(--surface)",
+          border: vm.complete ? "none" : "1px solid var(--line)",
         }}
       >
-        {row.complete && (
+        {vm.complete && (
           <Icon
             name="check"
             size={12}
@@ -58,13 +63,13 @@ export function ExerciseRow({ row, onPick }: ExerciseRowProps): JSX.Element {
             display: "block",
             fontSize: 13,
             fontWeight: 600,
-            color: row.active ? "var(--accent)" : "var(--text)",
+            color: vm.active ? "var(--accent)" : "var(--text)",
           }}
         >
-          {row.exercise}
+          {vm.exercise}
         </span>
         <span style={{ ...ELLIPSIS, display: "block", fontSize: 11, color: "var(--text3)" }}>
-          {row.detail}
+          {vm.detail}
         </span>
       </span>
       <span
@@ -73,10 +78,10 @@ export function ExerciseRow({ row, onPick }: ExerciseRowProps): JSX.Element {
           flex: "none",
           fontSize: 11,
           fontWeight: 400,
-          color: row.complete ? "var(--accent2)" : "var(--text3)",
+          color: vm.complete ? "var(--accent2)" : "var(--text3)",
         }}
       >
-        {row.progress}
+        {vm.progress}
       </span>
     </RowButton>
   );

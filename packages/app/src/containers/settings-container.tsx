@@ -1,24 +1,15 @@
 import { useMemo } from "react";
 import { SettingsModal, buildSettingsVM } from "@nabd/modals";
 import type { SettingsActions } from "@nabd/modals";
+import { pickJsonFile } from "../pick-file";
 import { useActions, useNabd } from "../store-context";
 
-/** Ask the user for a JSON file and hand its text to `onText`. */
-function pickJsonFile(onText: (text: string) => void): void {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = ".json,application/json";
-  input.onchange = () => {
-    void input.files?.[0]?.text().then(onText);
-  };
-  input.click();
-}
-
+/** The Settings dialog, while it is open. */
 export function SettingsContainer(): JSX.Element | null {
   const store = useActions();
   const open = useNabd((s) => s.settingsOpen);
   const settings = useNabd((s) => s.settings);
-  const notice = useNabd((s) => s.notice);
+  const notice = useNabd((s) => s.dataNotice);
   const capabilities = useNabd((s) => s.capabilities);
 
   const vm = useMemo(
@@ -32,7 +23,7 @@ export function SettingsContainer(): JSX.Element | null {
       importData: () => pickJsonFile(store.importData),
       sendTestNotification: store.sendTestNotification,
       quit: store.quit,
-      close: () => store.setSettingsOpen(false),
+      close: store.closeSettings,
     }),
     [store],
   );

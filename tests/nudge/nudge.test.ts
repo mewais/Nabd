@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS } from "@nabd/domain";
 import { NudgePolicy, SNOOZE_MINUTES, describeNudge, summarizeNudge } from "@nabd/nudge";
 import type { NudgeContext } from "@nabd/nudge";
-import { nov } from "../support/domain-factories";
+import { nov } from "../support/builders";
 
 // Workday 09:00–18:00, timer 50 min, minimum gap 15 min, idle after 30 s.
 const policy = new NudgePolicy(DEFAULT_SETTINGS);

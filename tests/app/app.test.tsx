@@ -1,12 +1,12 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { DEFAULT_SETTINGS } from "@nabd/domain";
+import { nov } from "../support/builders";
 import { createMemoryBackend } from "@nabd/ipc-client";
-import type { BootSnapshot } from "@nabd/ipc-client";
+import { DEFAULT_SETTINGS } from "@nabd/domain";
+import type { BootSnapshot, TrayAction } from "@nabd/ipc-client";
+import { App } from "@nabd/app/app";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { createNabdStore } from "@nabd/store";
-import { nov } from "../support/domain-factories";
-import { App } from "../../packages/app/src/app";
-import { createDemoClient } from "../../packages/app/src/demo";
-import { DEMO_PROGRAM } from "../../packages/app/src/demo-data";
+import { createDemoClient } from "@nabd/app/demo";
+import { DEMO_PROGRAM } from "@nabd/app/demo-data";
 
 /** The demo opens on the first day of its floating plan. */
 const FIRST_DAY_SETS = (DEMO_PROGRAM.days[0]?.exercises ?? []).reduce(
@@ -152,5 +152,32 @@ describe("App tells the desktop about a waiting nudge", () => {
     advanceTo(nov(16, 10, 40));
     expect(screen.getByText("Time to move")).toBeInTheDocument();
     expect(notifyNudge).not.toHaveBeenCalled();
+  });
+});
+
+describe("App follows the tray menu", () => {
+  it("Quit saves what is still waiting to be saved, then exits", async () => {
+    const { client } = createMemoryBackend({ program: DEMO_PROGRAM, settings: DEFAULT_SETTINGS });
+    let chooseFromTray = (_action: TrayAction): void => {};
+    client.onTrayAction = async (handler) => {
+      chooseFromTray = handler;
+      return () => {};
+    };
+    const quit = vi.spyOn(client, "quit");
+    const appendSet = vi.spyOn(client, "appendSet").mockRejectedValueOnce(new Error("disk full"));
+    const store = createNabdStore({ client, now: () => nov(16, 9), newId: () => "id" });
+    render(<App store={store} client={client} />);
+    await screen.findByText(`of ${FIRST_DAY_SETS} sets`);
+
+    await act(async () => {
+      store.getState().openSession();
+      await store.getState().logSet();
+    });
+    expect(store.getState().unsavedSets).toEqual(["id"]);
+
+    await act(async () => chooseFromTray("quit"));
+    await vi.waitFor(() => expect(quit).toHaveBeenCalledTimes(1));
+    expect(appendSet).toHaveBeenCalledTimes(2);
+    expect(store.getState().unsavedSets).toEqual([]);
   });
 });

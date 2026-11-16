@@ -1,7 +1,7 @@
 import type { LoggedSet } from "@nabd/domain";
 import type { PlanItem } from "@nabd/scheduling";
-import { ExerciseHistory, ProgressionAdvisor } from "@nabd/progression";
-import type { Advice, Performance } from "@nabd/progression";
+import { ExerciseHistory } from "@nabd/progression";
+import type { Advice, Performance, ProgressionAdvisor } from "@nabd/progression";
 
 /**
  * Answers, for any exercise in today's queue, "what should I aim for?" and
@@ -45,19 +45,29 @@ export class Coach {
    * What the log form starts with: what the user actually did for the kind of
    * set that comes next (warm-up, working, drop). Once the exercise has such a
    * set today, that is it. Before that, a warm-up starts from the last warm-up
-   * logged — warm-ups stay out of progression, but are remembered — and any
-   * other set from the very set the advice compares against, so the form and
-   * "Last time" always agree and applying the advice is a visible step up from
-   * the form. With nothing to go on it is a starting point for the set.
+   * logged — warm-ups stay out of progression, but are remembered — or, with
+   * none on record, from half the last working load (see
+   * ProgressionAdvisor.warmupFrom); any other set starts from the very set the
+   * advice compares against, so the form and "Last time" always agree and
+   * applying the advice is a visible step up from the form. With nothing to go
+   * on it is a starting point for the set.
    */
   startFor(item: PlanItem): Performance {
     const history = this.historyOf(item.exercise.id);
     const type = item.nextSet?.type ?? "working";
-    const earlier = type === "warmup" ? history.latest(type) : this.advise(item).basis;
     return (
       history.latest(type, this.today) ??
-      earlier ??
+      (type === "warmup" ? this.warmupStart(item, history) : this.advise(item).basis) ??
       this.advisor.startingPoint(item.exercise.tracking, item.nextSet).primary
+    );
+  }
+
+  /** Where a warm-up of `item` starts, from what is on record; undefined with nothing to go on. */
+  private warmupStart(item: PlanItem, history: ExerciseHistory): Performance | undefined {
+    const working = history.latest("working");
+    return (
+      history.latest("warmup") ??
+      (working && this.advisor.warmupFrom(item.exercise.tracking, working, item.nextSet))
     );
   }
 }

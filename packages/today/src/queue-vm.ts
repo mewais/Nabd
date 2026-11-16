@@ -1,5 +1,6 @@
-import { muscleNames, plural, supersetTags } from "@nabd/domain";
+import { muscleList, supersetTags } from "@nabd/domain";
 import type { PlanItem, TodayPlan } from "@nabd/scheduling";
+import { formatSetTally } from "@nabd/session";
 
 export interface QueueRowVM {
   id: string;
@@ -17,9 +18,17 @@ export interface QueueRowVM {
   startLabel: "Start" | "More" | null;
 }
 
+/** Today's exercises in plan order, extras last. */
+export interface QueueVM {
+  /** The program day's name; null on a day without one. */
+  dayName: string | null;
+  rows: QueueRowVM[];
+}
+
 function badge(item: PlanItem): string {
   if (item.skipped) return "Skipped";
-  return item.isExtra ? plural(item.done, "set") : `${item.done}/${plural(item.planned, "set")}`;
+  const counted = item.isExtra ? item.done : item.planned;
+  return `${formatSetTally(item)} ${counted === 1 ? "set" : "sets"}`;
 }
 
 function skipLabel(item: PlanItem): QueueRowVM["skipLabel"] {
@@ -33,18 +42,20 @@ function startLabel(item: PlanItem): QueueRowVM["startLabel"] {
   return item.status === "done" ? "More" : "Start";
 }
 
-/** Today's exercises in plan order, extras last. */
-export function buildQueue(plan: TodayPlan): QueueRowVM[] {
+export function buildQueueVM(plan: TodayPlan): QueueVM {
   const nextId = plan.nextItem?.id;
   const tags = supersetTags(plan.items);
-  return plan.items.map((item, index) => ({
-    id: item.id,
-    marker: tags[index] ?? String(index + 1).padStart(2, "0"),
-    exercise: item.exercise.name,
-    sub: `${item.label} · ${muscleNames(item.exercise).join(", ")}`,
-    badge: badge(item),
-    state: item.id === nextId ? "next" : item.status,
-    skipLabel: skipLabel(item),
-    startLabel: startLabel(item),
-  }));
+  return {
+    dayName: plan.dayName,
+    rows: plan.items.map((item, index) => ({
+      id: item.id,
+      marker: tags[index] ?? String(index + 1).padStart(2, "0"),
+      exercise: item.exercise.name,
+      sub: `${item.label} · ${muscleList(item.exercise)}`,
+      badge: badge(item),
+      state: item.id === nextId ? "next" : item.status,
+      skipLabel: skipLabel(item),
+      startLabel: startLabel(item),
+    })),
+  };
 }

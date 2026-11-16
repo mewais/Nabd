@@ -7,7 +7,7 @@ const { bench, raise, curl } = EXERCISE;
 /** One day of 7 sets: a main lift with a warm-up, then a superset. Default settings: 09:00–18:00, 50 / 15 min, 30 s. */
 const program = plan([
   day("Push", [
-    planned(bench.id, { sets: [{ type: "warmup", a: 12 }, ...workingSets(2)] }),
+    planned(bench.id, { sets: [{ type: "warmup", amount: 12 }, ...workingSets(2)] }),
     planned(raise.id, { supersetId: "superset", rest: 60 }),
     planned(curl.id, { supersetId: "superset", rest: 60 }),
   ]),
@@ -34,7 +34,7 @@ test("a workday: quiet before hours, nudged at the interval, logged from the nud
     await app.busyFor(1);
     await expect(shell.toast).toContainText("Interval's up");
     await expect(shell.toast).toContainText(bench.name);
-    await expect(shell.toast).toContainText("Chest · set 1 of 3");
+    await expect(shell.toast).toContainText("Chest · Set 1 of 3");
     await expect(shell.status).toContainText("Interval's up");
   });
 
@@ -102,7 +102,7 @@ test("after a set: the next nudge, an idle moment, Snooze and Pause", async ({ a
     await expect(shell.toast).toBeHidden();
     await app.idleFor(1);
     await expect(shell.toast).toContainText("You've gone quiet");
-    await expect(shell.toast).toContainText("Chest · set 2 of 3");
+    await expect(shell.toast).toContainText("Chest · Set 2 of 3");
     await expect(today.screen.getByRole("button", { name: "Snooze 5m" })).toBeVisible();
   });
 

@@ -8,10 +8,18 @@ import type {
   Program,
   ProgramType,
 } from "@nabd/domain";
-import { EQUIPMENT_NAMES, MUSCLE_NAMES, muscleNames, plural, supersetTags } from "@nabd/domain";
-import { daySummary } from "@nabd/program-editor";
-import { buildSetBlock } from "./set-block-vm";
+import {
+  EQUIPMENT_NAMES,
+  MUSCLE_NAMES,
+  exerciseName,
+  firstDay,
+  muscleList,
+  plural,
+  supersetTags,
+} from "@nabd/domain";
+import { buildSetBlockVM } from "./set-block-vm";
 import type { SetBlockVM } from "./set-block-vm";
+import { dayOrdinal, daySummary } from "./wording";
 
 export interface ExerciseCardVM {
   id: string;
@@ -33,14 +41,25 @@ export interface SlotCardVM {
   hint: string;
   /** "Exercise pool · 3 exercises" */
   poolLabel: string;
-  pool: { id: string; name: string }[];
+  pool: PoolEntryVM[];
   block: SetBlockVM;
+}
+
+/** One exercise of a slot's pool. */
+export interface PoolEntryVM {
+  id: string;
+  name: string;
+}
+
+/** Exercises done back to back. */
+export interface SupersetVM {
+  members: ExerciseCardVM[];
 }
 
 /** One row of the day. `id` is unique within it: a superset goes by its first member's. */
 export type EditorRowVM =
   | { kind: "exercise"; id: string; exercise: ExerciseCardVM }
-  | { kind: "superset"; id: string; members: ExerciseCardVM[] }
+  | { kind: "superset"; id: string; superset: SupersetVM }
   | { kind: "slot"; id: string; slot: SlotCardVM };
 
 /** Where the day sits: on a weekday, or at a position in the floating order. */
@@ -59,9 +78,9 @@ export interface EditorVM {
   rows: EditorRowVM[];
 }
 
-/** The day the editor shows: the selected one, else the first; undefined in an empty plan. */
-export function resolveEditDay(program: Program, editDayId: string | null): Day | undefined {
-  return program.days.find((day) => day.id === editDayId) ?? program.days[0];
+/** The day the editor shows: the planner's day, else the plan's first; undefined in an empty plan. */
+export function resolvePlannerDay(program: Program, plannerDayId: string | null): Day | undefined {
+  return program.days.find((day) => day.id === plannerDayId) ?? firstDay(program);
 }
 
 function exerciseCard(
@@ -72,10 +91,10 @@ function exerciseCard(
   const exercise = lookup(row.exId);
   return {
     id: row.id,
-    name: exercise?.name ?? row.exId,
-    muscles: exercise ? muscleNames(exercise).join(", ") : "",
+    name: exerciseName(lookup, row.exId),
+    muscles: exercise ? muscleList(exercise) : "",
     equipment: exercise ? EQUIPMENT_NAMES[exercise.equipment].toUpperCase() : "",
-    block: buildSetBlock(row),
+    block: buildSetBlockVM(row),
     supersetTag,
   };
 }
@@ -94,7 +113,7 @@ function exerciseRows(day: Day, lookup: ExerciseLookup): EditorRowVM[] {
       open.members.push(card);
     } else {
       open = { supersetId: row.supersetId, members: [card] };
-      rows.push({ kind: "superset", id: row.id, members: open.members });
+      rows.push({ kind: "superset", id: row.id, superset: { members: open.members } });
     }
   });
   return rows;
@@ -111,13 +130,13 @@ function slotRow(slot: CycledSlot, lookup: ExerciseLookup): EditorRowVM {
       muscleName,
       hint: `Targets ${muscleName} · cycles its pool`,
       poolLabel: `Exercise pool · ${plural(slot.pool.length, "exercise")}`,
-      pool: slot.pool.map((id) => ({ id, name: lookup(id)?.name ?? id })),
-      block: buildSetBlock(slot),
+      pool: slot.pool.map((id) => ({ id, name: exerciseName(lookup, id) })),
+      block: buildSetBlockVM(slot),
     },
   };
 }
 
-export function buildEditor(program: Program, day: Day, lookup: ExerciseLookup): EditorVM {
+export function buildEditorVM(program: Program, day: Day, lookup: ExerciseLookup): EditorVM {
   return {
     dayId: day.id,
     name: day.name,
@@ -125,7 +144,7 @@ export function buildEditor(program: Program, day: Day, lookup: ExerciseLookup):
     placement:
       program.schedule === "weekday"
         ? { kind: "weekday", weekday: day.weekday }
-        : { kind: "floating", label: `Day ${program.days.indexOf(day) + 1} · floating` },
+        : { kind: "floating", label: `${dayOrdinal(program.days.indexOf(day))} · floating` },
     summary: daySummary(day, program.type),
     rows:
       program.type === "fixed"

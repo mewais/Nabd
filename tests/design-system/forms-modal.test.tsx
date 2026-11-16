@@ -97,8 +97,11 @@ describe("ModalShell", () => {
   it("stacks above the layer it was opened from", () => {
     render(<ModalShell title="Below" width={300} onClose={vi.fn()} />);
     render(<ModalShell title="Above" width={300} layer="modalOver" onClose={vi.fn()} />);
-    const [below, above] = [...document.querySelectorAll<HTMLElement>("[data-modal-backdrop]")];
-    expect(Number(above?.style.zIndex)).toBeGreaterThan(Number(below?.style.zIndex));
+    const layers = [...document.querySelectorAll<HTMLElement>("[data-modal-backdrop]")].map(
+      (backdrop) => backdrop.dataset.layer,
+    );
+    expect(layers).toEqual(["modal", "modalOver"]);
+    expect(Z.modalOver).toBeGreaterThan(Z.modal);
   });
 
   it("gives Escape to the modal on top only", () => {
@@ -182,7 +185,8 @@ describe("ConfirmDialog", () => {
 
   it("opens over every other dialog", () => {
     setup();
-    const backdrop = document.querySelector("[data-modal-backdrop]") as HTMLElement;
-    expect(Number(backdrop.style.zIndex)).toBeGreaterThan(Z.modalTop);
+    const backdrop = document.querySelector<HTMLElement>("[data-modal-backdrop]");
+    expect(backdrop?.dataset.layer).toBe("confirm");
+    expect(Z.confirm).toBeGreaterThan(Z.modalTop);
   });
 });

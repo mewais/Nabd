@@ -1,9 +1,10 @@
 // The week board: Mon–Sun for a weekday schedule, DAY 1..N plus "add" for a floating one.
 
 import type { Day, ExerciseLookup, Program, Schedule } from "@nabd/domain";
-import { MUSCLE_NAMES, WEEK_ORDER, weekdayName, weekdayShort } from "@nabd/domain";
+import { MUSCLE_NAMES, WEEK_ORDER, exerciseName, weekdayName, weekdayShort } from "@nabd/domain";
+import { dayOrdinal } from "./wording";
 
-export interface BoardChipVM {
+interface BoardChipVM {
   name: string;
   superset: boolean;
 }
@@ -17,7 +18,8 @@ export interface DayColumnVM {
   chips: BoardChipVM[];
   /** "+2 more" when not everything fits on the card. */
   overflow: string | null;
-  editing: boolean;
+  /** This is the day the editor shows. */
+  selected: boolean;
 }
 
 export interface RestColumnVM {
@@ -30,7 +32,7 @@ export interface RestColumnVM {
 }
 
 /** One column of the board: a day's card, a free weekday, or the add tile. */
-export type BoardColumnVM = DayColumnVM | RestColumnVM | { kind: "add" };
+type BoardColumnVM = DayColumnVM | RestColumnVM | { kind: "add" };
 
 export interface BoardVM {
   schedule: Schedule;
@@ -44,14 +46,14 @@ function dayChips(day: Day, program: Program, lookup: ExerciseLookup): BoardChip
     return day.slots.map((slot) => ({ name: MUSCLE_NAMES[slot.muscle], superset: false }));
   }
   return day.exercises.map((row) => ({
-    name: lookup(row.exId)?.name ?? row.exId,
+    name: exerciseName(lookup, row.exId),
     superset: row.supersetId !== undefined,
   }));
 }
 
-export function buildBoard(
+export function buildBoardVM(
   program: Program,
-  editingDayId: string | undefined,
+  plannerDayId: string | undefined,
   lookup: ExerciseLookup,
 ): BoardVM {
   const dayColumn = (day: Day, label: string): DayColumnVM => {
@@ -63,7 +65,7 @@ export function buildBoard(
       name: day.name,
       chips: chips.slice(0, CHIPS_SHOWN),
       overflow: chips.length > CHIPS_SHOWN ? `+${chips.length - CHIPS_SHOWN} more` : null,
-      editing: day.id === editingDayId,
+      selected: day.id === plannerDayId,
     };
   };
 
@@ -71,7 +73,7 @@ export function buildBoard(
     return {
       schedule: "floating",
       columns: [
-        ...program.days.map((day, index) => dayColumn(day, `Day ${index + 1}`)),
+        ...program.days.map((day, index) => dayColumn(day, dayOrdinal(index))),
         { kind: "add" },
       ],
     };

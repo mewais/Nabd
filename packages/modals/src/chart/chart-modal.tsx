@@ -2,7 +2,7 @@ import { Card, LineChart, ModalShell, StatTile, TEXT } from "@nabd/design-system
 import type { ChartActions } from "./chart-actions";
 import type { ChartVM } from "./chart-vm";
 
-export interface ChartModalProps {
+interface ChartModalProps {
   vm: ChartVM;
   actions: ChartActions;
 }

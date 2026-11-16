@@ -41,7 +41,7 @@ export class Planner {
 
   /** The exercise (or slot) cards of the editor, top to bottom. */
   cards(): Locator {
-    return this.screen.getByRole("region");
+    return this.screen.getByRole("region", { name: "Day editor" }).getByRole("region");
   }
 
   /** A stepper of a card: "Set 1 reps", "Set 1 top of range", "Rest". */

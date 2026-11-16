@@ -1,65 +1,28 @@
-import type { DayRecord } from "@nabd/domain";
-import { dateKey } from "@nabd/domain";
-import { rollOver } from "@nabd/scheduling";
-import type { DayActions } from "./actions";
+import { NudgePolicy } from "@nabd/nudge";
 import type { StoreContext } from "./context";
-import { applyAutostart, applyGlass } from "./desktop";
 import { loadNotice, readSnapshot } from "./hydration";
-import { watchNudge } from "./nudge";
+import { applyAutostart, applyGlass } from "./os";
 import { errorText } from "./persistence";
-import { selectLibrary } from "./selectors";
-import { planDayToOpen } from "./view";
+import { beginDay } from "./rollover";
+import { selectPlannerDayToOpen, selectPolicyStatus } from "./selectors";
+import type { DaySlice } from "./slices";
 import type { LoadProblem } from "./state";
 
-/** Completed days kept for the completion charts. */
-const DAY_LOG_LIMIT = 400;
-
-/** The log with `records` added, each replacing an earlier record of its date. */
-function withRecords(dayLog: readonly DayRecord[], records: readonly DayRecord[]): DayRecord[] {
-  const closed = new Set(records.map((record) => record.date));
-  return [...dayLog.filter((record) => !closed.has(record.date)), ...records].slice(-DAY_LOG_LIMIT);
-}
-
-/**
- * Close out a finished day and open today, if the calendar day has moved on;
- * returns whether it had. Every action that reads or writes "today" starts
- * here, so none of them can act on a day that is already over.
- *
- * Days only ever move forward. A clock that jumps back (a corrected clock, a
- * flight west over midnight) changes nothing: rolling over to an earlier day
- * would file the day we are on as a finished day in the future.
- */
-export function beginDay({ get, set, now, persistTogether }: StoreContext): boolean {
+/** Start, keep, renew or withdraw the pending nudge, as the clock and the plan now stand. */
+function watchNudge({ get, set }: Pick<StoreContext, "get" | "set">): void {
   const s = get();
-  const today = now();
-  if (dateKey(today) <= s.dayState.date) return false;
-  const { dayState, rotation, records } = rollOver({
-    program: s.program,
-    dayState: s.dayState,
-    rotation: s.rotationState,
-    history: s.history,
-    date: today,
-    lookup: selectLibrary(s).lookup,
-  });
-  const dayLog = withRecords(s.dayLog, records);
-  set({
-    dayState,
-    rotationState: rotation,
-    dayLog,
-    session: null,
-    paused: dayState.paused,
-    snoozedUntil: null,
-    // Counting starts over with the new day (see settle.ts).
-    activeSince: null,
-    pendingNudge: null,
-  });
-  // One transaction: a rollover that is only partly on disk would be redone
-  // at the next launch from a mix of old and new state (pools advanced twice).
-  persistTogether("the new day", { dayLog, dayState, rotationState: rotation });
-  return true;
+  // An open logger is already the answer; nothing new fires over it.
+  if (s.session !== null) return;
+  const pendingNudge = new NudgePolicy(s.settings).latch(
+    s.pendingNudge,
+    selectPolicyStatus(s),
+    s.now,
+  );
+  if (pendingNudge !== s.pendingNudge) set({ pendingNudge });
 }
 
-export function dayActions(ctx: StoreContext): DayActions {
+/** The app's heartbeat: boot, then one beat a second. */
+export function daySlice(ctx: StoreContext): DaySlice {
   const { get, set, client, now, attempt, persist, flushSets } = ctx;
 
   /** Bring the OS in line with the stored settings, and learn what it can do. */
@@ -86,7 +49,6 @@ export function dayActions(ctx: StoreContext): DayActions {
       const { state } = loaded;
       set({
         ...state,
-        paused: state.dayState.paused,
         // What is stored was just read afresh: nothing of it is waiting to be saved.
         unsavedSets: [],
         loadProblems: loaded.problems,
@@ -94,7 +56,7 @@ export function dayActions(ctx: StoreContext): DayActions {
         now: now(),
         booted: true,
       });
-      set((s) => ({ planEditDay: planDayToOpen(s) }));
+      set((s) => ({ plannerDayId: selectPlannerDayToOpen(s) }));
       for (const key of loaded.repaired) persist(key, state[key]);
       // Make sure the day we are on is on record, so the next launch can roll it over.
       if (!beginDay(ctx)) persist("dayState", get().dayState);

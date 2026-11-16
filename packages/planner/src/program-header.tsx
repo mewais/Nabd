@@ -1,38 +1,37 @@
-import type { ProgramType } from "@nabd/domain";
 import { Eyebrow, Segmented, TitleInput } from "@nabd/design-system";
-import type { SegOption } from "@nabd/design-system";
-import { useProgramActions } from "./use-actions";
-import type { HeaderVM } from "./view-model";
+import { PROGRAM_TYPE_OPTIONS, scheduleOptions } from "./options";
+import type { PlannerActions } from "./planner-actions";
+import type { HeaderVM } from "./planner-vm";
 
 interface ProgramHeaderProps {
-  header: HeaderVM;
+  vm: HeaderVM;
+  actions: Pick<PlannerActions, "edit">;
 }
 
-const TYPES: readonly SegOption<ProgramType>[] = [
-  { value: "fixed", label: "Fixed" },
-  { value: "cycled", label: "Cycled" },
-];
-
 /** The program's name, and the two choices that shape it: plan type and schedule. */
-export function ProgramHeader({ header }: ProgramHeaderProps): JSX.Element {
-  const actions = useProgramActions();
+export function ProgramHeader({ vm, actions }: ProgramHeaderProps): JSX.Element {
+  const { edit } = actions;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
       <div>
         <Eyebrow>Program</Eyebrow>
-        <TitleInput ariaLabel="Program name" value={header.name} onChange={actions.rename} />
+        <TitleInput
+          ariaLabel="Program name"
+          value={vm.name}
+          onChange={(name) => edit((e) => e.rename(name))}
+        />
       </div>
       <Segmented
         ariaLabel="Plan type"
-        options={TYPES}
-        value={header.type}
-        onChange={actions.setType}
+        options={PROGRAM_TYPE_OPTIONS}
+        value={vm.type}
+        onChange={(type) => edit((e) => e.setType(type))}
       />
       <Segmented
         ariaLabel="Schedule"
-        options={header.scheduleOptions}
-        value={header.schedule}
-        onChange={actions.setSchedule}
+        options={scheduleOptions(vm.weekdayBlocked)}
+        value={vm.schedule}
+        onChange={(schedule) => edit((e) => e.setSchedule(schedule))}
       />
     </div>
   );

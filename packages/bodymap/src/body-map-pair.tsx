@@ -1,8 +1,10 @@
-import type { Coverage, MapStyle, MapView } from "@nabd/domain";
+import type { Coverage } from "@nabd/domain";
 import { Eyebrow } from "@nabd/design-system";
-import { BodyMap, type BodySide } from "./body-map";
+import type { MapStyle, MapView } from "@nabd/view";
+import { BodyMap } from "./body-map";
+import type { BodySide } from "./body-map";
 
-export interface BodyMapPairProps {
+interface BodyMapPairProps {
   coverage: Coverage;
   mapStyle?: MapStyle;
   view?: MapView;

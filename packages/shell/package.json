@@ -8,12 +8,13 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run --root ../.. --project shell"
   },
   "dependencies": {
     "@nabd/design-system": "workspace:*",
     "@nabd/domain": "workspace:*",
-    "@nabd/nudge": "workspace:*"
+    "@nabd/nudge": "workspace:*",
+    "@nabd/view": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.3.1"

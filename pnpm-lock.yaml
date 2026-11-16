@@ -107,6 +107,9 @@ importers:
       '@nabd/today':
         specifier: workspace:*
         version: link:../today
+      '@nabd/view':
+        specifier: workspace:*
+        version: link:../view
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -135,6 +138,9 @@ importers:
       '@nabd/domain':
         specifier: workspace:*
         version: link:../domain
+      '@nabd/view':
+        specifier: workspace:*
+        version: link:../view
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -156,6 +162,9 @@ importers:
       '@nabd/domain':
         specifier: workspace:*
         version: link:../domain
+      '@nabd/view':
+        specifier: workspace:*
+        version: link:../view
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -198,6 +207,9 @@ importers:
       '@nabd/session':
         specifier: workspace:*
         version: link:../session
+      '@nabd/view':
+        specifier: workspace:*
+        version: link:../view
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -255,6 +267,9 @@ importers:
       '@nabd/progression':
         specifier: workspace:*
         version: link:../progression
+      '@nabd/view':
+        specifier: workspace:*
+        version: link:../view
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -273,6 +288,9 @@ importers:
 
   packages/serialization:
     dependencies:
+      '@nabd/dataset':
+        specifier: workspace:*
+        version: link:../dataset
       '@nabd/domain':
         specifier: workspace:*
         version: link:../domain
@@ -300,6 +318,9 @@ importers:
       '@nabd/nudge':
         specifier: workspace:*
         version: link:../nudge
+      '@nabd/view':
+        specifier: workspace:*
+        version: link:../view
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -339,6 +360,9 @@ importers:
       '@nabd/session':
         specifier: workspace:*
         version: link:../session
+      '@nabd/view':
+        specifier: workspace:*
+        version: link:../view
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -372,9 +396,18 @@ importers:
       '@nabd/session':
         specifier: workspace:*
         version: link:../session
+      '@nabd/view':
+        specifier: workspace:*
+        version: link:../view
       react:
         specifier: ^18.3.1
         version: 18.3.1
+
+  packages/view:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
 
 packages:
 

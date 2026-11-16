@@ -6,5 +6,5 @@
 *.ico binary
 *.icns binary
 
-assets/body/bodydata.ts linguist-vendored
+packages/bodymap/src/drawing/bodydata.ts linguist-vendored
 packages/app/public/fonts/** linguist-vendored

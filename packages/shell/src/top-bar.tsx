@@ -7,9 +7,9 @@ import {
   TEXT,
   THEME_OPTIONS,
 } from "@nabd/design-system";
-import type { ShellActions } from "./actions";
+import type { ShellActions } from "./shell-actions";
+import type { TopBarVM } from "./shell-vm";
 import { StatusPill } from "./status-pill";
-import type { TopBarVM } from "./view-model";
 
 interface TopBarProps {
   vm: TopBarVM;
@@ -35,7 +35,7 @@ export function TopBar({ vm, actions }: TopBarProps): JSX.Element {
         <div style={TEXT.cardTitle}>{vm.greeting}</div>
         <div style={{ ...TEXT.cardSubtitle, fontFamily: FONT.mono }}>{vm.date}</div>
       </div>
-      <StatusPill status={vm.status} />
+      <StatusPill vm={vm.status} />
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
         <Segmented
           ariaLabel="Theme"

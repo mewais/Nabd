@@ -1,26 +1,27 @@
 import { FormRow, FormSection, Segmented, THEME_OPTIONS } from "@nabd/design-system";
-import type { SettingsPatch, SettingsVM } from "./settings-vm";
+import type { SettingsActions } from "./settings-actions";
+import type { SettingsVM } from "./settings-vm";
 import { StepperRow } from "./stepper-row";
 import { ToggleRow } from "./toggle-row";
 
 interface AppearanceSectionProps {
-  appearance: SettingsVM["appearance"];
-  onChange: (patch: SettingsPatch) => void;
+  vm: SettingsVM["appearance"];
+  actions: Pick<SettingsActions, "change">;
 }
 
 /** The theme, and the translucent window where the platform offers one. */
-export function AppearanceSection({ appearance, onChange }: AppearanceSectionProps): JSX.Element {
+export function AppearanceSection({ vm, actions }: AppearanceSectionProps): JSX.Element {
   return (
     <FormSection title="Appearance">
       <FormRow title="Theme" hint="Sets text & contrast.">
         <Segmented
           options={THEME_OPTIONS}
-          value={appearance.theme}
-          onChange={(theme) => onChange({ theme })}
+          value={vm.theme}
+          onChange={(theme) => actions.change({ theme })}
         />
       </FormRow>
-      {appearance.glass !== null && <ToggleRow row={appearance.glass} onChange={onChange} />}
-      {appearance.opacity !== null && <StepperRow row={appearance.opacity} onChange={onChange} />}
+      {vm.glass !== null && <ToggleRow vm={vm.glass} actions={actions} />}
+      {vm.opacity !== null && <StepperRow vm={vm.opacity} actions={actions} />}
     </FormSection>
   );
 }

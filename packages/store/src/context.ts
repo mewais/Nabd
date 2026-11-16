@@ -1,5 +1,5 @@
 import type { IpcClient } from "@nabd/ipc-client";
-import type { NabdStore } from "./actions";
+import type { NabdStore } from "./slices";
 import type { NabdState } from "./state";
 import type { Persistence } from "./persistence";
 

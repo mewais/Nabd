@@ -9,10 +9,7 @@ export const LOWER_LEGS: Movement[] = [
     secondary: [],
     equipment: ["machine", "dumbbell", "barbell", "bodyweight"],
     laterality: ["bilateral", "unilateral"],
-    nameOverride: {
-      machine: "Calf Raise",
-      bodyweight: "Calf Raise",
-    },
+    nameOverride: { machine: "Calf Raise" },
   },
   {
     id: "seated_calf_raise",
@@ -20,7 +17,6 @@ export const LOWER_LEGS: Movement[] = [
     primary: ["calves"],
     secondary: [],
     equipment: ["machine", "dumbbell"],
-    laterality: ["bilateral"],
   },
   {
     id: "jump_rope",
@@ -28,8 +24,6 @@ export const LOWER_LEGS: Movement[] = [
     primary: ["calves"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Jump Rope" },
     tracking: "duration",
   },
 
@@ -40,8 +34,6 @@ export const LOWER_LEGS: Movement[] = [
     primary: ["tibialis"],
     secondary: [],
     equipment: ["bodyweight", "bands"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Tibialis Raise" },
   },
   {
     id: "toe_raise",
@@ -49,7 +41,5 @@ export const LOWER_LEGS: Movement[] = [
     primary: ["tibialis"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Toe Raise" },
   },
 ];

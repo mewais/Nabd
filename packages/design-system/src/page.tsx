@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export interface PageProps {
+interface PageProps {
   /** Widest the content column grows, in px. */
   maxWidth?: number;
   children?: ReactNode;

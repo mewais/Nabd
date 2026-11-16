@@ -1,6 +1,6 @@
 import { TEXT } from "./tokens";
 
-export interface TitleInputProps {
+interface TitleInputProps {
   value: string;
   onChange: (value: string) => void;
   /** Accessible name: what is being named. */

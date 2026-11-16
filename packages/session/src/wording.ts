@@ -1,14 +1,18 @@
-// How sets, targets and advice are worded — shared by the Today screen and the logger.
+// How sets, targets, progress and advice are worded — shared by the Today
+// screen, the logger and the nudge toast.
 
 import type { Prescription, SetSpec, TrackingType, WeightUnit } from "@nabd/domain";
-import { formatWeight, isBodyweightLoaded, isTimeBased, needsLoad, plural } from "@nabd/domain";
+import {
+  INTENSITY_NAMES,
+  SET_TYPE_NAMES,
+  formatWeight,
+  isBodyweightLoaded,
+  isTimeBased,
+  needsLoad,
+  plural,
+} from "@nabd/domain";
+import type { PlanItem } from "@nabd/scheduling";
 import type { Advice, AdviceKind, Performance } from "@nabd/progression";
-
-const SET_TYPE_NAMES: Record<SetSpec["type"], string> = {
-  warmup: "Warm-up",
-  working: "Working set",
-  drop: "Drop set",
-};
 
 /**
  * "9 × 25 lb", "12 reps", "45 s", "45 s · 10 kg", "8 + 5 kg", "8 − 20 kg assist".
@@ -30,18 +34,45 @@ export function formatPerformance(
   return isTimeBased(tracking) ? `${amount} · ${load}` : `${amount} × ${load}`;
 }
 
+/** How much a prescribed set asks for: "45 s", "8–12 reps", "10 reps". */
+function formatAmountAsked(spec: SetSpec, prescription: Prescription): string {
+  if (prescription.repMode === "time") return `${spec.amount} s`;
+  if (spec.upTo === undefined || spec.upTo === spec.amount) return plural(spec.amount, "rep");
+  return `${spec.amount}–${plural(spec.upTo, "rep")}`;
+}
+
+/** How hard a prescribed set should be: "RPE 8", "70% 1RM"; null when load is not prescribed. */
+function formatIntensityAsked(spec: SetSpec, prescription: Prescription): string | null {
+  if (spec.intensity === undefined || prescription.intensity === "none") return null;
+  return prescription.intensity === "rpe"
+    ? `${INTENSITY_NAMES.rpe} ${spec.intensity}`
+    : `${spec.intensity}% 1RM`;
+}
+
 /** What a prescribed set asks for: "Working set · 8–12 reps · RPE 8". */
 export function formatTarget(spec: SetSpec, prescription: Prescription): string {
-  const amount =
-    prescription.repMode === "time"
-      ? `${spec.a} s`
-      : spec.b !== undefined && spec.b !== spec.a
-        ? `${spec.a}–${plural(spec.b, "rep")}`
-        : plural(spec.a, "rep");
-  const parts = [SET_TYPE_NAMES[spec.type], amount];
-  if (spec.val !== undefined && prescription.intensity === "rpe") parts.push(`RPE ${spec.val}`);
-  if (spec.val !== undefined && prescription.intensity === "pct") parts.push(`${spec.val}% 1RM`);
-  return parts.join(" · ");
+  return [
+    SET_TYPE_NAMES[spec.type],
+    formatAmountAsked(spec, prescription),
+    formatIntensityAsked(spec, prescription),
+  ]
+    .filter((part) => part !== null)
+    .join(" · ");
+}
+
+/**
+ * Which set of the exercise comes next: "Set 2 of 4"; just "Set 3" for an
+ * unplanned extra; "All 4 sets done — extra set" beyond the prescription.
+ */
+export function describeSetPosition(item: PlanItem): string {
+  if (item.isExtra) return `Set ${item.done + 1}`;
+  if (item.remaining === 0) return `All ${plural(item.planned, "set")} done — extra set`;
+  return `Set ${item.done + 1} of ${item.planned}`;
+}
+
+/** Sets done against sets planned: "2/4"; just "3" for an unplanned extra. */
+export function formatSetTally(item: PlanItem): string {
+  return item.isExtra ? String(item.done) : `${item.done}/${item.planned}`;
 }
 
 const ADVICE_REASONS: Record<AdviceKind, string> = {

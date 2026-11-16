@@ -1,24 +1,19 @@
-import type { ViewActions } from "./actions";
 import type { StoreContext } from "./context";
-import { selectTodayPlan } from "./selectors";
-import type { NabdState } from "./state";
-
-/** The day the planner opens on: today's, or the first on a rest day; null in an empty plan. */
-export function planDayToOpen(state: NabdState): string | null {
-  return selectTodayPlan(state).dayId ?? state.program.days[0]?.id ?? null;
-}
+import { selectPlannerDayToOpen } from "./selectors";
+import type { ViewSlice } from "./slices";
 
 /** What is on screen: nothing here is persisted. */
-export function viewActions({ set }: Pick<StoreContext, "set">): ViewActions {
+export function viewSlice({ set }: Pick<StoreContext, "set">): ViewSlice {
   return {
-    setScreen: (screen) =>
-      set((s) => (screen === "planner" ? { screen, planEditDay: planDayToOpen(s) } : { screen })),
+    showScreen: (screen) =>
+      set((s) =>
+        screen === "planner" ? { screen, plannerDayId: selectPlannerDayToOpen(s) } : { screen },
+      ),
     setMapView: (mapView) => set({ mapView }),
     setMapStyle: (mapStyle) => set({ mapStyle }),
-    // The import/export notice belongs to one visit of the Settings dialog.
-    setSettingsOpen: (settingsOpen) => set({ settingsOpen, notice: null }),
     setProgressTab: (progressTab) => set({ progressTab }),
-    setChartExercise: (chartExercise) => set({ chartExercise }),
+    openChart: (chartExercise) => set({ chartExercise }),
+    closeChart: () => set({ chartExercise: null }),
     dismissNotice: () => set({ appNotice: null }),
   };
 }

@@ -1,7 +1,7 @@
 import { APPDATA_VERSION, DEFAULT_SETTINGS } from "@nabd/domain";
 import { createIpcClient, isTauri } from "@nabd/ipc-client";
 import type { Invoke, Listen, Tick, TrayAction } from "@nabd/ipc-client";
-import { exercise, logged, nov } from "../support/domain-factories";
+import { exercise, logged, nov } from "../support/builders";
 
 function setup(result: unknown = undefined) {
   const invoke = vi.fn(async () => result);

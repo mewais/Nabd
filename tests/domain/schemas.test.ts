@@ -1,23 +1,24 @@
 import {
   AppDataSchema,
-  DayStateSchema,
   DEFAULT_SETTINGS,
-  displayWeight,
+  DayStateSchema,
   EMPTY_DRAFT,
-  exerciseFromDraft,
   ExerciseSchema,
-  formatWeight,
   GROUP_PRIMARY_MUSCLE,
-  isCompleteDraft,
-  kgFromDisplay,
-  loadStepKg,
   LoggedSetSchema,
+  MUSCLES,
   MUSCLE_GROUPS,
   MUSCLE_NAMES,
   MUSCLE_PRIMARY_GROUP,
-  MUSCLES,
-  salvageSettings,
   SettingsSchema,
+  displayWeight,
+  editableWeight,
+  exerciseFromDraft,
+  formatWeight,
+  isCompleteDraft,
+  kgFromDisplay,
+  loadStepKg,
+  salvageSettings,
   withWeightUnit,
 } from "@nabd/domain";
 
@@ -114,12 +115,34 @@ describe("a custom-exercise draft", () => {
 });
 
 describe("weights", () => {
-  it("stores kg and shows the chosen unit, to two decimals with no trailing zeros", () => {
+  it("stores kg and shows a weight exactly in the unit it was entered in, with no trailing zeros", () => {
     expect(displayWeight(60, "kg")).toBe(60);
-    expect(displayWeight(60, "lb")).toBe(132.28);
     expect(formatWeight(20, "kg")).toBe("20 kg");
     expect(formatWeight(12.5, "kg")).toBe("12.5 kg");
     expect(formatWeight(kgFromDisplay(27.5, "lb"), "lb")).toBe("27.5 lb");
+    expect(formatWeight(kgFromDisplay(22.25, "lb"), "lb")).toBe("22.25 lb");
+    // Odd decimals are kept too: they were typed.
+    expect(formatWeight(20.13, "kg")).toBe("20.13 kg");
+    expect(formatWeight(kgFromDisplay(44.1, "lb"), "lb")).toBe("44.1 lb");
+  });
+
+  it("holds a weight to two decimals in a field, whatever unit it was entered in", () => {
+    expect(editableWeight(20, "lb")).toBe(44.09);
+    expect(editableWeight(kgFromDisplay(44.34, "lb"), "lb")).toBe(44.34);
+    expect(editableWeight(21.25, "kg")).toBe(21.25);
+  });
+
+  it("shows a weight from the other unit as a conversion, to one decimal", () => {
+    expect(displayWeight(60, "lb")).toBe(132.3);
+    expect(formatWeight(20, "kg")).toBe("20 kg");
+    expect(formatWeight(20, "lb")).toBe("44.1 lb");
+    expect(formatWeight(62.5, "lb")).toBe("137.8 lb");
+    expect(formatWeight(21.25, "lb")).toBe("46.8 lb");
+    // …and the other way round: 27.5 lb and 25 lb, read in kg.
+    expect(formatWeight(kgFromDisplay(27.5, "lb"), "kg")).toBe("12.5 kg");
+    expect(formatWeight(kgFromDisplay(25, "lb"), "kg")).toBe("11.3 kg");
+    // A sum across units was entered in neither: 20 kg plus a 5 lb plate.
+    expect(formatWeight(20 + kgFromDisplay(5, "lb"), "lb")).toBe("49.1 lb");
   });
 
   it("shows every step of the finest increments exactly", () => {

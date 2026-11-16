@@ -1,13 +1,14 @@
 // Derived data. Everything here is computed from state, never stored, so it
 // cannot go stale; each selector is memoized on the state it reads.
 
-import type { Coverage, DayRecord, Exercise } from "@nabd/domain";
-import { addDays, loadStepKg, parseDateKey } from "@nabd/domain";
+import type { Coverage, DayRecord } from "@nabd/domain";
+import { addDays, firstDay, loadStepKg, parseDateKey } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
 import { TodayPlan } from "@nabd/scheduling";
 import { ExerciseProgress, ProgressionAdvisor } from "@nabd/progression";
 import { Coach } from "@nabd/session";
-import { NudgePolicy, type NudgeStatus, type PendingNudge } from "@nabd/nudge";
+import { NudgePolicy } from "@nabd/nudge";
+import type { NudgeStatus, PendingNudge } from "@nabd/nudge";
 import { MuscleVolume } from "@nabd/coverage";
 import { TrainingStats } from "@nabd/analytics";
 import type { NabdState } from "./state";
@@ -17,21 +18,18 @@ function memoize<Inputs extends unknown[], Result>(
   inputs: (s: NabdState) => Inputs,
   compute: (...inputs: Inputs) => Result,
 ): (s: NabdState) => Result {
-  let lastInputs: Inputs | null = null;
-  let lastResult: Result;
+  let last: { inputs: Inputs; result: Result } | null = null;
   return (s) => {
     const next = inputs(s);
-    if (lastInputs === null || next.some((value, i) => value !== lastInputs![i])) {
-      lastResult = compute(...next);
-      lastInputs = next;
-    }
-    return lastResult;
+    const fresh = last !== null && next.every((value, i) => value === last?.inputs[i]);
+    if (last === null || !fresh) last = { inputs: next, result: compute(...next) };
+    return last.result;
   };
 }
 
 /** The catalog plus the user's custom exercises. */
 export const selectLibrary = memoize(
-  (s) => [s.customExercises] as [Exercise[]],
+  (s) => [s.customExercises] as const,
   (custom) => ExerciseLibrary.catalog.withCustom(custom),
 );
 
@@ -74,8 +72,8 @@ export const selectPolicyStatus = memoize(
       s.activeSince,
       s.snoozedUntil,
       s.idleSeconds,
-      s.paused,
-      selectTodayPlan(s).setsRemaining > 0,
+      s.dayState.paused,
+      selectTodayPlan(s).hasWork,
     ] as const,
   (settings, now, lastSetAt, activeSince, snoozedUntil, idleSeconds, paused, hasWork) =>
     new NudgePolicy(settings).evaluate({
@@ -105,6 +103,13 @@ export const selectNudgeStatus = memoize(
  */
 export const selectPendingNudge = (s: NabdState): PendingNudge | null => s.pendingNudge;
 
+/**
+ * The day the planner opens on: today's, or on a rest day the plan's first
+ * (Monday-first for a weekday plan); null in an empty plan.
+ */
+export const selectPlannerDayToOpen = (s: NabdState): string | null =>
+  selectTodayPlan(s).dayId ?? firstDay(s.program)?.id ?? null;
+
 /** What the plan trains over one pass through the program. */
 export const selectPlannedVolume = memoize(
   (s) => [s.program, selectLibrary(s)] as const,
@@ -120,10 +125,10 @@ export const selectCoverage = memoize(
   },
 );
 
-/** How every exercise with history has trended, in the user's weight unit. */
+/** How every exercise with history has trended. */
 export const selectExerciseProgress = memoize(
-  (s) => [s.history, selectLibrary(s), s.settings.weightUnit] as const,
-  (history, library, unit) => new ExerciseProgress(history, library.lookup, unit),
+  (s) => [s.history, selectLibrary(s)] as const,
+  (history, library) => new ExerciseProgress(history, library.lookup),
 );
 
 /** Today's completion so far, in the same shape as the finished days in the log. */

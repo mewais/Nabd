@@ -13,6 +13,7 @@ import type {
   SetSpec,
   Trigger,
 } from "@nabd/domain";
+import { loggedSet as setOf } from "@nabd/domain";
 import { at } from "./time";
 
 /** The catalog exercises the specs use, by the name the UI shows. */
@@ -30,7 +31,7 @@ export const EXERCISE = {
 
 /** `count` working sets of 8–12 reps. */
 export function workingSets(count: number): SetSpec[] {
-  return Array.from({ length: count }, (): SetSpec => ({ type: "working", a: 8, b: 12 }));
+  return Array.from({ length: count }, (): SetSpec => ({ type: "working", amount: 8, upTo: 12 }));
 }
 
 /** What every row of a spec's plan asks for unless it says otherwise: two sets of 8–12, 90 s rest. */
@@ -81,18 +82,13 @@ let seededSets = 0;
 export function loggedSet(exId: string, seed: SetSeed): LoggedSet {
   const exercise = ExerciseLibrary.catalog.byId(exId);
   if (!exercise) throw new Error(`the catalog has no exercise ${exId}`);
-  return {
+  const details = {
     id: `seeded-${++seededSets}`,
-    exId,
-    exercise: exercise.name,
-    group: exercise.group,
-    muscles: [...exercise.primary, ...exercise.secondary],
     value: seed.reps,
     weight: seed.kg,
-    ts: at(seed.time ?? "10:00", seed.day).toISOString(),
-    date: seed.day,
     trigger: seed.trigger ?? "manual",
     planItemId: exId,
     setType: seed.type ?? "working",
   };
+  return setOf(exercise, at(seed.time ?? "10:00", seed.day), details, seed.day);
 }

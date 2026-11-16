@@ -7,7 +7,7 @@ import { addDays, atMinuteOfDay, formatClock } from "@nabd/domain";
 export const SNOOZE_MINUTES = 5;
 
 /** What can prompt a nudge: every trigger of a set except the user's own initiative. */
-export type NudgeReason = Exclude<Trigger, "manual">;
+type NudgeReason = Exclude<Trigger, "manual">;
 
 /** Everything the policy needs to know about the moment. */
 export interface NudgeContext {

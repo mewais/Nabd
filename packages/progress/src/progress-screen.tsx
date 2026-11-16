@@ -1,15 +1,15 @@
 import type { CSSProperties } from "react";
 import { Page, StatTile, TEXT } from "@nabd/design-system";
-import type { ProgressActions } from "./actions";
 import { CompletionCard } from "./completion-card";
 import { ConsistencyCard } from "./consistency-card";
 import { HeatmapCard } from "./heatmap-card";
+import type { ProgressActions } from "./progress-actions";
+import type { ProgressVM } from "./progress-vm";
 import { ProgressionCard } from "./progression-card";
 import { TimeOfDayCard } from "./time-of-day-card";
 import { TriggerCard } from "./trigger-card";
-import type { ProgressVM } from "./view-model";
 
-export interface ProgressScreenProps {
+interface ProgressScreenProps {
   vm: ProgressVM;
   actions: ProgressActions;
 }
@@ -30,15 +30,15 @@ export function ProgressScreen({ vm, actions }: ProgressScreenProps): JSX.Elemen
         ))}
       </div>
       <div style={pair("minmax(0, 1.5fr) minmax(0, 1fr)")}>
-        <ConsistencyCard consistency={vm.consistency} onTab={actions.setTab} />
-        <CompletionCard completion={vm.completion} />
+        <ConsistencyCard vm={vm.consistency} actions={actions} />
+        <CompletionCard vm={vm.completion} />
       </div>
       <div style={pair("minmax(0, 1fr) minmax(0, 1fr)")}>
-        <TimeOfDayCard timeOfDay={vm.timeOfDay} />
-        <TriggerCard triggers={vm.triggers} />
+        <TimeOfDayCard vm={vm.timeOfDay} />
+        <TriggerCard vm={vm.triggers} />
       </div>
-      <HeatmapCard heatmap={vm.heatmap} />
-      <ProgressionCard progression={vm.progression} onOpenChart={actions.openChart} />
+      <HeatmapCard vm={vm.heatmap} />
+      <ProgressionCard vm={vm.progression} actions={actions} />
     </Page>
   );
 }

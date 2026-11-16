@@ -1,16 +1,10 @@
 import type { Program } from "@nabd/domain";
 import { MUSCLES } from "@nabd/domain";
-import { FULL_COVERAGE_SETS, MuscleVolume, insight, recommendation } from "@nabd/coverage";
-import {
-  exercise,
-  logged,
-  lookupIn,
-  nov,
-  row,
-  threeSets,
-  warmup,
-  working,
-} from "../support/domain-factories";
+import { MuscleVolume, insight, recommendation } from "@nabd/coverage";
+
+/** Sixteen sets a week cover a muscle in full. */
+const FULL_COVERAGE_SETS = 16;
+import { exercise, logged, lookupIn, nov, row, threeSets, warmup, working } from "../support/builders";
 
 const press = exercise({ primary: ["chest"], secondary: ["triceps", "front_delts"] });
 const fly = exercise({ primary: ["chest"], secondary: [] });
@@ -33,7 +27,7 @@ describe("planned volume", () => {
           slots: [],
           exercises: [
             row(press.id, [warmup(10), ...threeSets()]),
-            row(curl.id, [working(10), { type: "drop", a: 10 }]),
+            row(curl.id, [working(10), { type: "drop", amount: 10 }]),
             row("missing", threeSets()),
           ],
         },

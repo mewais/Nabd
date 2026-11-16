@@ -1,7 +1,8 @@
 import { describeNextSet } from "@nabd/session";
 import type { NextSetWording } from "@nabd/session";
-import { buildWorld, did, lastWeek, pushDay } from "../support/plan-fixtures";
-import type { WorldInput } from "../support/plan-fixtures";
+import { did, lastWeek, pushDay } from "../support/programs";
+import { buildWorld } from "../support/world";
+import type { WorldInput } from "../support/world";
 
 function nextSetOf(itemId: string, input: Partial<WorldInput> = {}): NextSetWording {
   const { plan, coach } = buildWorld({ program: pushDay(), history: lastWeek(), ...input });
@@ -13,7 +14,10 @@ function nextSetOf(itemId: string, input: Partial<WorldInput> = {}): NextSetWord
 describe("describeNextSet", () => {
   it("words a warm-up's target and the plan's note, with no advice", () => {
     expect(nextSetOf("p-bench")).toEqual({
+      exercise: "Bench Press",
+      position: "Set 1 of 3",
       target: "Warm-up · 10 reps",
+      muscleNames: ["Chest", "Triceps", "Front Delts"],
       notes: "Pause at the chest",
       advice: null,
     });

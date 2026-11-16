@@ -3,6 +3,8 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import tsparser from "@typescript-eslint/parser";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
+import { layerRules } from "./scripts/eslint/layers.js";
+import { oneImportPerModule } from "./scripts/eslint/one-import-per-module.js";
 
 export default [
   {
@@ -12,7 +14,7 @@ export default [
       "**/target/**",
       "**/node_modules/**",
       "e2e/test-results/**",
-      "assets/body/**",
+      "packages/bodymap/src/drawing/bodydata.ts",
     ],
   },
   js.configs.recommended,
@@ -26,6 +28,7 @@ export default [
       "@typescript-eslint": tseslint,
       react,
       "react-hooks": reactHooks,
+      nabd: { rules: { "one-import-per-module": oneImportPerModule } },
     },
     rules: {
       ...tseslint.configs.recommended.rules,
@@ -41,9 +44,25 @@ export default [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+      // One import style: types come in their own `import type` statement, and
+      // a module is imported once per kind.
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        { prefer: "type-imports", fixStyle: "separate-type-imports" },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportSpecifier[importKind='type']",
+          message: "Import types with a separate `import type { … }` statement.",
+        },
+      ],
+      "nabd/one-import-per-module": "error",
     },
     settings: { react: { version: "detect" } },
   },
+  // The dependency direction between packages (README, "Layout").
+  ...layerRules,
   {
     // Node scripts.
     files: ["scripts/**/*.mjs"],

@@ -2,7 +2,7 @@
 // one exercise per equipment and laterality, plus the user's custom exercises.
 
 export { ExerciseLibrary } from "./library";
-export type { LibraryQuery } from "./library";
 // The composition rules, public so they can be exercised on small inputs.
 export { compose } from "./compose";
+export { currentExerciseId } from "./retired";
 export type { Movement } from "./movement";

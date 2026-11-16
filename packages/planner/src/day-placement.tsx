@@ -1,23 +1,32 @@
 import { Chip } from "@nabd/design-system";
-import type { DayActions } from "./actions";
 import type { DayPlacementVM } from "./editor-vm";
 import { MoveButtons } from "./move-buttons";
+import type { PlannerActions } from "./planner-actions";
 import { WeekdayPicker } from "./weekday-picker";
 
 interface DayPlacementProps {
-  placement: DayPlacementVM;
-  actions: Pick<DayActions, "setWeekday" | "move">;
+  vm: DayPlacementVM;
+  dayId: string;
+  actions: Pick<PlannerActions, "edit">;
 }
 
 /** Where a day sits in the plan, and the control that moves it. */
-export function DayPlacement({ placement, actions }: DayPlacementProps): JSX.Element {
-  if (placement.kind === "weekday") {
-    return <WeekdayPicker weekday={placement.weekday} onPick={actions.setWeekday} />;
+export function DayPlacement({ vm, dayId, actions }: DayPlacementProps): JSX.Element {
+  if (vm.kind === "weekday") {
+    return (
+      <WeekdayPicker
+        weekday={vm.weekday}
+        onPick={(weekday) => actions.edit((e) => e.setWeekday(dayId, weekday))}
+      />
+    );
   }
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <Chip variant="tag">{placement.label}</Chip>
-      <MoveButtons horizontal onMove={actions.move} />
+      <Chip variant="tag">{vm.label}</Chip>
+      <MoveButtons
+        horizontal
+        onMove={(direction) => actions.edit((e) => e.moveDay(dayId, direction))}
+      />
     </div>
   );
 }

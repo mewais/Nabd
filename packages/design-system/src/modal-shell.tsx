@@ -3,10 +3,11 @@ import type { ReactNode } from "react";
 import { Eyebrow } from "./eyebrow";
 import { ANIMATION } from "./global-styles";
 import { IconButton } from "./icon-button";
-import { COLOR, RADIUS, SHADOW, TEXT, Z, type ModalLayer } from "./tokens";
+import { COLOR, RADIUS, SHADOW, TEXT, Z } from "./tokens";
+import type { ModalLayer } from "./tokens";
 import { useEscapeKey } from "./use-escape-key";
 
-export interface ModalShellProps {
+interface ModalShellProps {
   title: ReactNode;
   /** The small accent label above the title. */
   eyebrow?: string;
@@ -43,6 +44,7 @@ export function ModalShell({
   return (
     <div
       data-modal-backdrop
+      data-layer={layer}
       onClick={onClose}
       style={{
         position: "fixed",

@@ -1,12 +1,13 @@
-import type { Equipment, Notice, Settings, Theme, WeightUnit } from "@nabd/domain";
-import { formatMinuteOfDay, roundTo } from "@nabd/domain";
-
-/** What the settings depend on of the computer they run on. */
-export interface PlatformFeatures {
-  tray: boolean;
-  glass: boolean;
-  idle: boolean;
-}
+import type {
+  Equipment,
+  NumericSetting,
+  PlatformCapabilities,
+  Settings,
+  Theme,
+  WeightUnit,
+} from "@nabd/domain";
+import { SETTING_STEPS, formatMinuteOfDay, glassInEffect, roundTo } from "@nabd/domain";
+import type { Notice } from "@nabd/view";
 
 /** A change to apply to the settings. */
 export type SettingsPatch = Partial<Settings>;
@@ -43,16 +44,13 @@ export interface SettingsVM {
   notice: Notice | null;
 }
 
-export interface SettingsInput {
+interface SettingsInput {
   settings: Settings;
   /** What this computer can do: a tray icon, a translucent window, system-wide idle time. */
-  capabilities: PlatformFeatures;
+  capabilities: PlatformCapabilities;
   notice: Notice | null;
 }
 
-type NumericSetting = {
-  [K in keyof Settings]: Settings[K] extends number ? K : never;
-}[keyof Settings];
 type BooleanSetting = {
   [K in keyof Settings]: Settings[K] extends boolean ? K : never;
 }[keyof Settings];
@@ -77,13 +75,14 @@ const IDLE_HINT = {
 class SettingsRows {
   constructor(private readonly settings: Settings) {}
 
+  /** A row that moves `key` by its step ({@link SETTING_STEPS}). */
   stepper(
     key: NumericSetting,
-    step: number,
     show: (value: number) => string,
     text: { title: string; hint: string },
   ): StepperRowVM {
     const value = this.settings[key];
+    const step = SETTING_STEPS[key];
     return {
       ...text,
       value: show(value),
@@ -103,32 +102,31 @@ class SettingsRows {
 
 export function buildSettingsVM({ settings, capabilities, notice }: SettingsInput): SettingsVM {
   const rows = new SettingsRows(settings);
-  const glassOn = capabilities.glass && settings.glass;
   return {
     workday: [
-      rows.stepper("workStart", 30, formatMinuteOfDay, {
+      rows.stepper("workStart", formatMinuteOfDay, {
         title: "Starts",
         hint: "Nabd stays silent before this.",
       }),
-      rows.stepper("workEnd", 30, formatMinuteOfDay, { title: "Ends", hint: "…and after this." }),
+      rows.stepper("workEnd", formatMinuteOfDay, { title: "Ends", hint: "…and after this." }),
     ],
     nudges: [
-      rows.stepper("interval", 5, minutes, {
+      rows.stepper("interval", minutes, {
         title: "Interval",
         hint: "Nudge this long after your last set, no matter what.",
       }),
-      rows.stepper("minGap", 5, minutes, {
+      rows.stepper("minGap", minutes, {
         title: "Minimum gap",
         hint: "Never nudge sooner than this after a set.",
       }),
-      rows.stepper("idleNudge", 5, (value) => `${value} sec`, {
+      rows.stepper("idleNudge", (value) => `${value} sec`, {
         title: "Idle moment",
         hint: capabilities.idle ? IDLE_HINT.system : IDLE_HINT.inApp,
       }),
     ],
     training: {
       unit: settings.weightUnit,
-      increment: rows.stepper("weightIncrement", 0.25, (v) => `${v} ${settings.weightUnit}`, {
+      increment: rows.stepper("weightIncrement", (v) => `${v} ${settings.weightUnit}`, {
         title: "Weight increment",
         hint:
           "The smallest jump you can load; suggestions use it. Changing the unit moves the " +
@@ -144,8 +142,8 @@ export function buildSettingsVM({ settings, capabilities, notice }: SettingsInpu
             hint: "Frost the panels so your desktop shows through.",
           })
         : null,
-      opacity: glassOn
-        ? rows.stepper("opacity", 0.05, (value) => `${Math.round(value * 100)}%`, {
+      opacity: glassInEffect(settings, capabilities)
+        ? rows.stepper("opacity", (value) => `${Math.round(value * 100)}%`, {
             title: "Background opacity",
             hint: "Higher = more solid.",
           })

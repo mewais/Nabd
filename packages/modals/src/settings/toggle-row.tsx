@@ -1,20 +1,21 @@
 import { FormRow, Toggle } from "@nabd/design-system";
-import type { SettingsPatch, ToggleRowVM } from "./settings-vm";
+import type { SettingsActions } from "./settings-actions";
+import type { ToggleRowVM } from "./settings-vm";
 
 interface ToggleRowProps {
-  row: ToggleRowVM;
-  onChange: (patch: SettingsPatch) => void;
+  vm: ToggleRowVM;
+  actions: Pick<SettingsActions, "change">;
 }
 
 /** An on/off setting with its switch. */
-export function ToggleRow({ row, onChange }: ToggleRowProps): JSX.Element {
+export function ToggleRow({ vm, actions }: ToggleRowProps): JSX.Element {
   return (
-    <FormRow title={row.title} hint={row.hint}>
+    <FormRow title={vm.title} hint={vm.hint}>
       <Toggle
-        on={row.on}
-        onChange={() => onChange(row.flip)}
-        ariaLabel={row.title}
-        disabled={row.disabled}
+        on={vm.on}
+        onChange={() => actions.change(vm.flip)}
+        ariaLabel={vm.title}
+        disabled={vm.disabled}
       />
     </FormRow>
   );

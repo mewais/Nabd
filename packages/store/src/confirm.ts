@@ -1,8 +1,8 @@
-import type { ConfirmActions } from "./actions";
 import type { StoreContext } from "./context";
+import type { ConfirmSlice } from "./slices";
 
 /** Destructive actions wait here for the user's yes before they run. */
-export function confirmActions({ get, set }: Pick<StoreContext, "get" | "set">): ConfirmActions {
+export function confirmSlice({ get, set }: Pick<StoreContext, "get" | "set">): ConfirmSlice {
   return {
     ask: (confirmation) => set({ confirmation }),
 

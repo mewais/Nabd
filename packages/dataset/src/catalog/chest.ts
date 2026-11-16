@@ -7,7 +7,6 @@ export const CHEST: Movement[] = [
     primary: ["chest"],
     secondary: ["front_delts", "triceps"],
     equipment: ["barbell", "dumbbell", "smith"],
-    laterality: ["bilateral"],
   },
   {
     id: "incline_bench_press",
@@ -15,7 +14,6 @@ export const CHEST: Movement[] = [
     primary: ["chest"],
     secondary: ["front_delts", "triceps"],
     equipment: ["barbell", "dumbbell", "smith"],
-    laterality: ["bilateral"],
   },
   {
     id: "decline_bench_press",
@@ -23,7 +21,6 @@ export const CHEST: Movement[] = [
     primary: ["chest"],
     secondary: ["triceps", "front_delts"],
     equipment: ["barbell", "dumbbell"],
-    laterality: ["bilateral"],
   },
   {
     id: "push_up",
@@ -32,7 +29,6 @@ export const CHEST: Movement[] = [
     secondary: ["front_delts", "triceps"],
     equipment: ["bodyweight"],
     laterality: ["bilateral", "unilateral"],
-    nameOverride: { bodyweight: "Push-Up", uni: "Single-Arm Push-Up" },
   },
   {
     id: "chest_dip",
@@ -40,9 +36,6 @@ export const CHEST: Movement[] = [
     primary: ["chest"],
     secondary: ["triceps", "front_delts"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Chest Dip" },
-    tracking: "weighted_bodyweight",
   },
   {
     id: "fly",
@@ -50,7 +43,6 @@ export const CHEST: Movement[] = [
     primary: ["chest"],
     secondary: [],
     equipment: ["dumbbell", "cable", "machine"],
-    laterality: ["bilateral"],
     nameOverride: { machine: "Pec Deck" },
   },
   {
@@ -59,7 +51,6 @@ export const CHEST: Movement[] = [
     primary: ["chest"],
     secondary: [],
     equipment: ["dumbbell", "cable"],
-    laterality: ["bilateral"],
   },
   {
     id: "cable_crossover",
@@ -67,6 +58,5 @@ export const CHEST: Movement[] = [
     primary: ["chest"],
     secondary: [],
     equipment: ["cable"],
-    laterality: ["bilateral"],
   },
 ];

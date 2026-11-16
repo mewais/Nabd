@@ -8,40 +8,35 @@ import { StepperRow } from "./stepper-row";
 import { ToggleRow } from "./toggle-row";
 import { TrainingSection } from "./training-section";
 
-export interface SettingsModalProps {
+interface SettingsModalProps {
   vm: SettingsVM;
   actions: SettingsActions;
 }
 
 /** Every setting, grouped; each change is applied at once. */
 export function SettingsModal({ vm, actions }: SettingsModalProps): JSX.Element {
-  const { change } = actions;
   return (
     <ModalShell title="Settings" onClose={actions.close} width={540} layer="modalTop">
       <div style={{ display: "flex", flexDirection: "column", gap: 22, padding: "18px 22px 22px" }}>
         <FormSection title="Workday">
           {vm.workday.map((row) => (
-            <StepperRow key={row.title} row={row} onChange={change} />
+            <StepperRow key={row.title} vm={row} actions={actions} />
           ))}
         </FormSection>
         <FormSection title="Nudges">
           {vm.nudges.map((row) => (
-            <StepperRow key={row.title} row={row} onChange={change} />
+            <StepperRow key={row.title} vm={row} actions={actions} />
           ))}
         </FormSection>
-        <TrainingSection training={vm.training} onChange={change} />
-        <AppearanceSection appearance={vm.appearance} onChange={change} />
+        <TrainingSection vm={vm.training} actions={actions} />
+        <AppearanceSection vm={vm.appearance} actions={actions} />
         <FormSection title="Startup">
           {vm.startup.map((row) => (
-            <ToggleRow key={row.title} row={row} onChange={change} />
+            <ToggleRow key={row.title} vm={row} actions={actions} />
           ))}
         </FormSection>
-        <NotificationsSection onTest={actions.sendTestNotification} />
-        <DataSection
-          notice={vm.notice}
-          onExport={actions.exportData}
-          onImport={actions.importData}
-        />
+        <NotificationsSection actions={actions} />
+        <DataSection vm={vm.notice} actions={actions} />
         <Button variant="secondary" block onClick={actions.quit}>
           Quit Nabd
         </Button>

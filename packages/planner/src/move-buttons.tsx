@@ -1,8 +1,9 @@
+import type { Direction } from "@nabd/domain";
 import { IconButton } from "@nabd/design-system";
 
 interface MoveButtonsProps {
   /** Earlier (-1) or later (+1). */
-  onMove: (direction: number) => void;
+  onMove: (direction: Direction) => void;
   /** Arrows point left/right (a row of things) instead of up/down (a list). */
   horizontal?: boolean;
 }

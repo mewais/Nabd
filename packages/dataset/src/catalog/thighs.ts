@@ -8,7 +8,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes", "hamstrings"],
     equipment: ["barbell", "smith"],
-    laterality: ["bilateral"],
   },
   {
     id: "front_squat",
@@ -16,7 +15,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes"],
     equipment: ["barbell", "dumbbell"],
-    laterality: ["bilateral"],
   },
   {
     id: "goblet_squat",
@@ -24,7 +22,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes"],
     equipment: ["dumbbell", "kettlebell"],
-    laterality: ["bilateral"],
   },
   {
     id: "bodyweight_squat",
@@ -32,7 +29,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
     nameOverride: { bodyweight: "Bodyweight Squat" },
   },
   {
@@ -41,7 +37,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes", "hamstrings"],
     equipment: ["machine"],
-    laterality: ["bilateral"],
     nameOverride: { machine: "Leg Press" },
   },
   {
@@ -50,8 +45,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes"],
     equipment: ["bodyweight", "dumbbell", "barbell"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Lunge" },
   },
   {
     id: "walking_lunge",
@@ -59,8 +52,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes"],
     equipment: ["bodyweight", "dumbbell", "barbell"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Walking Lunge" },
   },
   {
     id: "bulgarian_split_squat",
@@ -68,8 +59,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes"],
     equipment: ["bodyweight", "dumbbell", "barbell"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Bulgarian Split Squat" },
   },
   {
     id: "leg_extension",
@@ -77,7 +66,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: [],
     equipment: ["machine"],
-    laterality: ["bilateral"],
   },
   {
     id: "hack_squat",
@@ -85,7 +73,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes"],
     equipment: ["machine", "barbell"],
-    laterality: ["bilateral"],
   },
   {
     id: "step_up",
@@ -93,8 +80,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes"],
     equipment: ["bodyweight", "dumbbell"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Step-Up" },
   },
   {
     id: "wall_sit",
@@ -102,8 +87,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: ["glutes"],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Wall Sit" },
     tracking: "duration",
   },
   {
@@ -112,8 +95,6 @@ export const THIGHS: Movement[] = [
     primary: ["quads"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Sissy Squat" },
   },
 
   // Hamstrings
@@ -123,7 +104,6 @@ export const THIGHS: Movement[] = [
     primary: ["hamstrings"],
     secondary: ["glutes", "lower_back"],
     equipment: ["barbell", "dumbbell", "cable"],
-    laterality: ["bilateral"],
   },
   {
     id: "leg_curl",
@@ -131,11 +111,7 @@ export const THIGHS: Movement[] = [
     primary: ["hamstrings"],
     secondary: [],
     equipment: ["machine", "cable"],
-    laterality: ["bilateral"],
-    nameOverride: {
-      machine: "Leg Curl",
-      cable: "Cable Leg Curl",
-    },
+    nameOverride: { machine: "Leg Curl" },
   },
   {
     id: "nordic_curl",
@@ -143,8 +119,6 @@ export const THIGHS: Movement[] = [
     primary: ["hamstrings"],
     secondary: [],
     equipment: ["bodyweight"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Nordic Curl" },
   },
   {
     id: "stiff_leg_deadlift",
@@ -152,7 +126,6 @@ export const THIGHS: Movement[] = [
     primary: ["hamstrings"],
     secondary: ["lower_back", "glutes"],
     equipment: ["barbell", "dumbbell"],
-    laterality: ["bilateral"],
   },
   {
     id: "glute_ham_raise",
@@ -160,7 +133,5 @@ export const THIGHS: Movement[] = [
     primary: ["hamstrings"],
     secondary: ["glutes"],
     equipment: ["bodyweight", "machine"],
-    laterality: ["bilateral"],
-    nameOverride: { bodyweight: "Glute-Ham Raise" },
   },
 ];

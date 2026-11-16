@@ -4,7 +4,7 @@ import type { SessionActions } from "./session-actions";
 import type { SessionVM } from "./session-vm";
 import { SetForm } from "./set-form";
 
-export interface SessionModalProps {
+interface SessionModalProps {
   vm: SessionVM;
   actions: SessionActions;
 }
@@ -20,8 +20,8 @@ export function SessionModal({ vm, actions }: SessionModalProps): JSX.Element {
       width={720}
     >
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        <ExerciseList rows={vm.list} onPick={actions.focusItem} onLogOther={actions.logOther} />
-        <SetForm form={vm.form} actions={actions} />
+        <ExerciseList vm={vm.list} actions={actions} />
+        <SetForm vm={vm.form} actions={actions} />
       </div>
       <footer
         style={{

@@ -1,38 +1,28 @@
 import type { Exercise, LoggedSet, Prescription, SetSpec } from "@nabd/domain";
 import { isWarmup } from "@nabd/domain";
 
-export type PlanItemStatus = "done" | "skipped" | "pending";
+type PlanItemStatus = "done" | "skipped" | "pending";
 
-export interface PlanItemInit {
-  id: string;
-  exercise: Exercise;
-  /** Heading shown beside the exercise: its group, or the cycled slot's target muscle. */
-  label: string;
-  /** Null for an unplanned extra, which has no set target. */
-  prescription: Prescription | null;
-  supersetId?: string;
-  logged: readonly LoggedSet[];
-  skipped: boolean;
-}
+/** What a plan item is made from: its own fields (see {@link PlanItem}). */
+type PlanItemInit = Pick<
+  PlanItem,
+  "id" | "exercise" | "label" | "prescription" | "supersetId" | "logged" | "skipped"
+>;
 
 /** One exercise in today's queue, with what is prescribed and what has been logged. */
 export class PlanItem {
-  readonly id: string;
-  readonly exercise: Exercise;
-  readonly label: string;
-  readonly prescription: Prescription | null;
-  readonly supersetId: string | undefined;
-  readonly logged: readonly LoggedSet[];
-  readonly skipped: boolean;
+  declare readonly id: string;
+  declare readonly exercise: Exercise;
+  /** Heading shown beside the exercise: its group, or the cycled slot's target muscle. */
+  declare readonly label: string;
+  /** Null for an unplanned extra, which has no set target. */
+  declare readonly prescription: Prescription | null;
+  declare readonly supersetId?: string | undefined;
+  declare readonly logged: readonly LoggedSet[];
+  declare readonly skipped: boolean;
 
   constructor(init: PlanItemInit) {
-    this.id = init.id;
-    this.exercise = init.exercise;
-    this.label = init.label;
-    this.prescription = init.prescription;
-    this.supersetId = init.supersetId;
-    this.logged = init.logged;
-    this.skipped = init.skipped;
+    Object.assign(this, init);
   }
 
   /** True for an unplanned exercise added just for today. */
@@ -80,5 +70,12 @@ export class PlanItem {
   /** How many non-warm-up sets have been logged (the index progression compares on). */
   get workingSetsDone(): number {
     return this.logged.filter((set) => !isWarmup(set)).length;
+  }
+
+  /** Load moved so far, in kg: reps × weight over the logged sets, warm-ups left out. */
+  get loadLifted(): number {
+    return this.logged
+      .filter((set) => !isWarmup(set))
+      .reduce((total, set) => total + set.value * (set.weight ?? 0), 0);
   }
 }

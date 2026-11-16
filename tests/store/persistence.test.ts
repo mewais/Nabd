@@ -1,10 +1,11 @@
 import type { Program } from "@nabd/domain";
 import { DEFAULT_SETTINGS } from "@nabd/domain";
-import { nov } from "../support/domain-factories";
-import { benchRow, benchSet, boot, fakeBackend, program } from "./harness";
+import { nov } from "../support/builders";
+import { catalogBenchRow, catalogPushPull } from "../support/programs";
+import { benchSet, boot, fakeBackend } from "./fixtures";
 
 describe("stored data that cannot be read", () => {
-  const goodSet = (id: string) => benchSet(nov(16, 9, 30), { id, planItemId: benchRow.id });
+  const goodSet = (id: string) => benchSet(nov(16, 9, 30), { id, planItemId: catalogBenchRow.id });
 
   it("an unreadable value runs on a default, is reported, and is never saved over", async () => {
     const stored = { nonsense: true };
@@ -28,7 +29,7 @@ describe("stored data that cannot be read", () => {
   });
 
   it("what could be read keeps saving as usual", async () => {
-    const app = await boot({ program, customExercises: "??" });
+    const app = await boot({ program: catalogPushPull, customExercises: "??" });
     app.get().editProgram((e) => e.rename("Renamed"));
     expect((app.data.program as Program).name).toBe("Renamed");
   });
@@ -37,7 +38,7 @@ describe("stored data that cannot be read", () => {
     const stored = { ...DEFAULT_SETTINGS, interval: 30, opacity: 7, equipment: ["sled"] };
 
     it("one bad field falls back to its default; the others are kept", async () => {
-      const app = await boot({ program, settings: stored });
+      const app = await boot({ program: catalogPushPull, settings: stored });
       expect(app.get().settings).toEqual({ ...DEFAULT_SETTINGS, interval: 30 });
       expect(app.get().loadProblems).toEqual([]);
       expect(app.get().appNotice).toEqual({
@@ -47,7 +48,7 @@ describe("stored data that cannot be read", () => {
     });
 
     it("what was repaired is written back, and settings go on being saved", async () => {
-      const app = await boot({ program, settings: stored });
+      const app = await boot({ program: catalogPushPull, settings: stored });
       expect(app.data.settings).toEqual({ ...DEFAULT_SETTINGS, interval: 30 });
       app.get().updateSettings({ minGap: 10 });
       expect(app.data.settings).toEqual({ ...DEFAULT_SETTINGS, interval: 30, minGap: 10 });
@@ -62,29 +63,49 @@ describe("stored data that cannot be read", () => {
     });
 
     it("settings in order are not written again at boot", async () => {
-      const app = await boot({ program, settings: DEFAULT_SETTINGS });
+      const app = await boot({ program: catalogPushPull, settings: DEFAULT_SETTINGS });
       expect(app.savedKeys()).not.toContain("settings");
     });
   });
 
   it("counts the sets the backend itself could not read", async () => {
-    const app = await boot({ program, history: [goodSet("a"), { id: 1 }], unreadableSets: 2 });
+    const app = await boot({
+      program: catalogPushPull,
+      history: [goodSet("a"), { id: 1 }],
+      unreadableSets: 2,
+    });
     expect(app.get().history.map((set) => set.id)).toEqual(["a"]);
     expect(app.get().loadProblems).toEqual([{ source: "history", detail: "3 sets left out" }]);
   });
 
+  it("an export says that the sets that could not be read are not in it", async () => {
+    const app = await boot({
+      program: catalogPushPull,
+      history: [goodSet("a"), { id: 1 }],
+      unreadableSets: 2,
+    });
+    await app.get().exportData();
+    expect(app.get().dataNotice).toEqual({
+      kind: "info",
+      text: "Exported to memory (nothing is written) — without 3 sets left out that could not be read",
+    });
+  });
+
   it("one bad history row is left out without losing the others", async () => {
-    const app = await boot({ program, history: [goodSet("a"), { id: 1 }, goodSet("b")] });
+    const app = await boot({
+      program: catalogPushPull,
+      history: [goodSet("a"), { id: 1 }, goodSet("b")],
+    });
     expect(app.get().history.map((set) => set.id)).toEqual(["a", "b"]);
-    expect(app.plan().item(benchRow.id)!.done).toBe(2);
+    expect(app.plan().item(catalogBenchRow.id)!.done).toBe(2);
     expect(app.get().loadProblems).toEqual([{ source: "history", detail: "1 set left out" }]);
 
-    await app.log(benchRow.id, 1);
+    await app.log(catalogBenchRow.id, 1);
     expect(app.client.appendSet).toHaveBeenCalledTimes(1);
   });
 
   it("a load that fails outright is reported, and nothing is saved over the unread data", async () => {
-    const backend = fakeBackend({ program });
+    const backend = fakeBackend({ program: catalogPushPull });
     backend.client.loadAll = async () => Promise.reject(new Error("database is locked"));
     const app = await boot({}, backend);
     expect(app.get().booted).toBe(true);
@@ -97,12 +118,12 @@ describe("stored data that cannot be read", () => {
     app.get().togglePause();
     app.advanceTo(nov(17, 9));
     expect(app.client.save).not.toHaveBeenCalled();
-    expect(app.data.program).toEqual(program);
+    expect(app.data.program).toEqual(catalogPushPull);
   });
 
   it("importing a backup replaces the unreadable data and lifts the block", async () => {
     const app = await boot({ program: { nonsense: true } });
-    await app.importFile(JSON.stringify({ app: "Nabd", version: 2, program }));
+    await app.importFile(JSON.stringify({ app: "Nabd", version: 2, program: catalogPushPull }));
     expect(app.get().loadProblems).toEqual([]);
     expect(app.get().appNotice).toBeNull();
     app.get().editProgram((e) => e.rename("Recovered"));
@@ -133,9 +154,9 @@ describe("failed saves", () => {
   it("the notice outlives the Settings dialog and goes when dismissed", async () => {
     const app = await boot();
     vi.mocked(app.client.appendSet).mockRejectedValueOnce(new Error("disk full"));
-    await app.log(benchRow.id, 1);
-    app.get().setSettingsOpen(true);
-    app.get().setSettingsOpen(false);
+    await app.log(catalogBenchRow.id, 1);
+    app.get().openSettings();
+    app.get().closeSettings();
     expect(app.get().appNotice).not.toBeNull();
     app.get().dismissNotice();
     expect(app.get().appNotice).toBeNull();
@@ -143,7 +164,7 @@ describe("failed saves", () => {
 
   it("an undo that fails leaves the set where it was, and says so", async () => {
     const app = await boot();
-    await app.log(benchRow.id, 1);
+    await app.log(catalogBenchRow.id, 1);
     vi.mocked(app.client.deleteSet).mockRejectedValueOnce(new Error("busy"));
     await app.get().undoSet(app.get().history[0]!.id);
     expect(app.get().history).toHaveLength(1);

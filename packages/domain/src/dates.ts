@@ -22,8 +22,8 @@ export function addDays(d: Date, days: number): Date {
 
 /** Parse a `YYYY-MM-DD` key back to local midnight. */
 export function parseDateKey(key: string): Date {
-  const [y, m, d] = key.split("-").map(Number);
-  return new Date(y!, m! - 1, d!);
+  const [year = NaN, month = NaN, day = NaN] = key.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
 
 /** The Monday starting the Mon–Sun week that contains `d`. */

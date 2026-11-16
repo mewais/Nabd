@@ -1,13 +1,14 @@
 import { Chip, Eyebrow, IconButton, RADIUS, SURFACE2_BOX, TEXT } from "@nabd/design-system";
+import type { SessionActions } from "./session-actions";
 import type { LoggedSetVM } from "./session-vm";
 
 interface LoggedSetsProps {
-  sets: LoggedSetVM[];
-  onUndo: (setId: string) => void;
+  vm: LoggedSetVM[];
+  actions: Pick<SessionActions, "undoSet">;
 }
 
 /** The sets of this exercise logged today, each of which can be deleted. */
-export function LoggedSets({ sets, onUndo }: LoggedSetsProps): JSX.Element {
+export function LoggedSets({ vm, actions }: LoggedSetsProps): JSX.Element {
   return (
     <section aria-label="Logged today" style={{ marginTop: 18 }}>
       <Eyebrow style={{ marginBottom: 9 }}>Logged today</Eyebrow>
@@ -21,7 +22,7 @@ export function LoggedSets({ sets, onUndo }: LoggedSetsProps): JSX.Element {
           listStyle: "none",
         }}
       >
-        {sets.map((set) => (
+        {vm.map((set) => (
           <li
             key={set.id}
             style={{
@@ -45,7 +46,7 @@ export function LoggedSets({ sets, onUndo }: LoggedSetsProps): JSX.Element {
               icon="close"
               variant="plain"
               ariaLabel={set.deleteLabel}
-              onClick={() => onUndo(set.id)}
+              onClick={() => actions.undoSet(set.id)}
             />
           </li>
         ))}

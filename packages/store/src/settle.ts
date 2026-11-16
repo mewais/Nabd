@@ -28,8 +28,7 @@ function settledSession(before: NabdState, after: NabdState): LogSession | null 
  * NudgeContext.activeSince): set when the plan gains work, cleared when none is left.
  */
 function settledActiveSince(after: NabdState): Date | null {
-  const hasWork = selectTodayPlan(after).setsRemaining > 0;
-  return hasWork ? (after.activeSince ?? after.now) : null;
+  return selectTodayPlan(after).hasWork ? (after.activeSince ?? after.now) : null;
 }
 
 /** The corrections that make `after`, reached from `before`, a settled state. */

@@ -126,7 +126,7 @@ describe("AppShell · top bar", () => {
   });
 
   it("offers no Glass button where the window cannot be translucent", () => {
-    renderShell({ glassSupported: false });
+    renderShell({ capabilities: { glass: false } });
     expect(screen.queryByRole("button", { name: "Glass" })).not.toBeInTheDocument();
     expect(button("Pause")).toBeInTheDocument();
   });
@@ -172,7 +172,7 @@ describe("AppShell · notice banner", () => {
 
   it("shows plain information as a status, not an alert", () => {
     renderShell({ notice: { kind: "info", text: "Imported" } });
-    expect(screen.getByText("Imported").parentElement).toHaveAttribute("role", "status");
+    expect(screen.getByText("Imported").closest("[role]")).toHaveAttribute("role", "status");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });

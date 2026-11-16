@@ -6,8 +6,9 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { SessionModal } from "@nabd/modals";
 import type { SessionActions, SessionVM } from "@nabd/modals";
-import { did, lastWeek, pushDay } from "../support/plan-fixtures";
+import { did, lastWeek, pushDay } from "../support/programs";
 import { sessionVM } from "./fixtures";
+import { modalBackdrop } from "../support/dom";
 
 /** Bench Press, warm-up done and one working set logged; rows finished; plank skipped. */
 const SETS = {
@@ -46,9 +47,9 @@ function setup(vm: SessionVM = benchVM()) {
   const view = render(<SessionModal vm={vm} actions={actions} />);
   /** The −/+ buttons that belong to the field labelled `label`. */
   const stepper = (label: string) => {
-    const field = screen.getByLabelText(label);
-    if (!field.parentElement) throw new Error(`no stepper around "${label}"`);
-    return within(field.parentElement);
+    const group = screen.getByLabelText(label).closest<HTMLElement>('[role="group"]');
+    if (!group) throw new Error(`no stepper around "${label}"`);
+    return within(group);
   };
   const list = within(screen.getByRole("navigation", { name: "Today's exercises" }));
   /** The row for `exercise` in the left-hand list of today's exercises. */
@@ -224,7 +225,7 @@ describe("SessionModal", () => {
     expect(actions.close).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(actions.close).toHaveBeenCalledTimes(2);
-    fireEvent.click(screen.getByRole("dialog").parentElement as HTMLElement);
+    fireEvent.click(modalBackdrop());
     expect(actions.close).toHaveBeenCalledTimes(3);
   });
 

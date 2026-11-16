@@ -1,9 +1,10 @@
 import { Card, Eyebrow, Stepper } from "@nabd/design-system";
+import type { Direction } from "@nabd/domain";
 
 interface StepperCardProps {
   label: string;
   value: number;
-  onStep: (direction: number) => void;
+  onStep: (direction: Direction) => void;
   onSet: (value: number) => void;
   /** Enter in the field: log the set. */
   onEnter: () => void;
@@ -20,14 +21,7 @@ export function StepperCard({
   return (
     <Card variant="inset" stacked padding={14} style={{ flex: 1, alignItems: "center", gap: 10 }}>
       <Eyebrow>{label}</Eyebrow>
-      <Stepper
-        value={value}
-        onDec={() => onStep(-1)}
-        onInc={() => onStep(1)}
-        onSet={onSet}
-        onEnter={onEnter}
-        ariaLabel={label}
-      />
+      <Stepper value={value} onStep={onStep} onSet={onSet} onEnter={onEnter} ariaLabel={label} />
     </Card>
   );
 }

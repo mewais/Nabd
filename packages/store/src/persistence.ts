@@ -1,18 +1,35 @@
 import type { LoggedSet } from "@nabd/domain";
 import type { Singletons } from "@nabd/ipc-client";
+import type { Notice } from "@nabd/view";
 import type { StoreCore } from "./context";
-import { STORED_NAMES } from "./hydration";
-import type { LoadProblem } from "./state";
+import type { LoadProblem, NoticePlace } from "./state";
+
+/** How each stored thing is named to the user. */
+export const STORED_NAMES: Record<LoadProblem["source"], string> = {
+  program: "your plan",
+  settings: "your settings",
+  customExercises: "your custom exercises",
+  rotationState: "your exercise rotation",
+  dayState: "today's progress",
+  dayLog: "your completion log",
+  history: "your logged sets",
+  everything: "your data",
+};
 
 export const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
-/** The store's one path to the backend for anything that can fail. */
+/** How a backend call went: with what it resolved to, or not at all. */
+type Attempt<T> = { ok: true; value: T } | { ok: false };
+
+/** The store's one path to the backend for anything that can fail, and to the user's notices. */
 export interface Persistence {
+  /** Tell the user something, in the banner unless `place` says otherwise. */
+  notify: (kind: Notice["kind"], text: string, place?: NoticePlace) => void;
   /**
-   * Run a backend call. A failure never throws into the UI: it becomes the
-   * app-level notice ("Could not <what>: …"). Resolves to whether the call worked.
+   * Run a backend call. A failure never throws into the UI: it becomes a
+   * notice ("Could not <what>: …"), in the banner unless `place` says otherwise.
    */
-  attempt: (what: string, call: () => Promise<unknown>) => Promise<boolean>;
+  attempt: <T>(what: string, call: () => Promise<T>, place?: NoticePlace) => Promise<Attempt<T>>;
   /** Update one persisted singleton in state and in the backend. */
   save: <K extends keyof Singletons>(key: K, value: Singletons[K]) => void;
   /** Write a singleton to the backend, if it may be written. */
@@ -30,6 +47,11 @@ export interface Persistence {
 }
 
 export function createPersistence({ set, get, client }: StoreCore): Persistence {
+  const notify: Persistence["notify"] = (kind, text, place = "appNotice") => {
+    const notice = { kind, text };
+    set(place === "appNotice" ? { appNotice: notice } : { dataNotice: notice });
+  };
+
   const stopWaiting = (setId: string): void =>
     set((s) => ({ unsavedSets: s.unsavedSets.filter((id) => id !== setId) }));
 
@@ -54,9 +76,7 @@ export function createPersistence({ set, get, client }: StoreCore): Persistence 
       if (waiting && undone) await attempt("undo that set", () => client.deleteSet(setId));
       else if (waiting) saved += 1;
     }
-    if (saved > 0) {
-      set({ appNotice: { kind: "info", text: "The sets that were waiting are saved now." } });
-    }
+    if (saved > 0) notify("info", "The sets that were waiting are saved now.");
     return true;
   }
 
@@ -73,15 +93,15 @@ export function createPersistence({ set, get, client }: StoreCore): Persistence 
     if (get().unsavedSets.length > 0) void flushSets();
   };
 
-  const attempt: Persistence["attempt"] = async (what, call) => {
+  const attempt: Persistence["attempt"] = async (what, call, place) => {
     try {
-      await call();
+      const value = await call();
+      backendWorked();
+      return { ok: true, value };
     } catch (e) {
-      set({ appNotice: { kind: "error", text: `Could not ${what}: ${errorText(e)}` } });
-      return false;
+      notify("error", `Could not ${what}: ${errorText(e)}`, place);
+      return { ok: false };
     }
-    backendWorked();
-    return true;
   };
 
   /** Not if its stored copy could not be read: that copy must not be overwritten (see LoadProblem). */
@@ -95,6 +115,7 @@ export function createPersistence({ set, get, client }: StoreCore): Persistence 
   };
 
   return {
+    notify,
     attempt,
     persist,
     flushSets,
@@ -111,13 +132,12 @@ export function createPersistence({ set, get, client }: StoreCore): Persistence 
       try {
         await client.appendSet(logged);
       } catch (e) {
-        const text =
+        set((s) => ({ unsavedSets: [...s.unsavedSets, logged.id] }));
+        notify(
+          "error",
           `Could not save that set: ${errorText(e)}. ` +
-          "It is kept, marked as not saved yet, and will be saved as soon as that works again.";
-        set((s) => ({
-          unsavedSets: [...s.unsavedSets, logged.id],
-          appNotice: { kind: "error", text },
-        }));
+            "It is kept, marked as not saved yet, and will be saved as soon as that works again.",
+        );
         return;
       }
       backendWorked();

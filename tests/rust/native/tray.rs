@@ -209,9 +209,9 @@ fn only_start_and_open_bring_the_window_forward() {
 }
 
 #[test]
-fn start_and_pause_are_forwarded_to_the_frontend_under_their_ids() {
+fn start_pause_and_quit_are_forwarded_to_the_frontend_under_their_ids() {
     assert_eq!(TrayCommand::Start.frontend_action(), Some("start"));
     assert_eq!(TrayCommand::Pause.frontend_action(), Some("pause"));
     assert_eq!(TrayCommand::Open.frontend_action(), None);
-    assert_eq!(TrayCommand::Quit.frontend_action(), None);
+    assert_eq!(TrayCommand::Quit.frontend_action(), Some("quit"));
 }

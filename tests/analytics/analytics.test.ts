@@ -1,7 +1,7 @@
 import type { DayRecord, LoggedSet } from "@nabd/domain";
 import { dateKey } from "@nabd/domain";
 import { TrainingStats } from "@nabd/analytics";
-import { dayRecord, exercise, logged, nov } from "../support/domain-factories";
+import { dayRecord, exercise, logged, nov } from "../support/builders";
 
 const ex = exercise();
 const setsOn = (day: number, count: number, hour = 10): LoggedSet[] =>

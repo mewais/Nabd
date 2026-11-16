@@ -13,5 +13,6 @@ export function floatingDay(program: Program, dayId: string | null): Day | null 
 export function dayAfter(program: Program, dayId: string | null): string | null {
   const current = floatingDay(program, dayId);
   if (current === null) return null;
-  return program.days[(program.days.indexOf(current) + 1) % program.days.length]!.id;
+  const next = program.days[(program.days.indexOf(current) + 1) % program.days.length];
+  return next?.id ?? null;
 }

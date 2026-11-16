@@ -5,7 +5,7 @@ import type { Option } from "./option";
 import { RADIUS, SHADOW, SURFACE2_BOX, Z, tint } from "./tokens";
 import { useEscapeKey } from "./use-escape-key";
 
-export interface DropdownProps<V extends string = string> {
+interface DropdownProps<V extends string = string> {
   value: V;
   options: readonly Option<V>[];
   onChange: (value: V) => void;

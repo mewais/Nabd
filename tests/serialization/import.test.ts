@@ -1,12 +1,9 @@
 import { APPDATA_VERSION, DEFAULT_SETTINGS } from "@nabd/domain";
-import {
-  parseImport,
-  upgradeDayState,
-  upgradeRotation,
-  upgradeSettings,
-} from "@nabd/serialization";
+import { parseImport } from "@nabd/serialization";
 
-const doc = (fields: object): string => JSON.stringify({ app: "Nabd", version: 2, ...fields });
+/** An export file of the current version holding `fields`. */
+const doc = (fields: object): string =>
+  JSON.stringify({ app: "Nabd", version: APPDATA_VERSION, ...fields });
 
 describe("parseImport", () => {
   it("accepts a current export and fills defaults on logged sets", () => {
@@ -59,22 +56,11 @@ describe("parseImport", () => {
       ok: true,
       data: { settings: { theme: "dark", glass: true, interval: 30 } },
     });
-
-    const current = { theme: "light", glass: false };
-    expect(upgradeSettings(current)).toBe(current);
-    expect(upgradeSettings(null)).toBeNull();
   });
 
   it("turns an old pool position into the id of the exercise it pointed at", () => {
-    const slot = (id: string, pool: string[]) => ({ id, muscle: "chest", pool });
-    const day = { id: "a", slots: [slot("chest", ["bench", "fly"]), slot("empty", [])] };
+    const day = { id: "a" };
     const program = { name: "P", type: "cycled", schedule: "floating", days: [day] };
-    expect(upgradeRotation({ chest: 3, empty: 2, gone: 1 }, program)).toEqual({ chest: "fly" });
-
-    const current = { chest: "fly" };
-    expect(upgradeRotation(current, program)).toBe(current);
-    expect(upgradeRotation("garbage", program)).toBe("garbage");
-
     const fullDay = { ...day, name: "A", weekday: null, exercises: [], slots: [] };
     const result = parseImport(
       doc({ program: { ...program, days: [fullDay] }, rotationState: { chest: 1 } }),
@@ -97,13 +83,36 @@ describe("parseImport", () => {
       doc({ program, dayState: { date: "2026-11-16", floatingIndex: 3 } }),
     );
     expect(result).toMatchObject({ ok: true, data: { dayState: { dayId: "b" } } });
+  });
 
-    expect(upgradeDayState({ date: "2026-11-16", floatingIndex: 1 }, null)).toMatchObject({
-      dayId: null,
+  it("reads a version 2 export: prescribed sets under their old field names", () => {
+    const row = {
+      id: "r1",
+      exId: "bench_press__barbell",
+      repMode: "range",
+      intensity: "rpe",
+      rest: 90,
+      sets: [
+        { type: "warmup", a: 10 },
+        { type: "working", a: 8, b: 12, val: 8 },
+      ],
+    };
+    const slot = { ...row, id: "s1", exId: undefined, muscle: "chest", pool: [] };
+    const day = { id: "d", name: "Push", weekday: 1, exercises: [row], slots: [slot] };
+    const program = { name: "P", type: "fixed", schedule: "weekday", days: [day] };
+    const result = parseImport(JSON.stringify({ app: "Nabd", version: 2, program }));
+
+    const sets = [
+      { type: "warmup", amount: 10 },
+      { type: "working", amount: 8, upTo: 12, intensity: 8 },
+    ];
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        version: APPDATA_VERSION,
+        program: { days: [{ exercises: [{ sets }], slots: [{ sets }] }] },
+      },
     });
-    const current = { date: "2026-11-16", dayId: "a" };
-    expect(upgradeDayState(current, program)).toBe(current);
-    expect(upgradeDayState("garbage", program)).toBe("garbage");
   });
 
   it("drops fields it does not know", () => {
@@ -117,7 +126,7 @@ describe("parseImport", () => {
       ok: false,
       errors: ["This file is not a Nabd export."],
     });
-    expect(parseImport(JSON.stringify({ app: "Other", version: 2 })).ok).toBe(false);
+    expect(parseImport(JSON.stringify({ app: "Other", version: APPDATA_VERSION })).ok).toBe(false);
   });
 
   it("says where an invalid document is wrong", () => {
