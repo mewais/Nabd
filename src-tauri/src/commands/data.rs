@@ -47,7 +47,7 @@ pub fn export_data<R: Runtime>(
     app: AppHandle<R>,
     db: State<'_, Database>,
 ) -> AppResult<String> {
-    let json = db.with(|commands| commands.export_data(version))?;
+    let json = db.with(|commands| commands.export_data(&app.package_info().name, version))?;
     Ok(export::write(&app, &json, purpose)?.display().to_string())
 }
 

@@ -3,13 +3,13 @@
 use serde_json::json;
 
 use crate::common::set_json;
-use crate::support::{append, exported, fresh_db, snapshot, VERSION};
+use crate::support::{append, exported, fresh_db, snapshot, APP_NAME, VERSION};
 
 #[test]
 fn export_of_an_empty_db_has_only_app_version_and_empty_history() {
     assert_eq!(
         exported(&fresh_db()),
-        json!({"app": "Nabd", "version": VERSION, "history": []})
+        json!({"app": APP_NAME, "version": VERSION, "history": []})
     );
 }
 
@@ -45,7 +45,7 @@ fn export_can_be_imported_into_another_db() {
 
     let target = fresh_db();
     target
-        .import_data(&source.export_data(VERSION).unwrap())
+        .import_data(&source.export_data(APP_NAME, VERSION).unwrap())
         .unwrap();
 
     assert_eq!(snapshot(&target), snapshot(&source));

@@ -107,7 +107,8 @@ fn start<R: Runtime>(app: &mut App<R>) -> AppResult<()> {
 /// The window never appeared, so the only places to say why are the OS
 /// notification area and, for a launch from a terminal, stderr.
 fn report_startup_failure<R: Runtime>(app: &AppHandle<R>, error: &AppError) {
-    eprintln!("Nabd could not start: {error}");
+    let name = &app.package_info().name;
+    eprintln!("{name} could not start: {error}");
     // If even this fails there is nowhere left to report to.
-    let _ = notifications::show(app, DesktopNotification::startup_failure(error));
+    let _ = notifications::show(app, DesktopNotification::startup_failure(name, error));
 }

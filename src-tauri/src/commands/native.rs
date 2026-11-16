@@ -25,7 +25,7 @@ pub fn notify_nudge<R: Runtime>(
 
 #[tauri::command]
 pub fn send_test_notification<R: Runtime>(app: AppHandle<R>) -> AppResult<()> {
-    notifications::show(&app, DesktopNotification::test())
+    notifications::show(&app, DesktopNotification::test(&app.package_info().name))
 }
 
 #[tauri::command]

@@ -13,14 +13,14 @@ fn a_notification_arrives_from_the_frontend_as_a_title_and_a_body() {
 
 #[test]
 fn the_test_notification_is_recognisably_a_test() {
-    let notification = DesktopNotification::test();
+    let notification = DesktopNotification::test("Nabd");
     assert_eq!(notification.title, "Nabd");
     assert!(notification.body.starts_with("Notifications are working"));
 }
 
 #[test]
 fn a_failed_start_is_reported_with_its_reason() {
-    let notification = DesktopNotification::startup_failure(&"the database is locked");
+    let notification = DesktopNotification::startup_failure("Nabd", &"the database is locked");
     assert_eq!(notification.title, "Nabd could not start");
     assert_eq!(notification.body, "the database is locked");
 }

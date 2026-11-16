@@ -347,8 +347,16 @@ themes, on the e2e fixture and its fake clock, into `e2e/visual/shots/` (`OUT=<d
 elsewhere, `URL=<app>` for an app already being served) — for comparing two builds by
 eye; `pnpm e2e` does not run it. The same capture, as its own project
 (`pnpm exec playwright test --config e2e/visual --project icon`), renders the app icon's
-source image (`src-tauri/icons/source.png`) from the in-app logo, from which
-`pnpm tauri icon` makes the icons the bundle uses.
+source image (`src-tauri/icons/source.png`) from the in-app logo. To regenerate the icons
+after a theme or logo change:
+
+```bash
+pnpm exec playwright test --config e2e/visual --project icon
+pnpm tauri icon src-tauri/icons/source.png -o <scratch dir>
+# keep only what tauri.conf.json lists (32x32.png, 128x128.png, 128x128@2x.png, icon.icns,
+# icon.ico): copy those into src-tauri/icons/ and drop the mobile sets. tray-template.png is
+# drawn by hand and stays.
+```
 
 ## Layout
 

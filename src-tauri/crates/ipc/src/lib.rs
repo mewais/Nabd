@@ -75,11 +75,12 @@ impl DataCommands {
     }
 
     /// The export document: the snapshot without nulls, stamped with the app
-    /// name and the document `version` (which the frontend owns).
-    pub fn export_data(&self, version: u32) -> IpcResult<String> {
+    /// name (the product name the Tauri app was configured with) and the
+    /// document `version` (which the frontend owns).
+    pub fn export_data(&self, app_name: &str, version: u32) -> IpcResult<String> {
         let (mut obj, _unreadable) = self.snapshot()?;
         obj.retain(|_, value| !value.is_null());
-        obj.insert("app".to_string(), json!("Nabd"));
+        obj.insert("app".to_string(), json!(app_name));
         obj.insert("version".to_string(), json!(version));
         Ok(serde_json::to_string_pretty(&Value::Object(obj))?)
     }

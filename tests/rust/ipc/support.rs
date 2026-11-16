@@ -8,6 +8,8 @@ use crate::common::{fresh_store, ids, set_json};
 
 /// The export document version the tests stamp.
 pub const VERSION: u32 = 2;
+/// The product name the app passes in (tauri.conf.json `productName`).
+pub const APP_NAME: &str = "Nabd";
 
 pub fn fresh_db() -> DataCommands {
     DataCommands::over(fresh_store())
@@ -30,5 +32,5 @@ pub fn history_ids(c: &DataCommands) -> Vec<String> {
 
 /// The export document, parsed.
 pub fn exported(c: &DataCommands) -> Value {
-    serde_json::from_str(&c.export_data(VERSION).unwrap()).unwrap()
+    serde_json::from_str(&c.export_data(APP_NAME, VERSION).unwrap()).unwrap()
 }
