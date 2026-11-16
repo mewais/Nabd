@@ -57,7 +57,7 @@
 #                                 driver takes the next one)
 #
 # Other needs: xvfb, dbus (dbus-run-session), openbox, xdotool, sqlite3, curl,
-# libfaketime, and python3-dbus with python3-gi. Exits non-zero, naming the
+# libfaketime, and python3-dbus, python3-gi and gir1.2-gtk-3.0. Exits non-zero, naming the
 # failed expectation, as soon as one fails; every process it started and its
 # temporary directory are gone when it returns.
 
@@ -87,7 +87,7 @@ built_binary() {
 dbus_python() {
   local python
   for python in python3 /usr/bin/python3 /usr/bin/python3.*[0-9]; do
-    if "$python" -c "import dbus, gi" 2>/dev/null; then
+    if "$python" -c "import dbus, gi; gi.require_version('Gtk', '3.0')" 2>/dev/null; then
       command -v "$python"
       return
     fi
@@ -328,7 +328,7 @@ inside() {
   trap cleanup EXIT
   openbox &
   # The user's other work: the window that has the keyboard while Nabd is hidden.
-  xterm -title elsewhere &
+  "$NABD_SMOKE_PYTHON" "$ROOT/scripts/smoke/desktop_bus.py" elsewhere &
   first_launch
   restart_keeps_data
   second_instance

@@ -7,13 +7,17 @@ smoke test (scripts/smoke/linux-smoke.sh), and a client to inspect them.
         --notifications  be the notification service (org.freedesktop.Notifications),
                          appending each notification to FILE as a JSON line
                          {"title": ..., "body": ..., "app": ...}
+    desktop_bus.py elsewhere
+        a window titled "elsewhere", with a text field: the user's other work,
+        which has the keyboard while Nabd is not in front (a GTK window, so the
+        window manager can tell how recently it was used, as with a real app)
     desktop_bus.py tray-items              the tray items registered, one per line
     desktop_bus.py tray-menu               the tray item's menu: one line per entry,
                                            "<label>" or "<label> (disabled)"
     desktop_bus.py tray-click LABEL        choose the menu entry labelled LABEL, as a
                                            click in the host's menu would
 
-Needs python3-dbus and python3-gi (apt), which the system Python provides.
+Needs python3-dbus, python3-gi and gir1.2-gtk-3.0 (apt), for the system Python.
 """
 
 import json
@@ -132,6 +136,19 @@ def serve(args):
     GLib.MainLoop().run()
 
 
+def elsewhere():
+    import gi
+
+    gi.require_version("Gtk", "3.0")
+    from gi.repository import Gtk
+
+    window = Gtk.Window(title="elsewhere")
+    window.add(Gtk.Entry())
+    window.connect("destroy", Gtk.main_quit)
+    window.show_all()
+    Gtk.main()
+
+
 def registered_items(bus):
     watcher = bus.get_object(WATCHER, WATCHER_PATH)
     return [str(i) for i in watcher.Get(WATCHER, "RegisteredStatusNotifierItems", dbus_interface=PROPERTIES)]
@@ -163,6 +180,8 @@ def main():
     command, args = (sys.argv[1], sys.argv[2:]) if len(sys.argv) > 1 else ("", [])
     if command == "serve":
         return serve(args)
+    if command == "elsewhere":
+        return elsewhere()
     bus = dbus.SessionBus()
     if command == "tray-items":
         print("\n".join(registered_items(bus)))
