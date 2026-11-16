@@ -62,9 +62,11 @@ export const notifications = {
 
   /** Wait for notification number `count` (1-based) and return it. */
   async expect(count) {
-    const shown = await eventually(`notification #${count} (so far: ${JSON.stringify(this.all())})`, () => {
+    const shown = await eventually(`notification #${count}`, () => {
       const all = this.all();
       return all.length >= count ? all : undefined;
+    }).catch((error) => {
+      throw new Error(`${error.message}; there were: ${JSON.stringify(this.all())}`);
     });
     if (shown.length > count) throw new Error(`more than ${count} notifications: ${JSON.stringify(shown)}`);
     return shown[count - 1];
