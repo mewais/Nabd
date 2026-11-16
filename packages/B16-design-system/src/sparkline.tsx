@@ -1,3 +1,5 @@
+import { seriesScale } from "./series-scale";
+
 /** SVG polyline points for `series` drawn inside a `width`×`height` box, `pad` px in from each edge. */
 export function polylinePoints(
   series: readonly number[],
@@ -5,17 +7,9 @@ export function polylinePoints(
   height: number,
   pad: number,
 ): string {
-  const min = Math.min(...series);
-  const span = Math.max(...series) - min;
-  const xStep = series.length > 1 ? (width - 2 * pad) / (series.length - 1) : 0;
+  const scale = seriesScale(series, { width, height, pad });
   return series
-    .map((value, index) => {
-      // A flat series sits on the middle line.
-      const level = span === 0 ? 0.5 : (value - min) / span;
-      const x = pad + index * xStep;
-      const y = pad + (1 - level) * (height - 2 * pad);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
+    .map((value, index) => `${scale.x(index).toFixed(1)},${scale.y(value).toFixed(1)}`)
     .join(" ");
 }
 

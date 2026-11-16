@@ -68,6 +68,8 @@ export { BarChart } from "./bar-chart";
 export type { BarChartProps, BarDatum, BarTone } from "./bar-chart";
 export { Sparkline, polylinePoints } from "./sparkline";
 export type { SparklineProps } from "./sparkline";
+export { LineChart } from "./line-chart";
+export type { LineChartProps } from "./line-chart";
 export { MeterBar } from "./meter-bar";
 export type { MeterBarProps } from "./meter-bar";
 
