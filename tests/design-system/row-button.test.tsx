@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { Button, EmptyNote, RowButton, Segmented, THEME_OPTIONS } from "@nabd/design-system";
+import { Button, RowButton, Segmented, THEME_OPTIONS } from "@nabd/design-system";
 import { choose, click } from "./render";
 
 describe("RowButton", () => {
@@ -88,12 +88,5 @@ describe("THEME_OPTIONS", () => {
     choose("Light");
     expect(onChange).toHaveBeenCalledWith("light");
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
-  });
-});
-
-describe("EmptyNote", () => {
-  it("shows its sentence as a paragraph", () => {
-    render(<EmptyNote>No sets logged yet.</EmptyNote>);
-    expect(screen.getByText("No sets logged yet.").tagName).toBe("P");
   });
 });

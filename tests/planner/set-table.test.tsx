@@ -1,6 +1,6 @@
 // The set table of one exercise (or slot), driven through the planner.
 
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent } from "@testing-library/react";
 import { officeStrength, rotationPlan } from "../support/programs";
 import { dayOf } from "./fixtures";
 import { card, renderPlanner, stepper } from "./render";
@@ -8,6 +8,12 @@ import { card, renderPlanner, stepper } from "./render";
 const BENCH_CARD = "Barbell Bench Press";
 const OHP_CARD = "Barbell Overhead Press";
 const PLANK_CARD = "Plank";
+/** The row of the Push day behind each card. */
+const ROW_OF: Record<string, string> = {
+  [BENCH_CARD]: "e-bench",
+  [OHP_CARD]: "e-ohp",
+  [PLANK_CARD]: "e-plank",
+};
 
 const press = (scope: ReturnType<typeof card>, name: string | RegExp): void => {
   fireEvent.click(scope.getByRole("button", { name }));
@@ -18,14 +24,8 @@ const choose = (scope: ReturnType<typeof card>, name: string): void => {
   fireEvent.click(scope.getByRole("radio", { name }));
 };
 
-/** The planner on Monday's "Push" day, and that day's exercise rows after every edit. */
-function renderPush() {
-  const planner = renderPlanner(officeStrength());
-  const [bench, ohp, plank] = [0, 1, 2].map(
-    (index) => () => dayOf(planner.program(), "d-push").exercises[index]!,
-  );
-  return { bench: bench!, ohp: ohp!, plank: plank! };
-}
+/** The planner on Monday's "Push" day. */
+const renderPush = () => renderPlanner(officeStrength());
 
 describe("SetTable", () => {
   it("shows a badge per set with its type, and the prescribed reps, load, rest and note", () => {
@@ -65,57 +65,6 @@ describe("SetTable", () => {
     expect(plank.queryByRole("group", { name: "Set 1 top of range" })).toBeNull();
   });
 
-  it("clicking a badge cycles that set's type", () => {
-    const { bench } = renderPush();
-
-    press(card(BENCH_CARD), "2");
-
-    expect(bench().sets.map((s) => s.type)).toEqual(["warmup", "working", "warmup", "drop"]);
-  });
-
-  it.each([
-    ["Set 2 reps", "Increase", { amount: 9, upTo: 10, intensity: 8 }],
-    ["Set 2 reps", "Decrease", { amount: 7, upTo: 10, intensity: 8 }],
-    ["Set 2 top of range", "Increase", { amount: 8, upTo: 11, intensity: 8 }],
-    ["Set 2 top of range", "Decrease", { amount: 8, upTo: 9, intensity: 8 }],
-    ["Set 2 RPE", "Increase", { amount: 8, upTo: 10, intensity: 8.5 }],
-    ["Set 2 RPE", "Decrease", { amount: 8, upTo: 10, intensity: 7.5 }],
-  ])("%s → %s edits only its own value", (group, direction, expected) => {
-    const { bench } = renderPush();
-
-    const name = `${direction} ${group.charAt(0).toLowerCase()}${group.slice(1)}`;
-    fireEvent.click(stepper(card(BENCH_CARD), group).getByRole("button", { name }));
-
-    expect(bench().sets[1]).toMatchObject(expected);
-    expect(bench().sets[0]).toEqual({ type: "warmup", amount: 10, upTo: 12, intensity: 6 });
-  });
-
-  it("× removes that set", () => {
-    const { bench } = renderPush();
-
-    press(card(BENCH_CARD), "Remove set 2");
-
-    expect(bench().sets.map((s) => [s.type, s.amount])).toEqual([
-      ["warmup", 10],
-      ["working", 6],
-      ["drop", 12],
-    ]);
-  });
-
-  it("+ Add set appends a working set and + Warmup prepends a warm-up, on that exercise only", () => {
-    const { bench, ohp } = renderPush();
-
-    press(card(OHP_CARD), "+ Add set");
-    expect(ohp().sets).toHaveLength(4);
-    expect(ohp().sets.at(-1)).toEqual({ type: "working", amount: 5, intensity: 75 });
-
-    press(card(OHP_CARD), "+ Warmup");
-    expect(ohp().sets).toHaveLength(5);
-    expect(ohp().sets[0]).toMatchObject({ type: "warmup", amount: 5 });
-    expect(bench().sets).toHaveLength(4);
-    expect(screen.getByText("3 exercises · 11 sets")).toBeInTheDocument();
-  });
-
   it("seconds or reps is the exercise's doing: only how reps are written can be chosen", () => {
     renderPush();
 
@@ -128,48 +77,54 @@ describe("SetTable", () => {
     expect(repModes(PLANK_CARD)).toBeUndefined();
   });
 
-  it("switching the load mode starts every set from the new scale", () => {
-    const { bench } = renderPush();
-    expect(bench().sets.map((s) => s.intensity)).toEqual([6, 8, 8.5, 9]);
-
-    choose(card(BENCH_CARD), "%1RM");
-
-    // An RPE of 8.5 must not come back as 8.5% of a one-rep max.
-    expect(bench().sets.map((s) => s.intensity)).toEqual([70, 70, 70, 70]);
-  });
-
-  it("switching load to %1RM gives every set a percentage, None clears it", () => {
-    const { plank, bench } = renderPush();
-
-    choose(card(PLANK_CARD), "%1RM");
-    expect(plank().intensity).toBe("pct");
-    expect(plank().sets.map((s) => s.intensity)).toEqual([70, 70]);
-
-    choose(card(BENCH_CARD), "None");
-    expect(bench().intensity).toBe("none");
-    expect(bench().sets.every((s) => s.intensity === undefined)).toBe(true);
-  });
-
-  it("the Rest stepper moves rest in 15 s steps", () => {
-    const { bench } = renderPush();
-    const rest = () => stepper(card(BENCH_CARD), "Rest");
-
-    fireEvent.click(rest().getByRole("button", { name: "Increase rest" }));
-    expect(bench().rest).toBe(165);
-
-    fireEvent.click(rest().getByRole("button", { name: "Decrease rest" }));
-    fireEvent.click(rest().getByRole("button", { name: "Decrease rest" }));
-    expect(bench().rest).toBe(135);
-  });
-
-  it("typing a note stores it on the prescription", () => {
-    const { ohp } = renderPush();
-
-    fireEvent.change(card(OHP_CARD).getByRole("textbox", { name: "Note" }), {
-      target: { value: "Squeeze glutes" },
+  // What each control does to a prescription is PrescriptionEditor's (its own
+  // tests); here, that each control edits its own exercise's and nothing else.
+  it.each<[string, string, (scope: ReturnType<typeof card>) => void]>([
+    ["a set's badge", BENCH_CARD, (bench) => press(bench, "2")],
+    [
+      "a set's stepper",
+      BENCH_CARD,
+      (bench) =>
+        fireEvent.click(
+          stepper(bench, "Set 2 reps").getByRole("button", { name: "Increase set 2 reps" }),
+        ),
+    ],
+    ["a set's ×", BENCH_CARD, (bench) => press(bench, "Remove set 2")],
+    ["+ Add set", OHP_CARD, (ohp) => press(ohp, "+ Add set")],
+    ["+ Warmup", OHP_CARD, (ohp) => press(ohp, "+ Warmup")],
+    ["a load mode", PLANK_CARD, (plank) => choose(plank, "%1RM")],
+    [
+      "the Rest stepper",
+      BENCH_CARD,
+      (bench) =>
+        fireEvent.click(stepper(bench, "Rest").getByRole("button", { name: "Increase rest" })),
+    ],
+    [
+      "the note",
+      OHP_CARD,
+      (ohp) =>
+        fireEvent.change(ohp.getByRole("textbox", { name: "Note" }), {
+          target: { value: "Squeeze glutes" },
+        }),
+    ],
+  ])("%s edits that exercise's prescription and nothing else", (_, name, act) => {
+    const planner = renderPush();
+    const rows = () => dayOf(planner.program(), "d-push").exercises;
+    const edited = rows().findIndex((row) => row.id === ROW_OF[name]);
+    const others = (program: ReturnType<typeof planner.program>) => ({
+      ...program,
+      days: program.days.map((day) =>
+        day.id === "d-push"
+          ? { ...day, exercises: day.exercises.filter((_, i) => i !== edited) }
+          : day,
+      ),
     });
+    const before = planner.program();
 
-    expect(ohp().notes).toBe("Squeeze glutes");
+    act(card(name));
+
+    expect(rows()[edited]).not.toEqual(dayOf(before, "d-push").exercises[edited]);
+    expect(others(planner.program())).toEqual(others(before));
   });
 
   it("edits a cycled slot's prescription inside a slot card", () => {

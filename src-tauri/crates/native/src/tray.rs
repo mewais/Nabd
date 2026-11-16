@@ -49,8 +49,9 @@ impl TrayState {
         }
     }
 
-    /// The tray menu: status line, Start next set, Pause/Resume, Open, Quit.
-    pub fn items(&self) -> Vec<TrayItem> {
+    /// The tray menu: status line, Start next set, Pause/Resume, Open
+    /// `app_name`, Quit.
+    pub fn items(&self, app_name: &str) -> Vec<TrayItem> {
         let pause = if self.paused {
             "Resume nudges"
         } else {
@@ -60,15 +61,16 @@ impl TrayState {
             TrayItem::new(TRAY_STATUS, &self.status_line(), false),
             TrayItem::new(TRAY_START, "Start next set", self.next_exercise.is_some()),
             TrayItem::new(TRAY_PAUSE, pause, true),
-            TrayItem::new(TRAY_OPEN, "Open Nabd", true),
+            TrayItem::new(TRAY_OPEN, &format!("Open {app_name}"), true),
             TrayItem::new(TRAY_QUIT, "Quit", true),
         ]
     }
 
-    /// The text shown when the pointer rests on the tray icon.
-    pub fn tooltip(&self) -> String {
+    /// The text shown when the pointer rests on the tray icon: `app_name`
+    /// and where the day stands.
+    pub fn tooltip(&self, app_name: &str) -> String {
         let paused = if self.paused { " (paused)" } else { "" };
-        format!("Nabd{paused} — {}", self.status_line())
+        format!("{app_name}{paused} — {}", self.status_line())
     }
 }
 

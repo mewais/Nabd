@@ -1,58 +1,12 @@
 #!/usr/bin/env bash
-# Smoke test of the real Nabd binary on Linux: the things the browser tests
-# (e2e/) cannot reach — the native shell, SQLite, the window's life cycle, and
-# the desktop around the app.
+# Smoke test of the real Nabd binary on Linux, in a throw-away desktop session
+# (Xvfb, its own D-Bus session, openbox; a headless sway for Wayland):
 #
 #   scripts/smoke/linux-smoke.sh            (or: pnpm smoke:linux)
 #
-# It builds the frontend and the release binary (a debug build never touches
-# the login entry), then runs the binary in a throw-away desktop session (Xvfb
-# + its own D-Bus session + openbox) with HOME and the XDG directories pointing
-# into a temporary directory. First, on a desktop with no tray, the checks
-# every platform shares (checks.mjs says what each expects):
-#
-#   1. first-launch        a window; the database at today's schema version,
-#                          with the frontend's day state; the login entry, with
-#                          --autostart; closing the window quits, saving first
-#   2. restart             a stored plan survives, the day that ended meanwhile
-#                          is rolled over
-#   3. second-instance     a second launch exits, the first keeps running
-#   4. logged-set          (WebDriver) a set logged in the window is a row of
-#                          the history table, and it and Pause survive a restart
-#   5. autostart-setting   (WebDriver) Settings → "Open at startup" removes the
-#                          login entry and writes it back; a login launch with
-#                          no tray shows the window
-#   6. quit-from-settings  (WebDriver) Settings → Quit Nabd ends the app with
-#                          the set on disk
-#
-# then on a desktop that has a tray and a notification service (fakes of both,
-# desktop_bus.py, join the session):
-#
-#   7. late tray       the login entry's command line starts the app hidden in
-#                      the tray, though the tray comes up after the app; the
-#                      tray's Open shows the window
-#   8. shared checks   tray-menu (status, Start next set, Pause nudges, Open
-#                      Nabd, Quit, and Quit ending the app), close-to-tray
-#                      (closing hides; a second launch brings the window back,
-#                      focused), login-launch (hidden; a second login launch
-#                      leaves it hidden)
-#   9. tray actions    Pause flips and is stored without showing the window;
-#                      Open shows it; Start next set opens the logger (WebDriver)
-#  10. nudges          (WebDriver, with the app's wall clock moved by
-#                      libfaketime) desktop notifications for the timer nudge:
-#                      the workday's bounds, the repeat per interval, Snooze,
-#                      Pause
-#  11. idle time       (WebDriver) the clock beat carries the X server's idle
-#                      seconds, reset by synthetic input; the idle-moment nudge
-#                      waits for the minimum gap and for nobody at the mouse
-#  12. Wayland idle    (WebDriver, when sway and wtype are installed) under a
-#                      headless sway the clock beat carries the compositor's
-#                      idle seconds (ext-idle-notify-v1), reset by a key
-#
-# The WebDriver parts need `tauri-driver` (cargo install tauri-driver --locked)
-# and `WebKitWebDriver` (apt: webkit2gtk-driver, from Ubuntu 24.10 on
-# webkitgtk-webdriver); without them they are skipped, or fail when
-# NABD_SMOKE_REQUIRE_WEBDRIVER=1.
+# What it checks, and what it needs installed, is in the README (Smoke test).
+# Exits non-zero, naming the failed expectation, as soon as one fails; every
+# process it started and its temporary directory are gone when it returns.
 #
 # Environment:
 #   NABD_SMOKE_BINARY             test this binary instead of building one (a
@@ -60,16 +14,10 @@
 #   NABD_SMOKE_REQUIRE_WEBDRIVER  1 = the WebDriver parts must run
 #   NABD_SMOKE_DRIVER_PORT        tauri-driver's port (default 4444; the native
 #                                 driver takes the next one)
-#
-# Other needs: Node, xvfb, dbus (dbus-run-session), openbox, xdotool, curl,
-# libfaketime, and python3-dbus, python3-gi and gir1.2-gtk-3.0. Exits non-zero,
-# naming the failed expectation, as soon as one fails; every process it started
-# and its temporary directory are gone when it returns.
 
 set -euo pipefail
 
 SMOKE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$SMOKE/../.." && pwd)"
 DRIVER_PORT="${NABD_SMOKE_DRIVER_PORT:-4444}"
 
 # ---------------------------------------------------------------- outside ---
@@ -83,11 +31,6 @@ require() {
       exit 2
     }
   done
-}
-
-built_binary() {
-  (cd "$ROOT" && pnpm tauri build --no-bundle) >&2
-  echo "${CARGO_TARGET_DIR:-$ROOT/src-tauri/target}/release/nabd"
 }
 
 # The system Python carries the D-Bus bindings; a python3 earlier on the PATH may not.
@@ -131,7 +74,7 @@ outside() {
   local binary python faketime status=0
   python="$(dbus_python)"
   faketime="$(libfaketime)"
-  binary="${NABD_SMOKE_BINARY:-$(built_binary)}"
+  binary="$(node "$SMOKE/app.mjs" built-binary nabd)"
   SANDBOX="$(mktemp -d)"
   trap 'rm -rf "$SANDBOX"' EXIT
   # No ~/.config: a fresh account has none until something writes a setting.
@@ -216,6 +159,8 @@ tray_actions() {
   needs_webdriver "the tray's Start next set" || return 0
   act tray-start
   ok "the tray's Start next set shows the window with the logger open"
+  act unanswered-quit
+  ok "the tray's Quit ends the app after three seconds when the window cannot answer"
 }
 
 timer_nudges() {

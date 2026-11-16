@@ -1,22 +1,52 @@
-import type { Direction, MuscleKey, Program, ProgramType, Schedule, Weekday } from "@nabd/domain";
+import type {
+  CycledSlot,
+  Day,
+  Direction,
+  Exercise,
+  ExerciseLookup,
+  MuscleKey,
+  Prescription,
+  Program,
+  ProgramType,
+  Schedule,
+  Weekday,
+} from "@nabd/domain";
 import { isFloating, measureOf, poolMeasure } from "@nabd/domain";
 import { deriveSlots } from "./derive-slots";
 import { initialPrescription } from "./defaults";
-import { ProgramDraft } from "./draft";
+import { normalize } from "./normalize";
+import { PrescriptionEditor } from "./prescription-editor";
+import type { PrescriptionEdit } from "./prescription-editor";
 import { removeAll, removeById, shiftById } from "./reorder";
+import type { Identified } from "./reorder";
 import { fitsWeekdaySchedule, pinToWeekday, reschedule } from "./schedule";
+import type { PlanToday } from "./schedule";
 import { moveRow, toggleSupersetOf } from "./supersets";
 
 /** A change to the program, expressed against an editor (see {@link ProgramEditor}). */
 export type ProgramEdit = (editor: ProgramEditor) => Program;
 
+/** Points at the prescription being edited: a fixed exercise row or a cycled slot. */
+export interface EditRef {
+  kind: "exercise" | "slot";
+  id: string;
+}
+
 /**
  * Every way the planner can change a program (a prescription's changes are
- * {@link ProgramDraft.editPrescription}'s). Each method returns a new Program
- * and leaves the original untouched; whatever the change, the result obeys the
- * program rules (see normalize.ts).
+ * {@link PrescriptionEditor}'s, through {@link ProgramEditor.editPrescription}).
+ * Each method makes its change to a copy and returns it, leaving the program
+ * it was given untouched; whatever the change, the result obeys the program
+ * rules (see normalize.ts).
  */
-export class ProgramEditor extends ProgramDraft {
+export class ProgramEditor {
+  constructor(
+    private readonly program: Program,
+    private readonly newId: () => string,
+    private readonly lookup: ExerciseLookup,
+    private readonly today: PlanToday,
+  ) {}
+
   // ----- Program -----
 
   rename(name: string): Program {
@@ -143,5 +173,47 @@ export class ProgramEditor extends ProgramDraft {
 
   removePoolExercise(dayId: string, slotId: string, exId: string): Program {
     return this.editSlot(dayId, slotId, (slot) => removeAll(slot.pool, exId));
+  }
+
+  // ----- Prescriptions -----
+
+  /** Change the prescription `ref` points at (see {@link PrescriptionEditor} for the changes). */
+  editPrescription(dayId: string, ref: EditRef, edit: PrescriptionEdit): Program {
+    return this.editDay(dayId, (day) => {
+      const list: (Prescription & Identified)[] = ref.kind === "slot" ? day.slots : day.exercises;
+      const prescription = list.find((p) => p.id === ref.id);
+      if (prescription) Object.assign(prescription, edit(new PrescriptionEditor(prescription)));
+    });
+  }
+
+  // ----- How every change is made -----
+
+  /** Make `change` to a copy of the program, and bring the copy in line with the rules. */
+  private edit(change: (draft: Program) => void): Program {
+    const draft = structuredClone(this.program);
+    change(draft);
+    normalize(draft, this.lookup);
+    return draft;
+  }
+
+  /** Change day `dayId` of a copy; the copy unchanged when there is no such day. */
+  private editDay(dayId: string, change: (day: Day, draft: Program) => void): Program {
+    return this.edit((draft) => {
+      const day = draft.days.find((d) => d.id === dayId);
+      if (day) change(day, draft);
+    });
+  }
+
+  private editSlot(dayId: string, slotId: string, change: (slot: CycledSlot) => void): Program {
+    return this.editDay(dayId, (day) => {
+      const slot = day.slots.find((s) => s.id === slotId);
+      if (slot) change(slot);
+    });
+  }
+
+  /** A change that needs exercise `exId` from the library; the program itself when it has none. */
+  private withExercise(exId: string, change: (exercise: Exercise) => Program): Program {
+    const exercise = this.lookup(exId);
+    return exercise ? change(exercise) : this.program;
   }
 }

@@ -8,7 +8,7 @@ export type { SessionVM } from "./session/session-vm";
 export type { SessionActions } from "./session/session-actions";
 
 export { Toast } from "./toast/toast";
-export { buildToastVM, nudgeNotification } from "./toast/toast-vm";
+export { buildToastVM } from "./toast/toast-vm";
 export type { ToastVM } from "./toast/toast-vm";
 export type { ToastActions } from "./toast/toast-actions";
 

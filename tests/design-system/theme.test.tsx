@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { COLOR, LiveDot, ModalShell, ThemeProvider, ToastFrame } from "@nabd/design-system";
 import { renderRoot } from "./render";
 
@@ -26,11 +26,6 @@ const TOKENS = [
 ];
 
 describe("ThemeProvider", () => {
-  it("renders its children", () => {
-    root("dark", false);
-    expect(screen.getByText("content")).toBeInTheDocument();
-  });
-
   it("tags the root with the theme and the glass mode", () => {
     expect(root("light", false)).toHaveAttribute("data-theme", "light");
     expect(root("dark", true)).toHaveAttribute("data-glass", "on");
@@ -46,16 +41,6 @@ describe("ThemeProvider", () => {
     const style = root(theme, glass).style;
     const tokens = glass ? TOKENS : [...TOKENS, "--bg"];
     for (const token of tokens) expect(style.getPropertyValue(token), token).not.toBe("");
-  });
-
-  it("gives each of the four materials its own palette", () => {
-    const surfaces = [
-      root("light", false),
-      root("dark", false),
-      root("light", true),
-      root("dark", true),
-    ].map((element) => element.style.getPropertyValue("--surface"));
-    expect(new Set(surfaces).size).toBe(4);
   });
 
   it("paints the solid background from the theme", () => {

@@ -31,7 +31,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> AppResult<()> {
     let state = TrayState::default();
     let mut tray = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu(app, &state)?)
-        .tooltip(state.tooltip())
+        .tooltip(state.tooltip(app_name(app)))
         .show_menu_on_left_click(MENU_ON_LEFT_CLICK)
         .on_menu_event(|app, event| run_menu_entry(app, event.id().as_ref()));
     if !MENU_ON_LEFT_CLICK {
@@ -91,13 +91,18 @@ pub fn update<R: Runtime>(app: &AppHandle<R>, state: &TrayState) -> AppResult<()
         return Ok(());
     };
     tray.set_menu(Some(menu(app, state)?))?;
-    tray.set_tooltip(Some(state.tooltip()))?;
+    tray.set_tooltip(Some(state.tooltip(app_name(app))))?;
     Ok(())
+}
+
+/// The product name, from the Tauri configuration.
+fn app_name<R: Runtime>(app: &AppHandle<R>) -> &str {
+    &app.package_info().name
 }
 
 fn menu<R: Runtime>(app: &AppHandle<R>, state: &TrayState) -> AppResult<Menu<R>> {
     let menu = Menu::new(app)?;
-    for item in state.items() {
+    for item in state.items(app_name(app)) {
         menu.append(&MenuItem::with_id(
             app,
             item.id,
@@ -109,34 +114,39 @@ fn menu<R: Runtime>(app: &AppHandle<R>, state: &TrayState) -> AppResult<Menu<R>>
     Ok(menu)
 }
 
+/// A tray menu entry chosen — or Cmd+Q on macOS, whose menu item has the
+/// tray's Quit id (see `app_menu`).
 fn run_menu_entry<R: Runtime>(app: &AppHandle<R>, id: &str) {
-    if let Some(command) = TrayCommand::from_id(id) {
-        run(app, command);
+    let Some(command) = TrayCommand::from_id(id) else {
+        return;
+    };
+    if command == TrayCommand::Quit {
+        return quit(app);
     }
-}
-
-/// Carry out a tray command. Quit also comes from elsewhere — Cmd+Q, and
-/// closing a window that has no tray to hide in — so that every way of
-/// quitting that the app gets to hear of saves first.
-pub fn run<R: Runtime>(app: &AppHandle<R>, command: TrayCommand) {
     if command.reveals_window() {
         window::reveal(app);
     }
     if let Some(action) = command.frontend_action() {
-        // Emitting only fails while the app is shutting down.
-        let _ = app.emit(TRAY_ACTION_EVENT, action);
-    }
-    if command == TrayCommand::Quit {
-        exit_after_grace(app);
+        hand_to_frontend(app, action);
     }
 }
 
-/// Quit is the frontend's to carry out (see `QUIT_GRACE`); this is the
-/// fallback for a frontend that cannot answer, so Quit always quits.
-fn exit_after_grace<R: Runtime>(app: &AppHandle<R>) {
+/// Quit, the way every quit the app hears of goes — the tray's Quit, Cmd+Q,
+/// closing a window that has no tray to hide in: the frontend saves what is
+/// still waiting to be saved, then asks to exit. A frontend that cannot
+/// answer within `QUIT_GRACE` does not keep the app from exiting.
+pub fn quit<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(action) = TrayCommand::Quit.frontend_action() {
+        hand_to_frontend(app, action);
+    }
     let app = app.clone();
     thread::spawn(move || {
         thread::sleep(QUIT_GRACE);
         app.exit(0);
     });
+}
+
+fn hand_to_frontend<R: Runtime>(app: &AppHandle<R>, action: &str) {
+    // Emitting only fails while the app is shutting down.
+    let _ = app.emit(TRAY_ACTION_EVENT, action);
 }

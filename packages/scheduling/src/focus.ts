@@ -13,7 +13,7 @@ export function focusAfter(
   itemId: string,
 ): PlanItem | null {
   const current = plan.item(itemId);
-  if (current && current.done > current.planned) return current;
+  if (current && current.remaining === 0 && current.beyondPrescription > 0) return current;
   if (current?.supersetId !== undefined) {
     const partner = plan.items
       .filter((i) => i.supersetId === current.supersetId && i.id !== itemId && i.remaining > 0)

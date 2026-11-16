@@ -122,4 +122,34 @@ describe("normalized — a program as it was stored", () => {
       ],
     );
   });
+
+  describe("a weekday plan, one day per weekday", () => {
+    const day = (id: string, weekday: Program["days"][number]["weekday"]) => ({
+      ...oneDay.days[0]!,
+      id,
+      weekday,
+    });
+    const onWeekdays = (...days: Program["days"]): Program => ({ ...oneDay, days });
+
+    it("moves a day on a weekday an earlier day has, or on none, to the first free weekday", () => {
+      // Two Mondays, a Tuesday and a day on no weekday.
+      const program = onWeekdays(day("a", 1), day("b", 1), day("c", 2), day("d", null));
+      const fixed = normalized(program, lookup);
+      expect(fixed.schedule).toBe("weekday");
+      expect(fixed.days.map((d) => [d.id, d.weekday])).toEqual([
+        ["a", 1],
+        ["b", 3],
+        ["c", 2],
+        ["d", 4],
+      ]);
+    });
+
+    it("runs floating when it has more days than a week, keeping every day", () => {
+      const eight = ([1, 2, 3, 4, 5, 6, 0, 1] as const).map((weekday, i) => day(`d${i}`, weekday));
+      const fixed = normalized(onWeekdays(...eight), lookup);
+      expect(fixed.schedule).toBe("floating");
+      expect(fixed.days.map((d) => d.id)).toEqual(["d0", "d7", "d1", "d2", "d3", "d4", "d5", "d6"]);
+      expect(fixed.days.every((d) => d.weekday === null)).toBe(true);
+    });
+  });
 });

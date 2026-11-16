@@ -61,12 +61,7 @@ export class PlanItem {
     return counts;
   }
 
-  /** Prescribed sets earlier days did. */
-  private get carriedDone(): number {
-    return totalSets(this.prescribedOf(this.carried));
-  }
-
-  /** Of each kind, what earlier days and today did together. */
+  /** Of each kind, what earlier days and today did together, prescribed or not. */
   private get doneOfEachKind(): SetCounts {
     const today = countSets(this.logged.map((set) => set.setType));
     const counts = { ...NO_SETS };
@@ -74,28 +69,49 @@ export class PlanItem {
     return counts;
   }
 
+  /** Prescribed sets earlier days did. */
+  private get carriedDone(): number {
+    return totalSets(this.prescribedOf(this.carried));
+  }
+
+  /**
+   * Prescribed sets of each kind done so far, earlier days' and today's: the
+   * one count behind `done`, `remaining`, `nextSet`, the day's record and what
+   * a day that comes back starts from. A set counts only against a prescribed
+   * set of its own kind, so extra working sets never stand in for a warm-up.
+   */
+  get completed(): SetCounts {
+    return this.prescribedOf(this.doneOfEachKind);
+  }
+
   /** Prescribed sets this calendar day owes: what earlier days left (0 for extras). */
   get owed(): number {
     return Math.max(0, this.planned - this.carriedDone);
   }
 
-  /** Sets done toward the prescription: those carried from earlier days and today's. */
+  /** Prescribed sets done, earlier days' and today's (never more than `planned`). */
   get done(): number {
-    return this.carriedDone + this.logged.length;
+    return totalSets(this.completed);
   }
 
-  /** Prescribed sets of each kind done so far: what a day that comes back starts from. */
-  get completed(): SetCounts {
-    return this.prescribedOf(this.doneOfEachKind);
+  /** Prescribed sets done today: what today's record counts. */
+  get doneToday(): number {
+    return this.done - this.carriedDone;
+  }
+
+  /** Sets logged today that no prescribed set was waiting for (all of an extra's). */
+  get beyondPrescription(): number {
+    return this.logged.length - this.doneToday;
   }
 
   /** Prescribed sets still to do; skipped items owe nothing. */
   get remaining(): number {
-    return this.skipped ? 0 : Math.max(0, this.planned - this.done);
+    return this.skipped ? 0 : this.planned - this.done;
   }
 
   get status(): PlanItemStatus {
     if (this.skipped) return "skipped";
+    if (this.isExtra) return this.logged.length > 0 ? "done" : "pending";
     return this.remaining === 0 && this.done > 0 ? "done" : "pending";
   }
 
@@ -107,7 +123,7 @@ export class PlanItem {
    * with only the warm-up missing, the warm-up is what comes next.
    */
   get nextSet(): SetSpec | null {
-    if (this.prescription === null || this.done >= this.planned) return null;
+    if (this.prescription === null || this.done === this.planned) return null;
     const unmatched = this.doneOfEachKind;
     const owed = this.prescription.sets.find((spec) => {
       if (unmatched[spec.type] === 0) return true;

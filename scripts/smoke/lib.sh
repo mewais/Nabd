@@ -46,7 +46,7 @@ expect() {
 checks() {
   local driver=()
   [[ -z "$DRIVER_PID" ]] || driver=(--driver "http://127.0.0.1:$DRIVER_PORT")
-  node "$SMOKE/checks.mjs" --binary "$BINARY" "${driver[@]}" "$@" || exit 1
+  node "$SMOKE/linux-checks.mjs" --binary "$BINARY" "${driver[@]}" "$@" || exit 1
 }
 
 # app_data COMMAND [ARG...]: the app's database and login entry (app.mjs).

@@ -3,7 +3,7 @@ import { sum, totalSets } from "@nabd/domain";
 import type { TodayPlan } from "./today-plan";
 
 /** What the ledger reads of a day's plan: its items and the totals the plan keeps over them. */
-type LedgerPlan = Pick<TodayPlan, "date" | "items" | "setsDone" | "setsRemaining" | "setsOwed">;
+type LedgerPlan = Pick<TodayPlan, "date" | "items" | "setsLogged" | "setsRemaining" | "setsOwed">;
 
 /** Where the day stands in the calendar, which decides whether an idle day counts. */
 export interface LedgerCalendar {
@@ -31,7 +31,7 @@ export class DayLedger {
    * it sat idle on.
    */
   get owesNothing(): boolean {
-    return this.plan.setsRemaining === 0 && (this.calendar.workday || this.plan.setsDone > 0);
+    return this.plan.setsRemaining === 0 && (this.calendar.workday || this.plan.setsLogged > 0);
   }
 
   /**
@@ -48,8 +48,9 @@ export class DayLedger {
    * back to it; null when nothing was owed. What an earlier day of an
    * unfinished floating day already did is not owed again, so a day that came
    * back for two sets and got both done is complete. A skipped exercise still
-   * counts as owed, while extras and sets beyond a prescription earn nothing:
-   * only planned work can complete a plan.
+   * counts as owed, while extras, sets beyond a prescription and sets of a
+   * kind it was not waiting for earn nothing: only planned work can complete
+   * a plan.
    *
    * A floating plan has no calendar to fall behind: a day it sat idle is not a
    * missed day, so it has no record until a set is logged — or the plan has
@@ -72,9 +73,9 @@ export class DayLedger {
 
   /** The day's record; `waits` — the plan may come back to the day — spares an idle day one. */
   private recordOf(waits: boolean): DayRecord | null {
-    const { date, items, setsOwed, setsDone } = this.plan;
+    const { date, items, setsOwed, setsLogged } = this.plan;
     const notDue = !this.calendar.workday || waits;
-    if (setsOwed === 0 || (setsDone === 0 && notDue)) return null;
-    return { date, planned: setsOwed, done: sum(items, (i) => Math.min(i.logged.length, i.owed)) };
+    if (setsOwed === 0 || (setsLogged === 0 && notDue)) return null;
+    return { date, planned: setsOwed, done: sum(items, (i) => i.doneToday) };
   }
 }

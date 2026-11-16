@@ -11,20 +11,21 @@ export interface ToastVM {
   exercise: string;
   /** Where the set sits in the plan: "Push · Set 2 of 4". */
   detail: string;
+  /** The same nudge as the desktop announces it, for when the window is not in front. */
+  notification: { title: string; body: string };
 }
 
 /** The toast for a due nudge towards `next`; null when no set is due or nothing is left to do. */
 export function buildToastVM(next: PlanItem | null, nudge: NudgeStatus): ToastVM | null {
   if (nudge.state !== "due" || next === null) return null;
+  const title = "Time to move";
+  const reason = describeNudge(nudge);
+  const exercise = next.exercise.name;
   return {
-    title: "Time to move",
-    reason: describeNudge(nudge),
-    exercise: next.exercise.name,
+    title,
+    reason,
+    exercise,
     detail: `${next.label} · ${describeSetPosition(next)}`,
+    notification: { title, body: `${exercise} — ${reason}` },
   };
-}
-
-/** The same nudge as the desktop announces it, for when the window is not in front. */
-export function nudgeNotification(toast: ToastVM): { title: string; body: string } {
-  return { title: toast.title, body: `${toast.exercise} — ${toast.reason}` };
 }

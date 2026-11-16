@@ -3,18 +3,9 @@
 //
 //   node scripts/smoke/macos-smoke.mjs        (or: pnpm smoke:macos)
 //
-// The shared checks (checks.mjs) on a copy of the .app, with HOME in a
-// temporary folder — so the database lands in ~/Library/Application
-// Support/<identifier> and the login entry in ~/Library/LaunchAgents/Nabd.plist
-// there, and the account's own are left alone: first launch, restart,
-// single instance, closing to the menu bar, the login launch
-// starting hidden, and the menu-bar item's menu and its Quit. Windows are
-// seen through the window server's list (macos-windows.swift, no permission
-// needed); closing the window and choosing from the menu go through System
-// Events, which needs the accessibility permission: where it is refused,
-// those parts are reported as skipped and the app is asked to quit as the
-// Dock's Quit would. There is no WebDriver for WKWebView, so nothing is done
-// inside the window: no set logged, no setting changed, no idle time read.
+// What it checks is in the README (Smoke test). It runs a copy of the .app
+// with HOME in a temporary folder, so the account's own data and login entry
+// are left alone.
 //
 // Environment:
 //   NABD_SMOKE_BINARY   test this Nabd.app instead of building one
@@ -26,7 +17,8 @@ import process from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { builtBinary, sandbox } from "./app.mjs";
-import { runEntry, skipped } from "./checks.mjs";
+import { skipped } from "./checks.mjs";
+import { runEntry } from "./runner.mjs";
 import { AccessibilityUnavailable, systemEvents } from "./screen.mjs";
 
 const here = (file) => fileURLToPath(new URL(file, import.meta.url));

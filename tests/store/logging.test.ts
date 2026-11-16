@@ -154,7 +154,7 @@ describe("logging sets", () => {
       await app.log(catalogBenchRow.id, 3);
       expect(app.get().session!.itemId).toBe(catalogFlyRow.id);
       await app.log(catalogBenchRow.id, 1);
-      expect(app.plan().item(catalogBenchRow.id)!.done).toBe(4);
+      expect(app.plan().item(catalogBenchRow.id)).toMatchObject({ done: 3, beyondPrescription: 1 });
       expect(app.get().session!.itemId).toBe(catalogBenchRow.id);
     });
   });

@@ -3,7 +3,7 @@
 import type { LoggedSet, Program } from "@nabd/domain";
 import { NO_SETS, dateKey } from "@nabd/domain";
 import { rollOver, rotationAfterEdit } from "@nabd/scheduling";
-import { carry, logged, nov, visit, working } from "../support/builders";
+import { carry, logged, nov, visit, warmup, working } from "../support/builders";
 import { EX } from "../support/exercises";
 import { benchRow, cycledPlan, floatingPushPull, flyRow, raiseRow } from "../support/programs";
 import { MONDAY, benchSet, build, dayState, input } from "./fixtures";
@@ -66,18 +66,16 @@ describe("an unfinished floating day at rollover", () => {
     );
   });
 
-  it("counts no more of a kind than an exercise prescribes, and nothing for an extra", () => {
-    const sets = [9, 10, 11, 12, 13].map((hour) => benchSet(hour));
+  it("counts nothing for an extra", () => {
     const extra = logged(EX.dip, nov(16, 14), 12, null, { planItemId: "x" });
     const { dayState: next } = rollOver({
       ...input(),
       program: floatingPushPull,
       dayState: dayState(MONDAY, { extras: [{ id: "x", exId: EX.dip.id }] }),
-      history: [...sets, extra],
+      history: [benchSet(9), extra],
       date: TUESDAY,
     });
-    // Five working sets fill the three prescribed; the warm-up is still owed.
-    expect(next.carried?.items).toEqual({ [benchRow.id]: carry(EX.bench.id, { working: 3 }) });
+    expect(next.carried?.items).toEqual({ [benchRow.id]: carry(EX.bench.id, { working: 1 }) });
   });
 
   it("clears them once the plan moves on, and has none on a weekday plan", () => {
@@ -122,6 +120,49 @@ describe("an unfinished floating day at rollover", () => {
   });
 });
 
+describe("sets of a kind the prescription was not waiting for", () => {
+  // Bench prescribes a warm-up and three working sets; Monday logs four working sets.
+  const fourWorking = () => [9, 10, 11, 12].map((hour) => benchSet(hour));
+  /** Every Push exercise whole, except that bench's warm-up gave way to a fourth working set. */
+  const allButTheWarmup = () => [
+    ...fourWorking(),
+    ...[13, 14, 15].map((hour) => flySet(16, hour)),
+    ...[16, 17, 18].map((hour) =>
+      logged(EX.raise, nov(16, hour), 12, 10, { planItemId: raiseRow.id }),
+    ),
+  ];
+
+  it("leave the warm-up owed today, and next, and on record as not done", () => {
+    const plan = build(fourWorking(), dayState(MONDAY), floatingPushPull);
+    const bench = plan.item(benchRow.id)!;
+    expect(bench).toMatchObject({ done: 3, remaining: 1, status: "pending" });
+    expect(bench.nextSet).toEqual(warmup(12));
+    expect(plan.ledger.record()).toEqual({ date: dateKey(MONDAY), planned: 10, done: 3 });
+  });
+
+  it("leave the same warm-up owed on the day that comes back", () => {
+    const state = afterMonday(fourWorking()).dayState;
+    expect(state.carried?.items).toEqual({ [benchRow.id]: carry(EX.bench.id, { working: 3 }) });
+    const bench = tuesday(fourWorking(), state).item(benchRow.id)!;
+    expect(bench).toMatchObject({ done: 3, owed: 1, remaining: 1 });
+    expect(bench.nextSet).toEqual(warmup(12));
+  });
+
+  it("do not move a floating plan on, nor make the day complete", () => {
+    const plan = build(allButTheWarmup(), dayState(MONDAY), floatingPushPull);
+    expect([plan.isComplete, plan.setsRemaining]).toEqual([false, 1]);
+    const next = rollOver({
+      ...input(),
+      program: floatingPushPull,
+      history: allButTheWarmup(),
+      date: TUESDAY,
+    });
+    // Push comes back on Tuesday (it would be "wed" had the plan moved on).
+    expect(next.dayState).toMatchObject({ dayId: null, carried: { startedOn: dateKey(MONDAY) } });
+    expect(next.records).toEqual([{ date: dateKey(MONDAY), planned: 10, done: 9 }]);
+  });
+});
+
 describe("the day that comes back", () => {
   it("owes each exercise only the rest, starting at the right set", () => {
     const plan = tuesday();
@@ -133,7 +174,7 @@ describe("the day that comes back", () => {
     expect(bench.workingSetsDone).toBe(1);
     expect(plan.item(flyRow.id)).toMatchObject({ done: 2, owed: 1, remaining: 1 });
     expect(plan.item(raiseRow.id)).toMatchObject({ done: 0, owed: 3, remaining: 3 });
-    expect([plan.setsPlanned, plan.setsRemaining, plan.setsDone]).toEqual([6, 6, 0]);
+    expect([plan.setsPlanned, plan.setsRemaining, plan.setsLogged]).toEqual([6, 6, 0]);
     expect(plan.nextItem?.id).toBe(benchRow.id);
   });
 
@@ -215,7 +256,7 @@ describe("the day that comes back", () => {
       [raiseRow.id]: carry(EX.raise.id, { working: 3 }),
     });
     const plan = build([], dayState(TUESDAY, { carried }), floatingPushPull);
-    expect([plan.isComplete, plan.hasWork, plan.setsDone]).toEqual([true, false, 0]);
+    expect([plan.isComplete, plan.hasWork, plan.setsLogged]).toEqual([true, false, 0]);
   });
 
   it("counts nothing carried on a weekday plan, which has no such memory", () => {

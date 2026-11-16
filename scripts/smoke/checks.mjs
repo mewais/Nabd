@@ -1,53 +1,36 @@
 // What the smoke test expects of the real app on every desktop: each check
 // launches the binary under test, looks at its window, its database and its
-// login entry, and ends it again. The entry scripts choose the checks their
-// platform can run and say how the app is ended there:
-//
-//   linux-smoke.sh     (through the command line at the bottom) first, with no
-//                      tray, first-launch restart second-instance logged-set
-//                      autostart-setting quit-from-settings; then, with its
-//                      fake tray, tray-menu close-to-tray login-launch
-//   windows-smoke.mjs  all but tray-menu (its tray cannot be read)
-//   macos-smoke.mjs    those that need no WebDriver
-//
-// A failure names the check and the expectation, what was found instead, and
-// what the screen, the data folder, the login entry and the app's own output
-// looked like at that moment.
+// login entry, and ends it again. The README (Smoke test) lists the checks and
+// which platform runs which; runner.mjs runs them.
 
-import { appendFileSync, existsSync, readdirSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 import process from "node:process";
-import { parseArgs } from "node:util";
 import { setTimeout as sleep } from "node:timers/promises";
 import {
   AUTOSTART_ARG,
-  AppProcess,
   EVERY_DAY,
   SCHEMA_VERSION,
   SmokeFailure,
   TRAY_MENU,
   database,
   databasePath,
-  dataDir,
   dayState,
   eventually,
   expectEqual,
   expectLoginEntry,
   instances,
-  isMain,
-  launched,
   localDate,
   loginEntry,
   loginEntryLocation,
   plan,
 } from "./app.mjs";
 import { runAct } from "./app-session.mjs";
-import { tray } from "./linux-desktop.mjs";
-import { AccessibilityUnavailable, SyntheticInputUnavailable, screenFor } from "./screen.mjs";
+import { AccessibilityUnavailable, SyntheticInputUnavailable } from "./screen.mjs";
 
 // -------------------------------------------------------------- reporting ---
 
 /** A result line: to NABD_SMOKE_RESULTS when set (linux-smoke.sh follows it), else stdout. */
-function report(line) {
+export function report(line) {
   if (process.env.NABD_SMOKE_RESULTS) appendFileSync(process.env.NABD_SMOKE_RESULTS, `${line}\n`);
   else console.log(line);
 }
@@ -70,10 +53,10 @@ const YESTERDAY = localDate(-1);
 const LOGGED_SET = `push_up__bodyweight ${TODAY} ${TODAY} manual row`;
 
 const dayIsToday = () => database.stored("dayState", ".date") === TODAY;
-const storedDay = () => `dayState ${database.value("dayState")}`;
+export const storedDay = () => `dayState ${database.value("dayState")}`;
 
 /** Fail unless the app ended by itself, successfully, leaving the database sound. */
-async function expectCleanExit(app, what) {
+export async function expectCleanExit(app, what) {
   await app.expectExit(what);
   if (!database.isClean()) {
     throw new SmokeFailure(`a sound database after ${what}, with no rollback journal left`);
@@ -291,173 +274,3 @@ export const CHECKS = {
     }
   },
 };
-
-// ----------------------------------------------------------------- runner ---
-
-/** Write what an expectation needs to be understood: the screen, the files, the app's output. */
-function reportFailure(ctx, name, error, since) {
-  const section = (title, body) => {
-    let text;
-    try {
-      text = body();
-    } catch (failure) {
-      text = `(could not tell: ${failure.message})`;
-    }
-    console.error(`--- ${title}\n${text}`);
-  };
-  // linux-smoke.sh shows the results file as it goes, and the rest on failure.
-  if (process.env.NABD_SMOKE_RESULTS) report(`FAIL ${name}: ${error.message}`);
-  console.error(`FAIL ${name}: ${error instanceof SmokeFailure ? error.message : error.stack}`);
-  section("the screen", ctx.screen.describe);
-  section(`the data folder (${dataDir()})`, () =>
-    existsSync(dataDir()) ? readdirSync(dataDir()).join("  ") : "missing",
-  );
-  section("the stored day", storedDay);
-  section(`the login entry (${loginEntryLocation()})`, () => JSON.stringify(loginEntry()));
-  for (const app of launched.slice(since))
-    section("an app launch and its last lines", () => app.describe());
-  for (const extra of ctx.diagnostics ?? []) section(extra.title, extra.describe);
-}
-
-/**
- * Run the checks `names` in order, on `ctx`: { binary, tray, end(app),
- * driverUrl?, requireWebDriver?, quitFromTray?, diagnostics? }. Stops at the
- * first failure; returns whether all passed. An app a check leaves running is
- * ended before the next one starts.
- */
-export async function runChecks(ctx, names) {
-  const context = {
-    screen: screenFor(ctx.binary),
-    launch: (args = [], binary = ctx.binary) => new AppProcess(binary, args),
-    ...ctx,
-  };
-  for (const name of names) {
-    const since = launched.length;
-    try {
-      if (!(name in CHECKS)) throw new Error(`no check named ${name}`);
-      await CHECKS[name](context);
-    } catch (error) {
-      reportFailure(context, name, error, since);
-      return false;
-    } finally {
-      for (const app of launched.slice(since)) await app.kill();
-    }
-  }
-  return true;
-}
-
-// ------------------------------------------------------------ entry kit ---
-
-/**
- * tauri-driver on `port`, in front of the platform's `native` driver on the
- * next port, with its output kept for the diagnostics of a failure.
- */
-export class DriverProcess {
-  static async start(port, native) {
-    const driver = new DriverProcess(port, native);
-    await eventually(
-      `tauri-driver answering on port ${port}`,
-      async () => {
-        if (!driver.process.running) throw new Error(driver.process.describe());
-        return (await fetch(`${driver.url}/status`).catch(() => null))?.ok;
-      },
-      { found: () => driver.describe() },
-    );
-    return driver;
-  }
-
-  constructor(port, native) {
-    this.url = `http://127.0.0.1:${port}`;
-    this.process = new AppProcess("tauri-driver", [
-      "--port",
-      String(port),
-      "--native-port",
-      String(port + 1),
-      "--native-driver",
-      native,
-    ]);
-    // Not one of the app's launches: it outlives every check.
-    launched.splice(launched.indexOf(this.process), 1);
-  }
-
-  describe() {
-    return this.process.describe();
-  }
-
-  stop() {
-    return this.process.kill();
-  }
-}
-
-/**
- * The body of a platform's entry script: `setup()` returns the context for
- * runChecks, the checks run, `cleanup()` runs whatever happened, and the
- * process exits 0 only when every check passed.
- */
-export async function runEntry({ setup, checks, cleanup }) {
-  let passed = false;
-  try {
-    passed = await runChecks(await setup(), checks);
-  } catch (error) {
-    report(`FAIL setting up: ${error.message}`);
-    console.error(error.stack);
-  } finally {
-    try {
-      await cleanup();
-    } catch (error) {
-      console.error(`(could not clean up: ${error.message})`);
-    }
-  }
-  if (passed) ok("all expectations met");
-  process.exit(passed ? 0 : 1);
-}
-
-// ----------------------------------------------------------- command line ---
-// For linux-smoke.sh, inside its throw-away session; --tray once the fake
-// tray host (desktop_bus.py) is up:
-//
-//   node checks.mjs --binary PATH [--driver URL] [--tray] CHECK...
-
-/** The tray menu as the fake host reads it, then its Quit chosen. */
-function quitFromLinuxTray() {
-  const entries = tray
-    .menu()
-    .map((label) =>
-      label.endsWith(DISABLED) ? [label.slice(0, -DISABLED.length), false] : [label, true],
-    );
-  tray.click("Quit");
-  return entries;
-}
-
-const DISABLED = " (disabled)";
-
-if (isMain(import.meta.url)) {
-  const { values, positionals } = parseArgs({
-    options: {
-      binary: { type: "string" },
-      driver: { type: "string" },
-      tray: { type: "boolean", default: false },
-    },
-    allowPositionals: true,
-  });
-  const passed = await runChecks(
-    {
-      binary: values.binary,
-      driverUrl: values.driver,
-      requireWebDriver: process.env.NABD_SMOKE_REQUIRE_WEBDRIVER === "1",
-      tray: values.tray,
-      quitFromTray: quitFromLinuxTray,
-      // With a tray, its Quit; without, closing the window is quitting.
-      async end(app) {
-        if (values.tray) tray.click("Quit");
-        else screenFor(values.binary).close();
-        await expectCleanExit(
-          app,
-          values.tray ? "the tray's Quit" : "closing the window (no tray)",
-        );
-      },
-    },
-    positionals,
-  );
-  process.exit(passed ? 0 : 1);
-}

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { StoreApi } from "zustand";
 import type { IpcClient, TrayAction } from "@nabd/ipc-client";
-import { buildToastVM, nudgeNotification } from "@nabd/modals";
+import { buildToastVM } from "@nabd/modals";
 import type { NabdStore } from "@nabd/store";
 import { selectNudgeStatus, selectPendingNudge, selectTodayPlan } from "@nabd/store";
 import { startAppClock } from "./app-clock";
@@ -67,7 +67,7 @@ function useNudgeNotification(store: StoreApi<NabdStore>, client: IpcClient): vo
     const state = store.getState();
     const toast = buildToastVM(selectTodayPlan(state).nextItem, selectNudgeStatus(state));
     if (toast === null) return;
-    bestEffort("show the nudge notification", client.notifyNudge(nudgeNotification(toast)));
+    bestEffort("show the nudge notification", client.notifyNudge(toast.notification));
   }, [store, client, pending]);
 }
 

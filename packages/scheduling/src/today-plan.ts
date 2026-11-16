@@ -105,7 +105,7 @@ export class TodayPlan {
   }
 
   /** Sets logged today, whatever they count toward. */
-  get setsDone(): number {
+  get setsLogged(): number {
     return sum(this.items, (i) => i.logged.length);
   }
 

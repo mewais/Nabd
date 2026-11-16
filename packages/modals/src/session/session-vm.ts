@@ -142,8 +142,8 @@ export function buildSessionVM(input: SessionInput): SessionVM | null {
     list: plan.items.map((other) => buildListRowVM(other, item.id)),
     form: buildSetFormVM(item, input),
     footer:
-      plan.setsDone === 0
+      plan.setsLogged === 0
         ? "No sets logged yet today"
-        : `${plural(plan.setsDone, "set")} logged today`,
+        : `${plural(plan.setsLogged, "set")} logged today`,
   };
 }

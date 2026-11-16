@@ -6,6 +6,12 @@ import { EX } from "../support/exercises";
 import { benchRow, floatingPushPull, flyRow, pushPull, raiseRow } from "../support/programs";
 import { MONDAY, benchSet, build, dayState, input } from "./fixtures";
 
+/** Bench whole — its warm-up and three working sets — plus `more` working sets on top. */
+const wholeBench = (more = 0): LoggedSet[] => [
+  benchSet(9, { setType: "warmup" }),
+  ...Array.from({ length: 3 + more }, (_, set) => benchSet(10 + set)),
+];
+
 describe("which day is today", () => {
   const dayOn = (program: Program, date: Date, dayId: string | null = null): string | null =>
     TodayPlan.build({ ...input(), program, date, dayState: dayState(date, { dayId }) }).dayName;
@@ -62,12 +68,11 @@ describe("TodayPlan for a fixed day", () => {
     expect(item.workingSetsDone).toBe(1);
     expect(item.nextSet).toEqual(working(8, 12));
     expect(item.status).toBe("pending");
-    expect(plan.setsDone).toBe(2);
+    expect(plan.setsLogged).toBe(2);
   });
 
   it("marks an exercise done once every prescribed set is logged, and allows extra sets", () => {
-    const sets = [10, 11, 12, 13, 14].map((h) => benchSet(h));
-    const item = build(sets).item(benchRow.id)!;
+    const item = build(wholeBench(1)).item(benchRow.id)!;
     expect(item.status).toBe("done");
     expect(item.remaining).toBe(0);
     expect(item.nextSet).toBeNull();
@@ -97,11 +102,11 @@ describe("TodayPlan for a fixed day", () => {
         ],
       };
       expect(next([warmupSet, benchSet(10)], noWarmup)?.type).toBe("working");
-      // With every set logged it stays done, whatever kinds the sets were.
+      // The warm-up done before never stands in for a working set.
       const item = build([warmupSet, benchSet(10), benchSet(11)], dayState(MONDAY), noWarmup).item(
         benchRow.id,
       )!;
-      expect(item).toMatchObject({ status: "done", nextSet: null });
+      expect(item).toMatchObject({ status: "pending", done: 2, remaining: 1 });
     });
   });
 
@@ -119,9 +124,8 @@ describe("TodayPlan for a fixed day", () => {
       dayState(MONDAY, { extras: [{ id: "x1", exId: EX.dip.id }] }),
     );
     const extra = plan.item("x1")!;
-    expect(extra.isExtra).toBe(true);
-    expect(extra.planned).toBe(0);
-    expect(extra.done).toBe(1);
+    expect(extra).toMatchObject({ isExtra: true, planned: 0, done: 0, status: "done" });
+    expect(extra.beyondPrescription).toBe(1);
     expect(plan.setsPlanned).toBe(10);
   });
 
@@ -129,12 +133,7 @@ describe("TodayPlan for a fixed day", () => {
     const allSkipped = dayState(MONDAY, { skipped: [benchRow.id, flyRow.id, raiseRow.id] });
     expect(build([], allSkipped).isComplete).toBe(false);
     const onlyBench = dayState(MONDAY, { skipped: [flyRow.id, raiseRow.id] });
-    expect(
-      build(
-        [10, 11, 12, 13].map((h) => benchSet(h)),
-        onlyBench,
-      ).isComplete,
-    ).toBe(true);
+    expect(build(wholeBench(), onlyBench).isComplete).toBe(true);
   });
 });
 
@@ -148,8 +147,7 @@ describe("where the logger goes after a set", () => {
   });
 
   it("moves to the next exercise once it is finished", () => {
-    const plan = build([10, 11, 12, 13].map((h) => benchSet(h)));
-    expect(focusAfter(plan, benchRow.id)?.id).toBe(flyRow.id);
+    expect(focusAfter(build(wholeBench()), benchRow.id)?.id).toBe(flyRow.id);
   });
 
   it("alternates between superset partners", () => {
@@ -158,7 +156,7 @@ describe("where the logger goes after a set", () => {
   });
 
   it("stays on a finished exercise the user chose to do more of, superset or not", () => {
-    const more = build([9, 10, 11, 12, 13].map((h) => benchSet(h)));
+    const more = build(wholeBench(1));
     expect(focusAfter(more, benchRow.id)?.id).toBe(benchRow.id);
     const moreFly = build([9, 10, 11, 12].map(flySet));
     expect(focusAfter(moreFly, flyRow.id)?.id).toBe(flyRow.id);
@@ -171,25 +169,22 @@ describe("where the logger goes after a set", () => {
     );
     expect(focusAfter(withExtra, "x1")?.id).toBe("x1");
     const state = dayState(MONDAY, { skipped: [flyRow.id, raiseRow.id] });
-    const finished = build(
-      [10, 11, 12, 13].map((h) => benchSet(h)),
-      state,
-    );
+    const finished = build(wholeBench(), state);
     expect(focusAfter(finished, benchRow.id)).toBeNull();
   });
 });
 
 describe("the completion record", () => {
-  it("counts only planned sets, each exercise capped at its prescription", () => {
+  it("counts only planned sets, each kind capped at what the prescription asks of it", () => {
     const history = [
-      // Five bench sets against four prescribed, and an extra exercise on top.
+      // Five working bench sets against a warm-up and three working sets, and an extra on top.
       ...[9, 10, 11, 12, 13].map((h) => benchSet(h)),
       logged(EX.dip, nov(16, 15), 12, null, { planItemId: "x1" }),
     ];
     const plan = build(history, dayState(MONDAY, { extras: [{ id: "x1", exId: EX.dip.id }] }));
-    expect(plan.setsDone).toBe(6);
-    expect(plan.plannedSetsDone).toBe(4);
-    expect(plan.ledger.record()).toEqual({ date: dateKey(MONDAY), planned: 10, done: 4 });
+    expect(plan.setsLogged).toBe(6);
+    expect(plan.plannedSetsDone).toBe(3);
+    expect(plan.ledger.record()).toEqual({ date: dateKey(MONDAY), planned: 10, done: 3 });
   });
 
   it("a skipped exercise still counts as planned; a day without a plan has no record", () => {

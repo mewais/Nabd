@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS } from "@nabd/domain";
-import { NudgePolicy, SNOOZE_MINUTES, describeNudge, summarizeNudge } from "@nabd/nudge";
+import { NudgePolicy, describeNudge, summarizeNudge } from "@nabd/nudge";
 import type { NudgeContext } from "@nabd/nudge";
 import { nov } from "../support/builders";
 
@@ -121,8 +121,8 @@ describe("NudgePolicy", () => {
     expect(at(11, 5, ctx)).toEqual({ state: "due", reason: "timer" });
   });
 
-  it("snoozes for the configured number of minutes", () => {
-    expect(NudgePolicy.snoozeUntil(nov(16, 11, 0))).toEqual(nov(16, 11, SNOOZE_MINUTES));
+  it("snoozes for five minutes", () => {
+    expect(NudgePolicy.snoozeUntil(nov(16, 11, 0))).toEqual(nov(16, 11, 5));
   });
 
   it("does nothing while paused or when no sets are left", () => {

@@ -20,15 +20,15 @@ describe("sets whose plan item no longer exists", () => {
     const plan = build([benchSet(9), orphan(EX.bench, 10)]);
     expect(plan.item(benchRow.id)!.done).toBe(1);
     const unplanned = plan.items.at(-1)!;
-    expect(unplanned).toMatchObject({ isExtra: true, done: 1, exercise: EX.bench });
-    expect(plan.setsDone).toBe(2);
+    expect(unplanned).toMatchObject({ isExtra: true, beyondPrescription: 1, exercise: EX.bench });
+    expect(plan.setsLogged).toBe(2);
   });
 
   it("are listed as an unplanned exercise when the plan no longer has it", () => {
     const plan = build([orphan(EX.dip, 9), orphan(EX.dip, 10, null)]);
     const unplanned = plan.items.at(-1)!;
-    expect(unplanned).toMatchObject({ isExtra: true, done: 2, exercise: EX.dip });
-    expect(plan.setsDone).toBe(2);
+    expect(unplanned).toMatchObject({ isExtra: true, beyondPrescription: 2, exercise: EX.dip });
+    expect(plan.setsLogged).toBe(2);
     expect(plan.setsRemaining).toBe(10);
   });
 
@@ -36,15 +36,15 @@ describe("sets whose plan item no longer exists", () => {
     const deleted = exercise({ name: "Garage Carry", primary: ["forearms"], secondary: [] });
     const plan = build([orphan(deleted, 9), orphan(deleted, 10)]);
     const unplanned = plan.items.at(-1)!;
-    expect(unplanned).toMatchObject({ isExtra: true, done: 2 });
+    expect(unplanned).toMatchObject({ isExtra: true, beyondPrescription: 2 });
     expect(unplanned.exercise).toMatchObject({ id: deleted.id, name: "Garage Carry" });
-    expect(plan.setsDone).toBe(2);
+    expect(plan.setsLogged).toBe(2);
   });
 
   it("further sets logged on the unplanned exercise stay with it", () => {
     const first = build([orphan(EX.dip, 9)]).items.at(-1)!;
     const plan = build([orphan(EX.dip, 9), orphan(EX.dip, 10, first.id)]);
-    expect(plan.item(first.id)!.done).toBe(2);
+    expect(plan.item(first.id)!.logged).toHaveLength(2);
     expect(plan.items).toHaveLength(4);
   });
 
@@ -62,9 +62,13 @@ describe("sets whose plan item no longer exists", () => {
       days: [{ ...pushPull.days[0]!, slots: [slot] }],
     };
     const plan = build(history, dayState(MONDAY), cycledNow);
-    expect(plan.setsDone).toBe(2);
+    expect(plan.setsLogged).toBe(2);
     expect(plan.item("chest")!.exercise).toBe(EX.fly);
-    expect(plan.items.at(-1)).toMatchObject({ isExtra: true, exercise: EX.bench, done: 2 });
+    expect(plan.items.at(-1)).toMatchObject({
+      isExtra: true,
+      exercise: EX.bench,
+      beyondPrescription: 2,
+    });
   });
 });
 

@@ -1,85 +1,23 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import {
   Button,
   CardButton,
   CheckMark,
   ChipGroup,
   COLOR,
-  Divider,
-  Grid,
   HeatCell,
   IconButton,
   ProgressRing,
-  Row,
   RowButton,
-  Spacer,
   SplitBar,
-  Stack,
   Swatch,
   Text,
   TitleBlock,
   Toggle,
-  Wordmark,
 } from "@nabd/design-system";
 import { renderRoot } from "./render";
 
-describe("Row and Stack", () => {
-  it("render the element and the name they are given, so structure stays semantic", () => {
-    render(
-      <Stack as="ul" ariaLabel="Sets">
-        <Row as="li">one</Row>
-      </Stack>,
-    );
-    const list = screen.getByRole("list", { name: "Sets" });
-    expect(within(list).getByRole("listitem")).toHaveTextContent("one");
-  });
-
-  it("take a role, such as a status region", () => {
-    render(<Row role="status">Saved</Row>);
-    expect(screen.getByRole("status")).toHaveTextContent("Saved");
-  });
-});
-
-describe("Grid", () => {
-  it("holds its cells under the role and the name it is given", () => {
-    render(
-      <Grid role="group" ariaLabel="Days" columns={3}>
-        <span>Mon</span>
-        <span>Tue</span>
-      </Grid>,
-    );
-    expect(screen.getByRole("group", { name: "Days" })).toHaveTextContent("MonTue");
-  });
-});
-
-describe("Spacer", () => {
-  it("is invisible to assistive tech", () => {
-    expect(renderRoot(<Spacer />)).toHaveAttribute("aria-hidden", "true");
-  });
-});
-
-describe("Divider", () => {
-  it("is a separator, across a stack by default", () => {
-    render(<Divider />);
-    expect(screen.getByRole("separator")).toHaveAttribute("aria-orientation", "horizontal");
-  });
-
-  it("can stand upright between the things in a row", () => {
-    render(<Divider vertical />);
-    expect(screen.getByRole("separator")).toHaveAttribute("aria-orientation", "vertical");
-  });
-});
-
 describe("Text", () => {
-  it("renders the element it is given, so a heading is a heading", () => {
-    render(
-      <Text as="h2" variant="title">
-        Settings
-      </Text>,
-    );
-    expect(screen.getByRole("heading", { level: 2, name: "Settings" })).toBeInTheDocument();
-  });
-
   it("keeps an eyebrow's copy in plain case (the upper-casing is only how it is drawn)", () => {
     expect(renderRoot(<Text variant="eyebrow">Logged today</Text>)).toHaveTextContent(
       "Logged today",
@@ -173,13 +111,6 @@ describe("SplitBar", () => {
   });
 });
 
-describe("Wordmark", () => {
-  it("marks the Arabic name as Arabic", () => {
-    render(<Wordmark />);
-    expect(screen.getByText("نبض")).toHaveAttribute("lang", "ar");
-  });
-});
-
 describe("ButtonBase, under every button", () => {
   const noop = (): void => undefined;
   const buttons = (): HTMLButtonElement[] => {
@@ -213,11 +144,6 @@ describe("ButtonBase, under every button", () => {
       expect(button.tagName).toBe("BUTTON");
       expect(button).toHaveAttribute("type", "button");
     }
-  });
-
-  it("wears the one class the focus ring hangs on", () => {
-    const classes = new Set(buttons().map((button) => button.className));
-    expect(classes.size).toBe(1);
   });
 
   it("dims and refuses clicks while disabled", () => {

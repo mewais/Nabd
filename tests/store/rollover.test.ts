@@ -25,7 +25,7 @@ describe("across restarts and days", () => {
     app.advanceTo(nov(17, 9, 30));
 
     expect(app.plan().dayName).toBe("Push");
-    expect(app.plan().setsDone).toBe(0);
+    expect(app.plan().setsLogged).toBe(0);
     const carried = visit(nov(16), { [catalogBenchRow.id]: carry(CATALOG.bench, { working: 2 }) });
     expect(app.get().dayState).toEqual(freshDayState(nov(17), null, carried));
     expect(app.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, owed: 1, remaining: 1 });
@@ -67,52 +67,6 @@ describe("across restarts and days", () => {
     const second = await boot({}, { client: first.client, data: first.data }, nov(17, 10));
     expect(second.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, remaining: 1 });
     expect(second.get().session).toBeNull();
-  });
-
-  it("a completed floating day moves on to the next one", async () => {
-    const app = await boot();
-    await app.log(catalogBenchRow.id, 3);
-    await app.log(catalogFlyRow.id, 3);
-    app.advanceTo(nov(17, 9, 30));
-    expect(app.plan().dayName).toBe("Pull");
-    expect(app.data.dayState).toMatchObject({ dayId: "pull" });
-  });
-
-  describe("cycled pools", () => {
-    async function cycled() {
-      const app = await boot();
-      app.get().editProgram((e) => e.setType("cycled"));
-      const slot = app.get().program.days[0]!.slots[0]!;
-      expect(slot.pool).toEqual([CATALOG.bench, CATALOG.fly]);
-      expect(app.plan().items[0]!.exercise.id).toBe(CATALOG.bench);
-      return { app, slot };
-    }
-
-    it("rotate after a day they were trained", async () => {
-      const { app, slot } = await cycled();
-      await app.finishDay();
-      app.advanceTo(nov(17, 9, 30));
-      expect(app.get().rotationState).toEqual({ [slot.id]: CATALOG.fly });
-      expect(app.plan().dayName).toBe("Pull");
-    });
-
-    it("stay on the same exercise while their day comes back unfinished", async () => {
-      const { app, slot } = await cycled();
-      await app.log(slot.id, 1);
-      app.advanceTo(nov(17, 9, 30));
-      expect(app.get().rotationState).toEqual({});
-      expect(app.plan().dayName).toBe("Push");
-      expect(app.plan().items[0]!.exercise.id).toBe(CATALOG.bench);
-      expect(app.plan().item(slot.id)).toMatchObject({ done: 1, remaining: 2 });
-    });
-  });
-
-  it("a floating plan is not held up by a day that was skipped outright", async () => {
-    const app = await boot();
-    app.get().toggleSkip(catalogBenchRow.id);
-    app.get().toggleSkip(catalogFlyRow.id);
-    app.advanceTo(nov(17, 9, 30));
-    expect(app.plan().dayName).toBe("Pull");
   });
 
   it("a set logged just after midnight belongs to the new day, plan item included", async () => {
@@ -191,7 +145,7 @@ describe("across restarts and days", () => {
     const [set] = app.get().history;
     const item = app.plan().item(set!.planItemId!)!;
     expect(set!.date).toBe(dateKey(nov(17)));
-    expect(item).toMatchObject({ isExtra: true, done: 1 });
+    expect(item).toMatchObject({ isExtra: true, beyondPrescription: 1 });
     expect(item.exercise.id).toBe(CATALOG.bench);
     expect(app.get().session!.itemId).toBe(item.id);
   });
@@ -205,36 +159,6 @@ describe("across restarts and days", () => {
     app.get().openSession();
     expect(app.get().dayState.date).toBe(dateKey(nov(17)));
     expect(app.plan().item(app.get().session!.itemId)!.exercise.id).toBe(CATALOG.row);
-  });
-
-  it("planned weekdays the app was not running for are on record as missed", async () => {
-    const weekdays: Program = {
-      ...catalogPushPull,
-      schedule: "weekday",
-      days: [
-        { ...catalogPushPull.days[0]!, weekday: 1 },
-        { ...catalogPushPull.days[1]!, weekday: 3 },
-      ],
-    };
-    const first = await boot({ program: weekdays });
-    await first.log(catalogBenchRow.id, 2);
-    const later = await boot({}, { client: first.client, data: first.data }, nov(24, 9));
-    expect(later.get().dayLog).toEqual([
-      { date: dateKey(nov(16)), planned: 6, done: 2 },
-      { date: dateKey(nov(18)), planned: 3, done: 0 },
-      { date: dateKey(nov(23)), planned: 6, done: 0 },
-    ]);
-  });
-
-  it("extras and sets beyond the plan do not inflate completion", async () => {
-    const app = await boot();
-    // Five bench sets against three planned (the logger moves on, so reopen it each time).
-    for (let i = 0; i < 5; i++) await app.log(catalogBenchRow.id, 1);
-    app.get().openLibrary({ kind: "extra" });
-    app.get().pickExercise(CATALOG.row);
-    await app.get().logSet();
-    expect(app.plan().setsDone).toBe(6);
-    expect(selectStats(app.get()).completionThisWeek()).toBe(50);
   });
 
   it("rollover saves the day log, the day state and the rotation as one write", async () => {

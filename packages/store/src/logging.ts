@@ -109,7 +109,7 @@ function recordActions(ctx: StoreContext): Actions<"logSet" | "undoSet" | "toggl
       const { dayState } = get();
       const item = selectTodayPlan(get()).item(itemId);
       if (!item) return;
-      if (item.isExtra && item.done === 0) {
+      if (item.isExtra && item.logged.length === 0) {
         save("dayState", { ...dayState, extras: dayState.extras.filter((e) => e.id !== itemId) });
         return;
       }

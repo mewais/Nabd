@@ -126,8 +126,8 @@ describe("today across plan edits", () => {
     const app = await boot();
     await app.log(catalogBenchRow.id, 2);
     app.get().editProgram((e) => e.removeExercise("push", catalogBenchRow.id));
-    expect(app.plan().setsDone).toBe(2);
-    expect(app.plan().items.at(-1)).toMatchObject({ isExtra: true, done: 2 });
+    expect(app.plan().setsLogged).toBe(2);
+    expect(app.plan().items.at(-1)).toMatchObject({ isExtra: true, beyondPrescription: 2 });
 
     app.get().editProgram((e) => e.addExercise("push", CATALOG.bench));
     expect(app.plan().items.at(-1)).toMatchObject({ isExtra: false, done: 2, planned: 3 });
@@ -138,7 +138,7 @@ describe("today across plan edits", () => {
     const app = await boot();
     await app.log(catalogFlyRow.id, 2);
     app.get().editProgram((e) => e.setType("cycled"));
-    expect(app.plan().setsDone).toBe(2);
+    expect(app.plan().setsLogged).toBe(2);
     app.advanceTo(nov(17, 9, 30));
     expect(app.get().dayLog).toEqual([{ date: dateKey(nov(16)), planned: 3, done: 0 }]);
   });

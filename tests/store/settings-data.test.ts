@@ -82,6 +82,19 @@ describe("settings and data", () => {
     expect(app.get().program.days[0]!.exercises[0]!.sets[0]!.intensity).toBe(10);
   });
 
+  it("an imported weekday plan with two days on one weekday gets one day per weekday", async () => {
+    const app = await boot();
+    const [push] = catalogPushPull.days;
+    const days = [
+      { ...push!, id: "a", weekday: 1 },
+      { ...push!, id: "b", weekday: 1 },
+    ];
+    const program = { ...catalogPushPull, schedule: "weekday", days };
+    await app.importFile(JSON.stringify({ app: "Nabd", version: 4, program }));
+    expect(app.get().program.days.map((day) => day.weekday)).toEqual([1, 2]);
+    expect(app.data.program).toEqual(app.get().program);
+  });
+
   it("import validates first, then reloads everything", async () => {
     const app = await boot();
     await app.importFile("{not json");

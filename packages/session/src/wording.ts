@@ -76,14 +76,19 @@ export function formatTarget(spec: SetSpec, prescription: Prescription): string 
  * unplanned extra; "All 4 sets done — extra set" beyond the prescription.
  */
 export function describeSetPosition(item: PlanItem): string {
-  if (item.isExtra) return `Set ${item.done + 1}`;
+  if (item.isExtra) return `Set ${item.logged.length + 1}`;
   if (item.remaining === 0) return `All ${plural(item.planned, "set")} done — extra set`;
   return `Set ${item.done + 1} of ${item.planned}`;
 }
 
-/** Sets done against sets planned: "2/4"; just "3" for an unplanned extra. */
+/**
+ * Sets done against sets planned: "2/4"; once the prescription is whole, the
+ * sets beyond it too ("3/2"); just "3" for an unplanned extra.
+ */
 export function formatSetTally(item: PlanItem): string {
-  return item.isExtra ? String(item.done) : `${item.done}/${item.planned}`;
+  if (item.isExtra) return String(item.logged.length);
+  const shown = item.remaining === 0 ? item.done + item.beyondPrescription : item.done;
+  return `${shown}/${item.planned}`;
 }
 
 const ADVICE_REASONS: Record<AdviceKind, string> = {

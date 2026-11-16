@@ -21,6 +21,7 @@ describe("buildToastVM", () => {
       reason: "Interval's up",
       exercise: "Bench Press",
       detail: "Chest · Set 2 of 3",
+      notification: { title: "Time to move", body: "Bench Press — Interval's up" },
     });
   });
 

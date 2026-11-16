@@ -18,14 +18,22 @@ const config = JSON.parse(readFileSync(repo("src-tauri/tauri.conf.json"), "utf8"
 export const APP_ID = config.identifier;
 /** The product name: the name of the login entry on every platform. */
 export const PRODUCT_NAME = config.productName;
+/** The value `pattern` captures in a Rust source file: the smoke test keeps no copy of its own. */
+const rustValue = (file, pattern) =>
+  pattern.exec(readFileSync(repo(`src-tauri/${file}`), "utf8"))[1];
+
 /** The schema version the persistence crate writes today. */
 export const SCHEMA_VERSION = Number(
-  /SCHEMA_VERSION: i64 = (\d+);/.exec(
-    readFileSync(repo("src-tauri/crates/persistence/src/schema.rs"), "utf8"),
-  )[1],
+  rustValue("crates/persistence/src/schema.rs", /SCHEMA_VERSION: i64 = (\d+);/),
 );
 /** What the login entry adds to the command line, so a login launch can be told apart. */
-export const AUTOSTART_ARG = "--autostart";
+export const AUTOSTART_ARG = rustValue(
+  "crates/native/src/launch.rs",
+  /AUTOSTART_ARG: &str = "(.+)";/,
+);
+/** How long a quit waits for the window to save before the app exits regardless. */
+export const QUIT_GRACE_MS =
+  1000 * Number(rustValue("src/tray.rs", /QUIT_GRACE: Duration = Duration::from_secs\((\d+)\);/));
 
 /** Today's date as the app writes it: the local calendar day. */
 export function localDate(daysFromToday = 0) {
@@ -432,8 +440,10 @@ export function instances(binary) {
 //   node app.mjs start-day SETS [SETTINGS] database.startDay (SETTINGS: JSON)
 //   node app.mjs stored KEY PATH           database.stored, e.g. dayState .paused
 //   node app.mjs login-command             the login entry's command, one word a line
+//   node app.mjs built-binary PATH         builtBinary(PATH): the binary under test
 
 const COMMANDS = {
+  "built-binary": (path) => console.log(builtBinary(path)),
   "start-day": (sets, settings = "{}") => database.startDay(Number(sets), JSON.parse(settings)),
   stored: (key, path) => console.log(String(database.stored(key, path) ?? "")),
   "login-command": () => {

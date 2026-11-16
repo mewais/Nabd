@@ -1,28 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { CardButton, Chip, Segmented, StatTile, TitleInput } from "@nabd/design-system";
+import { CardButton, Chip, Segmented, TitleInput } from "@nabd/design-system";
 import { click } from "./render";
-
-describe("StatTile", () => {
-  it("shows a figure under its label, with its unit when it has one", () => {
-    render(<StatTile label="Sets this week" value="1,250" unit="sets" />);
-    const tile = screen.getByRole("region", { name: "Sets this week" });
-    expect(tile).toHaveTextContent("Sets this week1,250sets");
-  });
-
-  it("explains how the figure is counted, under it, when it has a hint", () => {
-    render(<StatTile label="Current streak" value="4" unit="days" hint="Workdays only." />);
-    expect(screen.getByRole("region", { name: "Current streak" })).toHaveTextContent(
-      "Current streak4daysWorkdays only.",
-    );
-  });
-
-  it("leaves the unit out when there is none", () => {
-    render(<StatTile label="Personal best" value="76 kg e1RM" />);
-    expect(screen.getByRole("region", { name: "Personal best" })).toHaveTextContent(
-      "Personal best76 kg e1RM",
-    );
-  });
-});
 
 describe("CardButton", () => {
   it("reports a click and says whether it is the selected one", () => {

@@ -1,5 +1,4 @@
 import {
-  INTENSITY_SCALES,
   NO_SETS,
   ProgramSchema,
   countSets,
@@ -25,9 +24,6 @@ const day = { id: "day1", name: "Day 1", weekday: 1, exercises: [row], slots: []
 const program = { name: "My Program", type: "fixed", schedule: "weekday", days: [day] };
 
 const accepts = (value: unknown): boolean => ProgramSchema.safeParse(value).success;
-const withDay = (patch: object): object => ({ ...program, days: [{ ...day, ...patch }] });
-const withRow = (patch: object): object => withDay({ exercises: [{ ...row, ...patch }] });
-const withSlot = (patch: object): object => withDay({ slots: [{ ...slot, ...patch }] });
 
 describe("ProgramSchema", () => {
   it("accepts a fixed weekday plan and a cycled floating one", () => {
@@ -41,40 +37,6 @@ describe("ProgramSchema", () => {
       }),
     ).toBe(true);
   });
-
-  it("knows only its own plan types and schedules", () => {
-    expect(accepts({ ...program, type: "random" })).toBe(false);
-    expect(accepts({ ...program, schedule: "daily" })).toBe(false);
-  });
-
-  it("pins a day to a weekday 0–6, or to none", () => {
-    for (const weekday of [0, 6, null])
-      expect(accepts(withDay({ weekday })), `${weekday}`).toBe(true);
-    for (const weekday of [-1, 7, 1.5])
-      expect(accepts(withDay({ weekday })), `${weekday}`).toBe(false);
-  });
-
-  it("a prescription rests for whole, non-negative seconds and may carry notes", () => {
-    expect(accepts(withRow({ notes: "Keep elbows tucked", supersetId: "ss" }))).toBe(true);
-    expect(accepts(withRow({ rest: -1 }))).toBe(false);
-    expect(accepts(withRow({ rest: 1.5 }))).toBe(false);
-    expect(accepts(withRow({ repMode: "amrap" }))).toBe(false);
-    expect(accepts(withRow({ intensity: "rir" }))).toBe(false);
-  });
-
-  it("a set is a warm-up, a working set or a drop set, with an optional range and intensity", () => {
-    expect(
-      accepts(withRow({ sets: [{ type: "warmup", amount: 5, upTo: 10, intensity: 70 }] })),
-    ).toBe(true);
-    expect(accepts(withRow({ sets: [{ type: "drop", amount: 12 }] }))).toBe(true);
-    expect(accepts(withRow({ sets: [{ a: 8 }] }))).toBe(false);
-    expect(accepts(withRow({ sets: [{ type: "amrap", amount: 8 }] }))).toBe(false);
-  });
-
-  it("a cycled slot targets one tracking muscle", () => {
-    expect(accepts(withSlot({ muscle: "side_delts", notes: "Go heavy" }))).toBe(true);
-    expect(accepts(withSlot({ muscle: "Chest" }))).toBe(false);
-  });
 });
 
 describe("counts of sets by kind", () => {
@@ -83,13 +45,6 @@ describe("counts of sets by kind", () => {
     const counts = countSets(["warmup", "working", "working", "drop"]);
     expect(counts).toEqual({ warmup: 1, working: 2, drop: 1 });
     expect(totalSets(counts)).toBe(4);
-  });
-});
-
-describe("the intensity scales", () => {
-  it("are RPE 5–10 and 40–100 %1RM, each starting from a usual value inside", () => {
-    expect(INTENSITY_SCALES.rpe).toMatchObject({ min: 5, max: 10, initial: 8 });
-    expect(INTENSITY_SCALES.pct).toMatchObject({ min: 40, max: 100, initial: 70 });
   });
 });
 

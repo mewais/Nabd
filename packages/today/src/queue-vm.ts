@@ -54,13 +54,13 @@ export interface QueueVM {
 
 function badge(item: PlanItem): string {
   if (item.skipped) return "Skipped";
-  const counted = item.isExtra ? item.done : item.planned;
+  const counted = item.isExtra ? item.logged.length : item.planned;
   return `${formatSetTally(item)} ${counted === 1 ? "set" : "sets"}`;
 }
 
 function skipLabel(item: PlanItem): "Skip" | "Restore" | "Remove" | null {
   if (item.skipped) return "Restore";
-  if (item.isExtra) return item.done === 0 ? "Remove" : null;
+  if (item.isExtra) return item.logged.length === 0 ? "Remove" : null;
   return item.remaining > 0 ? "Skip" : null;
 }
 

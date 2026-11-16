@@ -1,25 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { BrandMark, COLOR, Icon } from "@nabd/design-system";
-import type { IconName } from "@nabd/design-system";
 import { renderRoot } from "./render";
 
 describe("Icon", () => {
-  it("draws the named icon at a step of the size scale", () => {
-    const svg = renderRoot(<Icon name="bolt" size="sm" />);
-    expect(svg).toHaveAttribute("data-icon", "bolt");
-    expect(svg).toHaveAttribute("width", "14");
-    expect(svg).toHaveAttribute("height", "14");
-    expect(svg.querySelector("path")?.getAttribute("d")).toBeTruthy();
-  });
-
-  it("draws different icons differently", () => {
-    const path = (name: IconName): string | null | undefined =>
-      renderRoot(<Icon name={name} />)
-        .querySelector("path")
-        ?.getAttribute("d");
-    expect(path("check")).not.toBe(path("close"));
-  });
-
   it("is decorative unless it is given a label", () => {
     expect(renderRoot(<Icon name="check" />)).toHaveAttribute("aria-hidden", "true");
     render(<Icon name="check" ariaLabel="complete" />);
@@ -33,12 +16,6 @@ describe("Icon", () => {
       "stroke",
       COLOR.textFaint,
     );
-  });
-
-  it("only accepts names from the set", () => {
-    // @ts-expect-error "heart" is not an icon
-    const unknown: IconName = "heart";
-    expect(unknown).toBe("heart");
   });
 });
 

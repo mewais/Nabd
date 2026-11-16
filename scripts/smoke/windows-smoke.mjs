@@ -4,21 +4,11 @@
 //
 //   node scripts/smoke/windows-smoke.mjs        (or: pnpm smoke:windows)
 //
-// The shared checks (checks.mjs), with the database in %APPDATA%\<identifier>
-// and the login entry in HKCU\Software\Microsoft\Windows\CurrentVersion\Run:
-// first launch, restart, single instance, closing to the tray, the login
-// launch starting hidden; then, through WebDriver (tauri-driver in front of
-// an msedgedriver that matches the WebView2 runtime), a set logged and kept
-// across a restart, Settings → "Open at startup" and Settings → Quit Nabd,
-// and the system's idle time (GetLastInputInfo) in the clock beat. An app the
-// test started itself has no window it can ask to quit, so it is ended
-// without being asked (nothing is waiting to be saved then); the tray icon,
-// toasts and Mica are not looked at.
-//
-// The known-folder paths cannot be redirected, so the test uses this account's
-// own: it refuses to run where Nabd already has data or a login entry (outside
-// CI) unless NABD_SMOKE_RESET=1 lets it delete them first. It removes what it
-// created when it is done.
+// What it checks is in the README (Smoke test). The known-folder paths cannot
+// be redirected, so the test uses this account's own: it refuses to run where
+// Nabd already has data or a login entry (outside CI) unless
+// NABD_SMOKE_RESET=1 lets it delete them first, and removes what it created
+// when it is done.
 //
 // Environment:
 //   NABD_SMOKE_BINARY             test this binary instead of building one
@@ -28,12 +18,21 @@
 //   NABD_SMOKE_DRIVER_PORT        tauri-driver's port (default 4444; the native
 //                                 driver takes the next one)
 
-import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, rmSync, writeFileSync } from "node:fs";
+import { execFile, execFileSync } from "node:child_process";
+import { copyFileSync, existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
-import { APP_ID, PRODUCT_NAME, builtBinary, dataDir, loginEntry, sandbox } from "./app.mjs";
-import { DriverProcess, runEntry } from "./checks.mjs";
+import {
+  APP_ID,
+  PRODUCT_NAME,
+  builtBinary,
+  dataDir,
+  eventually,
+  loginEntry,
+  sandbox,
+} from "./app.mjs";
+import { DriverProcess } from "./driver.mjs";
+import { runEntry } from "./runner.mjs";
 
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 /** The WebView2 runtime's client id with Edge's updater, under which its version is kept. */
@@ -45,6 +44,32 @@ function forgetNabd() {
   rmSync(dataDir(), { recursive: true, force: true });
   rmSync(join(process.env.LOCALAPPDATA, APP_ID), { recursive: true, force: true });
   if (loginEntry() !== null) reg("delete", RUN_KEY, "/v", PRODUCT_NAME, "/f");
+}
+
+/**
+ * End `app` without asking it, and wait until WebView2's processes for its
+ * data folder have gone too: they outlive their app for a moment, and the
+ * next launch would join them instead of starting its own — whose browser
+ * then never takes the arguments a WebDriver session launches it with.
+ */
+async function endWithItsWebView(app) {
+  await app.kill();
+  const stray = () =>
+    execFileSync(
+      "powershell",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "Get-CimInstance Win32_Process -Filter \"Name='msedgewebview2.exe'\" | " +
+          `Where-Object { $_.CommandLine -like '*${APP_ID}*' } | ` +
+          "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; $_.ProcessId }",
+      ],
+      { encoding: "utf8" },
+    ).trim();
+  await eventually("WebView2's processes of the ended app gone", () => stray() === "", {
+    found: stray,
+  });
 }
 
 /** The installed WebView2 runtime's version, per machine or per user; null when there is none. */
@@ -169,6 +194,24 @@ const binary = join(dir, "nabd.exe");
 copyFileSync(builtBinary("nabd.exe"), binary);
 forgetNabd(); // a fresh account
 
+// TEMPORARY (WebDriver session diagnosis): the app's and WebView2's browser processes, sampled.
+let processes = "";
+const sampler = setInterval(() => {
+  execFile(
+    "powershell",
+    [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "Get-CimInstance Win32_Process | Where-Object { $_.Name -in 'nabd.exe','msedgewebview2.exe','msedgedriver.exe' -and $_.CommandLine -notmatch '--type=' } | ForEach-Object { \"$($_.ProcessId) <- $($_.ParentProcessId): $($_.CommandLine)\" }",
+    ],
+    (error, out) => {
+      if (!error && out.trim()) processes = `${new Date().toISOString()}\n${out.trim()}`;
+    },
+  );
+}, 2000);
+const webviewData = join(process.env.LOCALAPPDATA, APP_ID, "EBWebView");
+
 const port = Number(process.env.NABD_SMOKE_DRIVER_PORT ?? 4444);
 let driver = null;
 await runEntry({
@@ -181,8 +224,24 @@ await runEntry({
       requireWebDriver: process.env.NABD_SMOKE_REQUIRE_WEBDRIVER === "1",
       // Nothing waits to be saved, and an app the test started has no window
       // that could be asked to quit.
-      end: (app) => app.kill(),
-      diagnostics: [{ title: "tauri-driver and msedgedriver", describe: () => driver?.describe() }],
+      end: endWithItsWebView,
+      diagnostics: [
+        { title: "tauri-driver and msedgedriver", describe: () => driver?.describe() },
+        { title: "the last processes sampled", describe: () => processes },
+        {
+          title: `WebView2's data (${webviewData})`,
+          describe: () =>
+            existsSync(webviewData) ? readdirSync(webviewData).join("  ") : "missing",
+        },
+        {
+          title: "environment",
+          describe: () =>
+            Object.entries(process.env)
+              .filter(([key]) => /WEBVIEW2|EDGE/i.test(key))
+              .map(([key, value]) => `${key}=${value}`)
+              .join("\n"),
+        },
+      ],
     };
   },
   checks: [
@@ -197,6 +256,7 @@ await runEntry({
     "system-idle",
   ],
   async cleanup() {
+    clearInterval(sampler);
     await driver?.stop();
     forgetNabd();
     rmSync(dir, { recursive: true, force: true });

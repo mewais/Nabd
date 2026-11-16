@@ -1,6 +1,6 @@
 /** @nabd/today — buildTodayVM, the queue: today's exercises and what can be done with each. */
 
-import { carry, nov, visit, working } from "../support/builders";
+import { carry, nov, visit, warmup, working } from "../support/builders";
 import { asFloating, did, mondayProgram, planRow } from "../support/programs";
 import { todayVM } from "./fixtures";
 
@@ -117,6 +117,25 @@ describe("buildTodayVM · queue", () => {
 
   it("an extra with logged sets is done and can no longer be removed", () => {
     expect(row("x-pullup")).toMatchObject({ state: "done", badge: "2 sets", skip: null });
+  });
+
+  it("counts a set only against a prescribed set of its kind, and shows sets beyond a whole one", () => {
+    const vm = todayVM({
+      program: mondayProgram([
+        planRow("p-bench", "bench", [warmup(12), working(8, 12)]),
+        planRow("p-dip", "dip", [working(6, 10)]),
+      ]),
+      history: [
+        did("p-bench", "bench", 10, 60),
+        did("p-bench", "bench", 9, 60),
+        did("p-dip", "dip", 8, null),
+        did("p-dip", "dip", 7, null),
+      ],
+    });
+    const rowOf = (id: string) => vm.queue.rows.find((r) => r.id === id);
+    // Two working sets against a warm-up and one working set: the warm-up is still owed.
+    expect(rowOf("p-bench")).toMatchObject({ state: "next", badge: "1/2 sets" });
+    expect(rowOf("p-dip")).toMatchObject({ state: "done", badge: "2/1 set" });
   });
 
   describe("on a floating day that came back with only the rest", () => {

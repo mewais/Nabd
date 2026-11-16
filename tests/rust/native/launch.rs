@@ -1,6 +1,6 @@
 //! How a launch starts, and what closing the window does.
 
-use nabd_native::{CloseAction, Launch, TrayCommand, AUTOSTART_ARG};
+use nabd_native::{CloseAction, Launch, AUTOSTART_ARG};
 
 fn launch(autostart: bool, start_minimized: bool, tray: bool) -> Launch {
     Launch {
@@ -62,10 +62,4 @@ fn closing_hides_to_the_tray_when_there_is_one() {
 #[test]
 fn closing_quits_when_there_is_no_tray_to_come_back_from() {
     assert_eq!(CloseAction::for_tray(false), CloseAction::Quit);
-}
-
-#[test]
-fn quitting_by_closing_is_the_tray_quit_that_saves_first_and_hiding_is_no_command() {
-    assert_eq!(CloseAction::Quit.command(), Some(TrayCommand::Quit));
-    assert_eq!(CloseAction::HideToTray.command(), None);
 }

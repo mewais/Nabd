@@ -2,7 +2,7 @@
 // weekdays and floating keeps today on the day it is on.
 
 import type { Day, Program, Schedule, Weekday } from "@nabd/domain";
-import { DAYS_PER_WEEK, inWeekOrder, isWeekday } from "@nabd/domain";
+import { DAYS_PER_WEEK, WEEK_ORDER, inWeekOrder, isFloating, isWeekday } from "@nabd/domain";
 
 /** Where the plan stands today, for the edits that must not move today: switching schedule. */
 export interface PlanToday {
@@ -34,6 +34,41 @@ function weekdayAfter(weekday: Weekday, ahead: number): Weekday {
   return later;
 }
 
+/** Run `draft` floating: its days in the order they ran through the week, Monday first, unpinned. */
+function runFloating(draft: Program): void {
+  draft.schedule = "floating";
+  draft.days = inWeekOrder(draft.days);
+  for (const day of draft.days) day.weekday = null;
+}
+
+/**
+ * A weekday plan has one day per weekday, whatever was stored or imported: a
+ * day on no weekday, or on one an earlier day already has, moves to the first
+ * free weekday after it (from Monday, for a day on none), as it could never
+ * come up otherwise. A plan with more days than a week runs floating instead,
+ * which keeps every day.
+ */
+export function keepOneDayPerWeekday(draft: Program): void {
+  if (isFloating(draft)) return;
+  if (!fitsWeekdaySchedule(draft)) {
+    runFloating(draft);
+    return;
+  }
+  const taken = new Set<Weekday>();
+  const displaced = draft.days.filter((day) => {
+    if (day.weekday === null || taken.has(day.weekday)) return true;
+    taken.add(day.weekday);
+    return false;
+  });
+  for (const day of displaced) {
+    const from = day.weekday === null ? WEEK_ORDER[0]! : weekdayAfter(day.weekday, 1);
+    let weekday = from;
+    while (taken.has(weekday)) weekday = weekdayAfter(weekday, 1);
+    day.weekday = weekday;
+    taken.add(weekday);
+  }
+}
+
 /**
  * Put `draft` on `schedule`, keeping today on the day it is on. Going floating
  * puts the days in the order they ran through the week, Monday first, and
@@ -41,12 +76,11 @@ function weekdayAfter(weekday: Weekday, ahead: number): Weekday {
  * weekday and the days after it, in plan order, to the weekdays that follow.
  */
 export function reschedule(draft: Program, schedule: Schedule, today: PlanToday): void {
-  draft.schedule = schedule;
   if (schedule === "floating") {
-    draft.days = inWeekOrder(draft.days);
-    for (const day of draft.days) day.weekday = null;
+    runFloating(draft);
     return;
   }
+  draft.schedule = schedule;
   const current = Math.max(
     0,
     draft.days.findIndex((d) => d.id === today.dayId),

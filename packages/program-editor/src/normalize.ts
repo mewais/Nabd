@@ -4,6 +4,7 @@
 import type { Day, ExerciseLookup, Measure, Program } from "@nabd/domain";
 import { measureOf, poolMeasure } from "@nabd/domain";
 import { PrescriptionEditor } from "./prescription-editor";
+import { keepOneDayPerWeekday } from "./schedule";
 
 /**
  * Keep supersets together: the members of each superset follow its first
@@ -54,6 +55,7 @@ function keepIntensitiesOnScale(day: Day): void {
 
 /** Apply the rules to `program`, in place. */
 export function normalize(program: Program, lookup: ExerciseLookup): void {
+  keepOneDayPerWeekday(program);
   for (const day of program.days) {
     gatherSupersets(day);
     alignMeasures(day, lookup);

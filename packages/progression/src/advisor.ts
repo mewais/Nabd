@@ -23,15 +23,15 @@ const WARMUP_SHARE = 0.5;
  * assistance, so progressing means *removing* it.
  */
 export class ProgressionAdvisor {
+  private readonly steps: LoadSteps;
+  private readonly steering: IntensitySteering;
+
   /**
    * @param loadStepKg the smallest load change the user can make.
    * @param bodyWeightKg the user's body weight, null while unknown: what a
    *   bodyweight exercise's load adds to, so only with it can a %1RM or an
    *   RPE set that load.
    */
-  private readonly steps: LoadSteps;
-  private readonly steering: IntensitySteering;
-
   constructor(loadStepKg: number, bodyWeightKg: number | null = null) {
     this.steps = new LoadSteps(loadStepKg);
     this.steering = new IntensitySteering(this.steps, bodyWeightKg);

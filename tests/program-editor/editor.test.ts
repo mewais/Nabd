@@ -34,9 +34,10 @@ describe("ProgramEditor — program and days", () => {
       (e) => e.addDay(null),
     );
     expect(p.name).toBe("PPL");
+    // A weekday plan's day on no weekday goes to the first free one.
     expect(p.days.map((d) => [d.name, d.weekday])).toEqual([
       ["Push", 1],
-      ["New day", null],
+      ["New day", 2],
     ]);
     expect(apply(p, (e) => e.removeDay(DAY)).days).toHaveLength(1);
   });

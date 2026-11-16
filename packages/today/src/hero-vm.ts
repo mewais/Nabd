@@ -61,7 +61,7 @@ function notice(plan: TodayPlan, hasProgram: boolean): HeroNoticeVM {
     return {
       kind: "complete",
       title: "Day complete",
-      text: `All ${plural(plan.setsDone, "set")} logged across your workday. Nice work.`,
+      text: `All ${plural(plan.setsLogged, "set")} logged across your workday. Nice work.`,
       offersLogOther: false,
     };
   }

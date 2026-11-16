@@ -74,7 +74,7 @@ export interface NabdState extends Singletons {
   dataNotice: Notice | null;
   /** Something the user must know wherever they are: unreadable data, a failed save. */
   appNotice: Notice | null;
-  /** The day open in the planner's editor; null until the planner is opened, or with no days. */
+  /** The day open in the planner's editor, set at every hydrate (an import hydrates again); null with no days. */
   plannerDayId: string | null;
   library: LibraryState;
   /** The destructive action being confirmed. */

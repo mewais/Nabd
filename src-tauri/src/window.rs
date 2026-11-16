@@ -21,7 +21,7 @@ const TITLE: &str = env!("NABD_WINDOW_TITLE");
 const SIZE: (f64, f64) = (1280.0, 820.0);
 const MIN_SIZE: (f64, f64) = (980.0, 640.0);
 /// What an opaque window shows until the page has painted: the dark theme's
-/// background, read from the design system's theme.ts by build.rs, so a
+/// background, read from the design system's prepaint.json by build.rs, so a
 /// launch does not flash white.
 const BACKGROUND: Color = include!(concat!(env!("OUT_DIR"), "/background.rs"));
 
@@ -140,16 +140,16 @@ fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
 /// Closing the window hides it while there is a tray to live in. Otherwise
 /// closing it is quitting, and quitting goes the way the tray's Quit does: the
 /// window stays until the frontend has saved what is pending and asked to
-/// exit, or the grace period runs out (see `tray::run`).
+/// exit, or the grace period runs out (see `tray::quit`).
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     let WindowEvent::CloseRequested { api, .. } = event else {
         return;
     };
     api.prevent_close();
     let close = CloseAction::for_tray(window.state::<Capabilities>().tray);
-    match close.command() {
-        Some(command) => tray::run(window.app_handle(), command),
-        None => {
+    match close {
+        CloseAction::Quit => tray::quit(window.app_handle()),
+        CloseAction::HideToTray => {
             let _ = window.hide();
         }
     }

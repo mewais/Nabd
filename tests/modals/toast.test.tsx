@@ -12,6 +12,7 @@ describe("Toast", () => {
     reason: "You've gone quiet",
     exercise: "Bench Press",
     detail: "Chest · set 2 of 3",
+    notification: { title: "Time to move", body: "Bench Press — You've gone quiet" },
   };
   const setup = () => {
     const actions: ToastActions = { start: vi.fn(), snooze: vi.fn() };

@@ -22,7 +22,10 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   What was done is counted by kind of set (warm-ups, working sets, drop sets), so an
   edit afterwards — a warm-up deleted, a set's kind changed — never turns a working set
   that was done into a warm-up; and it counts for the exercise it was done on, so a pool
-  that has since moved on from that exercise owes its new one in full. Such a day is one
+  that has since moved on from that exercise owes its new one in full. The same count
+  holds within a day: a prescribed warm-up is owed like any other set, so an exercise is
+  whole only once each kind it prescribes is done, and extra sets of one kind never stand
+  in for another. Such a day is one
   visit, and one session, however many calendar days it takes: its sets are compared
   with the session before the visit, not with each other (see Suggestions), and the
   logger says which day it continues ("Continuing Monday's Push"). A set logged while a
@@ -49,6 +52,9 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   - a superset stays together: an exercise moved past it steps over the whole group, a
     member moves within it, and a member moved out past its edge is unlinked. The
     supersets of a day are lettered A, B, C … (A1/A2, B1/B2);
+  - a weekday plan has one day per weekday: a stored or imported one with a second day on
+    a weekday (or a day on none) moves that day to the first free weekday after it, and
+    one with more than seven days runs floating, every day kept;
   - switching between weekdays and floating keeps today on the day it is on: going
     floating starts on today's weekday's day (the first day, on a rest day); going
     weekdays pins the current day to today and the days after it to the weekdays that
@@ -77,7 +83,9 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   2. the timer nudges _interval_ minutes after your last set (before the first one: after
      the workday started, the app was launched, or the plan got work — whichever is latest);
   3. an idle moment (no keyboard or mouse for the _idle moment_ setting) nudges earlier —
-     but never sooner than the _minimum gap_ after a set;
+     but never sooner than the _minimum gap_ after the moment the timer counts from (your
+     last set, or before the first one, the start of the workday, the launch or the plan
+     getting work), so the start of the day is never an idle moment;
   4. Snooze silences both for five minutes.
 
   A nudge that has fired stays up until it is answered — Start, Snooze, a logged set or
@@ -357,9 +365,12 @@ from `tauri.conf.json`; the schema version, read from the persistence crate; the
 and login entry where Tauri and tauri-plugin-autostart put them on each platform; the
 database, read with `node:sqlite`; the app's processes and the last lines they printed) and
 `screen.mjs` (the window as the desktop sees it: the X server through `x11.sh`, Win32 through
-`windows.ps1`, the window server's list through `macos-windows.swift`). The WebDriver acts —
-doing things inside the window — are `app-session.mjs`, over the small client in
-`webdriver.mjs`. Each entry script only sets its platform up and picks the checks:
+`windows.ps1`, the window server's list through `macos-windows.swift`); `runner.mjs` runs
+them and reports a failure. The WebDriver acts — doing things inside the window — are
+`app-session.mjs`, over the small client in `webdriver.mjs` and the `tauri-driver` process of
+`driver.mjs`. Each entry script only sets its platform up and picks the checks (on Linux,
+`linux-smoke.sh` runs them through `linux-checks.mjs`). This list is the one description of
+the checks:
 
 - `first-launch` — a window; the database created at the current schema version, with the
   day state the frontend wrote; "Open at startup" (on by default) writing the login entry for
@@ -395,7 +406,9 @@ service join the session (`desktop_bus.py`, over D-Bus, the way a panel and a no
 daemon would): the entry's command line starts the app hidden though the tray came up two
 seconds after it, and the tray's Open shows it; `tray-menu`, `close-to-tray`,
 `login-launch`; Pause and Resume from the tray stored without showing the window; Open
-showing it; Start next set showing it with the logger open. With the app's wall clock moved
+showing it; Start next set showing it with the logger open; with the page's script stuck, so
+that the window cannot answer, the tray's Quit still ending the app once its three seconds
+of grace are up. With the app's wall clock moved
 by libfaketime (only the wall clock: its timers keep pace), a 5-minute interval brings a
 desktop notification ("Time to move", "Push-Up — Interval's up") only once the workday has
 begun, shows the hidden window again without the keyboard, repeats once per interval while
@@ -529,9 +542,9 @@ e2e/                   Playwright specs of the whole UI, with their page objects
                        and the app icon's source image)
 scripts/               the Vitest setup file, the local ESLint rules and the smoke
                        tests (smoke/: one entry per platform, the checks they
-                       share, the app's data and processes, the window per
-                       desktop, the WebDriver acts and client, and the fake
-                       Linux desktop services)
+                       share and their runner, the app's data and processes,
+                       the window per desktop, the WebDriver acts, client and
+                       driver process, and the fake Linux desktop services)
 ```
 
 **Dependencies only point one way**, and ESLint refuses an import that does not

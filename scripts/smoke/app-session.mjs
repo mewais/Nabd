@@ -8,7 +8,8 @@
 //   node scripts/smoke/app-session.mjs <act> <driver-url> <nabd-binary>
 
 import process from "node:process";
-import { SmokeFailure, isMain } from "./app.mjs";
+import { setTimeout as sleep } from "node:timers/promises";
+import { QUIT_GRACE_MS, SmokeFailure, eventually, instances, isMain } from "./app.mjs";
 import { clock, expectNudge, notifications, tray } from "./linux-desktop.mjs";
 import { screenFor } from "./screen.mjs";
 import { Session } from "./webdriver.mjs";
@@ -19,7 +20,7 @@ const NUDGE = {
   idle: "Push-Up — You've gone quiet",
 };
 
-/** The acts every platform with a WebDriver has: each `(app, screen)`. */
+/** The acts every platform with a WebDriver has: each `(app, screen, binary)`. */
 const ACTS = {
   /** Pause nudges, then log the one set of the smoke plan. */
   async "log-a-set"(app) {
@@ -76,6 +77,27 @@ const ACTS = {
 
 /** The acts that need the Linux desktop's fakes (linux-desktop.mjs). */
 const LINUX_ACTS = {
+  /**
+   * A window that cannot answer does not keep the app from quitting: with the
+   * page's script stuck in a loop, the tray's Quit still ends the app — once
+   * the window has had its grace (three seconds) to save.
+   */
+  async "unanswered-quit"(app, _screen, binary) {
+    await app.waitForButton("Start set");
+    await app.run("const done = arguments[0]; setTimeout(() => { for (;;); }, 100); done();");
+    await sleep(500);
+    const asked = Date.now();
+    tray.click("Quit");
+    await eventually("the app gone, though the window never answered", () => !instances(binary), {
+      timeoutMs: 15_000,
+      found: () => `${instances(binary)} Nabd process(es)`,
+    });
+    const waited = Date.now() - asked;
+    if (waited < QUIT_GRACE_MS - 1000) {
+      throw new SmokeFailure("the window given its grace before the app exits", `${waited} ms`);
+    }
+  },
+
   /** The tray's "Start next set" brings the hidden window back with the logger open. */
   async "tray-start"(app, screen) {
     await app.waitForButton("Start set");
@@ -185,7 +207,7 @@ export async function runAct(name, driverUrl, binary) {
   if (act === undefined) throw new Error(`no act named ${name}`);
   const app = await Session.start(driverUrl, binary);
   try {
-    await act(app, screenFor(binary));
+    await act(app, screenFor(binary), binary);
   } finally {
     // An act that quits the app leaves no session to end.
     await app.end().catch(() => {});

@@ -12,6 +12,7 @@ import {
   salvageSettings,
 } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
+import { SINGLETON_KEYS } from "@nabd/ipc-client";
 import type { BootSnapshot, Singletons } from "@nabd/ipc-client";
 import { normalized } from "@nabd/program-editor";
 import { upgradeStored } from "@nabd/serialization";
@@ -20,15 +21,6 @@ import { STORED_NAMES } from "./state";
 import type { LoadProblem, NabdState } from "./state";
 
 type Persisted = Pick<NabdState, keyof Singletons | "history">;
-
-const SINGLETONS = [
-  "program",
-  "settings",
-  "customExercises",
-  "rotationState",
-  "dayState",
-  "dayLog",
-] as const satisfies readonly (keyof Singletons)[];
 
 /** What the boot snapshot held, read into state. */
 interface Loaded {
@@ -54,7 +46,7 @@ interface Loaded {
 export function readSnapshot(snapshot: BootSnapshot, now: Date): Loaded {
   const problems: LoadProblem[] = [];
   const stored = upgradeStored(snapshot);
-  const repaired = new Set(SINGLETONS.filter((key) => stored[key] !== snapshot[key]));
+  const repaired = new Set(SINGLETON_KEYS.filter((key) => stored[key] !== snapshot[key]));
 
   function read<S extends ZodTypeAny>(
     source: keyof Singletons,

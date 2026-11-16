@@ -1,5 +1,5 @@
 import type { PlatformCapabilities, Settings, Theme } from "@nabd/domain";
-import { glassInEffect } from "@nabd/domain";
+import { APP_NAME, glassInEffect } from "@nabd/domain";
 import type { Notice } from "@nabd/view";
 import { SettingsRows } from "./rows-vm";
 import type { StepperRowVM, ToggleRowVM } from "./rows-vm";
@@ -30,19 +30,18 @@ interface SettingsInput {
 const minutes = (value: number): string => `${value} min`;
 
 const STARTUP_HINT = {
-  tray: "Launch Nabd when you log in, quietly in the tray.",
-  noTray: "Launch Nabd when you log in.",
+  tray: `Launch ${APP_NAME} when you log in, quietly in the tray.`,
+  noTray: `Launch ${APP_NAME} when you log in.`,
 };
 
 const MINIMIZED_HINT = {
   tray: "Sit quietly in the tray until a set is due.",
-  noTray: "This desktop shows no tray icons, so Nabd always opens as a window.",
+  noTray: `This desktop shows no tray icons, so ${APP_NAME} always opens as a window.`,
 };
 
 const IDLE_HINT = {
   system: "Once the minimum gap has passed, this long without keyboard or mouse nudges early.",
-  inApp:
-    "System idle detection is unavailable on this desktop, so this counts time without activity inside Nabd instead.",
+  inApp: `System idle detection is unavailable on this desktop, so this counts time without activity inside ${APP_NAME} instead.`,
 };
 
 export function buildSettingsVM({ settings, capabilities, notice }: SettingsInput): SettingsVM {
@@ -56,7 +55,7 @@ export function buildSettingsVM({ settings, capabilities, notice }: SettingsInpu
       }),
       rows.stepper("minGap", minutes, {
         title: "Minimum gap",
-        hint: "Never nudge sooner than this after a set.",
+        hint: "An idle moment never nudges sooner than this after your last set, or the start of the day.",
       }),
       rows.stepper("idleNudge", (value) => `${value} sec`, {
         title: "Idle moment",

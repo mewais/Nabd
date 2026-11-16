@@ -1,5 +1,5 @@
 // The local ESLint rules (scripts/eslint/), so that what the README says they
-// refuse stays refused: each probe here once slipped through.
+// refuse stays refused.
 
 import { readFileSync } from "node:fs";
 import { RuleTester } from "eslint";

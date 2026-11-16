@@ -72,7 +72,8 @@ const plusMinutes = (d: Date, minutes: number): Date =>
  *    or with nothing left to do;
  *  - the timer nudges `interval` minutes after the last set — or, before the first
  *    one, after the workday started or there first was work to do, whichever is later;
- *  - an idle moment nudges earlier, but never sooner than `minGap` minutes after it;
+ *  - an idle moment nudges earlier, but never sooner than `minGap` minutes after the
+ *    moment the timer counts from;
  *  - a snooze silences both until it expires;
  *  - a nudge that fired stays pending until it is answered, and is repeated once
  *    per `interval` while it waits.
