@@ -68,7 +68,8 @@ export const notifications = {
     }).catch((error) => {
       throw new Error(`${error.message}; there were: ${JSON.stringify(this.all())}`);
     });
-    if (shown.length > count) throw new Error(`more than ${count} notifications: ${JSON.stringify(shown)}`);
+    if (shown.length > count)
+      throw new Error(`more than ${count} notifications: ${JSON.stringify(shown)}`);
     return shown[count - 1];
   },
 

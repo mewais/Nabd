@@ -73,10 +73,21 @@ export default [
   // Words live in wording modules and view-models, not in components (README, "Layout").
   wordingRules,
   {
-    // Node scripts.
+    // Node scripts: the globals Node gives every module that they use.
     files: ["scripts/**/*.mjs"],
     languageOptions: {
-      globals: { console: "readonly", fetch: "readonly", process: "readonly", URL: "readonly" },
+      globals: Object.fromEntries(
+        [
+          "console",
+          "fetch",
+          "process",
+          "URL",
+          "setTimeout",
+          "clearTimeout",
+          "setInterval",
+          "clearInterval",
+        ].map((name) => [name, "readonly"]),
+      ),
     },
   },
 ];

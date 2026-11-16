@@ -93,7 +93,16 @@ const ACTS = {
     await notifications.expectNoMoreThan(3);
     tray.click("Resume nudges"); // the interval has long been up
     await new Promise((r) => setTimeout(r, 3000));
-    console.error("DBG", JSON.stringify(await app.run("arguments[0]([document.hasFocus(), document.visibilityState, document.body.innerText.slice(0,400)])")), screen.focused(), screen.shown());
+    console.error(
+      "DBG",
+      JSON.stringify(
+        await app.run(
+          "arguments[0]([document.hasFocus(), document.visibilityState, document.body.innerText.slice(0,400)])",
+        ),
+      ),
+      screen.focused(),
+      screen.shown(),
+    );
     expectNudge(await notifications.expect(4), NUDGE.timer);
 
     clock.at(17, 1); // the workday is over
@@ -116,7 +125,8 @@ const ACTS = {
     const stop = screen.busy();
     const busy = await idleTicks(app, 3000);
     stop();
-    if (Math.max(...busy) > 1) throw new Error(`moving the mouse should reset the idle time: ${busy}`);
+    if (Math.max(...busy) > 1)
+      throw new Error(`moving the mouse should reset the idle time: ${busy}`);
 
     await logOneSet(app);
     await app.pressNamed("Close");
