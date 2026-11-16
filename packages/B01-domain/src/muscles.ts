@@ -62,6 +62,37 @@ export const MUSCLE_NAMES: Record<MuscleKey, string> = {
 };
 
 /**
+ * The tracking muscles in the order a person reads them down the body:
+ * shoulders, back, chest and core, arms, legs, neck. Every list of muscles
+ * shown in the UI uses this order.
+ */
+export const MUSCLES_ANATOMICAL: readonly MuscleKey[] = [
+  "front_delts",
+  "side_delts",
+  "rear_delts",
+  "upper_traps",
+  "rhomboids",
+  "lower_traps",
+  "lats",
+  "lower_back",
+  "chest",
+  "abs",
+  "obliques",
+  "biceps",
+  "triceps",
+  "forearms",
+  "quads",
+  "hamstrings",
+  "glutes",
+  "abductors",
+  "adductors",
+  "hip_flexors",
+  "calves",
+  "tibialis",
+  "neck",
+];
+
+/**
  * The 12 planner muscle groups. Every exercise belongs to exactly one group;
  * the planner's cycled mode organizes slots by group, and the library filters
  * by group.

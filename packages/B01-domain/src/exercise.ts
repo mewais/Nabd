@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MuscleKeySchema, MuscleGroupSchema } from "./muscles";
+import { MUSCLE_NAMES, MuscleKeySchema, MuscleGroupSchema } from "./muscles";
 import { EquipmentSchema } from "./equipment";
 import { TrackingTypeSchema } from "./tracking";
 
@@ -16,3 +16,8 @@ export const ExerciseSchema = z.object({
 });
 
 export type Exercise = z.infer<typeof ExerciseSchema>;
+
+/** Display names of the muscles an exercise works, primary ones first. */
+export function muscleNames(exercise: Pick<Exercise, "primary" | "secondary">): string[] {
+  return [...exercise.primary, ...exercise.secondary].map((muscle) => MUSCLE_NAMES[muscle]);
+}

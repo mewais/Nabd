@@ -51,3 +51,31 @@ export function formatMinuteOfDay(minute: number): string {
 export function formatClock(d: Date): string {
   return formatMinuteOfDay(minuteOfDay(d));
 }
+
+/** Weekday names, indexed like `Date.getDay()` (0 = Sunday). */
+const WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
+
+/** "Monday" for weekday 1 (0 = Sunday … 6 = Saturday). */
+export function weekdayName(weekday: number): string {
+  const name = WEEKDAY_NAMES[weekday];
+  if (name === undefined) throw new RangeError(`weekday ${weekday} is not 0–6`);
+  return name;
+}
+
+/** "Mon" for weekday 1. */
+export function weekdayShort(weekday: number): string {
+  return weekdayName(weekday).slice(0, 3);
+}
+
+/** "M" for weekday 1. */
+export function weekdayInitial(weekday: number): string {
+  return weekdayName(weekday).charAt(0);
+}

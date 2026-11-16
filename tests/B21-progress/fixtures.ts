@@ -6,8 +6,7 @@ import type { Coverage, DayRecord, LoggedSet, SetType, Trigger } from "@nabd/dom
 import { MUSCLES, dateKey } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
 import { TrainingStats } from "@nabd/analytics";
-import { exerciseTrends } from "@nabd/progression";
-import { buildProgressVM } from "@nabd/progress";
+import { ExerciseProgress, buildProgressVM } from "@nabd/progress";
 import type { ProgressVM } from "@nabd/progress";
 
 export const BENCH = "bench_press__barbell";
@@ -18,8 +17,6 @@ export const PLANK = "plank__bodyweight";
 export const NOW = new Date(2026, 10, 18, 10, 30);
 
 const library = ExerciseLibrary.catalog;
-
-export const exerciseName = (exId: string): string => library.byId(exId)?.name ?? exId;
 
 let nextSetId = 0;
 
@@ -84,18 +81,35 @@ export function dayLog(): DayRecord[] {
   return [record(11, 2, 2), record(12, 3, 0), record(16, 4, 1), record(17, 4, 2), record(18, 4, 3)];
 }
 
+export const NO_COVERAGE = Object.fromEntries(MUSCLES.map((m) => [m, 0])) as Coverage;
+
+export interface Scenario {
+  sets?: LoggedSet[];
+  log?: DayRecord[];
+  now?: Date;
+  coverage?: Coverage;
+}
+
 /** The Progress view model for a history/day log, the way the app builds it. */
-export function progressVM(
-  sets: LoggedSet[] = history(),
-  log: DayRecord[] = dayLog(),
-  now: Date = NOW,
-): ProgressVM {
+export function progressVM({
+  sets = history(),
+  log = dayLog(),
+  now = NOW,
+  coverage = NO_COVERAGE,
+}: Scenario = {}): ProgressVM {
   return buildProgressVM({
     stats: new TrainingStats(sets, log, now),
-    trends: exerciseTrends(sets, "kg", () => undefined),
-    exerciseName,
-    now,
+    progress: new ExerciseProgress(sets, library, "kg"),
+    coverage,
+    today: dateKey(now),
   });
 }
 
-export const NO_COVERAGE = Object.fromEntries(MUSCLES.map((m) => [m, 0])) as Coverage;
+/** Someone who has neither planned nor logged anything. */
+export const NEW_USER: Scenario = { sets: [], log: [] };
+
+/** The content of a section that must not be in its empty state. */
+export function shown<Section extends object>(section: Section | { empty: string }): Section {
+  if ("empty" in section) throw new Error(`section is empty: ${section.empty}`);
+  return section;
+}

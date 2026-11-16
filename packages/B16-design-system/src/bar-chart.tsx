@@ -1,7 +1,7 @@
-import { FONT } from "./tokens";
+import { FONT, shade } from "./tokens";
 
 export interface BarDatum {
-  /** The caption under the bar. */
+  /** The caption under the bar; may be blank where only some bars are captioned. */
   label: string;
   /** Bar height as a share of the chart, 0–100. */
   heightPct: number;
@@ -25,11 +25,19 @@ export interface BarChartProps {
 
 const TONE_FILL: Record<BarTone, string> = {
   neutral: "var(--surface2)",
-  accent: "color-mix(in oklch, var(--accent) 30%, var(--surface2))",
-  success: "color-mix(in oklch, var(--accent2) 70%, var(--surface2))",
+  accent: shade("var(--accent)", 30),
+  success: shade("var(--accent2)", 70),
 };
 
-const CAPTION = { fontFamily: FONT.mono, fontSize: 10, color: "var(--text3)" } as const;
+/** A fixed line box, so a bar with a blank caption still stands on the same baseline. */
+const CAPTION = {
+  fontFamily: FONT.mono,
+  fontSize: 10,
+  lineHeight: "12px",
+  minHeight: 12,
+  whiteSpace: "nowrap",
+  color: "var(--text3)",
+} as const;
 
 /** Vertical bars that share the width evenly; an empty bar keeps a sliver so it stays visible. */
 export function BarChart({

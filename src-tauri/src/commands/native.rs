@@ -48,9 +48,3 @@ pub fn update_tray<R: Runtime>(state: TrayState, app: AppHandle<R>) -> AppResult
 pub fn quit<R: Runtime>(app: AppHandle<R>) {
     app.exit(0);
 }
-
-// TEMP-SMOKE
-#[tauri::command]
-pub fn debug_log(message: String) {
-    eprintln!("[webview] {message}");
-}

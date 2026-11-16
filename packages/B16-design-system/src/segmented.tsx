@@ -4,6 +4,12 @@ import { COLOR, RADIUS, SURFACE2_BOX } from "./tokens";
 export interface SegOption<K extends string = string> {
   k: K;
   label: ReactNode;
+  /** Accessible name, when the label alone is not enough (e.g. an initial). */
+  ariaLabel?: string;
+  /** Tooltip. */
+  title?: string;
+  /** Shown but not selectable; say why in `title`. */
+  disabled?: boolean;
 }
 
 export interface SegmentedProps<K extends string = string> {
@@ -48,13 +54,17 @@ export function Segmented<K extends string = string>({
             key={option.k}
             type="button"
             aria-pressed={active}
+            aria-label={option.ariaLabel}
+            title={option.title}
+            disabled={option.disabled}
             onClick={() => onChange(option.k)}
             style={{
               padding,
               fontSize,
               borderRadius: radius,
               border: "none",
-              cursor: "pointer",
+              cursor: option.disabled ? "not-allowed" : "pointer",
+              opacity: option.disabled ? 0.5 : 1,
               fontFamily: "inherit",
               fontWeight: 600,
               background: active ? "var(--accent)" : "transparent",

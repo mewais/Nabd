@@ -39,8 +39,8 @@ pub enum IdleBackend {
 }
 
 /// The backends worth trying in a session, best first; the first that answers
-/// is used. Mutter leads because GNOME implements neither of the Wayland
-/// protocol and `GetSessionIdleTime`.
+/// is used. Mutter leads because it is the only one GNOME offers: it has
+/// neither the Wayland protocol nor `GetSessionIdleTime`.
 pub fn idle_backends(session: SessionKind) -> &'static [IdleBackend] {
     use IdleBackend::{Mutter, SessionIdleTime, WaylandIdleNotify, XScreenSaver};
     match session {

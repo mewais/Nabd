@@ -1,11 +1,13 @@
 // Scenarios for the Today suite, built on the shared training world.
 
-import { DEFAULT_SETTINGS } from "@nabd/domain";
+import { DEFAULT_SETTINGS, addDays } from "@nabd/domain";
+import type { BodyView, MapStyle } from "@nabd/bodymap";
+import { MuscleVolume } from "@nabd/coverage";
 import { NudgePolicy } from "@nabd/nudge";
 import type { NudgeStatus } from "@nabd/nudge";
 import { buildTodayVM } from "@nabd/today";
 import type { TodayVM } from "@nabd/today";
-import { NOW, buildWorld } from "../support/plan-fixtures";
+import { LIBRARY, NOW, buildWorld } from "../support/plan-fixtures";
 import type { WorldInput } from "../support/plan-fixtures";
 
 export { lastWeek, pushDay } from "../support/plan-fixtures";
@@ -26,12 +28,18 @@ export function nudgeAt(
   });
 }
 
+export interface TodayOptions {
+  unit?: "kg" | "lb";
+  nudge?: NudgeStatus;
+  hasProgram?: boolean;
+  mapView?: BodyView;
+  mapStyle?: MapStyle;
+}
+
 /** The Today view-model for a world, the way the app's container builds it. */
-export function todayVM(
-  input: WorldInput,
-  options: { unit?: "kg" | "lb"; nudge?: NudgeStatus; hasProgram?: boolean } = {},
-): TodayVM {
+export function todayVM(input: WorldInput, options: TodayOptions = {}): TodayVM {
   const world = buildWorld(input);
+  const lookup = (exId: string) => LIBRARY.byId(exId);
   return buildTodayVM({
     plan: world.plan,
     coach: world.coach,
@@ -39,5 +47,13 @@ export function todayVM(
     nudge: options.nudge ?? nudgeAt(input.now ?? NOW),
     unit: options.unit ?? "kg",
     hasProgram: options.hasProgram ?? input.program.days.length > 0,
+    coverage: MuscleVolume.ofRecentHistory(
+      world.history,
+      lookup,
+      addDays(world.now, 1),
+    ).toCoverage(),
+    planned: MuscleVolume.ofProgram(input.program, lookup),
+    mapView: options.mapView ?? "both",
+    mapStyle: options.mapStyle ?? "heat",
   });
 }

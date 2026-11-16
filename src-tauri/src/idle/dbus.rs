@@ -70,7 +70,10 @@ impl DbusIdle {
     fn millis(&self) -> zbus::Result<u64> {
         match self.reply {
             Reply::U64 => self.proxy.call(self.method, &()),
-            Reply::U32 => self.proxy.call::<_, _, u32>(self.method, &()).map(u64::from),
+            Reply::U32 => self
+                .proxy
+                .call::<_, _, u32>(self.method, &())
+                .map(u64::from),
         }
     }
 }

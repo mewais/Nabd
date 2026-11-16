@@ -4,3 +4,5 @@ export { LogSession } from "./log-session";
 export { Coach } from "./coach";
 export { formatPerformance, formatTarget, describeAdvice, formatDuration } from "./wording";
 export type { AdviceWording } from "./wording";
+export { describeNextSet } from "./next-set";
+export type { NextSetWording } from "./next-set";

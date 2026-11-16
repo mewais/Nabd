@@ -3,15 +3,13 @@
  * plan, history and nudge state.
  */
 
-import { EMPTY_PROGRAM } from "@nabd/domain";
-import type { HeroVM } from "@nabd/today";
+import { EMPTY_PROGRAM, MUSCLES } from "@nabd/domain";
+import type { HeroVM, NextSetVM, TodayVM } from "@nabd/today";
 import { did, mondayProgram, planRow, work } from "../support/plan-fixtures";
 import { nov } from "../support/domain-factories";
 import { lastWeek, nudgeAt, pushDay, todayVM } from "./fixtures";
 
-type NextHero = Extract<HeroVM, { kind: "next" }>;
-
-function nextHero(hero: HeroVM): NextHero {
+function nextHero(hero: HeroVM): NextSetVM {
   if (hero.kind !== "next") throw new Error(`expected a "next" hero, got "${hero.kind}"`);
   return hero;
 }
@@ -20,9 +18,8 @@ describe("buildTodayVM · hero", () => {
   it("opens the day on the first exercise's warm-up, with no progression advice", () => {
     const hero = nextHero(todayVM({ program: pushDay(), history: lastWeek() }).hero);
 
-    expect(hero.itemId).toBe("p-bench");
     expect(hero.exercise).toBe("Bench Press");
-    expect(hero.kicker).toBe("UP NEXT · SET 1 OF 3");
+    expect(hero.kicker).toBe("Up next · Set 1 of 3");
     expect(hero.label).toBe("Chest");
     expect(hero.muscleNames).toEqual(["Chest", "Triceps", "Front Delts"]);
     expect(hero.target).toBe("Warm-up · 10 reps");
@@ -34,7 +31,7 @@ describe("buildTodayVM · hero", () => {
     const history = [...lastWeek(), did("p-bench", "bench", 10, 40, { setType: "warmup" })];
     const hero = nextHero(todayVM({ program: pushDay(), history }).hero);
 
-    expect(hero.kicker).toBe("UP NEXT · SET 2 OF 3");
+    expect(hero.kicker).toBe("Up next · Set 2 of 3");
     expect(hero.target).toBe("Working set · 8–12 reps · RPE 8");
     expect(hero.advice).toEqual({
       primary: "9 × 60 kg",
@@ -52,7 +49,7 @@ describe("buildTodayVM · hero", () => {
     ];
     const hero = nextHero(todayVM({ program: pushDay(), history }).hero);
 
-    expect(hero.kicker).toBe("UP NEXT · SET 3 OF 3");
+    expect(hero.kicker).toBe("Up next · Set 3 of 3");
     // Last week's second working set was 7 reps: under the 8–12 range.
     expect(hero.advice).toEqual({
       primary: "8 × 60 kg",
@@ -115,13 +112,13 @@ describe("buildTodayVM · hero", () => {
     ];
     const hero = nextHero(todayVM({ program: pushDay(), history }).hero);
 
-    expect(hero.itemId).toBe("p-row");
-    expect(hero.kicker).toBe("UP NEXT · SET 1 OF 2");
+    expect(hero.exercise).toBe("Barbell Row");
+    expect(hero.kicker).toBe("Up next · Set 1 of 2");
   });
 
   it("skips over an exercise the user skipped for today", () => {
     const hero = nextHero(todayVM({ program: pushDay(), skipped: ["p-bench"] }).hero);
-    expect(hero.itemId).toBe("p-row");
+    expect(hero.exercise).toBe("Barbell Row");
   });
 
   it("flags a due nudge and says why", () => {
@@ -131,6 +128,7 @@ describe("buildTodayVM · hero", () => {
 
     expect(hero.due).toBe(true);
     expect(hero.nudgeLine).toBe("Interval's up");
+    expect(hero.snoozeLabel).toBe("Snooze 5m");
   });
 
   it("while waiting, says when the next nudge comes", () => {
@@ -157,32 +155,43 @@ describe("buildTodayVM · hero", () => {
     expect(late.nudgeLine).toBe("Quiet until 09:00");
   });
 
-  it("is 'complete' with the day's set count once everything prescribed is logged", () => {
+  it("celebrates with the day's set count once everything prescribed is logged", () => {
     const program = mondayProgram([planRow("p-row", "row", [work(8, 12), work(8, 12)])]);
     const history = [did("p-row", "row", 12, 50), did("p-row", "row", 11, 50)];
 
-    expect(todayVM({ program, history }).hero).toEqual({ kind: "complete", setsDone: 2 });
+    expect(todayVM({ program, history }).hero).toEqual({
+      kind: "complete",
+      title: "Day complete",
+      text: "All 2 sets logged across your workday. Nice work.",
+      offersLogOther: false,
+    });
   });
 
   it("is a rest day when the program has nothing on this weekday", () => {
     const tuesday = nov(17, 10, 30);
     const vm = todayVM({ program: pushDay(), now: tuesday, history: lastWeek() });
 
-    expect(vm.hero).toEqual({ kind: "rest", hasProgram: true, allSkipped: false });
+    expect(vm.hero).toMatchObject({ kind: "rest", title: "Rest day", offersLogOther: true });
     expect(vm.dayName).toBeNull();
     expect(vm.queue).toEqual([]);
   });
 
   it("tells a day that was skipped outright apart from a rest day", () => {
     const vm = todayVM({ program: pushDay(), skipped: ["p-bench", "p-row", "p-plank"] });
-    expect(vm.hero).toEqual({ kind: "rest", hasProgram: true, allSkipped: true });
+    expect(vm.hero).toEqual({
+      kind: "skipped",
+      title: "Everything skipped today",
+      text: "Restore an exercise from the queue below, or log something else.",
+      offersLogOther: true,
+    });
   });
 
   it("tells a rest day apart from having no program at all", () => {
-    expect(todayVM({ program: EMPTY_PROGRAM }).hero).toEqual({
-      kind: "rest",
-      hasProgram: false,
-      allSkipped: false,
+    expect(todayVM({ program: EMPTY_PROGRAM }).hero).toMatchObject({
+      kind: "no-plan",
+      title: "No plan yet",
+      text: expect.stringContaining("Plan screen"),
+      offersLogOther: false,
     });
   });
 });
@@ -251,11 +260,19 @@ describe("buildTodayVM · queue", () => {
     expect(queue().queue.filter((r) => r.state === "next")).toHaveLength(1);
   });
 
-  it("tags superset partners A1/A2 and leaves other rows untagged", () => {
-    expect(row("p-pushup").supersetTag).toBe("A1");
-    expect(row("p-dip").supersetTag).toBe("A2");
-    expect(row("p-bench").supersetTag).toBeNull();
-    expect(row("x-curl").supersetTag).toBeNull();
+  it("marks superset partners A1/A2 and every other row with its place in the day", () => {
+    expect(row("p-bench").marker).toBe("01");
+    expect(row("p-pushup").marker).toBe("A1");
+    expect(row("p-dip").marker).toBe("A2");
+    expect(row("p-row").marker).toBe("04");
+    expect(row("x-curl").marker).toBe("06");
+  });
+
+  it("anything not skipped can be started; a finished exercise takes more sets", () => {
+    expect(row("p-pushup").startLabel).toBe("Start");
+    expect(row("x-curl").startLabel).toBe("Start");
+    expect(row("p-bench").startLabel).toBe("More");
+    expect(row("p-row").startLabel).toBeNull();
   });
 
   it("a skipped exercise says so and offers to restore it", () => {
@@ -321,23 +338,64 @@ describe("buildTodayVM · stats", () => {
     did("p-bench", "bench", 10, 40, { setType: "warmup" }),
     did("p-bench", "bench", 9, 60),
   ];
+  const figures = (vm: TodayVM) => Object.fromEntries(vm.stats.map((t) => [t.label, t.value]));
 
   it("reports the streak, this week's sets and the load moved today", () => {
     const vm = todayVM({ program: pushDay(), history: history() });
     // Sat + Sun + today; only today's two sets fall in the week that starts this Monday.
-    expect(vm.stats).toEqual({ streak: 3, weekSets: 2, volume: 10 * 40 + 9 * 60, unit: "kg" });
+    expect(figures(vm)).toEqual({
+      "day streak": "3",
+      "sets this week": "2",
+      "kg lifted today": "940",
+    });
   });
 
-  it("converts today's volume to pounds for lb users", () => {
+  it("converts today's volume to pounds for lb users, grouping the digits", () => {
     const vm = todayVM({ program: pushDay(), history: history() }, { unit: "lb" });
-    expect(vm.stats.unit).toBe("lb");
-    expect(vm.stats.volume).toBe(2072); // 940 kg
+    expect(figures(vm)).toMatchObject({ "lb lifted today": "2,072" });
   });
 
   it("counts nothing lifted for bodyweight work", () => {
     const program = mondayProgram([planRow("p-pushup", "pushup", [work(10, 15)])]);
     const vm = todayVM({ program, history: [did("p-pushup", "pushup", 12, null)] });
-    expect(vm.stats.volume).toBe(0);
-    expect(vm.stats.weekSets).toBe(1);
+    expect(figures(vm)).toMatchObject({ "kg lifted today": "0", "sets this week": "1" });
+  });
+});
+
+describe("buildTodayVM · coverage and insight", () => {
+  /** Twelve chest sets this week: chest is well covered, the rest of the plan lags. */
+  const benchWeek = () =>
+    Array.from({ length: 12 }, (unused, i) => did(null, "bench", 8, 60, { at: nov(13, 12, i) }));
+
+  it("carries the map's view and style through", () => {
+    const vm = todayVM({ program: pushDay() }, { mapView: "back", mapStyle: "outline" });
+    expect(vm.coverage).toMatchObject({ view: "back", mapStyle: "outline" });
+  });
+
+  it("lists every muscle down the body with its coverage and what it is due", () => {
+    const { legend } = todayVM({ program: pushDay(), history: benchWeek() }).coverage;
+    expect(legend).toHaveLength(MUSCLES.length);
+    expect(legend[0]).toEqual({ muscle: "front_delts", pct: 37.5, recommendation: "push" });
+    expect(legend.find((row) => row.muscle === "chest")).toMatchObject({
+      pct: 75,
+      recommendation: "rest",
+    });
+    expect(legend.at(-1)?.muscle).toBe("neck");
+  });
+
+  it("says which muscles to rest, and which of the muscles the plan trains to push", () => {
+    const { insight } = todayVM({ program: pushDay(), history: benchWeek() });
+    expect(insight).toEqual([
+      { kind: "rest", lead: "Rest these", text: " — Chest are well-trained this week." },
+      {
+        kind: "push",
+        lead: "Push these",
+        text: " — Rhomboids, Lats, Abs are lagging. Good to prioritize.",
+      },
+    ]);
+  });
+
+  it("has nothing to say without a plan or a history", () => {
+    expect(todayVM({ program: EMPTY_PROGRAM }).insight).toEqual([]);
   });
 });

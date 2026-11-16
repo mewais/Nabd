@@ -43,6 +43,22 @@ export const ExercisePrescriptionSchema = PrescriptionSchema.extend({
 });
 export type ExercisePrescription = z.infer<typeof ExercisePrescriptionSchema>;
 
+/**
+ * The tag of each row of a day: "A1", "A2"… for the members of a superset, by
+ * their place among their partners; null for a row on its own.
+ */
+export function supersetTags(
+  rows: readonly { supersetId?: string | undefined }[],
+): (string | null)[] {
+  const seen = new Map<string, number>();
+  return rows.map(({ supersetId }) => {
+    if (supersetId === undefined) return null;
+    const position = (seen.get(supersetId) ?? 0) + 1;
+    seen.set(supersetId, position);
+    return `A${position}`;
+  });
+}
+
 /** A cycled slot: targets one muscle with a rotating pool sharing one prescription. */
 export const CycledSlotSchema = PrescriptionSchema.extend({
   id: z.string(),

@@ -2,7 +2,7 @@
 // primitive the screens are built from. No app logic.
 
 export { ANIMATION } from "./global-styles";
-export { COLOR, FONT, RADIUS, SURFACE2_BOX, TEXT, Z, tint } from "./tokens";
+export { COLOR, FONT, RADIUS, SURFACE2_BOX, TEXT, Z, shade, tint } from "./tokens";
 export type { ModalLayer } from "./tokens";
 
 export { ThemeProvider } from "./theme-provider";
@@ -12,8 +12,12 @@ export { Page } from "./page";
 export type { PageProps } from "./page";
 export { Card } from "./card";
 export type { CardProps } from "./card";
+export { CardButton } from "./card-button";
+export type { CardButtonProps } from "./card-button";
 export { Eyebrow } from "./eyebrow";
 export type { EyebrowProps } from "./eyebrow";
+export { EmptyNote } from "./empty-note";
+export type { EmptyNoteProps } from "./empty-note";
 
 export { Icon } from "./icon";
 export type { IconProps } from "./icon";
@@ -27,6 +31,8 @@ export { IconButton } from "./icon-button";
 export type { IconButtonProps, IconButtonVariant } from "./icon-button";
 export { CloseButton } from "./close-button";
 export type { CloseButtonProps } from "./close-button";
+export { RowButton } from "./row-button";
+export type { RowButtonProps } from "./row-button";
 
 export { Stepper } from "./stepper";
 export type { StepperProps, StepperSize } from "./stepper";
@@ -39,8 +45,13 @@ export type { DropdownOption, DropdownProps } from "./dropdown";
 export { TextInput } from "./text-input";
 export type { TextInputProps } from "./text-input";
 
+export { TitleInput } from "./title-input";
+export type { TitleInputProps } from "./title-input";
+
 export { Chip } from "./chip";
-export type { ChipProps } from "./chip";
+export type { ChipProps, ChipTone, ChipVariant } from "./chip";
+export { Badge } from "./badge";
+export type { BadgeProps, BadgeTone } from "./badge";
 export { ChipToggle } from "./chip-toggle";
 export type { ChipToggleProps } from "./chip-toggle";
 export { ChipGroup } from "./chip-group";

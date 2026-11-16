@@ -37,7 +37,42 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   load; below it twice running → back off one step. "More load" is your own weight
   increment (Settings → Training), so 8 × 25 lb suggests 9 × 25 lb or 8 × 27.5 lb.
 - **Closing the window hides it**; the app lives in the tray (Start next set, Pause
-  nudges, Open, Quit).
+  nudges, Open, Quit). Where the desktop shows no tray icons (stock GNOME without the
+  AppIndicator extension) closing the window quits instead. Settings → Quit Nabd always
+  exits.
+
+## Prerequisites
+
+Node ≥ 20 with pnpm (the version in `package.json`'s `packageManager`; `corepack enable`
+provides it) and stable Rust (`rustup`), plus per platform:
+
+- **Linux** (Debian/Ubuntu names):
+
+  ```bash
+  sudo apt install build-essential curl wget file pkg-config libssl-dev \
+    libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+  ```
+
+  `rpm` as well if you build the `.rpm` bundle. At run time the app needs
+  `libwebkit2gtk-4.1-0`, `libgtk-3-0` and `libayatana-appindicator3-1`; the `.deb`/`.rpm`
+  bundles declare them.
+
+- **Windows 10/11**: the Microsoft C++ Build Tools ("Desktop development with C++"
+  workload) and the WebView2 runtime — part of Windows 11, and installed by the Nabd
+  installer on Windows 10 if it is missing.
+
+## Platform notes
+
+|                 | Windows 10/11                          | Linux                                                                                                             |
+| --------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Tray            | always                                 | needs a StatusNotifier host: KDE, or GNOME with the AppIndicator extension; without one the app is a plain window |
+| Idle time       | system-wide                            | GNOME (Mutter), Wayland `ext-idle-notify-v1` (KDE, Sway, Hyprland…), X11, KDE's screen-saver service              |
+| Glass           | Mica on Windows 11, blur on Windows 10 | not offered: Linux has no portable blur, so the window stays opaque                                               |
+| Open at startup | registry `Run` entry                   | an entry in `~/.config/autostart/`                                                                                |
+
+Where the OS cannot report idle time, "idle" means no keyboard or mouse activity inside
+the Nabḍ window. A login launch always starts in the tray (if there is one); "Start
+minimized" does the same for launches by hand. macOS is not a supported target yet.
 
 ## Quick start
 
@@ -88,9 +123,11 @@ packages/
   B23-app             React wiring (containers, app loop) + browser demo backend
 src-tauri/
   crates/B11-persistence   SQLite store + schema migrations
-  crates/B12-native        tray menu model, notification text (pure)
+  crates/B12-native        the pure decisions behind native features (tray model,
+                           notification text, capabilities, launch/close, idle backends)
   crates/B13-ipc           command core over SQLite
-  src/                     the Tauri binary: commands, tray, window, plugins
+  src/                     the Tauri binary: commands/, tray, window, clock, glass,
+                           autostart, export, and idle/ (one backend per platform API)
 ```
 
 Dependencies only point downward: engines (B02–B10) know nothing about React or the

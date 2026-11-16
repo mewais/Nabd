@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@nabd/domain": "workspace:*",
-    "@nabd/dataset": "workspace:*",
+    "@nabd/coverage": "workspace:*",
+    "@nabd/session": "workspace:*",
     "@nabd/program-editor": "workspace:*",
     "@nabd/design-system": "workspace:*",
     "@nabd/bodymap": "workspace:*"

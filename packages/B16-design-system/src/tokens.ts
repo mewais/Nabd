@@ -48,6 +48,11 @@ export function tint(color: string, percent: number): string {
   return `color-mix(in oklch, ${color} ${percent}%, transparent)`;
 }
 
+/** A colour mixed into the quiet fill, for heat scales and soft bars: `shade("var(--accent)", 30)`. */
+export function shade(color: string, percent: number): string {
+  return `color-mix(in oklch, ${color} ${percent}%, var(--surface2))`;
+}
+
 /** Shared text styles. */
 export const TEXT = {
   /** The mono, upper-case micro-label above titles and sections. */
