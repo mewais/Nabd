@@ -6,7 +6,6 @@ import {
   FormSection,
   ModalShell,
   Toggle,
-  Z,
 } from "@nabd/design-system";
 import { click, press } from "./render";
 
@@ -97,11 +96,9 @@ describe("ModalShell", () => {
   it("stacks above the layer it was opened from", () => {
     render(<ModalShell title="Below" width={300} onClose={vi.fn()} />);
     render(<ModalShell title="Above" width={300} layer="modalOver" onClose={vi.fn()} />);
-    const layers = [...document.querySelectorAll<HTMLElement>("[data-modal-backdrop]")].map(
-      (backdrop) => backdrop.dataset.layer,
-    );
-    expect(layers).toEqual(["modal", "modalOver"]);
-    expect(Z.modalOver).toBeGreaterThan(Z.modal);
+    const [below, above] = [...document.querySelectorAll<HTMLElement>("[data-modal-backdrop]")];
+    expect([below?.dataset.layer, above?.dataset.layer]).toEqual(["modal", "modalOver"]);
+    expect(Number(above?.style.zIndex)).toBeGreaterThan(Number(below?.style.zIndex));
   });
 
   it("gives Escape to the modal on top only", () => {
@@ -184,9 +181,10 @@ describe("ConfirmDialog", () => {
   });
 
   it("opens over every other dialog", () => {
+    render(<ModalShell title="Top" width={300} layer="modalTop" onClose={vi.fn()} />);
     setup();
-    const backdrop = document.querySelector<HTMLElement>("[data-modal-backdrop]");
-    expect(backdrop?.dataset.layer).toBe("confirm");
-    expect(Z.confirm).toBeGreaterThan(Z.modalTop);
+    const [top, confirm] = [...document.querySelectorAll<HTMLElement>("[data-modal-backdrop]")];
+    expect(confirm?.dataset.layer).toBe("confirm");
+    expect(Number(confirm?.style.zIndex)).toBeGreaterThan(Number(top?.style.zIndex));
   });
 });

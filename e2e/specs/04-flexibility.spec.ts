@@ -14,7 +14,7 @@ test("a nudge is an invitation: any order, extra sets, extras, skipping and undo
   await app.launch(at("10:00"), { program });
 
   await test.step("any exercise can be started out of order", async () => {
-    await expect(today.row(bench.name)).toHaveAttribute("data-state", "next");
+    await expect(today.row(bench.name).getByRole("img", { name: "Up next" })).toBeVisible();
     await today.rowButton(curl.name, "Start").click();
     await expect(logger.exercise).toHaveText(curl.name);
     await logger.log({ reps: 10, weight: 8 });

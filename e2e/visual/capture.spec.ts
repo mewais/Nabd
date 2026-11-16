@@ -1,5 +1,8 @@
+// The states `pnpm visual` photographs (see playwright.config.ts beside this file).
+
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { DEFAULT_SETTINGS } from "@nabd/domain";
 import { EXERCISE, day, loggedSet, plan, planned, slot, workingSets } from "../support/data";
@@ -7,7 +10,7 @@ import { test } from "../support/fixtures";
 import type { App } from "../support/app";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const OUT = process.env.OUT ?? "/tmp/style-shots/before";
+const OUT = process.env.OUT ?? fileURLToPath(new URL("./shots/", import.meta.url));
 mkdirSync(OUT, { recursive: true });
 const { bench, raise, curl, hammerCurl, squat, pullUp, pushUp, plank, barbellBench } = EXERCISE;
 const LAST_FRIDAY = dayAfter(MONDAY, -3);
@@ -15,13 +18,14 @@ const LAST_FRIDAY = dayAfter(MONDAY, -3);
 const THEMES = ["dark", "light"] as const;
 type ThemeName = (typeof THEMES)[number];
 
-function shooter(page: Page, theme: ThemeName) {
+/** Saves `<theme>-<name>.png` once the clock has moved past every transition. */
+function shooter(page: Page, theme: ThemeName): (name: string) => Promise<void> {
   return async (name: string): Promise<void> => {
     await page.clock.runFor(700);
     await page.screenshot({ path: join(OUT, `${theme}-${name}.png`), animations: "disabled" });
   };
 }
-const settingsOf = (theme: ThemeName, more: object = {}) => ({ ...DEFAULT_SETTINGS, theme, ...more });
+const settingsOf = (theme: ThemeName): typeof DEFAULT_SETTINGS => ({ ...DEFAULT_SETTINGS, theme });
 
 const pushDay = day("Push", [
   planned(bench.id, {
@@ -54,7 +58,11 @@ for (const theme of THEMES) {
     test("today and logger", async ({ app, page }) => {
       const shot = shooter(page, theme);
       const { shell, today, logger, library } = app;
-      await app.launch(at("09:10"), { program: plan([pushDay]), history, settings: settingsOf(theme) });
+      await app.launch(at("09:10"), {
+        program: plan([pushDay]),
+        history,
+        settings: settingsOf(theme),
+      });
       await shot("today-not-due");
       await app.idleFor(51);
       await shot("today-due-toast");
@@ -127,8 +135,21 @@ for (const theme of THEMES) {
       const program = plan([
         pushDay,
         day("Pull", [
-          planned(pullUp.id, { intensity: "rpe", sets: [{ type: "working", amount: 6, upTo: 8, intensity: 8 }, { type: "drop", amount: 10, upTo: 12, intensity: 7 }] }),
-          planned(barbellBench.id, { intensity: "pct", repMode: "fixed", sets: [{ type: "warmup", amount: 5, intensity: 50 }, { type: "working", amount: 5, intensity: 80 }] }),
+          planned(pullUp.id, {
+            intensity: "rpe",
+            sets: [
+              { type: "working", amount: 6, upTo: 8, intensity: 8 },
+              { type: "drop", amount: 10, upTo: 12, intensity: 7 },
+            ],
+          }),
+          planned(barbellBench.id, {
+            intensity: "pct",
+            repMode: "fixed",
+            sets: [
+              { type: "warmup", amount: 5, intensity: 50 },
+              { type: "working", amount: 5, intensity: 80 },
+            ],
+          }),
         ]),
         day("Empty", []),
       ]);
@@ -164,7 +185,13 @@ for (const theme of THEMES) {
       const shot = shooter(page, theme);
       const program = plan(
         [
-          day("Upper", [], { slots: [slot("chest", [bench.id, pushUp.id]), slot("biceps", [curl.id, hammerCurl.id]), slot("side_delts", [])] }),
+          day("Upper", [], {
+            slots: [
+              slot("chest", [bench.id, pushUp.id]),
+              slot("biceps", [curl.id, hammerCurl.id]),
+              slot("side_delts", []),
+            ],
+          }),
           day("Lower", [], { slots: [slot("quads", [squat.id])] }),
         ],
         { type: "cycled" },
@@ -180,7 +207,10 @@ for (const theme of THEMES) {
     test("settings and notice", async ({ app, page }) => {
       const shot = shooter(page, theme);
       const { shell, settings } = app;
-      await app.launch(at("10:00"), { program: plan([pushDay]), settings: { theme, interval: 2 } });
+      await app.launch(at("10:00"), {
+        program: plan([pushDay]),
+        settings: { ...settingsOf(theme), interval: 2 },
+      });
       await shot("notice-banner");
       await shell.button("Settings").click();
       await shot("settings-top");
@@ -212,16 +242,27 @@ for (const theme of THEMES) {
       await shot("progress");
       await progress.tab("Weekly").click();
       await shot("progress-weekly");
-      await page.getByRole("heading", { name: "Sets per muscle" }).or(page.getByText("Sets per muscle")).first().scrollIntoViewIfNeeded();
+      await page
+        .getByRole("heading", { name: "Sets per muscle" })
+        .or(page.getByText("Sets per muscle"))
+        .first()
+        .scrollIntoViewIfNeeded();
       await page.mouse.wheel(0, 2000);
       await shot("progress-end");
-      await page.getByRole("button", { name: /Bench Press/ }).first().click();
+      await page
+        .getByRole("button", { name: /Bench Press/ })
+        .first()
+        .click();
       await shot("chart");
     });
 
     test("focus ring", async ({ app, page }) => {
       const shot = shooter(page, theme);
-      await app.launch(at("09:10"), { program: plan([pushDay]), history, settings: settingsOf(theme) });
+      await app.launch(at("09:10"), {
+        program: plan([pushDay]),
+        history,
+        settings: settingsOf(theme),
+      });
       await page.keyboard.press("Tab");
       await page.keyboard.press("Tab");
       await page.keyboard.press("Tab");
@@ -237,7 +278,9 @@ for (const theme of THEMES) {
 
 for (const theme of THEMES) {
   test(`${theme} error notice`, async ({ app, page }) => {
-    const program = plan([day("Upper", [], { slots: [slot("shoulders" as never, [])] })], { type: "cycled" });
+    const program = plan([day("Upper", [], { slots: [slot("shoulders" as never, [])] })], {
+      type: "cycled",
+    });
     await app.launch(at("10:00"), { program, settings: settingsOf(theme) });
     await shooter(page, theme)("notice-error");
   });

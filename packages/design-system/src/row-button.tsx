@@ -16,7 +16,7 @@ interface RowButtonProps {
   variant?: RowButtonVariant;
   /** Accessible name, when the row's content is not enough. */
   ariaLabel?: string;
-  /** The row that is selected in its list. */
+  /** Whether this is the selected row of its list; left out for a row of a list without one. */
   current?: boolean;
   /** Out of play for now: drawn faded. */
   dimmed?: boolean;
@@ -53,13 +53,13 @@ export function RowButton({
   onClick,
   variant = "plain",
   ariaLabel,
-  current = false,
+  current,
   dimmed = false,
 }: RowButtonProps): JSX.Element {
   return (
     <ButtonBase
       aria-label={ariaLabel}
-      aria-current={current || undefined}
+      aria-current={current}
       onClick={onClick}
       style={{
         display: "block",
@@ -67,7 +67,7 @@ export function RowButton({
         boxSizing: "border-box",
         textAlign: "left",
         opacity: dimmed ? DIMMED_OPACITY : undefined,
-        ...variantStyle(variant, current),
+        ...variantStyle(variant, current === true),
       }}
     >
       {children}

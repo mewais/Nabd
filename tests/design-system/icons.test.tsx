@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { BrandMark, Icon } from "@nabd/design-system";
+import { BrandMark, COLOR, Icon } from "@nabd/design-system";
 import type { IconName } from "@nabd/design-system";
 import { renderRoot } from "./render";
 
@@ -26,9 +26,13 @@ describe("Icon", () => {
     expect(screen.getByRole("img", { name: "complete" })).toBeInTheDocument();
   });
 
-  it("takes its colour from the text unless a stroke is given", () => {
+  it("takes its colour from the text unless a tone is given", () => {
     expect(renderRoot(<Icon name="plus" />)).toHaveAttribute("stroke", "currentColor");
-    expect(renderRoot(<Icon name="plus" stroke="#fff" />)).toHaveAttribute("stroke", "#fff");
+    expect(renderRoot(<Icon name="plus" tone="accent" />)).toHaveAttribute("stroke", COLOR.accent);
+    expect(renderRoot(<Icon name="plus" tone="faint" />)).toHaveAttribute(
+      "stroke",
+      COLOR.textFaint,
+    );
   });
 
   it("only accepts names from the set", () => {

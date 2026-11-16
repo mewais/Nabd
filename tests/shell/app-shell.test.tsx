@@ -77,9 +77,6 @@ describe("AppShell · sidebar", () => {
 });
 
 describe("AppShell · top bar", () => {
-  /** The status dot that sits next to the clock. */
-  const liveDot = (): Element | null => screen.getByText("10:30").querySelector("[data-active]");
-
   it("shows the greeting, date, clock and where nudging stands", () => {
     renderShell();
     expect(screen.getByText("Good morning")).toBeInTheDocument();
@@ -88,14 +85,14 @@ describe("AppShell · top bar", () => {
     expect(screen.getByText("Next nudge at 11:20, sooner if you go idle")).toBeInTheDocument();
   });
 
-  it("lights the live dot only while a set is due", () => {
+  it("says in its status region, in words, when a set is due", () => {
     const waiting = renderShell();
-    expect(liveDot()).toHaveAttribute("data-active", "false");
+    expect(screen.getByRole("status")).toHaveTextContent("10:30");
+    expect(screen.getByRole("status")).not.toHaveTextContent("Interval's up");
     waiting.unmount();
 
     renderShell({ nudge: { state: "due", reason: "timer" } });
-    expect(liveDot()).toHaveAttribute("data-active", "true");
-    expect(screen.getByText("Interval's up")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Interval's up");
   });
 
   it("offers Pause while nudges run, and toggles on click", () => {

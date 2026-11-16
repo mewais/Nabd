@@ -23,6 +23,7 @@ export default [
       "**/target/**",
       "**/node_modules/**",
       "e2e/test-results/**",
+      "e2e/visual/test-results/**",
       "packages/bodymap/src/drawing/bodydata.ts",
     ],
   },

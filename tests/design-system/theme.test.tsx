@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { ANIMATION, ThemeProvider } from "@nabd/design-system";
+import { LiveDot, ModalShell, ThemeProvider, ToastFrame } from "@nabd/design-system";
 import { renderRoot } from "./render";
 
 const root = (theme: "light" | "dark", glass: boolean, opacity = 0.7): HTMLElement =>
@@ -71,11 +71,25 @@ describe("ThemeProvider", () => {
     expect(light.background.replace(/\s/g, "")).toBe("rgba(244,246,251,0.3)");
   });
 
-  it("ships the keyframes every named animation refers to", () => {
+  it("ships the keyframes of every animation its primitives play", () => {
+    const { container } = render(
+      <ThemeProvider theme="dark" glass={false} opacity={1}>
+        <LiveDot active />
+        <ToastFrame>toast</ToastFrame>
+        <ModalShell title="Modal" width={300} onClose={() => undefined} />
+      </ThemeProvider>,
+    );
+    const css = container.querySelector("style")?.textContent ?? "";
+    const played = [...document.querySelectorAll<HTMLElement>("[style]")]
+      .map((element) => element.style.animation.split(" ")[0])
+      .filter((name): name is string => name !== undefined && name !== "");
+    expect(new Set(played).size).toBe(3);
+    for (const name of played) expect(css).toContain(`@keyframes ${name}`);
+  });
+
+  it("draws one focus ring, for keyboard focus only", () => {
     const { container } = render(<ThemeProvider theme="dark" glass={false} opacity={1} />);
     const css = container.querySelector("style")?.textContent ?? "";
-    for (const animation of Object.values(ANIMATION)) {
-      expect(css).toContain(`@keyframes ${animation.split(" ")[0]}`);
-    }
+    expect(css.match(/:focus-visible[^{]*\{[^}]*outline: 2px solid/g)).toHaveLength(1);
   });
 });

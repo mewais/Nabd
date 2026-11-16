@@ -43,7 +43,7 @@ export function HeatCell({ level, size = "cell", children }: HeatCellProps): JSX
         userSelect: "none",
       }}
     >
-      {children}
+      {level === null ? null : children}
     </span>
   );
 }

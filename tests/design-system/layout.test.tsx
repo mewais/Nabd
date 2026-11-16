@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { Card, Eyebrow, Page } from "@nabd/design-system";
+import { Card, Page } from "@nabd/design-system";
 import { renderRoot } from "./render";
 
 describe("Card", () => {
@@ -20,17 +20,33 @@ describe("Card", () => {
     expect(screen.getByRole("button", { name: "Weekly" })).toBeInTheDocument();
     expect(screen.getByText("body")).toBeInTheDocument();
   });
-});
 
-describe("Eyebrow", () => {
-  it("keeps its copy in plain case (the upper-casing is only how it is drawn)", () => {
-    expect(renderRoot(<Eyebrow>Logged today</Eyebrow>)).toHaveTextContent("Logged today");
+  it("is a region named by its title, or by its label when it has none", () => {
+    render(<Card title="Coverage">body</Card>);
+    render(<Card ariaLabel="Up next">body</Card>);
+    expect(screen.getByRole("region", { name: "Coverage" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Up next" })).toBeInTheDocument();
+  });
+
+  it("is a plain box when nothing names it", () => {
+    render(<Card>body</Card>);
+    expect(screen.queryByRole("region")).toBeNull();
+  });
+
+  it("takes a header of its own making in place of the title row", () => {
+    render(<Card header={<h3>Custom</h3>}>body</Card>);
+    expect(screen.getByRole("heading", { name: "Custom" })).toBeInTheDocument();
+  });
+
+  it("pads its content by a step of the scale, or not at all when flush", () => {
+    expect(renderRoot(<Card padding="md">body</Card>).style.padding).toBe("12px");
+    expect(renderRoot(<Card flush>body</Card>).style.padding).toBe("0px");
   });
 });
 
 describe("Page", () => {
   it("holds the screen's content", () => {
-    const page = renderRoot(<Page maxWidth={1100}>screen</Page>);
+    const page = renderRoot(<Page width="narrow">screen</Page>);
     expect(page).toHaveTextContent("screen");
   });
 });

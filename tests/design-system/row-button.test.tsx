@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { EmptyNote, RowButton, shade } from "@nabd/design-system";
+import { EmptyNote, RowButton } from "@nabd/design-system";
 import { click } from "./render";
 
 describe("RowButton", () => {
@@ -43,13 +43,5 @@ describe("EmptyNote", () => {
   it("shows its sentence as a paragraph", () => {
     render(<EmptyNote>No sets logged yet.</EmptyNote>);
     expect(screen.getByText("No sets logged yet.").tagName).toBe("P");
-  });
-});
-
-describe("shade", () => {
-  it("mixes a share of a colour into the quiet fill", () => {
-    expect(shade("var(--accent)", 30)).toBe(
-      "color-mix(in oklch, var(--accent) 30%, var(--surface2))",
-    );
   });
 });

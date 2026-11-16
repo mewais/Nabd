@@ -24,9 +24,10 @@ export class Planner {
 
   /** A day's tile on the board; pressing it opens the day in the editor. */
   dayCard(name: string): Locator {
-    return this.screen.locator("button[aria-pressed]").filter({
-      has: this.page.getByText(name, { exact: true }),
-    });
+    return this.screen
+      .getByRole("group", { name: "Days" })
+      .getByRole("button")
+      .filter({ has: this.page.getByText(name, { exact: true }) });
   }
 
   /** The card of an exercise (fixed plan) or of a muscle slot (cycled plan) in the editor. */

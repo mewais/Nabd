@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { BarChart, LiveDot, MeterBar, Sparkline } from "@nabd/design-system";
+import { BarChart, COLOR, LiveDot, MeterBar, Sparkline } from "@nabd/design-system";
 import { renderRoot } from "./render";
 
 describe("BarChart", () => {
@@ -9,7 +9,7 @@ describe("BarChart", () => {
     { label: "Wed", heightPct: 0 },
   ];
   const setup = (): HTMLElement[] => {
-    render(<BarChart bars={BARS} height={160} ariaLabel="Sets per day" />);
+    render(<BarChart bars={BARS} size="lg" ariaLabel="Sets per day" />);
     return screen.getAllByRole("listitem");
   };
   it("draws one captioned bar per datum, under the chart's name", () => {
@@ -36,7 +36,7 @@ describe("BarChart", () => {
           { label: "9a", heightPct: 40 },
           { label: "", heightPct: 80 },
         ]}
-        height={124}
+        size="md"
         ariaLabel="Sets by hour"
       />,
     );
@@ -50,7 +50,7 @@ describe("BarChart", () => {
           { label: "T", heightPct: 10 },
           { label: "T", heightPct: 20 },
         ]}
-        height={88}
+        size="sm"
         ariaLabel="Week"
       />,
     );
@@ -106,16 +106,24 @@ describe("MeterBar", () => {
     expect(meter(pct)).toHaveAttribute("aria-valuenow", filled);
   });
 
-  it("renders what it is given after the figure", () => {
-    render(<MeterBar label="Quads" pct={10} value="2 sets" trailing={<b>Push</b>} />);
-    expect(screen.getByText("Push")).toBeInTheDocument();
+  it("writes its tag after the figure", () => {
+    render(<MeterBar label="Quads" pct={10} value="2 sets" tag="Push" tagTone="accent" />);
+    expect(screen.getByRole("group", { name: "Quads" })).toHaveTextContent(/2 sets\s*Push$/);
     expect(screen.getByRole("meter")).toHaveAttribute("aria-valuetext", "2 sets");
   });
 });
 
 describe("LiveDot", () => {
-  it("says whether it is active", () => {
-    expect(renderRoot(<LiveDot active={false} />)).toHaveAttribute("data-active", "false");
-    expect(renderRoot(<LiveDot active />)).toHaveAttribute("data-active", "true");
+  it("is decorative: the words beside it say what it means", () => {
+    expect(renderRoot(<LiveDot active />)).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("turns accent and pulses only while active", () => {
+    const idle = renderRoot(<LiveDot active={false} />);
+    expect(idle.style.background).toBe(COLOR.textFaint);
+    expect(idle.style.animation).toBe("");
+    const active = renderRoot(<LiveDot active />);
+    expect(active.style.background).toBe(COLOR.accent);
+    expect(active.style.animation).not.toBe("");
   });
 });
