@@ -3,12 +3,12 @@
 // login entry, and ends it again. The entry scripts choose the checks their
 // platform can run and say how the app is ended there:
 //
-//   linux-smoke.sh     first-launch restart second-instance logged-set
-//                      autostart-setting quit-from-settings (through the
-//                      command line at the bottom), then its tray, notification
-//                      and idle parts
-//   windows-smoke.mjs  all but tray-menu
-//   macos-smoke.mjs    those without WebDriver
+//   linux-smoke.sh     (through the command line at the bottom) first, with no
+//                      tray, first-launch restart second-instance logged-set
+//                      autostart-setting quit-from-settings; then, with its
+//                      fake tray, tray-menu close-to-tray login-launch
+//   windows-smoke.mjs  all but tray-menu (its tray cannot be read)
+//   macos-smoke.mjs    those that need no WebDriver
 //
 // A failure names the check and the expectation, what was found instead, and
 // what the screen, the data folder, the login entry and the app's own output
@@ -41,6 +41,7 @@ import {
   plan,
 } from "./app.mjs";
 import { runAct } from "./app-session.mjs";
+import { tray } from "./linux-desktop.mjs";
 import { AccessibilityUnavailable, SyntheticInputUnavailable, screenFor } from "./screen.mjs";
 
 // -------------------------------------------------------------- reporting ---
@@ -182,6 +183,10 @@ export const CHECKS = {
     ok("closing the window hides it, and the app keeps running in the tray");
     await ctx.launch().expectExit("a second launch");
     await ctx.screen.expectShown(true);
+    // Where the platform can tell (X11), the window has the keyboard too.
+    if (ctx.screen.focused() !== null) {
+      await eventually("the window brought back focused", ctx.screen.focused);
+    }
     ok("a second launch brings the hidden window back");
     await ctx.end(app);
   },
@@ -216,7 +221,7 @@ export const CHECKS = {
     const app = ctx.launch();
     await ctx.screen.expectShown(true, 60_000);
     await eventually("the frontend storing today's day state", dayIsToday, { found: storedDay });
-    await sleep(2000); // the frontend updates the menu once it has booted
+    await sleep(3000); // the frontend updates the menu once it has booted
     let entries;
     try {
       entries = ctx.quitFromTray();
@@ -413,13 +418,31 @@ export async function runEntry({ setup, checks, cleanup }) {
 }
 
 // ----------------------------------------------------------- command line ---
-// For linux-smoke.sh, inside its throw-away session (no tray yet):
+// For linux-smoke.sh, inside its throw-away session; --tray once the fake
+// tray host (desktop_bus.py) is up:
 //
-//   node checks.mjs --binary PATH [--driver URL] CHECK...
+//   node checks.mjs --binary PATH [--driver URL] [--tray] CHECK...
+
+/** The tray menu as the fake host reads it, then its Quit chosen. */
+function quitFromLinuxTray() {
+  const entries = tray
+    .menu()
+    .map((label) =>
+      label.endsWith(DISABLED) ? [label.slice(0, -DISABLED.length), false] : [label, true],
+    );
+  tray.click("Quit");
+  return entries;
+}
+
+const DISABLED = " (disabled)";
 
 if (isMain(import.meta.url)) {
   const { values, positionals } = parseArgs({
-    options: { binary: { type: "string" }, driver: { type: "string" } },
+    options: {
+      binary: { type: "string" },
+      driver: { type: "string" },
+      tray: { type: "boolean", default: false },
+    },
     allowPositionals: true,
   });
   const passed = await runChecks(
@@ -427,11 +450,16 @@ if (isMain(import.meta.url)) {
       binary: values.binary,
       driverUrl: values.driver,
       requireWebDriver: process.env.NABD_SMOKE_REQUIRE_WEBDRIVER === "1",
-      tray: false,
-      // Without a tray, closing the window is quitting.
+      tray: values.tray,
+      quitFromTray: quitFromLinuxTray,
+      // With a tray, its Quit; without, closing the window is quitting.
       async end(app) {
-        screenFor(values.binary).close();
-        await expectCleanExit(app, "closing the window (no tray)");
+        if (values.tray) tray.click("Quit");
+        else screenFor(values.binary).close();
+        await expectCleanExit(
+          app,
+          values.tray ? "the tray's Quit" : "closing the window (no tray)",
+        );
       },
     },
     positionals,

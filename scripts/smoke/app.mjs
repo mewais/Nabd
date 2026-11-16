@@ -429,7 +429,6 @@ export function instances(binary) {
 //   node app.mjs start-day SETS [SETTINGS] database.startDay (SETTINGS: JSON)
 //   node app.mjs stored KEY PATH           database.stored, e.g. dayState .paused
 //   node app.mjs login-command             the login entry's command, one word a line
-//   node app.mjs tray-menu                 TRAY_MENU, as desktop_bus.py prints a menu
 
 const COMMANDS = {
   "start-day": (sets, settings = "{}") => database.startDay(Number(sets), JSON.parse(settings)),
@@ -439,10 +438,6 @@ const COMMANDS = {
     if (entry === null) throw new SmokeFailure(`a login entry at ${loginEntryLocation()}`, "none");
     console.log([entry.program, ...entry.args].join("\n"));
   },
-  "tray-menu": () =>
-    console.log(
-      TRAY_MENU.map(([label, enabled]) => (enabled ? label : `${label} (disabled)`)).join("\n"),
-    ),
 };
 
 /** Whether the module at `url` is the script Node was started with. */

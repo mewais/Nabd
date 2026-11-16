@@ -28,15 +28,16 @@
 # then on a desktop that has a tray and a notification service (fakes of both,
 # desktop_bus.py, join the session):
 #
-#   7. login launch    the entry's own command line starts the app hidden in the
-#                      tray, even when the tray comes up after the app
-#   8. tray            the item and its menu (status, Start next set, Pause
-#                      nudges, Open Nabd, Quit); closing the window hides it;
-#                      Pause flips and is stored without showing the window;
-#                      Open shows it; Start next set opens the logger
-#                      (WebDriver); Quit ends the app
-#   9. single instance a second launch brings the hidden window forward,
-#                      focused, and exits; a second login launch leaves it hidden
+#   7. late tray       the login entry's command line starts the app hidden in
+#                      the tray, though the tray comes up after the app; the
+#                      tray's Open shows the window
+#   8. shared checks   tray-menu (status, Start next set, Pause nudges, Open
+#                      Nabd, Quit, and Quit ending the app), close-to-tray
+#                      (closing hides; a second launch brings the window back,
+#                      focused), login-launch (hidden; a second login launch
+#                      leaves it hidden)
+#   9. tray actions    Pause flips and is stored without showing the window;
+#                      Open shows it; Start next set opens the logger (WebDriver)
 #  10. nudges          (WebDriver, with the app's wall clock moved by
 #                      libfaketime) desktop notifications for the timer nudge:
 #                      the workday's bounds, the repeat per interval, Snooze,
@@ -189,21 +190,13 @@ login_launch() {
   expect_exit "the tray's Quit"
 }
 
-tray_menu() {
-  local menu
-  menu="$(app_data tray-menu | paste -sd '|')"
+# Pause and Resume from the tray, with the window hidden; Open; Start next set.
+tray_actions() {
   start_day 1
   launch_shown
-  wait_for 15 tray_menu_has "$(app_data tray-menu | head -n 1)" ||
-    fail "tray menu: $(tray menu | paste -sd '|')"
-  expect "the tray menu" "$(tray menu | paste -sd '|')" "$menu"
-  ok "the tray item's menu: where the day stands, Start next set, Pause nudges, Open Nabd, Quit"
-
+  wait_for 15 tray_menu_has "Pause nudges" || fail "tray menu: $(tray menu | paste -sd '|')"
   x11 close
   wait_for 10 window_hidden || fail "closing the window did not hide it"
-  sleep 1
-  gone "$APP_PID" && fail "closing the window with a tray ended the app"
-  ok "with a tray, closing the window hides it and the app keeps running"
 
   tray click "Pause nudges"
   wait_for 10 tray_menu_has "Resume nudges" || fail "the tray's Pause did not turn into Resume"
@@ -217,28 +210,12 @@ tray_menu() {
   tray click "Open Nabd"
   wait_for 10 x11 shown || fail "the tray's Open did not show the window"
   ok "the tray's Open shows the window"
-
   tray click "Quit"
   expect_exit "the tray's Quit"
-  ok "the tray's Quit ends the app"
 
   needs_webdriver "the tray's Start next set" || return 0
   act tray-start
   ok "the tray's Start next set shows the window with the logger open"
-}
-
-single_instance_focus() {
-  launch_shown
-  x11 close
-  wait_for 10 window_hidden || fail "closing the window did not hide it"
-  second_launch --autostart
-  sleep 1
-  x11 shown && fail "a second login launch showed the window"
-  second_launch
-  wait_for 10 x11 focused || fail "a second launch did not bring the window forward, focused"
-  ok "a second launch brings the hidden window forward and exits; a second login launch does not"
-  tray click "Quit"
-  expect_exit "the tray's Quit"
 }
 
 timer_nudges() {
@@ -296,8 +273,8 @@ inside() {
   if webdriver_installed; then start_webdriver; fi
   checks first-launch restart second-instance logged-set autostart-setting quit-from-settings
   login_launch
-  tray_menu
-  single_instance_focus
+  checks --tray tray-menu close-to-tray login-launch
+  tray_actions
   timer_nudges
   idle_nudges
   wayland_idle

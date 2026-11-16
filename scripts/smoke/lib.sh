@@ -41,8 +41,8 @@ expect() {
 
 # ------------------------------------------------- shared checks and data ---
 
-# checks CHECK...: the cross-platform checks of checks.mjs, which report for
-# themselves (and say what they found when one fails).
+# checks [--tray] CHECK...: the cross-platform checks of checks.mjs, which
+# report for themselves (and say what they found when one fails).
 checks() {
   local driver=()
   [[ -z "$DRIVER_PID" ]] || driver=(--driver "http://127.0.0.1:$DRIVER_PORT")
@@ -96,19 +96,6 @@ expect_exit() {
   wait_for 15 gone "$APP_PID" || fail "$1 did not end the app"
   wait "$APP_PID" || status=$?
   expect "exit status after $1" "$status" 0
-}
-
-# second_launch [ARG...]: launch another copy, which must hand over to the
-# running one and exit at once, successfully.
-second_launch() {
-  local second status=0
-  "$BINARY" "$@" &
-  second=$!
-  wait_for 15 gone "$second" || fail "a second instance kept running"
-  wait "$second" || status=$?
-  expect "exit status of the second instance" "$status" 0
-  gone "$APP_PID" && fail "the first instance ended when a second one was launched"
-  return 0
 }
 
 # -------------------------------------------------------------- desktop ---
