@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The Nabd window as the X server sees it, for the smoke test (linux-smoke.sh
-# and, through it, the WebDriver acts of app-session.mjs).
+# The Nabd window as the X server sees it, for the Linux smoke test
+# (linux-smoke.sh, and screen.mjs for the shared checks and the WebDriver acts).
 #
 #   x11.sh count     how many Nabd windows are shown
 #   x11.sh shown     succeeds while a Nabd window is shown

@@ -8,25 +8,25 @@
 # It builds the frontend and the release binary (a debug build never touches
 # the login entry), then runs the binary in a throw-away desktop session (Xvfb
 # + its own D-Bus session + openbox) with HOME and the XDG directories pointing
-# into a temporary directory, and checks, first on a desktop with no tray:
+# into a temporary directory. First, on a desktop with no tray, the checks
+# every platform shares (checks.mjs says what each expects):
 #
-#   1. first launch    a window appears; the database is created at schema
-#                      version 3; the frontend boots and stores its day state;
-#                      the login entry is written ("Open at startup" is on)
-#   2. closing         with no tray host, closing the window quits the app, by
-#                      way of the window, which saves first
-#   3. restart         a plan stored before the launch is still there, and the
-#                      day that ended while the app was off is rolled over
-#   4. second launch   exits at once and leaves the first instance running
-#   5. logging a set   (WebDriver) a set logged in the real window lands in the
-#                      history table, in the session of its day, and, like
-#                      Pause, survives a restart
-#   6. autostart       (WebDriver) Settings → "Open at startup" removes the login
-#                      entry and writes it back; a login launch with no tray
-#                      shows the window
+#   1. first-launch        a window; the database at today's schema version,
+#                          with the frontend's day state; the login entry, with
+#                          --autostart; closing the window quits, saving first
+#   2. restart             a stored plan survives, the day that ended meanwhile
+#                          is rolled over
+#   3. second-instance     a second launch exits, the first keeps running
+#   4. logged-set          (WebDriver) a set logged in the window is a row of
+#                          the history table, and it and Pause survive a restart
+#   5. autostart-setting   (WebDriver) Settings → "Open at startup" removes the
+#                          login entry and writes it back; a login launch with
+#                          no tray shows the window
+#   6. quit-from-settings  (WebDriver) Settings → Quit Nabd ends the app with
+#                          the set on disk
 #
 # then on a desktop that has a tray and a notification service (fakes of both,
-# scripts/smoke/desktop_bus.py, join the session):
+# desktop_bus.py, join the session):
 #
 #   7. login launch    the entry's own command line starts the app hidden in the
 #                      tray, even when the tray comes up after the app
@@ -35,8 +35,8 @@
 #                      Pause flips and is stored without showing the window;
 #                      Open shows it; Start next set opens the logger
 #                      (WebDriver); Quit ends the app
-#   9. single instance a second launch brings the hidden window forward and
-#                      exits; a second login launch leaves it hidden
+#   9. single instance a second launch brings the hidden window forward,
+#                      focused, and exits; a second login launch leaves it hidden
 #  10. nudges          (WebDriver, with the app's wall clock moved by
 #                      libfaketime) desktop notifications for the timer nudge:
 #                      the workday's bounds, the repeat per interval, Snooze,
@@ -49,8 +49,9 @@
 #                      idle seconds (ext-idle-notify-v1), reset by a key
 #
 # The WebDriver parts need `tauri-driver` (cargo install tauri-driver --locked)
-# and `WebKitWebDriver` (apt: webkit2gtk-driver, from Ubuntu 24.10 on webkitgtk-webdriver); without them they are
-# skipped, or fail when NABD_SMOKE_REQUIRE_WEBDRIVER=1.
+# and `WebKitWebDriver` (apt: webkit2gtk-driver, from Ubuntu 24.10 on
+# webkitgtk-webdriver); without them they are skipped, or fail when
+# NABD_SMOKE_REQUIRE_WEBDRIVER=1.
 #
 # Environment:
 #   NABD_SMOKE_BINARY             test this binary instead of building one (a
@@ -59,16 +60,15 @@
 #   NABD_SMOKE_DRIVER_PORT        tauri-driver's port (default 4444; the native
 #                                 driver takes the next one)
 #
-# Other needs: xvfb, dbus (dbus-run-session), openbox, xdotool, sqlite3, curl,
-# libfaketime, and python3-dbus, python3-gi and gir1.2-gtk-3.0. Exits non-zero, naming the
-# failed expectation, as soon as one fails; every process it started and its
-# temporary directory are gone when it returns.
+# Other needs: Node, xvfb, dbus (dbus-run-session), openbox, xdotool, curl,
+# libfaketime, and python3-dbus, python3-gi and gir1.2-gtk-3.0. Exits non-zero,
+# naming the failed expectation, as soon as one fails; every process it started
+# and its temporary directory are gone when it returns.
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SELF="$ROOT/scripts/smoke/linux-smoke.sh"
-APP_ID="com.mewais.nabd"
+SMOKE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SMOKE/../.." && pwd)"
 DRIVER_PORT="${NABD_SMOKE_DRIVER_PORT:-4444}"
 
 # ---------------------------------------------------------------- outside ---
@@ -77,7 +77,10 @@ DRIVER_PORT="${NABD_SMOKE_DRIVER_PORT:-4444}"
 require() {
   local tool
   for tool in "$@"; do
-    command -v "$tool" >/dev/null || { echo "linux-smoke: $tool is not installed" >&2; exit 2; }
+    command -v "$tool" >/dev/null || {
+      echo "linux-smoke: $tool is not installed" >&2
+      exit 2
+    }
   done
 }
 
@@ -102,7 +105,10 @@ dbus_python() {
 libfaketime() {
   local library
   for library in /usr/lib/*/faketime/libfaketime.so.1 /usr/lib/faketime/libfaketime.so.1; do
-    [[ -e "$library" ]] && { echo "$library"; return; }
+    [[ -e "$library" ]] && {
+      echo "$library"
+      return
+    }
   done
   echo "linux-smoke: libfaketime is not installed" >&2
   exit 2
@@ -120,7 +126,7 @@ EOF
 }
 
 outside() {
-  require xvfb-run dbus-run-session openbox xdotool sqlite3 curl node
+  require xvfb-run dbus-run-session openbox xdotool curl node
   local binary python faketime status=0
   python="$(dbus_python)"
   faketime="$(libfaketime)"
@@ -142,13 +148,13 @@ outside() {
     HOME="$SANDBOX/home" XDG_DATA_HOME="$SANDBOX/data" \
     XDG_CONFIG_HOME="$SANDBOX/config" XDG_CACHE_HOME="$SANDBOX/cache" \
     GDK_BACKEND=x11 NO_AT_BRIDGE=1 SANDBOX="$SANDBOX" NABD_SMOKE_PYTHON="$python" \
-    xvfb-run -a -s "-screen 0 1440x900x24" dbus-run-session -- "$SELF" --in-session \
+    xvfb-run -a -s "-screen 0 1440x900x24" dbus-run-session -- "$SMOKE/linux-smoke.sh" --in-session \
     >"$SANDBOX/session.log" 2>&1 || status=$?
   sleep 0.5
   kill "$follower"
   if ((status != 0)); then
     echo "--- what the session printed (last lines)" >&2
-    tail -n 40 "$SANDBOX/session.log" >&2
+    tail -n 60 "$SANDBOX/session.log" >&2
   fi
   return "$status"
 }
@@ -157,103 +163,19 @@ outside() {
 
 BINARY="${SANDBOX:-}/nabd"
 FAKETIME_BINARY="${SANDBOX:-}/nabd-faketime"
-DB="${XDG_DATA_HOME:-}/$APP_ID/nabd.sqlite"
-AUTOSTART_ENTRY="${HOME:-}/.config/autostart/Nabd.desktop"
 export NABD_SMOKE_CLOCK="${SANDBOX:-}/clock"
 export NABD_SMOKE_NOTIFICATIONS="${SANDBOX:-}/notifications.jsonl"
 CLOCK="$NABD_SMOKE_CLOCK"
 NOTIFICATIONS="$NABD_SMOKE_NOTIFICATIONS"
-TODAY="$(date +%F)"
-YESTERDAY="$(date -d yesterday +%F)"
 # shellcheck source=scripts/smoke/lib.sh
-source "$ROOT/scripts/smoke/lib.sh"
+source "$SMOKE/lib.sh"
 
-# Every weekday a workday, so the day the test runs on is one.
-EVERY_DAY='"workDays":[0,1,2,3,4,5,6]'
-
-first_launch() {
-  launch_shown
-  ok "a window appears"
-  wait_for 30 test -s "$DB" || fail "no database at $DB"
-  expect "database schema version" "$(sql "SELECT value FROM app_meta WHERE key = 'version'")" 3
-  ok "the database is created at schema version 3"
-  wait_for 30 day_is "$TODAY" || fail "the frontend did not store today's day state"
-  ok "the frontend booted and stored its day state"
-  wait_for 10 test -s "$AUTOSTART_ENTRY" || fail "no login entry at $AUTOSTART_ENTRY"
-  expect "the login entry's command" "$(grep '^Exec=' "$AUTOSTART_ENTRY")" "Exec=$BINARY --autostart"
-  ok "\"Open at startup\" (on by default) writes the login entry, with --autostart"
-  close_and_expect_exit
-  ok "without a tray host, closing the window quits the app"
-}
-
-# Yesterday was skipped outright, with nudges paused: a floating plan moves on
-# from such a day and puts it on record (a day it merely sat idle is not recorded).
-restart_keeps_data() {
-  local plan
-  plan="$(plan 1)"
-  sql "INSERT OR REPLACE INTO kv (key, value) VALUES
-         ('program', '$plan'), ('settings', '{$EVERY_DAY}'),
-         ('dayState', '{\"date\":\"$YESTERDAY\",\"dayId\":null,\"carried\":{},\"skipped\":[\"row\"],\"extras\":[],\"paused\":true}')"
-  launch_shown
-  wait_for 30 day_is "$TODAY" || fail "yesterday's day was not rolled over at launch"
-  expect "stored plan after a restart" "$(sql "SELECT value FROM kv WHERE key = 'program'")" "$plan"
-  expect "schema version after a restart" "$(sql "SELECT value FROM app_meta WHERE key = 'version'")" 3
-  expect "yesterday's record: date" "$(stored dayLog '[0].date')" "$YESTERDAY"
-  expect "yesterday's record: planned sets" "$(stored dayLog '[0].planned')" 1
-  expect "yesterday's record: done sets" "$(stored dayLog '[0].done')" 0
-  expect "pause on the new day" "$(stored dayState .paused)" 0
-  ok "a restart keeps the stored plan and rolls yesterday over in the database"
-}
-
-second_instance() {
-  second_launch
-  expect "number of windows" "$(x11 count)" 1
-  ok "a second launch exits and leaves the first instance and its one window"
-  close_and_expect_exit
-}
-
-# needs_webdriver WHAT: whether the WebDriver parts can run; says so when not.
-needs_webdriver() {
-  if command -v tauri-driver >/dev/null && [[ -n "$(webkit_webdriver)" ]]; then
-    [[ -n "$DRIVER_PID" ]] || start_webdriver
-    return 0
-  fi
-  [[ "${NABD_SMOKE_REQUIRE_WEBDRIVER:-}" != 1 ]] || fail "tauri-driver or WebKitWebDriver is not installed"
-  ok "(skipped: $1 — tauri-driver or WebKitWebDriver is not installed)"
-  return 1
-}
-
-logged_set_survives() {
-  needs_webdriver "logging a set through WebDriver" || return 0
-  act log-a-set
-  local set="SELECT ex_id || ' ' || date || ' ' || session || ' ' || trigger || ' ' || plan_item_id FROM history"
-  expect "the history table" "$(sql "$set")" "push_up__bodyweight $TODAY $TODAY manual row"
-  expect "pause in the database" "$(stored dayState .paused)" 1
-  ok "a set logged in the window is a row of the history table; Pause is stored"
-
-  act after-restart
-  expect "the history table after a restart" "$(sql "$set")" "push_up__bodyweight $TODAY $TODAY manual row"
-  ok "after a restart the window still counts the set and nudges are still paused"
-}
-
-autostart_setting() {
-  needs_webdriver "Settings → Open at startup" || return 0
-  act toggle-autostart
-  [[ ! -e "$AUTOSTART_ENTRY" ]] || fail "switching \"Open at startup\" off left the login entry"
-  ok "switching \"Open at startup\" off removes the login entry"
-  act toggle-autostart
-  expect "the login entry's command" "$(grep '^Exec=' "$AUTOSTART_ENTRY")" "Exec=$BINARY --autostart"
-  ok "switching it on writes the entry again"
-  launch_shown --autostart
-  ok "a login launch on a desktop with no tray shows the window"
-  close_and_expect_exit
-}
-
-# The entry's command line, run as the desktop would at login. The tray host
-# comes up two seconds later, as a panel still starting would.
+# The login entry's command line, run as the desktop would at login. The tray
+# host comes up two seconds later, as a panel still starting would.
 login_launch() {
   local command
-  read -ra command <<<"$(sed -n 's/^Exec=//p' "$AUTOSTART_ENTRY")"
+  mapfile -t command < <(app_data login-command)
+  ((${#command[@]} > 0)) || fail "no login entry to launch"
   "${command[@]}" &
   APP_PID=$!
   sleep 2
@@ -268,12 +190,13 @@ login_launch() {
 }
 
 tray_menu() {
-  start_day "$(plan 1)" "{$EVERY_DAY}"
+  local menu
+  menu="$(app_data tray-menu | paste -sd '|')"
+  start_day 1
   launch_shown
-  wait_for 15 tray_menu_has "Next: Push-Up · 0/1 sets (disabled)" ||
+  wait_for 15 tray_menu_has "$(app_data tray-menu | head -n 1)" ||
     fail "tray menu: $(tray menu | paste -sd '|')"
-  expect "the tray menu" "$(tray menu | paste -sd '|')" \
-    "Next: Push-Up · 0/1 sets (disabled)|Start next set|Pause nudges|Open Nabd|Quit"
+  expect "the tray menu" "$(tray menu | paste -sd '|')" "$menu"
   ok "the tray item's menu: where the day stands, Start next set, Pause nudges, Open Nabd, Quit"
 
   x11 close
@@ -320,7 +243,7 @@ single_instance_focus() {
 
 timer_nudges() {
   needs_webdriver "desktop notifications of nudges" || return 0
-  start_day "$(plan 3)" "{$EVERY_DAY,\"interval\":5,\"minGap\":5,\"idleNudge\":600,\"workStart\":540,\"workEnd\":1020}"
+  start_day 3 '{"interval":5,"minGap":5,"idleNudge":600,"workStart":540,"workEnd":1020}'
   fake_clock_at 08:55
   act timer-nudges "$FAKETIME_BINARY"
   ok "timer nudges notify within the workday only, again per interval, not while snoozed or paused"
@@ -328,7 +251,7 @@ timer_nudges() {
 
 idle_nudges() {
   needs_webdriver "idle time and the idle-moment nudge" || return 0
-  start_day "$(plan 3)" "{$EVERY_DAY,\"interval\":60,\"minGap\":2,\"idleNudge\":5,\"workStart\":0,\"workEnd\":1440}"
+  start_day 3 '{"interval":60,"minGap":2,"idleNudge":5,"workStart":0,"workEnd":1440}'
   fake_clock_at 10:00
   act idle-nudges "$FAKETIME_BINARY"
   ok "the tick carries the X server's idle time; the idle nudge waits for the gap and for quiet"
@@ -358,7 +281,7 @@ wayland_idle() {
     export WAYLAND_DISPLAY=wayland-1
     DRIVER_PORT=$((DRIVER_PORT + 2))
     start_webdriver
-    act wayland-idle
+    act system-idle
     ok "under Wayland (sway: ext-idle-notify-v1) the tick carries the idle time, reset by input"
     cleanup
   )
@@ -369,12 +292,9 @@ inside() {
   trap cleanup EXIT
   openbox &
   # The user's other work: the window that has the keyboard while Nabd is hidden.
-  "$NABD_SMOKE_PYTHON" "$ROOT/scripts/smoke/desktop_bus.py" elsewhere &
-  first_launch
-  restart_keeps_data
-  second_instance
-  logged_set_survives
-  autostart_setting
+  "$NABD_SMOKE_PYTHON" "$SMOKE/desktop_bus.py" elsewhere &
+  if webdriver_installed; then start_webdriver; fi
+  checks first-launch restart second-instance logged-set autostart-setting quit-from-settings
   login_launch
   tray_menu
   single_instance_focus

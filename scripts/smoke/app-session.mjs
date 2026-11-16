@@ -1,14 +1,16 @@
-// Drives the real Nabd window through WebDriver (tauri-driver in front of
-// WebKitWebDriver), for scripts/smoke/linux-smoke.sh, which sets up the
-// session and the stored data each act starts from, and checks the database
-// and the files between the acts.
+// Drives the real Nabd window through WebDriver (tauri-driver in front of the
+// platform's driver: WebKitWebDriver on Linux, msedgedriver on Windows). Each
+// act starts the app, does its part and closes the app again; the caller sets
+// up the stored data an act starts from and checks the database and the files
+// afterwards (checks.mjs, and linux-smoke.sh for the Linux-only acts, through
+// the command line at the bottom).
 //
 //   node scripts/smoke/app-session.mjs <act> <driver-url> <nabd-binary>
-//
-// Each act starts the app, does its part and closes the app again.
 
 import process from "node:process";
-import { clock, expectNudge, idleTicks, notifications, screen, tray } from "./desktop.mjs";
+import { SmokeFailure, isMain } from "./app.mjs";
+import { clock, expectNudge, notifications, tray } from "./linux-desktop.mjs";
+import { screenFor } from "./screen.mjs";
 import { Session } from "./webdriver.mjs";
 
 /** What the nudges for the smoke plan's one exercise say, by what prompted them. */
@@ -17,8 +19,9 @@ const NUDGE = {
   idle: "Push-Up — You've gone quiet",
 };
 
+/** The acts every platform with a WebDriver has: each `(app, screen)`. */
 const ACTS = {
-  /** Pause nudges, then log the one set of the plan the smoke test stored. */
+  /** Pause nudges, then log the one set of the smoke plan. */
   async "log-a-set"(app) {
     await app.press("Pause");
     await app.waitForButton("Resume");
@@ -32,7 +35,7 @@ const ACTS = {
     await app.waitForButton("Resume");
   },
 
-  /** Settings → "Open at startup", flipped once (linux-smoke.sh looks at the login entry). */
+  /** Settings → "Open at startup", flipped once (the caller looks at the login entry). */
   async "toggle-autostart"(app) {
     await app.pressNamed("Settings");
     const row = "//*[@role='group'][@aria-label='Open at startup']//*[@role='switch']";
@@ -41,8 +44,40 @@ const ACTS = {
     await app.waitFor(`${row}[@aria-checked='${before === "true" ? "false" : "true"}']`);
   },
 
+  /** Settings → Quit Nabd: the window saves, then the app exits (the caller sees it go). */
+  async "quit-from-settings"(app) {
+    await app.waitForText("1 set logged today");
+    await app.pressNamed("Settings");
+    await app.press("Quit Nabd");
+  },
+
+  /**
+   * The idle seconds of the clock beat grow while nobody is at the computer,
+   * and synthetic input resets them: the system's idle time, not the
+   * window's (X11 under Linux, a compositor's under Wayland, GetLastInputInfo
+   * on Windows).
+   */
+  async "system-idle"(app, screen) {
+    const idle = await idleTicks(app, 6500);
+    if (!(Math.max(...idle) >= 5 && idle.every((s, i) => i === 0 || s >= idle[i - 1]))) {
+      throw new SmokeFailure(
+        "with nobody at the computer, idle seconds that grow past 5",
+        JSON.stringify(idle),
+      );
+    }
+    const stop = await screen.busy();
+    const busy = await idleTicks(app, 3000);
+    stop();
+    if (Math.max(...busy) > 1) {
+      throw new SmokeFailure("input to reset the idle seconds (at most 1)", JSON.stringify(busy));
+    }
+  },
+};
+
+/** The acts that need the Linux desktop's fakes (linux-desktop.mjs). */
+const LINUX_ACTS = {
   /** The tray's "Start next set" brings the hidden window back with the logger open. */
-  async "tray-start"(app) {
+  async "tray-start"(app, screen) {
     await app.waitForButton("Start set");
     screen.close();
     await screen.expectShown(false);
@@ -57,7 +92,7 @@ const ACTS = {
    * workday, a notification when the interval is up, repeated once per
    * interval, silenced by Snooze and Pause, and nothing after the workday.
    */
-  async "timer-nudges"(app) {
+  async "timer-nudges"(app, screen) {
     await app.waitForText("Quiet until 09:00");
     screen.close();
     await screen.expectShown(false);
@@ -100,8 +135,8 @@ const ACTS = {
    * moment nudges only once the minimum gap has passed, and only while nobody
    * is at the keyboard or mouse.
    */
-  async "idle-nudges"(app) {
-    await expectSystemIdleTime(app);
+  async "idle-nudges"(app, screen) {
+    await ACTS["system-idle"](app, screen);
     await logOneSet(app);
     await app.pressNamed("Close");
     screen.close();
@@ -115,26 +150,7 @@ const ACTS = {
     stopBusy();
     expectNudge(await notifications.expect(1), NUDGE.idle);
   },
-
-  /**
-   * Under Wayland (a headless sway, whose idle time is `ext-idle-notify-v1`'s):
-   * the clock beat carries the compositor's idle seconds, which synthetic
-   * keyboard input resets.
-   */
-  "wayland-idle": expectSystemIdleTime,
 };
-
-/** The idle seconds of the clock beat grow while nobody is at the computer, and input resets them. */
-async function expectSystemIdleTime(app) {
-  const idle = await idleTicks(app, 6500);
-  if (!(Math.max(...idle) >= 5 && idle.every((s, i) => i === 0 || s >= idle[i - 1]))) {
-    throw new Error(`with nobody at the computer the idle time should grow past 5 s: ${idle}`);
-  }
-  const stop = await screen.busy();
-  const busy = await idleTicks(app, 3000);
-  stop();
-  if (Math.max(...busy) > 1) throw new Error(`input should reset the idle time: ${busy}`);
-}
 
 async function logOneSet(app) {
   await app.press("Start set");
@@ -142,16 +158,47 @@ async function logOneSet(app) {
   await app.waitForText("1 set logged today");
 }
 
-const [name, driverUrl, binary] = process.argv.slice(2);
-const act = ACTS[name];
-if (act === undefined || driverUrl === undefined || binary === undefined) {
-  console.error(`usage: app-session.mjs <${Object.keys(ACTS).join("|")}> <driver-url> <binary>`);
-  process.exit(2);
+/**
+ * The idle seconds the app's clock beat carries, as the frontend receives
+ * them over `ms`: listening to the backend's `tick` event the way the app
+ * itself does (@tauri-apps/api's `listen`, which goes through the Tauri
+ * internals every Tauri page has).
+ */
+function idleTicks(app, ms) {
+  return app.run(
+    `const [ms, done] = arguments;
+     const tauri = window.__TAURI_INTERNALS__;
+     const seen = [];
+     const handler = tauri.transformCallback((event) => seen.push(event.payload.idleSeconds));
+     tauri
+       .invoke("plugin:event|listen", { event: "tick", target: { kind: "Any" }, handler })
+       .then(() => setTimeout(() => done(seen), ms), (error) => done(String(error)));`,
+    ms,
+  );
 }
 
-const app = await Session.start(driverUrl, binary);
-try {
-  await act(app);
-} finally {
-  await app.end();
+const ALL_ACTS = { ...ACTS, ...LINUX_ACTS };
+
+/** Start the app from `binary` under the driver at `driverUrl`, do act `name`, and close the app. */
+export async function runAct(name, driverUrl, binary) {
+  const act = ALL_ACTS[name];
+  if (act === undefined) throw new Error(`no act named ${name}`);
+  const app = await Session.start(driverUrl, binary);
+  try {
+    await act(app, screenFor(binary));
+  } finally {
+    // An act that quits the app leaves no session to end.
+    await app.end().catch(() => {});
+  }
+}
+
+if (isMain(import.meta.url)) {
+  const [name, driverUrl, binary] = process.argv.slice(2);
+  if (!(name in ALL_ACTS) || driverUrl === undefined || binary === undefined) {
+    console.error(
+      `usage: app-session.mjs <${Object.keys(ALL_ACTS).join("|")}> <driver-url> <binary>`,
+    );
+    process.exit(2);
+  }
+  await runAct(name, driverUrl, binary);
 }
