@@ -69,311 +69,41 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(happy-dom@15.11.7)(jsdom@25.0.1)
 
-  packages/B01-domain:
-    dependencies:
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
-
-  packages/B02-dataset:
+  packages/analytics:
     dependencies:
       '@nabd/domain':
         specifier: workspace:*
-        version: link:../B01-domain
+        version: link:../domain
 
-  packages/B03-coverage:
+  packages/app:
     dependencies:
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-
-  packages/B04-scheduling:
-    dependencies:
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-
-  packages/B05-progression:
-    dependencies:
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-
-  packages/B06-session:
-    dependencies:
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-      '@nabd/progression':
-        specifier: workspace:*
-        version: link:../B05-progression
-      '@nabd/scheduling':
-        specifier: workspace:*
-        version: link:../B04-scheduling
-
-  packages/B07-nudge:
-    dependencies:
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-
-  packages/B08-analytics:
-    dependencies:
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-
-  packages/B09-program-editor:
-    dependencies:
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-
-  packages/B10-serialization:
-    dependencies:
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-
-  packages/B14-ipc-client:
-    dependencies:
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-      '@nabd/nudge':
-        specifier: workspace:*
-        version: link:../B07-nudge
-      '@tauri-apps/api':
-        specifier: ^2.0.0
-        version: 2.11.1
-
-  packages/B15-store:
-    dependencies:
-      '@nabd/analytics':
-        specifier: workspace:*
-        version: link:../B08-analytics
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
       '@nabd/dataset':
         specifier: workspace:*
-        version: link:../B02-dataset
+        version: link:../dataset
       '@nabd/domain':
         specifier: workspace:*
-        version: link:../B01-domain
+        version: link:../domain
       '@nabd/ipc-client':
         specifier: workspace:*
-        version: link:../B14-ipc-client
-      '@nabd/nudge':
-        specifier: workspace:*
-        version: link:../B07-nudge
-      '@nabd/program-editor':
-        specifier: workspace:*
-        version: link:../B09-program-editor
-      '@nabd/progression':
-        specifier: workspace:*
-        version: link:../B05-progression
-      '@nabd/scheduling':
-        specifier: workspace:*
-        version: link:../B04-scheduling
-      '@nabd/serialization':
-        specifier: workspace:*
-        version: link:../B10-serialization
-      '@nabd/session':
-        specifier: workspace:*
-        version: link:../B06-session
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
-      zustand:
-        specifier: ^4.5.5
-        version: 4.5.7(@types/react@18.3.31)(react@18.3.1)
-
-  packages/B16-design-system:
-    dependencies:
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-      '@nabd/session':
-        specifier: workspace:*
-        version: link:../B06-session
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-
-  packages/B17-bodymap:
-    dependencies:
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
-      '@nabd/design-system':
-        specifier: workspace:*
-        version: link:../B16-design-system
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-
-  packages/B18-shell:
-    dependencies:
-      '@nabd/design-system':
-        specifier: workspace:*
-        version: link:../B16-design-system
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-      '@nabd/nudge':
-        specifier: workspace:*
-        version: link:../B07-nudge
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-
-  packages/B19-today:
-    dependencies:
-      '@nabd/analytics':
-        specifier: workspace:*
-        version: link:../B08-analytics
-      '@nabd/bodymap':
-        specifier: workspace:*
-        version: link:../B17-bodymap
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
-      '@nabd/design-system':
-        specifier: workspace:*
-        version: link:../B16-design-system
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-      '@nabd/nudge':
-        specifier: workspace:*
-        version: link:../B07-nudge
-      '@nabd/scheduling':
-        specifier: workspace:*
-        version: link:../B04-scheduling
-      '@nabd/session':
-        specifier: workspace:*
-        version: link:../B06-session
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-
-  packages/B20-planner:
-    dependencies:
-      '@nabd/bodymap':
-        specifier: workspace:*
-        version: link:../B17-bodymap
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
-      '@nabd/design-system':
-        specifier: workspace:*
-        version: link:../B16-design-system
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-      '@nabd/program-editor':
-        specifier: workspace:*
-        version: link:../B09-program-editor
-      '@nabd/session':
-        specifier: workspace:*
-        version: link:../B06-session
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-
-  packages/B21-progress:
-    dependencies:
-      '@nabd/analytics':
-        specifier: workspace:*
-        version: link:../B08-analytics
-      '@nabd/bodymap':
-        specifier: workspace:*
-        version: link:../B17-bodymap
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
-      '@nabd/design-system':
-        specifier: workspace:*
-        version: link:../B16-design-system
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-      '@nabd/progression':
-        specifier: workspace:*
-        version: link:../B05-progression
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-
-  packages/B22-modals:
-    dependencies:
-      '@nabd/dataset':
-        specifier: workspace:*
-        version: link:../B02-dataset
-      '@nabd/design-system':
-        specifier: workspace:*
-        version: link:../B16-design-system
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-      '@nabd/nudge':
-        specifier: workspace:*
-        version: link:../B07-nudge
-      '@nabd/progression':
-        specifier: workspace:*
-        version: link:../B05-progression
-      '@nabd/scheduling':
-        specifier: workspace:*
-        version: link:../B04-scheduling
-      '@nabd/session':
-        specifier: workspace:*
-        version: link:../B06-session
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-
-  packages/B23-app:
-    dependencies:
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
-      '@nabd/dataset':
-        specifier: workspace:*
-        version: link:../B02-dataset
-      '@nabd/domain':
-        specifier: workspace:*
-        version: link:../B01-domain
-      '@nabd/ipc-client':
-        specifier: workspace:*
-        version: link:../B14-ipc-client
+        version: link:../ipc-client
       '@nabd/modals':
         specifier: workspace:*
-        version: link:../B22-modals
-      '@nabd/nudge':
-        specifier: workspace:*
-        version: link:../B07-nudge
+        version: link:../modals
       '@nabd/planner':
         specifier: workspace:*
-        version: link:../B20-planner
+        version: link:../planner
       '@nabd/progress':
         specifier: workspace:*
-        version: link:../B21-progress
-      '@nabd/progression':
-        specifier: workspace:*
-        version: link:../B05-progression
+        version: link:../progress
       '@nabd/shell':
         specifier: workspace:*
-        version: link:../B18-shell
+        version: link:../shell
       '@nabd/store':
         specifier: workspace:*
-        version: link:../B15-store
+        version: link:../store
       '@nabd/today':
         specifier: workspace:*
-        version: link:../B19-today
+        version: link:../today
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -390,6 +120,258 @@ importers:
       vite:
         specifier: ^5.4.0
         version: 5.4.21(@types/node@22.20.0)
+
+  packages/bodymap:
+    dependencies:
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../coverage
+      '@nabd/design-system':
+        specifier: workspace:*
+        version: link:../design-system
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+
+  packages/coverage:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+
+  packages/dataset:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+
+  packages/design-system:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+
+  packages/domain:
+    dependencies:
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+
+  packages/ipc-client:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@tauri-apps/api':
+        specifier: ^2.0.0
+        version: 2.11.1
+
+  packages/modals:
+    dependencies:
+      '@nabd/dataset':
+        specifier: workspace:*
+        version: link:../dataset
+      '@nabd/design-system':
+        specifier: workspace:*
+        version: link:../design-system
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@nabd/nudge':
+        specifier: workspace:*
+        version: link:../nudge
+      '@nabd/progression':
+        specifier: workspace:*
+        version: link:../progression
+      '@nabd/scheduling':
+        specifier: workspace:*
+        version: link:../scheduling
+      '@nabd/session':
+        specifier: workspace:*
+        version: link:../session
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+
+  packages/nudge:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+
+  packages/planner:
+    dependencies:
+      '@nabd/bodymap':
+        specifier: workspace:*
+        version: link:../bodymap
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../coverage
+      '@nabd/design-system':
+        specifier: workspace:*
+        version: link:../design-system
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@nabd/program-editor':
+        specifier: workspace:*
+        version: link:../program-editor
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+
+  packages/program-editor:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+
+  packages/progress:
+    dependencies:
+      '@nabd/analytics':
+        specifier: workspace:*
+        version: link:../analytics
+      '@nabd/bodymap':
+        specifier: workspace:*
+        version: link:../bodymap
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../coverage
+      '@nabd/design-system':
+        specifier: workspace:*
+        version: link:../design-system
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@nabd/progression':
+        specifier: workspace:*
+        version: link:../progression
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+
+  packages/progression:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+
+  packages/scheduling:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+
+  packages/serialization:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+
+  packages/session:
+    dependencies:
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@nabd/progression':
+        specifier: workspace:*
+        version: link:../progression
+      '@nabd/scheduling':
+        specifier: workspace:*
+        version: link:../scheduling
+
+  packages/shell:
+    dependencies:
+      '@nabd/design-system':
+        specifier: workspace:*
+        version: link:../design-system
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@nabd/nudge':
+        specifier: workspace:*
+        version: link:../nudge
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+
+  packages/store:
+    dependencies:
+      '@nabd/analytics':
+        specifier: workspace:*
+        version: link:../analytics
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../coverage
+      '@nabd/dataset':
+        specifier: workspace:*
+        version: link:../dataset
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@nabd/ipc-client':
+        specifier: workspace:*
+        version: link:../ipc-client
+      '@nabd/nudge':
+        specifier: workspace:*
+        version: link:../nudge
+      '@nabd/program-editor':
+        specifier: workspace:*
+        version: link:../program-editor
+      '@nabd/progression':
+        specifier: workspace:*
+        version: link:../progression
+      '@nabd/scheduling':
+        specifier: workspace:*
+        version: link:../scheduling
+      '@nabd/serialization':
+        specifier: workspace:*
+        version: link:../serialization
+      '@nabd/session':
+        specifier: workspace:*
+        version: link:../session
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+      zustand:
+        specifier: ^4.5.5
+        version: 4.5.7(@types/react@18.3.31)(react@18.3.1)
+
+  packages/today:
+    dependencies:
+      '@nabd/analytics':
+        specifier: workspace:*
+        version: link:../analytics
+      '@nabd/bodymap':
+        specifier: workspace:*
+        version: link:../bodymap
+      '@nabd/coverage':
+        specifier: workspace:*
+        version: link:../coverage
+      '@nabd/design-system':
+        specifier: workspace:*
+        version: link:../design-system
+      '@nabd/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@nabd/nudge':
+        specifier: workspace:*
+        version: link:../nudge
+      '@nabd/scheduling':
+        specifier: workspace:*
+        version: link:../scheduling
+      '@nabd/session':
+        specifier: workspace:*
+        version: link:../session
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
 
 packages:
 

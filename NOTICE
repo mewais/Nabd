@@ -10,7 +10,7 @@ This product bundles the following third-party material:
    Copyright (c) 2022 ELABBASSI Hicham
    License: MIT — a copy is included at assets/body/LICENSE.
 
-2. Fonts — packages/B23-app/public/fonts/*.woff2 (bundled with the app)
+2. Fonts — packages/app/public/fonts/*.woff2 (bundled with the app)
    Hanken Grotesk
      Copyright 2021 The Hanken Grotesk Project Authors
      (https://github.com/marcologous/hanken-grotesk)
@@ -18,4 +18,4 @@ This product bundles the following third-party material:
      Copyright 2020 The JetBrains Mono Project Authors
      (https://github.com/JetBrains/JetBrainsMono)
    License: SIL Open Font License 1.1 — a copy is included at
-   packages/B23-app/public/fonts/OFL.txt.
+   packages/app/public/fonts/OFL.txt.

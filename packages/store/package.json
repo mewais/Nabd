@@ -1,0 +1,28 @@
+{
+  "name": "@nabd/store",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nabd/analytics": "workspace:*",
+    "@nabd/coverage": "workspace:*",
+    "@nabd/dataset": "workspace:*",
+    "@nabd/domain": "workspace:*",
+    "@nabd/ipc-client": "workspace:*",
+    "@nabd/nudge": "workspace:*",
+    "@nabd/program-editor": "workspace:*",
+    "@nabd/progression": "workspace:*",
+    "@nabd/scheduling": "workspace:*",
+    "@nabd/serialization": "workspace:*",
+    "@nabd/session": "workspace:*",
+    "zustand": "^4.5.5",
+    "zod": "^3.23.8"
+  }
+}

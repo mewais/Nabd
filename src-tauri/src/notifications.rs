@@ -1,4 +1,4 @@
-//! OS notifications. Their text is built in `nabd-native`.
+//! Raising OS notifications.
 
 use nabd_native::NotifPayload;
 use tauri::{AppHandle, Runtime};

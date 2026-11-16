@@ -21,7 +21,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         data::export_data,
         data::import_data,
         native::platform_capabilities,
-        native::notify,
+        native::notify_nudge,
         native::send_test_notification,
         native::set_glass,
         native::set_autostart,

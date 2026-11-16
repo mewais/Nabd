@@ -21,7 +21,7 @@ import { exercise, logged, nov, row, warmup, working } from "./domain-factories"
 /** Monday 16 Nov 2026, 10:30 local — "now" unless a test says otherwise. */
 export const NOW = nov(16, 10, 30);
 /** The previous Monday: the last time this day's plan was trained. */
-export const LAST_WEEK = nov(9, 10, 0);
+const LAST_WEEK = nov(9, 10, 0);
 
 export const EX = {
   bench: exercise({
@@ -92,10 +92,6 @@ export type ExKey = keyof typeof EX;
 
 export const LIBRARY = new ExerciseLibrary(Object.values(EX));
 
-export { warmup };
-/** {@link working}, under the name the view-model suites use. */
-export const work = working;
-
 /** A planned exercise row; its id doubles as the plan-item id. */
 export function planRow(
   id: string,
@@ -131,12 +127,12 @@ export function did(
 /** Monday's plan: bench (warm-up + 2 working sets at RPE 8), rows, a plank hold. */
 export const pushDay = (): Program =>
   mondayProgram([
-    planRow("p-bench", "bench", [warmup(10), work(8, 12, 8), work(8, 12, 8)], {
+    planRow("p-bench", "bench", [warmup(10), working(8, 12, 8), working(8, 12, 8)], {
       intensity: "rpe",
       notes: "Pause at the chest",
     }),
-    planRow("p-row", "row", [work(8, 12), work(8, 12)]),
-    planRow("p-plank", "plank", [work(30)], { repMode: "time" }),
+    planRow("p-row", "row", [working(8, 12), working(8, 12)]),
+    planRow("p-plank", "plank", [working(30)], { repMode: "time" }),
   ]);
 
 /** The same day trained a week ago. */

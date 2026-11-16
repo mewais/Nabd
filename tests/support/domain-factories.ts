@@ -1,6 +1,7 @@
 // Small builders for domain objects, shared by every test suite.
 
 import type {
+  DayRecord,
   Exercise,
   ExerciseLookup,
   ExercisePrescription,
@@ -8,7 +9,7 @@ import type {
   Prescription,
   SetSpec,
 } from "@nabd/domain";
-import { loggedSet } from "@nabd/domain";
+import { dateKey, loggedSet } from "@nabd/domain";
 
 let nextId = 0;
 const uid = (prefix: string): string => `${prefix}-${++nextId}`;
@@ -80,3 +81,10 @@ export function logged(
   } as const;
   return { ...loggedSet(ex, at, details), ...overrides };
 }
+
+/** How a day went against its plan: `done` of `planned` sets. */
+export const dayRecord = (date: Date, planned: number, done: number): DayRecord => ({
+  date: dateKey(date),
+  planned,
+  done,
+});

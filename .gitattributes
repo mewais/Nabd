@@ -7,4 +7,4 @@
 *.icns binary
 
 assets/body/bodydata.ts linguist-vendored
-packages/B23-app/public/fonts/** linguist-vendored
+packages/app/public/fonts/** linguist-vendored

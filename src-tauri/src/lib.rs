@@ -67,7 +67,9 @@ fn start<R: Runtime>(app: &mut App<R>) -> AppResult<()> {
 
     let db = Database::open_in(&handle.path().app_data_dir()?)?;
     // Unreadable settings must not keep the app from starting: default to shown.
-    let start_minimized = db.with(nabd_ipc::starts_minimized).unwrap_or(false);
+    let start_minimized = db
+        .with(nabd_ipc::Commands::starts_minimized)
+        .unwrap_or(false);
     app.manage(db);
 
     if capabilities.tray {

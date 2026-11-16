@@ -1,6 +1,6 @@
 //! Commands over the desktop: tray, notifications, window, login entry.
 
-use nabd_native::{nudge_notification, test_notification, Capabilities, NotifReason, TrayState};
+use nabd_native::{test_notification, Capabilities, NotifPayload, TrayState};
 use tauri::{AppHandle, Runtime, State};
 
 use crate::error::AppResult;
@@ -15,13 +15,9 @@ pub fn platform_capabilities(capabilities: State<'_, Capabilities>) -> Capabilit
 /// through to the app on every platform, so a window hidden in the tray is
 /// also put back on screen (unfocused): looking for the app finds the nudge.
 #[tauri::command]
-pub fn notify<R: Runtime>(
-    reason: NotifReason,
-    exercise: String,
-    app: AppHandle<R>,
-) -> AppResult<()> {
+pub fn notify_nudge<R: Runtime>(notification: NotifPayload, app: AppHandle<R>) -> AppResult<()> {
     window::reveal_quietly(&app);
-    notifications::show(&app, nudge_notification(reason, &exercise))
+    notifications::show(&app, notification)
 }
 
 #[tauri::command]

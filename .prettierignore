@@ -6,4 +6,4 @@ src-tauri/gen
 pnpm-lock.yaml
 # vendored
 assets/body/bodydata.ts
-packages/B23-app/public/fonts
+packages/app/public/fonts

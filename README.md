@@ -12,34 +12,43 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
 
 - **The plan** (Plan screen) is either _fixed_ — specific exercises per day — or
   _cycled_ — each day targets muscles, and each muscle rotates through a pool of
-  exercises. Days are pinned to weekdays, or _floating_ (Day 1, 2, 3 … moving on once
-  a day owes nothing more: completed, skipped, or empty — an unfinished day comes back).
+  exercises, moving on to the next one each time the day comes round. Days are pinned
+  to weekdays (at most one per weekday, so seven), or _floating_: Day 1, 2, 3 … in
+  order, moving on once a day owes nothing more — completed, skipped, or empty. An
+  unfinished floating day comes back the next day, weekends included.
 - **Today** is derived, never stored: the plan for the day, plus the sets logged today.
-  Edit the plan and Today changes immediately; restart the app and nothing is lost.
+  Edit the plan and Today changes immediately; restart the app and nothing is lost. A
+  set whose exercise has since left the plan (or the library) is still listed and
+  counted.
 - **Nudges** follow four rules:
   1. never outside the workday (Settings → Workday), while paused, or with nothing left;
   2. the timer nudges _interval_ minutes after your last set (before the first one: after
      the workday started, the app was launched, or the plan got work — whichever is latest);
-  3. an idle moment (no keyboard/mouse) nudges earlier — but never sooner than the
-     _minimum gap_ after a set;
+  3. an idle moment (no keyboard or mouse for the _idle moment_ setting) nudges earlier —
+     but never sooner than the _minimum gap_ after a set;
   4. Snooze silences both for five minutes.
 
-  A nudge that has fired waits for an answer — Start, Snooze, a logged set or Pause —
-  and the set you then log is recorded as prompted by it.
+  A nudge that has fired stays up until it is answered — Start, Snooze, a logged set or
+  Pause — even if you touch the mouse in the meantime, and the sets you then log are
+  recorded as prompted by it. It shows as a toast in the window and, when the window is
+  not in front, as a desktop notification (a window hidden in the tray is also brought
+  back, unfocused). Opening the logger answers it; closing the logger without logging
+  keeps it quiet for the length of a snooze.
 
 - **A nudge is an invitation, not a limit.** The logger lists all of today's exercises;
   log one set or as many as you have time for, in any order. Supersets alternate, rest
-  between back-to-back sets is counted down, any exercise can be skipped, and anything
-  not in the plan can be logged as an extra.
+  between back-to-back sets is counted down, any exercise can be skipped for the day
+  (and restored), and anything not in the plan can be logged as an extra.
 - **Suggestions** use double progression against the same set of your previous session:
   inside your rep range → one more rep (or, alternatively, the same reps with more
   load); at the top → more load, back at the bottom of the range; below it → hold the
   load; below it twice running → back off one step. "More load" is your own weight
   increment (Settings → Training), so 8 × 25 lb suggests 9 × 25 lb or 8 × 27.5 lb.
+  Warm-ups are left out of progression, volume and trends.
 - **Closing the window hides it**; the app lives in the tray (Start next set, Pause
   nudges, Open, Quit). Where the desktop shows no tray icons (stock GNOME without the
-  AppIndicator extension) closing the window quits instead. Settings → Quit Nabd always
-  exits.
+  AppIndicator extension) the app is an ordinary window: closing it quits, and "Start
+  minimized" is ignored. Settings → Quit Nabd always exits.
 
 ## Prerequisites
 
@@ -61,25 +70,28 @@ provides it) and stable Rust (`rustup`), plus per platform:
   workload) and the WebView2 runtime — part of Windows 11, and installed by the Nabd
   installer on Windows 10 if it is missing.
 
-## Platform notes
+## Platform support
 
-|                 | Windows 10/11                          | Linux                                                                                                             |
-| --------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Tray            | always                                 | needs a StatusNotifier host: KDE, or GNOME with the AppIndicator extension; without one the app is a plain window |
-| Idle time       | system-wide                            | GNOME (Mutter), Wayland `ext-idle-notify-v1` (KDE, Sway, Hyprland…), X11, KDE's screen-saver service              |
-| Glass           | Mica on Windows 11, blur on Windows 10 | not offered: Linux has no portable blur, so the window stays opaque                                               |
-| Open at startup | registry `Run` entry                   | an entry in `~/.config/autostart/`                                                                                |
+|                 | Windows 10/11                          | Linux, X11                                                                 | Linux, Wayland                                                               |
+| --------------- | -------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Tray            | always                                 | needs a StatusNotifier host: KDE, or GNOME with the AppIndicator extension | the same                                                                     |
+| Without a tray  | —                                      | a plain window: closing it quits                                           | the same                                                                     |
+| Idle time       | system-wide                            | GNOME (Mutter), else the X screen-saver extension, else KDE's screen saver | GNOME (Mutter), else `ext-idle-notify-v1` (KDE, Sway, Hyprland…), else KDE's |
+| Glass           | Mica on Windows 11, blur on Windows 10 | not offered: no portable blur, so the window stays opaque                  | the same                                                                     |
+| Open at startup | registry `Run` entry                   | an entry in `~/.config/autostart/`                                         | the same                                                                     |
+| Notifications   | toast                                  | the desktop's notification service                                         | the same                                                                     |
 
 Where the OS cannot report idle time, "idle" means no keyboard or mouse activity inside
-the Nabḍ window. A login launch always starts in the tray (if there is one); "Start
-minimized" does the same for launches by hand. macOS is not a supported target yet.
+the Nabḍ window, and Settings says so. A login launch always starts in the tray (if there
+is one); "Start minimized" does the same for launches by hand. macOS is not a supported
+target yet.
 
 ## Quick start
 
 ```bash
 pnpm install
 pnpm tauri dev          # the desktop app (needs a desktop session + webkit2gtk-4.1 on Linux)
-pnpm dev                # just the UI in a browser, on an in-memory sample plan
+pnpm dev                # just the UI in a browser, on an in-memory sample plan (http://localhost:1420)
 pnpm tauri build        # production bundle
 ```
 
@@ -90,49 +102,67 @@ pnpm test               # TypeScript suites (Vitest); one package: pnpm --filter
 pnpm test:rust          # Rust crates
 pnpm typecheck          # packages and tests, one strict tsconfig
 pnpm lint               # ESLint + Prettier
+pnpm lint:rust          # rustfmt + clippy
 pnpm check              # all of the above
 ```
 
-`scripts/visual/capture.mjs` drives the browser demo through the main flows and saves
-screenshots.
+`scripts/visual/capture.mjs` drives the browser demo through every screen and modal, in
+both themes, and saves screenshots; `scripts/visual/make-icon.mjs` renders the app
+icon's source image from the in-app logo.
 
 ## Layout
 
-Code lives in `packages/` (TypeScript) and `src-tauri/` (Rust); each package's tests
-live apart from it, under `tests/<package>/`. The `paths` block of `tsconfig.json` is the
-single map of package locations; `workspace.config.ts` turns it into the aliases Vite and
-Vitest resolve through.
+Code lives in `packages/` (TypeScript, one `@nabd/<name>` package per directory) and
+`src-tauri/` (Rust); tests live apart from the code, under `tests/<package>/` and
+`tests/rust/<crate>/`, with shared fixtures in `tests/support/` and
+`tests/rust/common/`. The `paths` block of `tsconfig.json` is the single map of package
+locations; `workspace.config.ts` turns it into the aliases Vite and Vitest resolve
+through.
 
 ```
 packages/
-  B01-domain          types + zod schemas, settings, local-date helpers (the contract)
-  B02-dataset         ExerciseLibrary: movement catalog × equipment × laterality
-  B03-coverage        MuscleVolume: sets per muscle, from the plan or from history
-  B04-scheduling      TodayPlan / PlanItem (today's queue) and day rollover
-  B05-progression     ProgressionAdvisor, ExerciseHistory, per-exercise trends
-  B06-session         LogSession (the set being entered), Coach, wording
-  B07-nudge           NudgePolicy: when to say "time to move"
-  B08-analytics       TrainingStats: streaks, completion, time of day, triggers
-  B09-program-editor  ProgramEditor: every planner mutation, immutably
-  B10-serialization   validates + migrates an import file
-  B14-ipc-client      the typed boundary to the Rust backend
-  B15-store           Zustand store: state, actions, memoized selectors
-  B16-design-system   theme + primitives        B17-bodymap   anatomical SVG map
-  B18-shell           sidebar / top bar         B19-today  B20-planner  B21-progress
-  B22-modals          logger, nudge toast, library, settings, history chart
-  B23-app             React wiring (containers, app loop) + browser demo backend
+  domain          the shared vocabulary: types + zod schemas, settings, muscle and
+                  equipment tables, local-date, number and text helpers
+  dataset         ExerciseLibrary: movement catalog × equipment × laterality
+  coverage        MuscleVolume: sets per muscle, from the plan or from history
+  scheduling      TodayPlan / PlanItem (today's queue) and day rollover
+  progression     ProgressionAdvisor, ExerciseHistory, ExerciseProgress (trends)
+  session         LogSession (the set being entered), Coach, wording
+  nudge           NudgePolicy: when to say "time to move"
+  analytics       TrainingStats: streaks, completion, time of day, triggers
+  program-editor  ProgramEditor: every planner mutation, immutably
+  serialization   validates + migrates an import file
+  ipc-client      the typed boundary to the Rust backend, and an in-memory stand-in
+  store           Zustand store, one file per slice: state, actions, memoized selectors
+  design-system   theme, tokens and every presentational primitive
+  bodymap         the anatomical SVG map and its per-muscle meter
+  shell           the app chrome: sidebar, top bar, notice banner
+  today           the Today screen
+  planner         the Plan screen
+  progress        the Progress screen
+  modals          set logger, nudge toast, exercise library, settings, history chart
+  app             React wiring (containers, app loop) + the browser demo backend
 src-tauri/
-  crates/B11-persistence   SQLite store + schema migrations
-  crates/B12-native        the pure decisions behind native features (tray model,
-                           notification text, capabilities, launch/close, idle backends)
-  crates/B13-ipc           command core over SQLite
-  src/                     the Tauri binary: commands/, tray, window, clock, glass,
-                           autostart, export, and idle/ (one backend per platform API)
+  crates/persistence   Store: SQLite, the singletons and the set history, migrations
+  crates/native        the pure decisions behind native features (tray model,
+                       notifications, capabilities, launch/close, idle backends)
+  crates/ipc           Commands: what the frontend can ask of the stored data
+  src/                 the Tauri binary: commands/, tray, window, clock, glass,
+                       autostart, export, and idle/ (one backend per platform API)
+tests/                 tests/<package>/, tests/rust/<crate>/, tests/support/
+scripts/               the Vitest setup file and the visual scripts
+assets/body/           the vendored body-map drawing
 ```
 
-Dependencies only point downward: engines (B02–B10) know nothing about React or the
-store; screens (B18–B22) are presentational and take view-models built by pure
-functions; the store is the only place that persists.
+Dependencies only point one way: `domain` ← engines (`dataset` … `serialization`) ←
+`store`, and `design-system` ← `bodymap` ← screens. Engines know nothing about React or
+the store. Every screen package (`shell`, `today`, `planner`, `progress`, `modals`) has
+the same shape: an `index.ts` that only exports, a pure `build…VM` function that turns
+domain objects into exactly what is rendered, an actions interface saying what the
+screen asks of the app, and presentational components taking `{ vm, actions }`. Screens
+never import the store; the containers in `packages/app/src/containers/` connect the
+two (select state → build the view-model → bind the actions). The store is the only
+place that persists.
 
 ## Credits
 
@@ -140,6 +170,6 @@ functions; the store is the only place that persists.
   [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter)
   (MIT, © 2022 ELABBASSI Hicham) — `assets/body/LICENSE`.
 - Bundled fonts: Hanken Grotesk and JetBrains Mono (SIL Open Font License 1.1) —
-  `packages/B23-app/public/fonts/OFL.txt`.
+  `packages/app/public/fonts/OFL.txt`.
 - Full attribution is in `NOTICE`.
 - © 2026 Mohammad Ewais — MIT (`LICENSE`).
