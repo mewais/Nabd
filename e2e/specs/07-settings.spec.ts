@@ -80,7 +80,7 @@ test("the weight unit and increment re-render weights and reshape suggestions", 
 
   await test.step("pounds: the usual 2.5 kg step becomes the usual 5 lb step", async () => {
     await settings.option("Weight unit", "lb").click();
-    await expect(settings.row("Weight increment")).toContainText("−5 lb+");
+    await expect(settings.row("Weight increment").getByRole("group")).toHaveText("5 lb");
     await expect(today.screen).toContainText("Try 9 × 44.1 lb or 8 × 49.1 lb");
     await expect(today.screen).toContainText("Last time: 8 × 44.1 lb");
     await expect(today.stat("Lifted today")).toContainText("lb");
@@ -88,17 +88,17 @@ test("the weight unit and increment re-render weights and reshape suggestions", 
 
   await test.step("back to kilograms, in smaller steps", async () => {
     await settings.option("Weight unit", "kg").click();
-    await expect(settings.row("Weight increment")).toContainText("−2.5 kg+");
+    await expect(settings.row("Weight increment").getByRole("group")).toHaveText("2.5 kg");
     await step(settings.row("Weight increment"), "decrease", 2);
-    await expect(settings.row("Weight increment")).toContainText("2 kg");
+    await expect(settings.row("Weight increment").getByRole("group")).toHaveText("2 kg");
     await expect(today.screen).toContainText("Try 9 × 20 kg or 8 × 22 kg");
     await step(settings.row("Weight increment"), "decrease", 8);
-    await expect(settings.row("Weight increment")).toContainText("0.25 kg");
+    await expect(settings.row("Weight increment").getByRole("group")).toHaveText("0.25 kg");
   });
 
   await test.step("an increment of the user's own keeps its number across units", async () => {
     await settings.option("Weight unit", "lb").click();
-    await expect(settings.row("Weight increment")).toContainText("−0.25 lb+");
+    await expect(settings.row("Weight increment").getByRole("group")).toHaveText("0.25 lb");
   });
 
   await test.step("the logger steps the load by the increment, in the chosen unit", async () => {
