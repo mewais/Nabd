@@ -29,7 +29,11 @@ function useTray(store: StoreApi<NabdStore>, client: IpcClient): void {
       if (action === "start") store.getState().openSession();
       else store.getState().togglePause();
     });
-    return () => bestEffort("stop following the tray", subscription.then((stop) => stop()));
+    return () =>
+      bestEffort(
+        "stop following the tray",
+        subscription.then((stop) => stop()),
+      );
   }, [store, client]);
 
   const plan = useNabd(selectTodayPlan);

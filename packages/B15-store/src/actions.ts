@@ -83,7 +83,8 @@ export interface DesktopActions {
 }
 
 export interface NabdActions
-  extends DayActions,
+  extends
+    DayActions,
     NudgeActions,
     LoggingActions,
     PlanActions,

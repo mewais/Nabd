@@ -3,13 +3,7 @@ import { dateKey, freshDayState } from "@nabd/domain";
 import { ProgressionAdvisor } from "@nabd/progression";
 import { TodayPlan } from "@nabd/scheduling";
 import type { PlanItem } from "@nabd/scheduling";
-import {
-  Coach,
-  LogSession,
-  describeAdvice,
-  formatPerformance,
-  formatTarget,
-} from "@nabd/session";
+import { Coach, LogSession, describeAdvice, formatPerformance, formatTarget } from "@nabd/session";
 import {
   exercise,
   logged,

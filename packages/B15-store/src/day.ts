@@ -16,9 +16,7 @@ const DAY_LOG_LIMIT = 400;
 /** The log with `records` added, each replacing an earlier record of its date. */
 function withRecords(dayLog: readonly DayRecord[], records: readonly DayRecord[]): DayRecord[] {
   const closed = new Set(records.map((record) => record.date));
-  return [...dayLog.filter((record) => !closed.has(record.date)), ...records].slice(
-    -DAY_LOG_LIMIT,
-  );
+  return [...dayLog.filter((record) => !closed.has(record.date)), ...records].slice(-DAY_LOG_LIMIT);
 }
 
 /**

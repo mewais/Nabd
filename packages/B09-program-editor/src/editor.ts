@@ -218,7 +218,12 @@ export class ProgramEditor {
 
   addSlot(dayId: string, muscle: MuscleKey): Program {
     return this.editDay(dayId, (day) => {
-      day.slots.push({ id: this.newId(), muscle, pool: [], ...prescriptions.defaultPrescription(false) });
+      day.slots.push({
+        id: this.newId(),
+        muscle,
+        pool: [],
+        ...prescriptions.defaultPrescription(false),
+      });
     });
   }
 
