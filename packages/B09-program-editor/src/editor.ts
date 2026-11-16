@@ -32,8 +32,15 @@ const TIME_STEP_SEC = 5;
 const RPE = { min: 5, max: 10, step: 0.5, initial: 8 };
 const PCT = { min: 40, max: 100, step: 2.5, initial: 70 };
 
+/** Days a weekday schedule has room for: one per weekday, as a further day could never come up. */
+const WEEKDAY_SLOTS = WEEK_ORDER.length;
+
+/** The set a new prescription starts from: a 45 s hold, or 8–12 reps. */
+const defaultSet = (timeBased: boolean): SetSpec =>
+  timeBased ? { type: "working", a: 45 } : { type: "working", a: 8, b: 12 };
+
 const defaultPrescription = (timeBased: boolean): Prescription => {
-  const set: SetSpec = timeBased ? { type: "working", a: 45 } : { type: "working", a: 8, b: 12 };
+  const set = defaultSet(timeBased);
   return {
     repMode: timeBased ? "time" : "range",
     intensity: "none",
@@ -105,11 +112,21 @@ export class ProgramEditor {
     });
   }
 
-  /** Switch schedule; going weekday gives every unplaced day a free weekday. */
+  /**
+   * Switch schedule. Going weekday gives every unplaced day a free weekday, and
+   * is refused while the plan has more days than a week. Going floating puts
+   * the days in the order they ran through the week, Monday first.
+   */
   setSchedule(schedule: Schedule): Program {
+    if (schedule === "weekday" && this.program.days.length > WEEKDAY_SLOTS) return this.program;
     return this.edit((draft) => {
       draft.schedule = schedule;
-      if (schedule !== "weekday") return;
+      if (schedule === "floating") {
+        const weekPosition = (day: Day): number =>
+          day.weekday === null ? WEEKDAY_SLOTS : WEEK_ORDER.indexOf(day.weekday);
+        draft.days.sort((a, b) => weekPosition(a) - weekPosition(b));
+        return;
+      }
       const taken = new Set(draft.days.map((d) => d.weekday));
       const free = WEEK_ORDER.filter((wd) => !taken.has(wd));
       for (const day of draft.days) {
@@ -120,7 +137,10 @@ export class ProgramEditor {
 
   // ----- Days -----
 
+  /** Add an empty day; a weekday schedule that is already full stays as it is. */
   addDay(weekday: number | null): Program {
+    const { schedule, days } = this.program;
+    if (schedule === "weekday" && days.length >= WEEKDAY_SLOTS) return this.program;
     return this.edit((draft) => {
       draft.days.push({ id: this.newId(), name: "New day", weekday, exercises: [], slots: [] });
     });
@@ -284,12 +304,19 @@ export class ProgramEditor {
 
   // ----- Prescriptions (an exercise row or a cycled slot) -----
 
+  /**
+   * Switch how sets are prescribed. Seconds and reps are different quantities,
+   * so crossing between time and a rep mode starts every set from that mode's
+   * default instead of reading 45 s as 45 reps.
+   */
   setRepMode(dayId: string, ref: EditRef, mode: RepMode): Program {
     return this.editPrescription(dayId, ref, (p) => {
+      const fresh = (p.repMode === "time") !== (mode === "time") ? defaultSet(mode === "time") : null;
       p.repMode = mode;
       for (const set of p.sets) {
-        if (mode !== "range") delete set.b;
-        else set.b ??= set.a + 2;
+        if (fresh) set.a = fresh.a;
+        if (fresh || mode !== "range") delete set.b;
+        if (mode === "range") set.b = fresh?.b ?? set.a + 2;
       }
     });
   }

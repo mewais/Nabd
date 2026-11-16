@@ -1,6 +1,5 @@
 {
   "name": "@nabd/coverage",
-  "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
@@ -9,8 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run",
-    "test:cov": "vitest run --coverage"
+    "test": "vitest run"
   },
   "dependencies": {
     "@nabd/domain": "workspace:*"

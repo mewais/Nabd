@@ -1,14 +1,16 @@
 // Drives the browser demo (no Tauri) through the main flows and saves a
 // screenshot of each screen, for a quick visual check.
 //
-//   pnpm build && pnpm --filter @nabd/app exec vite preview --port 4399 &
-//   node scripts/visual/capture.mjs            # → scripts/visual/shots/*.png
+//   pnpm build
+//   pnpm --filter @nabd/app preview --port 4399     (leave running; second terminal:)
+//   node scripts/visual/capture.mjs                 → scripts/visual/shots/*.png
 
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const APP_URL = process.env.URL ?? "http://localhost:4399";
-const OUT = new URL("./shots/", import.meta.url).pathname;
+const OUT = fileURLToPath(new URL("./shots/", import.meta.url));
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();

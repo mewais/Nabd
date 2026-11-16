@@ -5,6 +5,8 @@
 //! a queryable `history` table. Every function takes a `&Connection`, so the
 //! whole crate runs against an in-memory database in tests.
 
+use std::path::Path;
+
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
@@ -63,14 +65,22 @@ pub fn open_memory() -> Result<Connection> {
 }
 
 /// Open (creating if needed) a database file at `path`.
-pub fn open_at(path: &str) -> Result<Connection> {
+pub fn open_at(path: &Path) -> Result<Connection> {
     Ok(Connection::open(path)?)
 }
 
 /// Create the schema, or migrate an older database up to [`SCHEMA_VERSION`].
-/// Idempotent.
+/// Idempotent. A database written by a newer build is refused untouched:
+/// stamping it down would let this build misread, then overwrite, data whose
+/// shape it does not know.
 pub fn init_schema(c: &Connection) -> Result<()> {
     let from = schema_version(c)?;
+    if from > SCHEMA_VERSION {
+        return Err(Error::NewerSchema {
+            found: from,
+            supported: SCHEMA_VERSION,
+        });
+    }
     // One transaction: a migration that fails half-way must leave the old schema intact.
     let tx = c.unchecked_transaction()?;
     tx.execute_batch(
@@ -103,16 +113,17 @@ pub fn init_schema(c: &Connection) -> Result<()> {
     Ok(())
 }
 
-/// v2: sets know their plan item and set type; the theme lives in `settings`;
-/// the day state no longer stores slots (it is rebuilt from history).
+/// v2: sets know their plan item and set type, and the theme lives in
+/// `settings`. The `dayState` blob is kept as it is: the frontend tolerates
+/// its old shape, and it holds the floating-day position, which cannot be
+/// rebuilt from history.
 fn migrate_v1_to_v2(c: &Connection) -> Result<()> {
     c.execute_batch(
         "ALTER TABLE history ADD COLUMN plan_item_id TEXT;
-         ALTER TABLE history ADD COLUMN set_type TEXT NOT NULL DEFAULT 'working';
-         DELETE FROM kv WHERE key = 'dayState';",
+         ALTER TABLE history ADD COLUMN set_type TEXT NOT NULL DEFAULT 'working';",
     )?;
-    if let Some(theme) = get_raw(c, "theme")? {
-        let mut settings: serde_json::Value = match get_raw(c, "settings")? {
+    if let Some(theme) = get_kv(c, "theme")? {
+        let mut settings: serde_json::Value = match get_kv(c, "settings")? {
             Some(json) => serde_json::from_str(&json)?,
             None => serde_json::json!({}),
         };
@@ -124,6 +135,8 @@ fn migrate_v1_to_v2(c: &Connection) -> Result<()> {
 }
 
 /// The stored schema version (0 for a database that was never initialised).
+/// A version that is not a number is an error, not "never initialised": the
+/// file is not something this build should start writing a schema into.
 pub fn schema_version(c: &Connection) -> Result<i64> {
     let has_meta: bool = c.query_row(
         "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'app_meta')",
@@ -140,21 +153,22 @@ pub fn schema_version(c: &Connection) -> Result<i64> {
             |r| r.get(0),
         )
         .optional()?;
-    Ok(version.and_then(|v| v.parse().ok()).unwrap_or(0))
+    match version {
+        Some(text) => text
+            .parse()
+            .map_err(|_| Error::UnreadableSchemaVersion(text)),
+        None => Ok(0),
+    }
 }
 
-fn get_raw(c: &Connection, key: &str) -> Result<Option<String>> {
+/// Get a singleton JSON blob by key.
+pub fn get_kv(c: &Connection, key: &str) -> Result<Option<String>> {
     Ok(
         c.query_row("SELECT value FROM kv WHERE key = ?1", params![key], |r| {
             r.get(0)
         })
         .optional()?,
     )
-}
-
-/// Get a singleton JSON blob by key.
-pub fn get_kv(c: &Connection, key: &str) -> Result<Option<String>> {
-    get_raw(c, key)
 }
 
 /// Upsert a singleton JSON blob.

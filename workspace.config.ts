@@ -10,27 +10,28 @@ const fromRoot = (path: string): string => fileURLToPath(new URL(path, import.me
 
 /** `@nabd/<name>` → that package's source entry point. */
 export const workspaceAliases: Record<string, string> = Object.fromEntries(
-  Object.entries(tsconfig.compilerOptions.paths).map(([name, [entry]]) => [name, fromRoot(entry)]),
+  Object.entries(tsconfig.compilerOptions.paths).flatMap(([name, entries]) =>
+    entries.map((entry) => [name, fromRoot(entry)]),
+  ),
 );
 
 /**
  * The Vitest config for one package. Its tests live outside the package, under
  * tests/<dir>/; coverage is measured on the package's own source only. Globs are
- * relative to the repository root, so they stay POSIX-style on every platform.
+ * relative to the package directory, so they stay POSIX-style on every platform.
  */
 export function packageTestConfig(dir: string, environment: "node" | "happy-dom") {
   return defineConfig({
-    root: fromRoot("./"),
     resolve: { alias: workspaceAliases },
     test: {
       name: dir,
       environment,
       globals: true,
-      setupFiles: environment === "happy-dom" ? ["./scripts/vitest.setup.ts"] : [],
-      include: [`tests/${dir}/**/*.{test,spec}.{ts,tsx}`],
+      setupFiles: environment === "happy-dom" ? [fromRoot("./scripts/vitest.setup.ts")] : [],
+      include: [`../../tests/${dir}/**/*.{test,spec}.{ts,tsx}`],
       coverage: {
         provider: "v8",
-        include: [`packages/${dir}/src/**/*.{ts,tsx}`],
+        include: ["src/**/*.{ts,tsx}"],
         reporter: ["text", "json-summary"],
         reportOnFailure: true,
       },

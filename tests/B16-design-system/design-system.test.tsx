@@ -8,7 +8,6 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { THEMES, GLASS_FROST, materialKey, glassTint } from "@nabd/domain";
-import type { Theme } from "@nabd/domain";
 
 import {
   themeVars,
@@ -29,8 +28,6 @@ import type { AdviceText, IconName } from "@nabd/design-system";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const THEMES_LIST: Theme[] = ["light", "dark"];
 
 const ALL_ICON_NAMES: IconName[] = [
   "today",

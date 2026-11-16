@@ -46,11 +46,11 @@ pnpm tauri build        # production bundle
 ## Checks
 
 ```bash
-pnpm test               # TypeScript suites (Vitest)
+pnpm test               # TypeScript suites (Vitest); one package: pnpm --filter @nabd/nudge test
 pnpm test:rust          # Rust crates
-pnpm typecheck
-pnpm lint
-pnpm ci                 # all of the above
+pnpm typecheck          # packages and tests, one strict tsconfig
+pnpm lint               # ESLint + Prettier
+pnpm check              # all of the above
 ```
 
 `scripts/visual/capture.mjs` drives the browser demo through the main flows and saves
@@ -59,8 +59,9 @@ screenshots.
 ## Layout
 
 Code lives in `packages/` (TypeScript) and `src-tauri/` (Rust); each package's tests
-live apart from it, under `tests/<package>/`. `workspace.config.ts` is the single map of
-package locations that Vite and Vitest resolve through.
+live apart from it, under `tests/<package>/`. The `paths` block of `tsconfig.json` is the
+single map of package locations; `workspace.config.ts` turns it into the aliases Vite and
+Vitest resolve through.
 
 ```
 packages/

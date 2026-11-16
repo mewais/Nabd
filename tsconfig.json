@@ -37,12 +37,5 @@
       "@nabd/modals": ["./packages/B22-modals/src/index.ts"]
     }
   },
-  "include": [
-    "packages/*/src",
-    "packages/*/*.ts",
-    "tests",
-    "assets",
-    "scripts/*.ts",
-    "*.ts"
-  ]
+  "include": ["packages/*/src", "packages/*/*.ts", "tests", "assets", "scripts/*.ts", "*.ts"]
 }

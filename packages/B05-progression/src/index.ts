@@ -1,6 +1,6 @@
 // @nabd/progression — what to do next for an exercise, and how it has trended.
 
-export { ExerciseHistory, strengthScore } from "./history";
+export { ExerciseHistory, assistedScore, strengthScore } from "./history";
 export type { Performance } from "./history";
 export { ProgressionAdvisor, repGoal } from "./advisor";
 export type { Advice, AdviceKind, RepGoal } from "./advisor";

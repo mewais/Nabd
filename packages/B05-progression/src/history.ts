@@ -49,19 +49,22 @@ export class ExerciseHistory {
       .map((d) => this.on(d));
   }
 
-  /** The very last set logged for this exercise, on any day. */
-  latest(): Performance | null {
-    const lastDate = this.dates.at(-1);
-    return lastDate === undefined ? null : this.on(lastDate).at(-1)!;
-  }
-
-  /** Strength score of each session's best set, oldest first (for trend charts). */
-  bestPerSession(): number[] {
-    return this.dates.map((d) => Math.max(...this.on(d).map(strengthScore)));
+  /** Each session's best set as measured by `score`, oldest first (for trend charts). */
+  bestPerSession(score: (set: Performance) => number): number[] {
+    return this.dates.map((d) => Math.max(...this.on(d).map(score)));
   }
 }
 
 /** Estimated 1RM (Epley) for weighted sets; plain reps/seconds otherwise. */
 export function strengthScore({ reps, weight }: Performance): number {
   return weight !== null && weight > 0 ? weight * (1 + reps / 30) : reps;
+}
+
+/**
+ * Score of an assisted set: its load relative to bodyweight, i.e. the
+ * assistance as a negative number. Assistance is help, not load, so less of it
+ * must score higher; an unassisted set scores 0.
+ */
+export function assistedScore({ weight }: Performance): number {
+  return -(weight ?? 0);
 }

@@ -8,6 +8,7 @@ license.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
+chrono = { workspace = true }
 serde = { workspace = true }
 
 [dev-dependencies]

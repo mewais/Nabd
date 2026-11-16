@@ -1,90 +1,25 @@
 //! B12 · nabd-native — the pure decisions behind native features (no OS or
-//! Tauri dependency): the tray menu model, notification text and the
-//! translucency alpha. The binary performs the actual OS calls.
+//! Tauri dependency): what the tray shows and does, notification text, what
+//! this platform can do, how a launch and a close behave, which idle backend
+//! to ask, and how an export file is named. The binary performs the OS calls.
 
-use serde::{Deserialize, Serialize};
+mod autostart;
+mod export;
+mod idle;
+mod launch;
+mod notification;
+mod platform;
+mod tray;
 
-/// Map the translucent background opacity (0.1–1.0) to an 8-bit alpha.
-pub fn vibrancy_alpha(opacity: f64) -> u8 {
-    (opacity.clamp(0.1, 1.0) * 255.0).round() as u8
-}
-
-/// What the tray menu reflects; pushed from the frontend whenever it changes.
-#[derive(Clone, PartialEq, Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TrayState {
-    /// The exercise that is up next, or None when nothing is left today.
-    pub next_exercise: Option<String>,
-    pub done: u32,
-    pub total: u32,
-    pub paused: bool,
-}
-
-/// Tray menu entry ids (also the action names sent to the frontend).
-pub const TRAY_STATUS: &str = "status";
-pub const TRAY_START: &str = "start";
-pub const TRAY_PAUSE: &str = "pause";
-pub const TRAY_OPEN: &str = "open";
-pub const TRAY_QUIT: &str = "quit";
-
-/// A tray menu entry the binary will render.
-#[derive(Clone, PartialEq, Debug)]
-pub struct TrayItem {
-    pub id: &'static str,
-    pub label: String,
-    pub enabled: bool,
-}
-
-/// The tray menu: status line, Start next set, Pause/Resume, Open, Quit.
-pub fn tray_items(state: &TrayState) -> Vec<TrayItem> {
-    let progress = format!("{}/{} sets", state.done, state.total);
-    let status = match &state.next_exercise {
-        Some(exercise) => format!("Next: {exercise} · {progress}"),
-        None if state.total == 0 => "Nothing planned today".to_string(),
-        None => format!("All done · {progress}"),
-    };
-    let pause = if state.paused {
-        "Resume nudges"
-    } else {
-        "Pause nudges"
-    };
-    let item = |id, label: &str, enabled| TrayItem {
-        id,
-        label: label.to_string(),
-        enabled,
-    };
-    vec![
-        item(TRAY_STATUS, &status, false),
-        item(TRAY_START, "Start next set", state.next_exercise.is_some()),
-        item(TRAY_PAUSE, pause, true),
-        item(TRAY_OPEN, "Open Nabd", true),
-        item(TRAY_QUIT, "Quit", true),
-    ]
-}
-
-/// Why a notification is being raised.
-#[derive(Clone, Copy, PartialEq, Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum NotifReason {
-    Timer,
-    Idle,
-}
-
-/// A built OS-notification payload.
-#[derive(Clone, PartialEq, Debug, Serialize)]
-pub struct NotifPayload {
-    pub title: String,
-    pub body: String,
-}
-
-/// The notification for a due set.
-pub fn notif_payload(reason: NotifReason, exercise: &str) -> NotifPayload {
-    let why = match reason {
-        NotifReason::Timer => "Interval's up",
-        NotifReason::Idle => "You've gone quiet",
-    };
-    NotifPayload {
-        title: "Time to move".to_string(),
-        body: format!("{exercise} \u{2014} {why}"),
-    }
-}
+pub use autostart::{autostart_change, AutostartChange};
+pub use export::export_file_name;
+pub use idle::{idle_backends, millis_since, IdleBackend, SessionKind};
+pub use launch::{
+    close_action, is_autostart_launch, starts_hidden, CloseAction, Launch, AUTOSTART_ARG,
+};
+pub use notification::{nudge_notification, test_notification, NotifPayload, NotifReason};
+pub use platform::{glass_effect, tray_host_present, Capabilities, GlassEffect, Platform};
+pub use tray::{
+    tray_items, tray_tooltip, TrayCommand, TrayItem, TrayState, TRAY_OPEN, TRAY_PAUSE, TRAY_QUIT,
+    TRAY_START, TRAY_STATUS,
+};

@@ -1,6 +1,6 @@
 import type { LoggedSet, Program } from "@nabd/domain";
 import { DEFAULT_SETTINGS, dateKey } from "@nabd/domain";
-import type { BootSnapshot, IpcClient } from "@nabd/ipc-client";
+import type { BootSnapshot, IpcClient, Singletons } from "@nabd/ipc-client";
 import {
   createNabdStore,
   selectCoach,
@@ -44,7 +44,7 @@ function fakeBackend(initial: Partial<BootSnapshot> = {}) {
   };
   const client: IpcClient = {
     loadAll: async () => structuredClone(data),
-    save: vi.fn(async (key, value) => {
+    save: vi.fn(async (key: keyof Singletons, value: unknown) => {
       data[key] = structuredClone(value);
     }),
     appendSet: vi.fn(async (set) => {

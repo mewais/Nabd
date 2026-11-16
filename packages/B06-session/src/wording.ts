@@ -1,7 +1,7 @@
 // How sets, targets and advice are worded — shared by the Today screen and the logger.
 
 import type { Prescription, SetSpec, TrackingType, WeightUnit } from "@nabd/domain";
-import { formatWeight, isTimeBased } from "@nabd/domain";
+import { formatWeight, isTimeBased, plural } from "@nabd/domain";
 import type { Advice, AdviceKind, Performance } from "@nabd/progression";
 
 const SET_TYPE_NAMES: Record<SetSpec["type"], string> = {
@@ -17,7 +17,7 @@ export function formatPerformance(
   unit: WeightUnit,
 ): string {
   const amount = isTimeBased(tracking) ? `${reps} s` : `${reps}`;
-  if (weight === null) return isTimeBased(tracking) ? amount : `${amount} reps`;
+  if (weight === null) return isTimeBased(tracking) ? amount : plural(reps, "rep");
   const load = formatWeight(weight, unit);
   if (tracking === "assisted_bodyweight") return `${amount} − ${load} assist`;
   if (tracking === "weighted_bodyweight") return `${amount} + ${load}`;
@@ -30,8 +30,8 @@ export function formatTarget(spec: SetSpec, prescription: Prescription): string 
     prescription.repMode === "time"
       ? `${spec.a} s`
       : spec.b !== undefined && spec.b !== spec.a
-        ? `${spec.a}–${spec.b} reps`
-        : `${spec.a} reps`;
+        ? `${spec.a}–${plural(spec.b, "rep")}`
+        : plural(spec.a, "rep");
   const parts = [SET_TYPE_NAMES[spec.type], amount];
   if (spec.val !== undefined && prescription.intensity === "rpe") parts.push(`RPE ${spec.val}`);
   if (spec.val !== undefined && prescription.intensity === "pct") parts.push(`${spec.val}% 1RM`);
@@ -66,8 +66,12 @@ export function describeAdvice(
 ): AdviceWording | null {
   if (advice === null) return null;
   const say = (p: Performance): string => formatPerformance(p, tracking, unit);
+  // A first-time load of zero is "not known yet", not a target to aim for.
+  const loadUnknown = advice.kind === "start" && advice.primary.weight === 0;
   return {
-    primary: say(advice.primary),
+    primary: loadUnknown
+      ? `${say({ ...advice.primary, weight: null })} — pick a starting weight`
+      : say(advice.primary),
     alternative: advice.alternative && say(advice.alternative),
     reason: ADVICE_REASONS[advice.kind],
     basis: advice.basis && `Last time: ${say(advice.basis)}`,

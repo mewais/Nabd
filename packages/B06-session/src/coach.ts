@@ -26,9 +26,7 @@ export class Coach {
     return history;
   }
 
-  /** The progression advice for the item's next set; none for a warm-up. */
-  adviceFor(item: PlanItem): Advice | null {
-    if (item.nextSet?.type === "warmup") return null;
+  private advise(item: PlanItem): Advice {
     return this.advisor.advise(
       item.exercise.tracking,
       item.prescription,
@@ -38,15 +36,24 @@ export class Coach {
     );
   }
 
+  /** The progression advice for the item's next set; none for a warm-up. */
+  adviceFor(item: PlanItem): Advice | null {
+    return item.nextSet?.type === "warmup" ? null : this.advise(item);
+  }
+
   /**
-   * What the log form starts with: what the user actually did last (their most
-   * recent set, today included), or a starting point when there is no history.
-   * Advice is only ever a suggestion the user chooses to apply.
+   * What the log form starts with: what the user actually did. Once the
+   * exercise has a working set today that is the previous set; before that it
+   * is the very set the advice compares against, so the form and "Last time"
+   * always agree and applying the advice is a visible step up from the form.
+   * With no history it is a starting point for the set that comes next.
    */
   startFor(item: PlanItem): Performance {
-    const history = this.historyOf(item.exercise.id);
+    const previous = this.historyOf(item.exercise.id).on(this.today).at(-1);
     return (
-      history.latest() ?? this.advisor.startingPoint(item.exercise.tracking, item.nextSet).primary
+      previous ??
+      this.advise(item).basis ??
+      this.advisor.startingPoint(item.exercise.tracking, item.nextSet).primary
     );
   }
 }

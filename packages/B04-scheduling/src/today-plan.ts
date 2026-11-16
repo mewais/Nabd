@@ -1,6 +1,18 @@
-import type { Day, DayState, Exercise, LoggedSet, Program, RotationState } from "@nabd/domain";
+import type {
+  Day,
+  DayRecord,
+  DayState,
+  Exercise,
+  LoggedSet,
+  MuscleKey,
+  Prescription,
+  Program,
+  RotationState,
+} from "@nabd/domain";
 import { MUSCLE_NAMES, dateKey } from "@nabd/domain";
+import { floatingDay } from "./floating";
 import { PlanItem } from "./plan-item";
+import { TodaysSets } from "./todays-sets";
 
 export type ExerciseLookup = (exId: string) => Exercise | undefined;
 
@@ -14,12 +26,12 @@ export interface TodayPlanInput {
   lookup: ExerciseLookup;
 }
 
-/** Which program day applies on `date`: by weekday, or by position for floating plans. */
-export function resolveDay(program: Program, date: Date, floatingIndex: number): Day | null {
+/** Which program day applies on `date`: by weekday, or the current floating day. */
+export function resolveDay(program: Program, date: Date, dayId: string | null): Day | null {
   if (program.schedule === "weekday") {
     return program.days.find((d) => d.weekday === date.getDay()) ?? null;
   }
-  return program.days[floatingIndex % program.days.length] ?? null;
+  return floatingDay(program, dayId);
 }
 
 /** The exercise a cycled pool is currently pointing at. */
@@ -31,6 +43,53 @@ export function rotatedExercise(
   return pool[(rotation[slotId] ?? 0) % pool.length] ?? null;
 }
 
+/** Item-id prefix for sets that count toward nothing in the plan (see {@link TodayPlan.build}). */
+const UNPLANNED = "unplanned:";
+
+/** One line of the queue before its exercise is looked up. */
+interface Entry {
+  id: string;
+  exId: string;
+  /** Replaces the exercise's group as the heading (a cycled slot's target muscle). */
+  label?: string;
+  prescription: Prescription | null;
+  supersetId?: string;
+  logged: LoggedSet[];
+}
+
+const sum = <T>(list: readonly T[], amount: (element: T) => number): number =>
+  list.reduce((total, element) => total + amount(element), 0);
+
+/** The day's prescribed lines, each with the sets logged against it. */
+function plannedEntries(
+  program: Program,
+  day: Day | null,
+  rotation: RotationState,
+  sets: TodaysSets,
+): { entries: Entry[]; emptySlots: MuscleKey[] } {
+  const entries: Entry[] = [];
+  const emptySlots: MuscleKey[] = [];
+  if (day === null) return { entries, emptySlots };
+  if (program.type === "fixed") {
+    for (const row of day.exercises) {
+      const { id, exId, supersetId } = row;
+      entries.push({ id, exId, supersetId, prescription: row, logged: sets.loggedAgainst(id) });
+    }
+    return { entries, emptySlots };
+  }
+  for (const slot of day.slots) {
+    const logged = sets.loggedAgainst(slot.id);
+    // Once trained today a slot stays on that exercise, whatever happens to its pool.
+    const exId = logged[0]?.exId ?? rotatedExercise(slot.id, slot.pool, rotation);
+    if (exId === null) emptySlots.push(slot.muscle);
+    else {
+      const label = MUSCLE_NAMES[slot.muscle];
+      entries.push({ id: slot.id, exId, label, prescription: slot, logged });
+    }
+  }
+  return { entries, emptySlots };
+}
+
 /**
  * Today's queue, derived on demand from the program, the rotation and today's
  * logged sets — never stored — so plan edits and logged sets always show up.
@@ -40,70 +99,42 @@ export class TodayPlan {
     readonly date: string,
     readonly dayName: string | null,
     readonly items: readonly PlanItem[],
+    /** Muscles of cycled slots that cannot be trained yet: their pool is empty. */
+    readonly emptySlots: readonly MuscleKey[],
   ) {}
 
-  static readonly empty = new TodayPlan("", null, []);
+  static readonly empty = new TodayPlan("", null, [], []);
 
+  /**
+   * Every set logged today counts somewhere, even after the plan changed under
+   * it (plan type switched, exercise removed or replaced): a set whose plan item
+   * is gone moves to an untouched item of the same exercise, and failing that is
+   * listed as an unplanned exercise, so the totals never lose work that was done.
+   */
   static build(input: TodayPlanInput): TodayPlan {
     const { program, date, dayState, rotation, history, lookup } = input;
     const today = dateKey(date);
-    const loggedByItem = new Map<string, LoggedSet[]>();
-    for (const set of history) {
-      if (set.date !== today || set.planItemId === null) continue;
-      const sets = loggedByItem.get(set.planItemId);
-      if (sets) sets.push(set);
-      else loggedByItem.set(set.planItemId, [set]);
-    }
-    const state = (id: string) => ({
-      id,
-      logged: loggedByItem.get(id) ?? [],
-      skipped: dayState.skipped.includes(id),
-    });
+    const sets = new TodaysSets(history.filter((set) => set.date === today));
+    const day = resolveDay(program, date, dayState.dayId);
 
-    const day = resolveDay(program, date, dayState.floatingIndex);
-    const items: PlanItem[] = [];
-    const add = (exId: string | null, init: (exercise: Exercise) => PlanItem): void => {
-      const exercise = exId === null ? undefined : lookup(exId);
-      if (exercise) items.push(init(exercise));
-    };
-
-    if (day !== null && program.type === "fixed") {
-      for (const row of day.exercises) {
-        add(
-          row.exId,
-          (exercise) =>
-            new PlanItem({
-              ...state(row.id),
-              exercise,
-              label: exercise.group,
-              prescription: row,
-              supersetId: row.supersetId,
-            }),
-        );
-      }
-    }
-    if (day !== null && program.type === "cycled") {
-      for (const slot of day.slots) {
-        add(
-          rotatedExercise(slot.id, slot.pool, rotation),
-          (exercise) =>
-            new PlanItem({
-              ...state(slot.id),
-              exercise,
-              label: MUSCLE_NAMES[slot.muscle],
-              prescription: slot,
-            }),
-        );
-      }
-    }
+    const { entries, emptySlots } = plannedEntries(program, day, rotation, sets);
     for (const extra of dayState.extras) {
-      add(
-        extra.exId,
-        (exercise) =>
-          new PlanItem({ ...state(extra.id), exercise, label: exercise.group, prescription: null }),
-      );
+      entries.push({ ...extra, prescription: null, logged: sets.loggedAgainst(extra.id) });
     }
-    return new TodayPlan(today, day?.name ?? null, items);
+    for (const entry of entries) {
+      if (entry.logged.length === 0) entry.logged = sets.ofExercise(entry.exId);
+    }
+    for (const exId of sets.unclaimedExercises) {
+      entries.push({ id: UNPLANNED + exId, exId, prescription: null, logged: sets.ofExercise(exId) });
+    }
+
+    const items = entries.flatMap(({ exId, label, ...entry }) => {
+      const exercise = lookup(exId);
+      if (!exercise) return [];
+      const skipped = dayState.skipped.includes(entry.id);
+      return [new PlanItem({ ...entry, exercise, label: label ?? exercise.group, skipped })];
+    });
+    return new TodayPlan(today, day?.name ?? null, items, emptySlots);
   }
 
   item(id: string): PlanItem | undefined {
@@ -112,20 +143,42 @@ export class TodayPlan {
 
   /** Prescribed sets across items that were not skipped. */
   get setsPlanned(): number {
-    return this.items.reduce((n, i) => n + (i.skipped ? 0 : i.planned), 0);
+    return sum(this.items, (i) => (i.skipped ? 0 : i.planned));
   }
 
   get setsDone(): number {
-    return this.items.reduce((n, i) => n + i.done, 0);
+    return sum(this.items, (i) => i.done);
   }
 
   get setsRemaining(): number {
-    return this.items.reduce((n, i) => n + i.remaining, 0);
+    return sum(this.items, (i) => i.remaining);
   }
 
   /** Everything prescribed has been logged (and something actually was). */
   get isComplete(): boolean {
     return this.setsRemaining === 0 && this.setsDone > 0;
+  }
+
+  /** There is a plan for today, but every exercise in it was skipped. */
+  get isAllSkipped(): boolean {
+    const planned = this.items.filter((i) => !i.isExtra);
+    return planned.length > 0 && planned.every((i) => i.skipped);
+  }
+
+  /**
+   * How the day stands against its plan, for the completion charts; null when
+   * nothing was planned. A skipped exercise still counts as planned, while
+   * extras and sets beyond a prescription earn nothing: only planned work can
+   * complete a plan.
+   */
+  get record(): DayRecord | null {
+    const planned = sum(this.items, (i) => i.planned);
+    if (planned === 0) return null;
+    return {
+      date: this.date,
+      planned,
+      done: sum(this.items, (i) => Math.min(i.done, i.planned)),
+    };
   }
 
   /** The first exercise that still owes a set. */

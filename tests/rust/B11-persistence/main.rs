@@ -1,8 +1,8 @@
 //! B11 · nabd-persistence — behaviour tests against an in-memory database.
 
 use nabd_persistence::{
-    all_history, append_history, delete_history, get_kv, init_schema, open_memory, replace_all,
-    schema_version, set_kv, LoggedSetRow, SCHEMA_VERSION,
+    all_history, append_history, delete_history, get_kv, init_schema, open_at, open_memory,
+    replace_all, schema_version, set_kv, Error, LoggedSetRow, SCHEMA_VERSION,
 };
 use rusqlite::Connection;
 use serde_json::{json, Value};
@@ -349,6 +349,68 @@ fn replace_all_rolls_everything_back_when_a_history_row_fails() {
     assert_eq!(history_ids(&c), ["old"]);
 }
 
+#[test]
+fn a_database_from_a_newer_build_is_refused_and_left_untouched() {
+    let c = fresh_db();
+    set_kv(&c, "program", r#"{"days":[]}"#).unwrap();
+    let newer = SCHEMA_VERSION + 1;
+    c.execute(
+        "UPDATE app_meta SET value = ?1 WHERE key = 'version'",
+        [newer.to_string()],
+    )
+    .unwrap();
+
+    let err = init_schema(&c).unwrap_err();
+
+    assert!(
+        matches!(err, Error::NewerSchema { found, supported }
+            if found == newer && supported == SCHEMA_VERSION),
+        "got {err:?}"
+    );
+    assert!(err.to_string().contains("newer version of Nabd"));
+    assert_eq!(schema_version(&c).unwrap(), newer);
+    assert_eq!(
+        get_kv(&c, "program").unwrap().as_deref(),
+        Some(r#"{"days":[]}"#)
+    );
+}
+
+#[test]
+fn a_schema_version_that_is_not_a_number_is_an_error_not_a_fresh_database() {
+    let c = fresh_db();
+    c.execute(
+        "UPDATE app_meta SET value = 'two' WHERE key = 'version'",
+        [],
+    )
+    .unwrap();
+
+    assert!(matches!(
+        schema_version(&c).unwrap_err(),
+        Error::UnreadableSchemaVersion(text) if text == "two"
+    ));
+    assert!(init_schema(&c).is_err());
+}
+
+#[test]
+fn a_database_file_is_opened_from_a_path_and_reopened_with_its_data() {
+    let path = std::env::temp_dir().join(format!("nabd-open-at-{}.sqlite", std::process::id()));
+    let _ = std::fs::remove_file(&path);
+    {
+        let c = open_at(&path).unwrap();
+        init_schema(&c).unwrap();
+        set_kv(&c, "program", r#"{"days":[]}"#).unwrap();
+    }
+
+    let reopened = open_at(&path).unwrap();
+    init_schema(&reopened).unwrap();
+    assert_eq!(
+        get_kv(&reopened, "program").unwrap().as_deref(),
+        Some(r#"{"days":[]}"#)
+    );
+    drop(reopened);
+    std::fs::remove_file(&path).unwrap();
+}
+
 // ── v1 → v2 migration ────────────────────────────────────────────────────────
 
 #[test]
@@ -423,14 +485,16 @@ fn migration_leaves_settings_alone_when_there_is_no_theme_row() {
 }
 
 #[test]
-fn migration_drops_the_old_day_state_but_keeps_other_singletons() {
+fn migration_keeps_the_old_day_state_and_the_other_singletons() {
     let c = v1_db();
-    insert_v1_kv(&c, "dayState", r#"{"date":"2025-01-02","slots":[1,2,3]}"#);
+    // The old blob carries the floating-day position, which history cannot rebuild.
+    let day_state = r#"{"date":"2025-01-02","floatingIndex":2,"slots":[1,2,3]}"#;
+    insert_v1_kv(&c, "dayState", day_state);
     insert_v1_kv(&c, "program", r#"{"days":[]}"#);
 
     init_schema(&c).unwrap();
 
-    assert_eq!(get_kv(&c, "dayState").unwrap(), None);
+    assert_eq!(get_kv(&c, "dayState").unwrap().as_deref(), Some(day_state));
     assert_eq!(
         get_kv(&c, "program").unwrap().as_deref(),
         Some(r#"{"days":[]}"#)

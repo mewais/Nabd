@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MuscleKeySchema, type MuscleKey } from "./muscles";
 import { SetTypeSchema } from "./program";
+import { dateKey } from "./dates";
 
 /** What prompted a logged set. */
 export const TriggerSchema = z.enum(["idle", "timer", "manual"]);
@@ -41,15 +42,32 @@ export type ExtraItem = z.infer<typeof ExtraItemSchema>;
 
 /**
  * The per-day bookkeeping that is not derivable from program + history: which
- * floating day we are on, what was skipped, and what was added ad hoc.
+ * floating day we are on, what was skipped, what was added ad hoc, and whether
+ * nudges are paused for the day.
  */
 export const DayStateSchema = z.object({
   date: z.string(),
-  floatingIndex: z.number().int().nonnegative().default(0),
+  /**
+   * Floating plans: the id of the program day we are on (null = the first day).
+   * An id, not a position, so reordering or removing other days never changes
+   * which day is today.
+   */
+  dayId: z.string().nullable().default(null),
   skipped: z.array(z.string()).default([]),
   extras: z.array(ExtraItemSchema).default([]),
+  /** Nudges are paused until the day ends. */
+  paused: z.boolean().default(false),
 });
 export type DayState = z.infer<typeof DayStateSchema>;
+
+/** A day with nothing skipped, added or paused, on floating day `dayId`. */
+export const freshDayState = (date: Date, dayId: string | null = null): DayState => ({
+  date: dateKey(date),
+  dayId,
+  skipped: [],
+  extras: [],
+  paused: false,
+});
 
 /** How a finished training day went (drives completion analytics). */
 export const DayRecordSchema = z.object({

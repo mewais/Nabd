@@ -47,8 +47,8 @@ export const SettingsSchema = z.object({
   workEnd: z.number().int().min(1).max(1440),
   /** Weight unit for display + input (weights are stored canonically in kg). */
   weightUnit: WeightUnitSchema,
-  /** Smallest weight jump the user can make, in the display unit. */
-  weightIncrement: z.number().positive().max(50),
+  /** Smallest weight jump the user can make, in the display unit (micro-plates go down to 0.25). */
+  weightIncrement: z.number().min(0.25).max(50),
   /** Equipment the user owns; the exercise library is filtered to it. */
   equipment: z.array(EquipmentSchema),
 });

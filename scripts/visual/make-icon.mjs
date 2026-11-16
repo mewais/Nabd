@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { fileURLToPath } from "node:url";
 
 // Render the Nabd heart logo (white, on the accent rounded square) to a 1024 PNG,
 // matching the in-app brand mark. Then `tauri icon` derives the full icon set.
@@ -22,6 +23,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" 
 const b = await chromium.launch({ headless: true });
 const p = await b.newPage({ viewport: { width: 1024, height: 1024 }, deviceScaleFactor: 1 });
 await p.setContent(`<body style="margin:0">${svg}</body>`, { waitUntil: "networkidle" });
-await p.locator("svg").screenshot({ path: "src-tauri/icons/source.png", omitBackground: true });
+const out = fileURLToPath(new URL("../../src-tauri/icons/source.png", import.meta.url));
+await p.locator("svg").screenshot({ path: out, omitBackground: true });
 await b.close();
 console.log("icon source.png written");

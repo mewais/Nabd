@@ -8,12 +8,10 @@ export default [
   {
     ignores: [
       "**/dist/**",
-      "**/build/**",
       "**/coverage/**",
       "**/target/**",
       "**/node_modules/**",
       "assets/body/**",
-      "design_handoff_nabd_workout_tracker/**",
     ],
   },
   js.configs.recommended,
@@ -30,14 +28,24 @@ export default [
     },
     rules: {
       ...tseslint.configs.recommended.rules,
+      ...react.configs.recommended.rules,
+      ...react.configs["jsx-runtime"].rules,
+      ...reactHooks.configs.recommended.rules,
       // TypeScript itself reports undefined names (and knows the DOM + test globals).
       "no-undef": "off",
-      "react-hooks/rules-of-hooks": "error",
+      // Props are typed with TypeScript, not PropTypes.
+      "react/prop-types": "off",
+      "react-hooks/exhaustive-deps": "error",
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
     },
     settings: { react: { version: "detect" } },
+  },
+  {
+    // Node scripts.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: { globals: { console: "readonly", process: "readonly", URL: "readonly" } },
   },
 ];
