@@ -1,7 +1,7 @@
 import type { Direction, Intensity, Measure, Prescription, RepMode, SetSpec } from "@nabd/domain";
-import { INTENSITY_SCALES, SECONDS_STEP, measureOfMode } from "@nabd/domain";
+import { INTENSITY_SCALES, measureOfMode } from "@nabd/domain";
 import { defaultRepMode, defaultSet } from "./defaults";
-import * as setSpec from "./set-spec";
+import * as spec from "./set-spec";
 
 const REST_STEP_SEC = 15;
 
@@ -28,10 +28,10 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
   }
 
   /** A copy with `fields` changed, and every set of it changed by `change`. */
-  private editSets(fields: Partial<Prescription>, change: (set: SetSpec, draft: T) => void): T {
+  private editSets(fields: Partial<Prescription>, change: (set: SetSpec) => void): T {
     return this.edit((draft) => {
       Object.assign(draft, fields);
-      for (const set of draft.sets) change(set, draft);
+      for (const set of draft.sets) change(set);
     });
   }
 
@@ -52,10 +52,8 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
    */
   countIn(measure: Measure): T {
     if (this.measure === measure) return this.prescription;
-    const fresh = defaultSet(measure);
-    return this.editSets({ repMode: defaultRepMode(measure) }, (set) =>
-      setSpec.takeAmounts(set, fresh),
-    );
+    const [repMode, fresh] = [defaultRepMode(measure), defaultSet(measure)];
+    return this.editSets({ repMode }, (set) => spec.takeAmounts(set, fresh));
   }
 
   /**
@@ -65,7 +63,7 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
    */
   setRepStyle(style: RepStyle): T {
     if (this.prescription.repMode === "time") return this.prescription;
-    return this.editSets({ repMode: style }, (set) => setSpec.writeReps(set, style === "range"));
+    return this.editSets({ repMode: style }, (set) => spec.writeReps(set, style === "range"));
   }
 
   /**
@@ -74,7 +72,7 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
    */
   setIntensity(mode: Intensity): T {
     if (this.prescription.intensity === mode) return this.prescription;
-    return this.editSets({ intensity: mode }, (set) => setSpec.holdIntensity(set, mode));
+    return this.editSets({ intensity: mode }, (set) => spec.holdIntensity(set, mode));
   }
 
   /** Shorten or lengthen the rest by one step of 15 s. */
@@ -108,25 +106,18 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
 
   /** working → warm-up → drop → working. */
   cycleSetType(index: number): T {
-    return this.editSet(index, (set) =>
-      Object.assign(set, { type: setSpec.nextSetType(set.type) }),
-    );
-  }
-
-  /** One step of a set's amount: a rep, or a few seconds. */
-  private get amountStep(): number {
-    return this.measure === "time" ? SECONDS_STEP : 1;
+    return this.editSet(index, spec.cycleType);
   }
 
   /** Step a set's reps or seconds (the bottom of its range); the top never falls below it. */
   stepAmount(index: number, direction: Direction): T {
-    return this.editSet(index, (set) => setSpec.stepAmount(set, direction, this.amountStep));
+    return this.editSet(index, (set) => spec.stepAmount(set, direction, this.measure));
   }
 
   /** Step the top of a set's rep range, never below its bottom. */
   stepUpTo(index: number, direction: Direction): T {
     if (this.prescription.sets[index]?.upTo === undefined) return this.prescription;
-    return this.editSet(index, (set) => setSpec.stepUpTo(set, direction, this.amountStep));
+    return this.editSet(index, (set) => spec.stepUpTo(set, direction, this.measure));
   }
 
   /**
@@ -136,9 +127,8 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
    * or imported is brought to it.
    */
   keepIntensitiesOnScale(): T {
-    return this.editSets({}, (set, draft) =>
-      setSpec.holdIntensity(set, draft.intensity, set.intensity),
-    );
+    const mode = this.prescription.intensity;
+    return this.editSets({}, (set) => spec.holdIntensity(set, mode, set.intensity));
   }
 
   /** Step a set's intensity (RPE or %1RM) within its bounds. */
@@ -147,7 +137,7 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
     const current = this.prescription.sets[index]?.intensity;
     if (current === undefined || mode === "none") return this.prescription;
     return this.editSet(index, (set) =>
-      setSpec.holdIntensity(set, mode, current + direction * INTENSITY_SCALES[mode].step),
+      spec.holdIntensity(set, mode, current + direction * INTENSITY_SCALES[mode].step),
     );
   }
 

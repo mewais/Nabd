@@ -24,6 +24,7 @@
     "lint": "eslint . && prettier --check .",
     "lint:fix": "eslint . --fix && prettier --write .",
     "lint:rust": "cd src-tauri && cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "check:windows": "cd src-tauri && cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warnings && cargo build --target x86_64-pc-windows-gnu && WINEDEBUG=-all CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUNNER=wine cargo test --workspace --exclude nabd --target x86_64-pc-windows-gnu",
     "check": "pnpm lint && pnpm lint:rust && pnpm typecheck && pnpm test && pnpm test:rust"
   },
   "devDependencies": {

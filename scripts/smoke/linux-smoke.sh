@@ -44,6 +44,9 @@
 #  11. idle time       (WebDriver) the clock beat carries the X server's idle
 #                      seconds, reset by synthetic input; the idle-moment nudge
 #                      waits for the minimum gap and for nobody at the mouse
+#  12. Wayland idle    (WebDriver, when sway and wtype are installed) under a
+#                      headless sway the clock beat carries the compositor's
+#                      idle seconds (ext-idle-notify-v1), reset by a key
 #
 # The WebDriver parts need `tauri-driver` (cargo install tauri-driver --locked)
 # and `WebKitWebDriver` (apt: webkit2gtk-driver, from Ubuntu 24.10 on webkitgtk-webdriver); without them they are
@@ -331,6 +334,37 @@ idle_nudges() {
   ok "the tick carries the X server's idle time; the idle nudge waits for the gap and for quiet"
 }
 
+# A headless sway: a Wayland session (no XWayland) whose idle time comes from
+# ext-idle-notify-v1, as on KDE, Sway or Hyprland. Its runtime directory is
+# short-named: a Wayland socket's path must fit in 108 bytes.
+wayland_idle() {
+  if ! command -v sway >/dev/null || ! command -v wtype >/dev/null; then
+    ok "(skipped: idle time under Wayland — sway or wtype is not installed)"
+    return
+  fi
+  needs_webdriver "idle time under Wayland" || return 0
+  local runtime
+  runtime="$(mktemp -d /tmp/nabd-wl.XXXXXX)"
+  (
+    export XDG_RUNTIME_DIR="$runtime" GDK_BACKEND=wayland
+    unset DISPLAY
+    WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman sway -c /dev/null &
+    # A compositor that cannot start here says nothing about the app.
+    if ! wait_for 15 test -S "$runtime/wayland-1"; then
+      ok "(skipped: idle time under Wayland — headless sway did not start in this environment)"
+      cleanup
+      exit 0
+    fi
+    export WAYLAND_DISPLAY=wayland-1
+    DRIVER_PORT=$((DRIVER_PORT + 2))
+    start_webdriver
+    act wayland-idle
+    ok "under Wayland (sway: ext-idle-notify-v1) the tick carries the idle time, reset by input"
+    cleanup
+  )
+  rm -rf "$runtime"
+}
+
 inside() {
   trap cleanup EXIT
   openbox &
@@ -346,6 +380,7 @@ inside() {
   single_instance_focus
   timer_nudges
   idle_nudges
+  wayland_idle
   ok "all expectations met"
 }
 

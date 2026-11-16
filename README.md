@@ -211,18 +211,18 @@ on).
 
 ## Platform support
 
-|                 | Windows 10/11                          | macOS 11+                                                                     | Linux, X11                                                                 | Linux, Wayland                                                               |
-| --------------- | -------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Web view        | WebView2 111+                          | WKWebView of Safari 16.2+ (built in from macOS 13.1)                          | WebKitGTK 2.40+                                                            | the same                                                                     |
-| Tray            | always                                 | always: a menu-bar item (monochrome template icon); a click opens its menu    | needs a StatusNotifier host: KDE, or GNOME with the AppIndicator extension | the same                                                                     |
-| Without a tray  | —                                      | —                                                                             | a plain window: closing it quits, once it has saved                        | the same                                                                     |
-| Window          | closing hides it                       | closing hides it; the Dock icon brings it back                                | closing hides it (with a tray)                                             | the same                                                                     |
-| Quit            | tray Quit, Settings (both save first)  | tray Quit, Settings and Cmd+Q (all save first); the Dock menu's Quit does not | tray Quit, Settings, closing the tray-less window (all save first)         | the same                                                                     |
-| Idle time       | system-wide                            | system-wide (CoreGraphics event source)                                       | GNOME (Mutter), else the X screen-saver extension, else KDE's screen saver | GNOME (Mutter), else `ext-idle-notify-v1` (KDE, Sway, Hyprland…), else KDE's |
-| Glass           | Mica on Windows 11, blur on Windows 10 | vibrancy (under-window material, follows light/dark)                          | not offered: no portable blur, so the window stays opaque                  | the same                                                                     |
-| Open at startup | registry `Run` entry                   | a LaunchAgent in `~/Library/LaunchAgents/`                                    | an entry in `~/.config/autostart/`                                         | the same                                                                     |
-| Notifications   | toast                                  | Notification Center                                                           | the desktop's notification service                                         | the same                                                                     |
-| Verified        | in CI (build, tests)                   | in CI (build, tests, universal bundle) — **not yet run on a real Mac**        | in CI, plus the smoke test of the real binary                              | the same                                                                     |
+|                 | Windows 10/11                                                                                                                                                    | macOS 11+                                                                     | Linux, X11                                                                                                                               | Linux, Wayland                                                                                                           |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Web view        | WebView2 111+                                                                                                                                                    | WKWebView of Safari 16.2+ (built in from macOS 13.1)                          | WebKitGTK 2.40+                                                                                                                          | the same                                                                                                                 |
+| Tray            | always                                                                                                                                                           | always: a menu-bar item (monochrome template icon); a click opens its menu    | needs a StatusNotifier host: KDE, or GNOME with the AppIndicator extension                                                               | the same                                                                                                                 |
+| Without a tray  | —                                                                                                                                                                | —                                                                             | a plain window: closing it quits, once it has saved                                                                                      | the same                                                                                                                 |
+| Window          | closing hides it                                                                                                                                                 | closing hides it; the Dock icon brings it back                                | closing hides it (with a tray)                                                                                                           | the same                                                                                                                 |
+| Quit            | tray Quit, Settings (both save first)                                                                                                                            | tray Quit, Settings and Cmd+Q (all save first); the Dock menu's Quit does not | tray Quit, Settings, closing the tray-less window (all save first)                                                                       | the same                                                                                                                 |
+| Idle time       | system-wide                                                                                                                                                      | system-wide (CoreGraphics event source)                                       | GNOME (Mutter), else the X screen-saver extension, else KDE's screen saver                                                               | GNOME (Mutter), else `ext-idle-notify-v1` (KDE, Sway, Hyprland…), else KDE's                                             |
+| Glass           | Mica on Windows 11, blur on Windows 10                                                                                                                           | vibrancy (under-window material, follows light/dark)                          | not offered: no portable blur, so the window stays opaque                                                                                | the same                                                                                                                 |
+| Open at startup | registry `Run` entry                                                                                                                                             | a LaunchAgent in `~/Library/LaunchAgents/`                                    | an entry in `~/.config/autostart/`                                                                                                       | the same                                                                                                                 |
+| Notifications   | toast                                                                                                                                                            | Notification Center                                                           | the desktop's notification service                                                                                                       | the same                                                                                                                 |
+| Verified        | in CI (build, tests, bundles); cross-built from Linux, with the Rust crates' tests under Wine (`pnpm check:windows`) — **not yet run on a real Windows desktop** | in CI (build, tests, universal bundle) — **not yet run on a real Mac**        | in CI, plus the smoke test of the real binary: window, SQLite, tray and its menu, notifications, idle time, login entry, single instance | the smoke test's idle time under a headless sway (`ext-idle-notify-v1`); tray, notifications and the rest only as on X11 |
 
 Where the OS cannot report idle time, "idle" means no keyboard or mouse activity inside
 the Nabḍ window, and Settings says so (also when the desktop's idle service is lost, or
@@ -254,7 +254,16 @@ pnpm typecheck          # packages and tests, one strict tsconfig
 pnpm lint               # ESLint + Prettier
 pnpm lint:rust          # rustfmt + clippy, over the whole Cargo workspace
 pnpm check              # all of the above
+pnpm check:windows      # from Linux: clippy, a full build and the Rust crates' tests for Windows
 ```
+
+`pnpm check:windows` cross-compiles for `x86_64-pc-windows-gnu` (`rustup target add
+x86_64-pc-windows-gnu`, apt `mingw-w64`) and runs the crates' tests under Wine (apt `wine`):
+clippy with `-D warnings`, `nabd.exe` built in full, and the persistence, native and ipc
+suites. Under Wine the built `nabd.exe` gets as far as opening its database (schema version
+3, in `%APPDATA%\com.mewais.nabd`) and then waits for a WebView2 runtime Wine does not have,
+so nothing on screen — tray, toast, idle time, the registry `Run` entry, Mica — is exercised
+until it runs on a real Windows desktop.
 
 Besides the usual rules, ESLint enforces four things about this code base
 (`eslint.config.js`, `scripts/eslint/`, with their own tests in `tests/scripts/`):
@@ -322,25 +331,52 @@ off. No spec is marked at present.
 ## Smoke test
 
 ```bash
-sudo apt install xvfb dbus openbox xdotool sqlite3 curl webkit2gtk-driver
+sudo apt install xvfb dbus openbox xdotool sqlite3 curl libfaketime \
+  python3-dbus python3-gi gir1.2-gtk-3.0 sway wtype \
+  webkit2gtk-driver                     # webkitgtk-webdriver from Ubuntu 24.10 on
 cargo install tauri-driver --locked
 pnpm smoke:linux                        # = scripts/smoke/linux-smoke.sh
 ```
 
-What the browser cannot reach — the native shell, SQLite, the window's life cycle — is
-checked on the real binary, Linux only. The script builds the debug binary and runs it in
-a throw-away session (Xvfb, its own D-Bus session, openbox) with `HOME` and the XDG
-directories in a temporary directory, then expects: a window; a database at schema
-version 3 that the frontend has written its day state to; the app quitting when its window
-is closed (the session has no tray host), by way of the window's own save-then-quit; a
-stored plan surviving a restart, with the day that ended meanwhile rolled over; a second
-launch exiting while the first keeps running; and — through WebDriver, when
-`tauri-driver` and `WebKitWebDriver` are installed — a set logged in the real window
-landing in the `history` table, in its day's session, and, like Pause, surviving a
-restart. `NABD_SMOKE_BINARY=<path>` tests an existing binary instead of building one.
+What the browser cannot reach — the native shell, SQLite, the window's life cycle and the
+desktop around the app — is checked on the real binary, Linux only. The script builds the
+release binary (a debug build never touches the login entry) and runs it in a throw-away
+session (Xvfb, its own D-Bus session, openbox) with `HOME` and the XDG directories in a
+temporary directory. First, on a desktop with no tray, it expects: a window; a database at
+schema version 3 that the frontend has written its day state to; the login entry
+(`~/.config/autostart/Nabd.desktop`, `Exec=… --autostart`) written on a fresh account; the
+app quitting when its window is closed, by way of the window's own save-then-quit; a stored
+plan surviving a restart, with the day that ended meanwhile rolled over; a second launch
+exiting while the first keeps running; a set logged in the real window landing in the
+`history` table, in its day's session, and, like Pause, surviving a restart; Settings →
+"Open at startup" removing the entry and writing it back; and a login launch showing the
+window, as there is no tray to start in.
 
-Not covered anywhere: the tray icon and its menu, desktop notifications, system-wide
-idle time, autostart, and everything Windows- or macOS-specific.
+Then fakes of a StatusNotifier host and of the notification service join the session
+(`scripts/smoke/desktop_bus.py`, over D-Bus, the way a panel and a notification daemon
+would), and it expects: the entry's own command line starting the app hidden in the tray,
+though the tray came up two seconds after it; the tray item's menu reading where the day
+stands, Start next set, Pause nudges, Open Nabd and Quit; closing the window hiding it;
+Pause and Resume stored without showing the window; Open showing it; Start next set showing
+it with the logger open; Quit ending the app; a second launch bringing the hidden window
+forward, focused, and a second login launch leaving it hidden. With the app's wall clock
+moved by libfaketime (only the wall clock: its timers keep pace), a 5-minute interval brings
+a desktop notification ("Time to move", "Push-Up — Interval's up") only once the workday has
+begun, shows the hidden window again without the keyboard, repeats once per interval while
+unanswered, stays quiet while snoozed or paused and after the workday. The clock beat carries
+the X server's idle seconds (the screen-saver extension), which synthetic input resets; after
+a set an idle moment nudges ("Push-Up — You've gone quiet") only past the minimum gap and
+only while nobody touches the mouse. Last, under a headless sway (Wayland, no XWayland), the
+beat carries the compositor's idle seconds (`ext-idle-notify-v1`), reset by a key.
+
+The parts that need WebDriver — `tauri-driver` and `WebKitWebDriver` — are skipped without
+them, and fail instead when `NABD_SMOKE_REQUIRE_WEBDRIVER=1` (as in CI); the Wayland part is
+skipped without sway and wtype, or where a headless sway cannot start.
+`NABD_SMOKE_BINARY=<path>` tests an existing (release) binary instead of building one.
+
+Not covered anywhere: the tray, notifications and idle time of a real GNOME or KDE session
+(Mutter's idle monitor, KDE's screen saver), the Wayland tray and notifications, and
+everything Windows- or macOS-specific beyond what `pnpm check:windows` and CI build and test.
 
 `pnpm visual` (`e2e/visual/`) photographs every screen, modal and overlay state in both
 themes, on the e2e fixture and its fake clock, into `e2e/visual/shots/` (`OUT=<dir>` for
@@ -429,7 +465,8 @@ e2e/                   Playwright specs of the whole UI, with their page objects
                        shared config, and the screenshot capture (visual/: the screens,
                        and the app icon's source image)
 scripts/               the Vitest setup file, the local ESLint rules and the Linux
-                       smoke test
+                       smoke test (smoke/: the script, its shell helpers, the
+                       WebDriver acts, and the fake desktop services)
 ```
 
 **Dependencies only point one way**, and ESLint refuses an import that does not

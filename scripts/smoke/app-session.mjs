@@ -101,16 +101,7 @@ const ACTS = {
    * is at the keyboard or mouse.
    */
   async "idle-nudges"(app) {
-    const idle = await idleTicks(app, 6500);
-    if (!(Math.max(...idle) >= 5 && idle.every((s, i) => i === 0 || s >= idle[i - 1]))) {
-      throw new Error(`with nobody at the computer the idle time should grow past 5 s: ${idle}`);
-    }
-    const stop = await screen.busy();
-    const busy = await idleTicks(app, 3000);
-    stop();
-    if (Math.max(...busy) > 1)
-      throw new Error(`moving the mouse should reset the idle time: ${busy}`);
-
+    await expectSystemIdleTime(app);
     await logOneSet(app);
     await app.pressNamed("Close");
     screen.close();
@@ -124,7 +115,26 @@ const ACTS = {
     stopBusy();
     expectNudge(await notifications.expect(1), NUDGE.idle);
   },
+
+  /**
+   * Under Wayland (a headless sway, whose idle time is `ext-idle-notify-v1`'s):
+   * the clock beat carries the compositor's idle seconds, which synthetic
+   * keyboard input resets.
+   */
+  "wayland-idle": expectSystemIdleTime,
 };
+
+/** The idle seconds of the clock beat grow while nobody is at the computer, and input resets them. */
+async function expectSystemIdleTime(app) {
+  const idle = await idleTicks(app, 6500);
+  if (!(Math.max(...idle) >= 5 && idle.every((s, i) => i === 0 || s >= idle[i - 1]))) {
+    throw new Error(`with nobody at the computer the idle time should grow past 5 s: ${idle}`);
+  }
+  const stop = await screen.busy();
+  const busy = await idleTicks(app, 3000);
+  stop();
+  if (Math.max(...busy) > 1) throw new Error(`input should reset the idle time: ${busy}`);
+}
 
 async function logOneSet(app) {
   await app.press("Start set");

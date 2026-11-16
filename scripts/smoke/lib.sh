@@ -172,6 +172,8 @@ webkit_webdriver() {
   command -v WebKitWebDriver || find /usr/lib /usr/libexec -name WebKitWebDriver -type f 2>/dev/null | head -n 1
 }
 
+# start_webdriver: tauri-driver on DRIVER_PORT, the native driver on the next
+# port; the apps it starts get this shell's environment.
 start_webdriver() {
   tauri-driver --port "$DRIVER_PORT" --native-port "$((DRIVER_PORT + 1))" \
     --native-driver "$(webkit_webdriver)" &
@@ -186,12 +188,13 @@ act() {
     fail "the WebDriver session '$1' did not go as expected"
 }
 
-# Leave no process behind: the app (and any second copy), the native driver
-# under tauri-driver, then tauri-driver itself, the desktop services and the
-# window manager.
+# Leave no process behind: the app (and any second copy), what the session's
+# jobs started (the native driver under tauri-driver), then the jobs
+# themselves: tauri-driver, the desktop services, the compositors.
 cleanup() {
+  local job
   pkill -f "^$BINARY" || true
-  [[ -z "$DRIVER_PID" ]] || pkill -P "$DRIVER_PID" || true
+  for job in $(jobs -p); do pkill -P "$job" || true; done
   # shellcheck disable=SC2046 # one PID per word is the point
   kill $(jobs -p) 2>/dev/null || true
 }

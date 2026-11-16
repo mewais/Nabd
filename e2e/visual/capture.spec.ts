@@ -264,9 +264,16 @@ for (const theme of THEMES) {
 
 for (const theme of THEMES) {
   test(`${theme} error notice`, async ({ app, page }) => {
-    const program = plan([day("Upper", [], { slots: [slot("shoulders" as never, [])] })], {
-      type: "cycled",
-    });
+    // A stored plan this version cannot read, as a corrupted store hands it over: plain JSON
+    // (the snapshot's `program` is `unknown`), here a cycled slot on a muscle there is no such key for.
+    const readable = plan([day("Upper", [], { slots: [slot("chest", [])] })], { type: "cycled" });
+    const program: unknown = {
+      ...readable,
+      days: readable.days.map((d) => ({
+        ...d,
+        slots: d.slots.map((s) => ({ ...s, muscle: "shoulders" })),
+      })),
+    };
     await app.launch(at("10:00"), { program, settings: settingsOf(theme) });
     await shooter(page, theme)("notice-error");
   });

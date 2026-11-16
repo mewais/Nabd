@@ -81,8 +81,9 @@ jobs:
 
       # The binary just built, in a throw-away X session with a fake tray host and
       # notification service: window, SQLite, close, restart, single instance, the
-      # login entry, the tray menu, nudge notifications and idle time, partly
-      # through WebDriver (scripts/smoke/linux-smoke.sh says what each part checks).
+      # login entry, the tray menu, nudge notifications and idle time (X11, and
+      # Wayland under a headless sway), partly through WebDriver
+      # (scripts/smoke/linux-smoke.sh says what each part checks).
       # The WebDriver for WebKitGTK is `webkit2gtk-driver` up to Ubuntu 24.04 and
       # `webkitgtk-webdriver` after; whichever this image has is installed.
       - name: Smoke-test the app (Linux)
@@ -95,7 +96,7 @@ jobs:
           apt-cache policy "$driver" | grep -q 'Candidate: [0-9]' || driver=webkitgtk-webdriver
           sudo apt-get install -y --no-install-recommends \
             xvfb dbus dbus-x11 openbox xdotool sqlite3 curl libfaketime \
-            python3-dbus python3-gi "$driver"
+            python3-dbus python3-gi gir1.2-gtk-3.0 sway wtype "$driver"
           cargo install tauri-driver --locked
           scripts/smoke/linux-smoke.sh
 

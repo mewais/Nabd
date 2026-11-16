@@ -1,8 +1,8 @@
 // One prescribed set, changed in place: the arithmetic PrescriptionEditor's
 // changes are made of.
 
-import type { Direction, Intensity, SetSpec, SetType } from "@nabd/domain";
-import { INTENSITY_SCALES, SET_TYPES, clamp } from "@nabd/domain";
+import type { Direction, Intensity, Measure, SetSpec } from "@nabd/domain";
+import { INTENSITY_SCALES, SECONDS_STEP, SET_TYPES, clamp } from "@nabd/domain";
 
 /** How far apart a range starts when a fixed rep count becomes one: 8 → 8–10. */
 const RANGE_SPAN = 2;
@@ -21,18 +21,23 @@ export function writeReps(set: SetSpec, range: boolean): void {
 }
 
 /** working → warm-up → drop → working. */
-export const nextSetType = (type: SetType): SetType =>
-  SET_TYPES[(SET_TYPES.indexOf(type) + 1) % SET_TYPES.length] ?? "working";
+export function cycleType(set: SetSpec): void {
+  set.type = SET_TYPES[(SET_TYPES.indexOf(set.type) + 1) % SET_TYPES.length] ?? "working";
+}
 
-/** Step the amount (the bottom of a range) by `step`, never below one step; the top follows. */
-export function stepAmount(set: SetSpec, direction: Direction, step: number): void {
+/** One step of an amount counted in `measure`: a rep, or a few seconds. */
+const amountStep = (measure: Measure): number => (measure === "time" ? SECONDS_STEP : 1);
+
+/** Step the amount (the bottom of a range) by one step, never below one; the top follows. */
+export function stepAmount(set: SetSpec, direction: Direction, measure: Measure): void {
+  const step = amountStep(measure);
   set.amount = Math.max(step, set.amount + direction * step);
   if (set.upTo !== undefined) set.upTo = Math.max(set.upTo, set.amount);
 }
 
-/** Step the top of a range by `step`, never below its bottom. */
-export function stepUpTo(set: SetSpec, direction: Direction, step: number): void {
-  set.upTo = Math.max(set.amount, (set.upTo ?? set.amount) + direction * step);
+/** Step the top of a range by one step, never below its bottom. */
+export function stepUpTo(set: SetSpec, direction: Direction, measure: Measure): void {
+  set.upTo = Math.max(set.amount, (set.upTo ?? set.amount) + direction * amountStep(measure));
 }
 
 /**

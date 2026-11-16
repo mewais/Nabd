@@ -117,12 +117,14 @@ const x11 = (command) => {
   }
 };
 
-/** The app's window, as the X server sees it. */
+/** The app's window, as the X server sees it, and the user's input. */
 export const screen = {
   shown: () => x11("shown") !== null,
   focused: () => x11("focused") !== null,
   close: () => x11("close"),
-  touch: () => x11("touch"),
+  /** One synthetic input: a mouse movement under X11, a key under Wayland (wtype). */
+  touch: () =>
+    process.env.WAYLAND_DISPLAY ? execFileSync("wtype", ["-k", "Shift_L"]) : x11("touch"),
 
   expectShown: (shown) =>
     eventually(`the window ${shown ? "shown" : "hidden"}`, () =>
@@ -136,7 +138,7 @@ export const screen = {
     if (screen.focused()) throw new Error("the window came back with the keyboard focus");
   },
 
-  /** Keep touching the mouse, from now until the returned function is called. */
+  /** Keep giving input, from now until the returned function is called. */
   async busy() {
     screen.touch();
     const timer = setInterval(() => screen.touch(), 500);
