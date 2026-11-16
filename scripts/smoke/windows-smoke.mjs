@@ -19,11 +19,20 @@
 //                                 driver takes the next one)
 
 import { execFile, execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
+import { setTimeout as sleep } from "node:timers/promises";
 import {
   APP_ID,
+  AppProcess,
   PRODUCT_NAME,
   builtBinary,
   dataDir,
@@ -212,11 +221,66 @@ const sampler = setInterval(() => {
 }, 2000);
 const webviewData = join(process.env.LOCALAPPDATA, APP_ID, "EBWebView");
 
+// TEMPORARY (WebDriver session diagnosis): what msedgedriver launches the app
+// with, from its own verbose log; and whether the app's WebView2 takes
+// WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS when the app is started by hand.
+async function probeWebView2(native, probePort) {
+  const log = join(dir, "edgedriver.log");
+  const edge = new AppProcess(native, [`--port=${probePort}`, "--verbose", `--log-path=${log}`], {
+    TAURI_WEBVIEW_AUTOMATION: "true",
+  });
+  await eventually(
+    "probe msedgedriver up",
+    async () => (await fetch(`http://127.0.0.1:${probePort}/status`).catch(() => null))?.ok,
+  );
+  const answer = await fetch(`http://127.0.0.1:${probePort}/session`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      capabilities: {
+        alwaysMatch: {
+          browserName: "webview2",
+          "ms:edgeChromium": true,
+          "ms:edgeOptions": { binary, args: [] },
+        },
+      },
+    }),
+  }).then((r) => r.text());
+  console.log(`PROBE A answer: ${answer.slice(0, 400)}`);
+  console.log(`PROBE A processes:\n${processes}`);
+  await edge.kill();
+  try {
+    execFileSync("taskkill", ["/IM", "nabd.exe", "/T", "/F"], { stdio: "ignore" });
+  } catch {
+    // none left
+  }
+  const lines = existsSync(log) ? readFileSync(log, "utf8").split(/\r?\n/) : ["(no log)"];
+  console.log("PROBE A log:");
+  for (const line of lines
+    .filter((l) => /launch|WEBVIEW2|environment|command|remote|binary|DevTools|args/i.test(l))
+    .slice(0, 80))
+    console.log(`  ${line.slice(0, 600)}`);
+
+  const app = new AppProcess(binary, [], {
+    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=9333",
+    WEBVIEW2_USER_DATA_FOLDER: join(dir, "probe-webview"),
+  });
+  await sleep(10_000);
+  console.log(`PROBE B processes:\n${processes}`);
+  const version = await fetch("http://127.0.0.1:9333/json/version")
+    .then((r) => r.text())
+    .catch((error) => `unreachable: ${error.message}`);
+  console.log(`PROBE B devtools: ${version.slice(0, 400)}`);
+  await endWithItsWebView(app);
+  forgetNabd();
+}
+
 const port = Number(process.env.NABD_SMOKE_DRIVER_PORT ?? 4444);
 let driver = null;
 await runEntry({
   async setup() {
     driver = await startWebDriver(dir, port);
+    if (driver) await probeWebView2(driver.process.command.split(" ").at(-1), port + 10); // TEMPORARY
     return {
       binary,
       tray: true,

@@ -176,6 +176,29 @@ def menu_entries(menu):
     return entries
 
 
+def entry_id(menu, label):
+    """The id of the shown entry labelled `label`; exits when there is none."""
+    ids = [i for i, shown, _enabled in menu_entries(menu) if shown == label]
+    if not ids:
+        sys.exit(f"no tray menu entry labelled {label!r}")
+    return ids[0]
+
+
+def click(menu, label, attempts=5):
+    """Choose the entry labelled `label`. The app builds its menu afresh when
+    what it shows changes, with new ids, so the id just read can be gone by
+    the time it is clicked: then the menu is read again and the entry's new id
+    clicked, a few times at most."""
+    for attempt in range(1, attempts + 1):
+        item = entry_id(menu, label)
+        try:
+            menu.Event(item, "clicked", dbus.Int32(0, variant_level=1), dbus.UInt32(0))
+            return
+        except dbus.exceptions.DBusException:
+            if attempt == attempts or entry_id(menu, label) == item:
+                raise
+
+
 def main():
     command, args = (sys.argv[1], sys.argv[2:]) if len(sys.argv) > 1 else ("", [])
     if command == "serve":
@@ -189,11 +212,7 @@ def main():
         for _id, label, enabled in menu_entries(tray_menu(bus)):
             print(label if enabled else f"{label} (disabled)")
     elif command == "tray-click" and len(args) == 1:
-        menu = tray_menu(bus)
-        ids = [i for i, label, _enabled in menu_entries(menu) if label == args[0]]
-        if not ids:
-            sys.exit(f"no tray menu entry labelled {args[0]!r}")
-        menu.Event(ids[0], "clicked", dbus.Int32(0, variant_level=1), dbus.UInt32(0))
+        click(tray_menu(bus), args[0])
     else:
         sys.exit(__doc__)
 
