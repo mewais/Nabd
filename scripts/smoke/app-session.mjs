@@ -66,6 +66,8 @@ const ACTS = {
     await notifications.expectNoMoreThan(0);
     clock.advance(3); // 09:06: five minutes into the workday
     expectNudge(await notifications.expect(1), NUDGE.timer);
+    await new Promise((r) => setTimeout(r, 3000));
+    console.error("DBG1", screen.focused(), screen.shown());
     // The window hidden in the tray is brought back, without the keyboard.
     await screen.expectShown(true);
     if (screen.focused()) throw new Error("the nudge brought the window back focused");
@@ -80,9 +82,13 @@ const ACTS = {
     await notifications.expectNoMoreThan(2);
     clock.advance(3); // 09:18
     expectNudge(await notifications.expect(3), NUDGE.timer);
+    console.error("DBG3a", screen.focused(), screen.shown());
+    await new Promise((r) => setTimeout(r, 3000));
+    console.error("DBG3b", screen.focused(), screen.shown());
 
     tray.click("Pause nudges");
     await tray.expectEntry("Resume nudges");
+    console.error("DBGp", screen.focused(), screen.shown());
     clock.advance(10); // 09:28
     await notifications.expectNoMoreThan(3);
     tray.click("Resume nudges"); // the interval has long been up

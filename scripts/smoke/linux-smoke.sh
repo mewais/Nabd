@@ -327,6 +327,8 @@ idle_nudges() {
 inside() {
   trap cleanup EXIT
   openbox &
+  # The user's other work: the window that has the keyboard while Nabd is hidden.
+  xterm -title elsewhere &
   first_launch
   restart_keeps_data
   second_instance
