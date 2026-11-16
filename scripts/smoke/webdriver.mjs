@@ -54,6 +54,16 @@ export class Session {
     await request("POST", `${this.url}/element/${button}/click`, {});
   }
 
+  /**
+   * Press the button whose text is exactly `label`, which ends the app: the
+   * driver may lose the app before it can answer, so no answer is expected
+   * (the caller sees whether the app is gone).
+   */
+  async pressToQuit(label) {
+    const button = await this.waitForButton(label);
+    await request("POST", `${this.url}/element/${button}/click`, {}).catch(() => {});
+  }
+
   /** Wait until some element's own text contains `text`. */
   async waitForText(text) {
     await this.waitFor(`//*[text()[contains(., ${literal(text)})]]`);

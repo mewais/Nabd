@@ -19,10 +19,13 @@
     "e2e": "playwright test --config e2e --trace off",
     "visual": "playwright test --config e2e/visual --trace off --project screens",
     "smoke:linux": "bash scripts/smoke/linux-smoke.sh",
+    "smoke:windows": "node scripts/smoke/windows-smoke.mjs",
+    "smoke:macos": "node scripts/smoke/macos-smoke.mjs",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --workspace --exclude nabd",
     "typecheck": "tsc -p .",
     "lint": "eslint . && prettier --check .",
     "lint:fix": "eslint . --fix && prettier --write .",
+    "lint:sh": "shellcheck -x scripts/smoke/*.sh",
     "lint:rust": "cd src-tauri && cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings",
     "check:windows": "cd src-tauri && cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warnings && cargo build --target x86_64-pc-windows-gnu && WINEDEBUG=-all CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUNNER=wine cargo test --workspace --exclude nabd --target x86_64-pc-windows-gnu",
     "check": "pnpm lint && pnpm lint:rust && pnpm typecheck && pnpm test && pnpm test:rust"

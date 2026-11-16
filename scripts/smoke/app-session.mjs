@@ -46,9 +46,9 @@ const ACTS = {
 
   /** Settings → Quit Nabd: the window saves, then the app exits (the caller sees it go). */
   async "quit-from-settings"(app) {
-    await app.waitForText("1 set logged today");
+    await app.waitForText("Day complete");
     await app.pressNamed("Settings");
-    await app.press("Quit Nabd");
+    await app.pressToQuit("Quit Nabd");
   },
 
   /**

@@ -80,14 +80,16 @@ jobs:
       - run: pnpm tauri build ${{ matrix.bundle-args }}
 
       # The binary just built, in a throw-away X session with a fake tray host and
-      # notification service: window, SQLite, close, restart, single instance, the
-      # login entry, the tray menu, nudge notifications and idle time (X11, and
-      # Wayland under a headless sway), partly through WebDriver
-      # (scripts/smoke/linux-smoke.sh says what each part checks).
-      # The WebDriver for WebKitGTK is `webkit2gtk-driver` up to Ubuntu 24.04 and
-      # `webkitgtk-webdriver` after; whichever this image has is installed.
+      # notification service: the checks every platform shares (window, SQLite,
+      # restart, single instance, the login entry, a set logged through WebDriver,
+      # Settings → Quit), then the tray menu, nudge notifications and idle time
+      # (X11, and Wayland under a headless sway). scripts/smoke/linux-smoke.sh says
+      # what each part checks. The WebDriver for WebKitGTK is `webkit2gtk-driver`
+      # up to Ubuntu 24.04 and `webkitgtk-webdriver` after; whichever this image
+      # has is installed.
       - name: Smoke-test the app (Linux)
         if: runner.os == 'Linux'
+        timeout-minutes: 20
         env:
           NABD_SMOKE_BINARY: src-tauri/target/release/nabd
           NABD_SMOKE_REQUIRE_WEBDRIVER: 1
@@ -95,10 +97,37 @@ jobs:
           driver=webkit2gtk-driver
           apt-cache policy "$driver" | grep -q 'Candidate: [0-9]' || driver=webkitgtk-webdriver
           sudo apt-get install -y --no-install-recommends \
-            xvfb dbus dbus-x11 openbox xdotool sqlite3 curl libfaketime \
+            xvfb dbus dbus-x11 openbox xdotool curl libfaketime shellcheck \
             python3-dbus python3-gi gir1.2-gtk-3.0 sway wtype "$driver"
+          pnpm lint:sh
           cargo install tauri-driver --locked
           scripts/smoke/linux-smoke.sh
+
+      # The same shared checks on the runner's desktop, with the account's own
+      # %APPDATA% and Run key (the runner is thrown away), then through WebDriver
+      # (tauri-driver + an msedgedriver matching the WebView2 runtime, found or
+      # downloaded by the script): a set logged, "Open at startup", Settings → Quit
+      # and the system's idle time. scripts/smoke/windows-smoke.mjs says more.
+      - name: Smoke-test the app (Windows)
+        if: runner.os == 'Windows'
+        timeout-minutes: 20
+        env:
+          NABD_SMOKE_BINARY: src-tauri/target/release/nabd.exe
+          NABD_SMOKE_REQUIRE_WEBDRIVER: 1
+        run: |
+          cargo install tauri-driver --locked
+          pnpm smoke:windows
+
+      # The shared checks that need no WebDriver (WKWebView has none) on a copy of
+      # the universal .app, with HOME in a temporary folder; closing the window
+      # and the menu-bar item's menu through System Events where the runner
+      # allows UI scripting. scripts/smoke/macos-smoke.mjs says more.
+      - name: Smoke-test the app (macOS)
+        if: runner.os == 'macOS'
+        timeout-minutes: 15
+        env:
+          NABD_SMOKE_BINARY: ${{ matrix.bundle-dir }}/macos/Nabd.app
+        run: pnpm smoke:macos
 
       - uses: actions/upload-artifact@v4
         with:

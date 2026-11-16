@@ -78,6 +78,7 @@ export default [
     languageOptions: {
       globals: Object.fromEntries(
         [
+          "Buffer",
           "console",
           "fetch",
           "process",
