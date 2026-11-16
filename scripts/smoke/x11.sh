@@ -15,11 +15,22 @@ windows() {
   xdotool search --onlyvisible --class nabd 2>/dev/null || true
 }
 
+# Activating the window can lose a race with the window manager (xdotool dies
+# of an X error while no window is active yet), before the key is sent: then
+# it is tried again, a few times at most.
+close() {
+  for _ in 1 2 3 4 5; do
+    xdotool windowactivate --sync "$(windows | tail -n 1)" key --clearmodifiers alt+F4 && return
+    sleep 0.5
+  done
+  return 1
+}
+
 case "${1:-}" in
   count) windows | grep -c . || true ;;
   shown) [[ -n "$(windows)" ]] ;;
   focused) windows | grep -qx "$(xdotool getwindowfocus 2>/dev/null)" ;;
-  close) xdotool windowactivate --sync "$(windows | tail -n 1)" key --clearmodifiers alt+F4 ;;
+  close) close ;;
   touch) xdotool mousemove_relative -- 1 1 mousemove_relative -- -1 -1 ;;
   *)
     echo "usage: x11.sh count|shown|focused|close|touch" >&2
