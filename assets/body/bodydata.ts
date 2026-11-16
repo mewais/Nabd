@@ -1,5 +1,7 @@
-// Anatomical muscle paths — react-native-body-highlighter (MIT, (c) 2022 ELABBASSI Hicham).
-// Matches the design handoff body map. Each part: slug + path sides (arrays of 'd').
+// Anatomical muscle paths, vendored from react-native-body-highlighter
+// (https://github.com/HichamELBSI/react-native-body-highlighter, assets/bodyFront.ts and
+// assets/bodyBack.ts). MIT, (c) 2022 ELABBASSI Hicham — see ./LICENSE and ./NOTICE.
+// Each part: slug + path sides (arrays of SVG path 'd' strings).
 export interface BodyPart { slug: string; color: string; path: { left?: string[]; right?: string[]; center?: string[]; common?: string[] }; }
 
 export const FRONT_MUSCLES: BodyPart[] = [

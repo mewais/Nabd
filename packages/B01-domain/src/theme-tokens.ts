@@ -4,8 +4,7 @@ import type { Theme, Material } from "./settings";
  * The four materials: two solid themes (light/dark) and their glass variants.
  * Glass materials re-specify tokens for legibility against the tint (NOT the
  * wallpaper). Their `--bg` here is the floor-opacity tint as a fallback; the live
- * tint is computed from the opacity setting via `glassTint()`. Verbatim from the
- * design handoff.
+ * tint is computed from the opacity setting via `glassTint()`.
  */
 export const THEMES: Record<Material, Record<string, string>> = {
   light: {

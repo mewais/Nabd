@@ -1,5 +1,10 @@
-Body Muscles
-Copyright 2024 Ivan Vulović
+Anatomical body-map SVG path data (bodydata.ts)
 
-This product includes software developed by Ivan Vulović.
-https://github.com/vulovix/body-muscles
+Source:    react-native-body-highlighter
+           https://github.com/HichamELBSI/react-native-body-highlighter
+           (assets/bodyFront.ts and assets/bodyBack.ts)
+Copyright: (c) 2022 ELABBASSI Hicham
+License:   MIT — see LICENSE in this directory
+
+Changes: the front and back part lists are merged into one file and exported as
+FRONT_MUSCLES / BACK_MUSCLES; the path data itself is unmodified.

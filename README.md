@@ -93,7 +93,10 @@ functions; the store is the only place that persists.
 
 ## Credits
 
-- Body-map SVG paths adapted from
+- Body-map SVG paths vendored from
   [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter)
-  (MIT). See `NOTICE` and `assets/body/LICENSE`.
+  (MIT, © 2022 ELABBASSI Hicham) — `assets/body/LICENSE`.
+- Bundled fonts: Hanken Grotesk and JetBrains Mono (SIL Open Font License 1.1) —
+  `packages/B23-app/public/fonts/OFL.txt`.
+- Full attribution is in `NOTICE`.
 - © 2026 Mohammad Ewais — MIT (`LICENSE`).
