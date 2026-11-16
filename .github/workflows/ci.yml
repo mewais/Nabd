@@ -63,7 +63,25 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm test:rust
+
+      - name: Install the browser for the end-to-end tests
+        run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e
+
       - run: pnpm tauri build ${{ matrix.bundle-args }}
+
+      # The binary just built, in a throw-away X session: window, SQLite, close,
+      # restart, single instance, and one set logged through WebDriver.
+      - name: Smoke-test the app (Linux)
+        if: runner.os == 'Linux'
+        env:
+          NABD_SMOKE_BINARY: src-tauri/target/release/nabd
+          NABD_SMOKE_REQUIRE_WEBDRIVER: 1
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            xvfb dbus openbox xdotool sqlite3 curl webkit2gtk-driver
+          cargo install tauri-driver --locked
+          scripts/smoke/linux-smoke.sh
 
       - uses: actions/upload-artifact@v4
         with:

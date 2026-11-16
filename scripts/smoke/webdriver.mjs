@@ -1,10 +1,10 @@
 // A minimal W3C WebDriver client: just what the smoke test needs to press
 // buttons in the real window and read what it shows. No dependencies.
 
+import { setTimeout as sleep } from "node:timers/promises";
+
 const ELEMENT_KEY = "element-6066-11e4-a52e-4f735466cecf";
 const POLL_MS = 250;
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** XPath string literal for `text` (which may hold either kind of quote, not both). */
 const literal = (text) => (text.includes("'") ? `"${text}"` : `'${text}'`);
@@ -43,9 +43,14 @@ export class Session {
     throw new Error(`nothing on the page matches ${xpath}`);
   }
 
+  /** Wait until there is a button whose text is exactly `label`, and return its id. */
+  waitForButton(label) {
+    return this.waitFor(`//button[normalize-space()=${literal(label)}]`);
+  }
+
   /** Press the button whose text is exactly `label`. */
   async press(label) {
-    const button = await this.waitFor(`//button[normalize-space()=${literal(label)}]`);
+    const button = await this.waitForButton(label);
     await request("POST", `${this.url}/element/${button}/click`, {});
   }
 

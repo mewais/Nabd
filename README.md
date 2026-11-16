@@ -106,6 +106,54 @@ pnpm lint:rust          # rustfmt + clippy
 pnpm check              # all of the above
 ```
 
+## End-to-end tests
+
+```bash
+pnpm exec playwright install chromium   # once: the browser Playwright drives
+pnpm e2e                                # build, serve with `vite preview`, run every spec headless
+pnpm e2e specs/03-suggestions.spec.ts   # one spec; any `playwright test` argument can follow
+```
+
+`e2e/` holds Playwright specs that use the whole UI the way a person does — build a plan
+in the planner, get nudged, log sets, change settings, read Progress — in a browser, on
+the in-memory backend of `pnpm dev`. Two things make them deterministic:
+
+- **the clock** is Playwright's fake one, installed before the page loads and frozen:
+  time passes only when a spec says so, either with nobody at the keyboard
+  (`app.idleFor`) or with the mouse moving in the window (`app.busyFor`) — in a browser
+  the app takes its idle time from activity inside the page;
+- **the data** a spec starts from is handed to the demo backend through
+  `window.__NABD_E2E_SNAPSHOT__` (`packages/app/src/demo.ts`), the one seam the tests
+  have. It is read only where the demo backend is built, which the desktop app never does.
+
+`e2e/support/` has the fixture (`app`), one page object per screen and modal, and the
+builders for plans and history; the browser runs in a non-UTC time zone so "today" is
+tested as the user's calendar day. A spec marked `test.fail` documents designed behaviour
+the app does not have yet: it starts failing the day the app is fixed, and the mark comes
+off.
+
+## Smoke test
+
+```bash
+sudo apt install xvfb dbus openbox xdotool sqlite3 curl webkit2gtk-driver
+cargo install tauri-driver --locked
+pnpm smoke:linux                        # = scripts/smoke/linux-smoke.sh
+```
+
+What the browser cannot reach — the native shell, SQLite, the window's life cycle — is
+checked on the real binary, Linux only. The script builds the debug binary and runs it in
+a throw-away session (Xvfb, its own D-Bus session, openbox) with `HOME` and the XDG
+directories in a temporary directory, then expects: a window; a database at schema
+version 2 that the frontend has written its day state to; the app quitting when its window
+is closed (the session has no tray host); a stored plan surviving a restart, with the day
+that ended meanwhile rolled over; a second launch exiting while the first keeps running;
+and — through WebDriver, when `tauri-driver` and `WebKitWebDriver` are installed — a set
+logged in the real window landing in the `history` table and, like Pause, surviving a
+restart. `NABD_SMOKE_BINARY=<path>` tests an existing binary instead of building one.
+
+Not covered anywhere: the tray icon and its menu, desktop notifications, system-wide
+idle time, autostart, and everything Windows-specific.
+
 `scripts/visual/capture.mjs` drives the browser demo through every screen and modal, in
 both themes, and saves screenshots; `scripts/visual/make-icon.mjs` renders the app
 icon's source image from the in-app logo.
@@ -150,7 +198,8 @@ src-tauri/
   src/                 the Tauri binary: commands/, tray, window, clock, glass,
                        autostart, export, and idle/ (one backend per platform API)
 tests/                 tests/<package>/, tests/rust/<crate>/, tests/support/
-scripts/               the Vitest setup file and the visual scripts
+e2e/                   Playwright specs of the whole UI, with their page objects
+scripts/               the Vitest setup file, the visual scripts and the Linux smoke test
 assets/body/           the vendored body-map drawing
 ```
 

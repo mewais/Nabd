@@ -27,11 +27,6 @@ export class Library {
     return this.dialog.getByRole("button", { name: `Add ${exercise}`, exact: true });
   }
 
-  /** Every row on show. */
-  get rows(): Locator {
-    return this.dialog.getByRole("button", { name: /^Add / });
-  }
-
   /** Find `exercise` by typing `text`, and pick it. */
   async add(exercise: string, text: string = exercise): Promise<void> {
     await this.search.fill(text);
