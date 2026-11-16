@@ -86,6 +86,8 @@ const ACTS = {
     clock.advance(10); // 09:28
     await notifications.expectNoMoreThan(3);
     tray.click("Resume nudges"); // the interval has long been up
+    await new Promise((r) => setTimeout(r, 3000));
+    console.error("DBG", JSON.stringify(await app.run("arguments[0]([document.hasFocus(), document.visibilityState, document.body.innerText.slice(0,400)])")), screen.focused(), screen.shown());
     expectNudge(await notifications.expect(4), NUDGE.timer);
 
     clock.at(17, 1); // the workday is over
