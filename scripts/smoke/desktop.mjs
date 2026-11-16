@@ -129,9 +129,19 @@ export const screen = {
       screen.shown() === shown ? true : undefined,
     ),
 
-  /** Keep touching the mouse until the returned function is called. */
-  busy() {
+  /** The window hidden in the tray is back on screen, and the keyboard is still elsewhere. */
+  async expectShownUnfocused() {
+    await screen.expectShown(true);
+    await sleep(1000);
+    if (screen.focused()) throw new Error("the window came back with the keyboard focus");
+  },
+
+  /** Keep touching the mouse, from now until the returned function is called. */
+  async busy() {
+    screen.touch();
     const timer = setInterval(() => screen.touch(), 500);
+    // Past the beat that was already on its way when the first touch came.
+    await sleep(1200);
     return () => clearInterval(timer);
   },
 };

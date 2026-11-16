@@ -89,10 +89,33 @@ fn set_focus_on_map<R: Runtime>(window: &WebviewWindow<R>, focus: bool) {
     });
 }
 
+/// GTK tells an X window manager "not asked for by the user" (a user time of
+/// 0) for a window that must not take the focus — but only the first time the
+/// window is mapped. Mapped again, it carries the time of the last key or
+/// click it had, and the window manager may then hand it the focus as though
+/// the user had just asked for it. So the time is reset as well, and the
+/// window shown, in one go on the main thread (where GTK may be touched).
 #[cfg(target_os = "linux")]
 fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
-    set_focus_on_map(window, false);
-    let _ = window.show();
+    use gtk::glib::Cast;
+    use gtk::prelude::{GtkWindowExt, WidgetExt};
+
+    let target = window.clone();
+    let _ = window.run_on_main_thread(move || {
+        let Ok(gtk_window) = target.gtk_window() else {
+            return;
+        };
+        gtk_window.set_focus_on_map(false);
+        // Only an X11 window has a user time; on Wayland the compositor decides.
+        if let Some(x11) = gtk_window
+            .window()
+            .and_then(|w| w.downcast::<gdkx11::X11Window>().ok())
+        {
+            x11.set_user_time(0);
+        }
+        // What Tauri's `show()` does on GTK, here so that it comes after the above.
+        gtk_window.show_all();
+    });
 }
 
 /// Tauri's `show()` is `SW_SHOW`, which activates the window.

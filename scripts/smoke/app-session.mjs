@@ -8,7 +8,6 @@
 // Each act starts the app, does its part and closes the app again.
 
 import process from "node:process";
-import { execFileSync } from "node:child_process";
 import { clock, expectNudge, idleTicks, notifications, screen, tray } from "./desktop.mjs";
 import { Session } from "./webdriver.mjs";
 
@@ -67,73 +66,26 @@ const ACTS = {
     await notifications.expectNoMoreThan(0);
     clock.advance(3); // 09:06: five minutes into the workday
     expectNudge(await notifications.expect(1), NUDGE.timer);
-    await new Promise((r) => setTimeout(r, 3000));
-    console.error(
-      "DBG1",
-      screen.focused(),
-      screen.shown(),
-      execFileSync(
-        "bash",
-        [
-          "-c",
-          "for w in $(xdotool search --onlyvisible --class nabd); do xprop -id $w _NET_WM_USER_TIME _NET_WM_USER_TIME_WINDOW WM_HINTS; u=$(xprop -id $w _NET_WM_USER_TIME_WINDOW | grep -o '0x[0-9a-f]*'); [ -n \"$u\" ] && xprop -id $u _NET_WM_USER_TIME; done; xprop -root _NET_ACTIVE_WINDOW",
-        ],
-        { encoding: "utf8" },
-      ),
-    );
-    // The window hidden in the tray is brought back, without the keyboard.
-    await screen.expectShown(true);
-    if (screen.focused()) throw new Error("the nudge brought the window back focused");
+    await screen.expectShownUnfocused();
 
     clock.advance(6); // 09:12: unanswered for an interval
     expectNudge(await notifications.expect(2), NUDGE.timer);
 
-    console.error("DBGs0", screen.focused(), screen.shown());
-    // await app.press("Snooze");
-    await new Promise((r) => setTimeout(r, 1000));
-    console.error("DBGs1", screen.focused(), screen.shown());
+    await app.press("Snooze"); // for five minutes: until 09:17
     screen.close();
     await screen.expectShown(false);
-    execFileSync(new URL("x11.sh", import.meta.url).pathname, ["elsewhere"]);
-    await new Promise((r) => setTimeout(r, 1000));
-    console.error("DBGs2", screen.focused(), require_focus());
     clock.advance(3); // 09:15
     await notifications.expectNoMoreThan(2);
     clock.advance(3); // 09:18
     expectNudge(await notifications.expect(3), NUDGE.timer);
-    console.error(
-      "DBG3a",
-      screen.focused(),
-      screen.shown(),
-      execFileSync(
-        "bash",
-        [
-          "-c",
-          "for w in $(xdotool search --onlyvisible --class nabd); do xprop -id $w _NET_WM_USER_TIME _NET_WM_USER_TIME_WINDOW WM_HINTS; u=$(xprop -id $w _NET_WM_USER_TIME_WINDOW | grep -o '0x[0-9a-f]*'); [ -n \"$u\" ] && xprop -id $u _NET_WM_USER_TIME; done; xprop -root _NET_ACTIVE_WINDOW",
-        ],
-        { encoding: "utf8" },
-      ),
-    );
-    await new Promise((r) => setTimeout(r, 3000));
-    console.error("DBG3b", screen.focused(), screen.shown());
+    // Brought back again (the window has had a click since it was first shown).
+    await screen.expectShownUnfocused();
 
     tray.click("Pause nudges");
     await tray.expectEntry("Resume nudges");
-    console.error("DBGp", screen.focused(), screen.shown());
     clock.advance(10); // 09:28
     await notifications.expectNoMoreThan(3);
     tray.click("Resume nudges"); // the interval has long been up
-    await new Promise((r) => setTimeout(r, 3000));
-    console.error(
-      "DBG",
-      JSON.stringify(
-        await app.run(
-          "arguments[0]([document.hasFocus(), document.visibilityState, document.body.innerText.slice(0,400)])",
-        ),
-      ),
-      screen.focused(),
-      screen.shown(),
-    );
     expectNudge(await notifications.expect(4), NUDGE.timer);
 
     clock.at(17, 1); // the workday is over
@@ -153,7 +105,7 @@ const ACTS = {
     if (!(Math.max(...idle) >= 5 && idle.every((s, i) => i === 0 || s >= idle[i - 1]))) {
       throw new Error(`with nobody at the computer the idle time should grow past 5 s: ${idle}`);
     }
-    const stop = screen.busy();
+    const stop = await screen.busy();
     const busy = await idleTicks(app, 3000);
     stop();
     if (Math.max(...busy) > 1)
@@ -166,17 +118,13 @@ const ACTS = {
 
     clock.advance(1); // 10:01: idle, but within the minimum gap after the set
     await notifications.expectNoMoreThan(0);
-    const stopBusy = screen.busy();
+    const stopBusy = await screen.busy();
     clock.advance(2); // 10:03: past the gap, but someone is at the mouse
     await notifications.expectNoMoreThan(0);
     stopBusy();
     expectNudge(await notifications.expect(1), NUDGE.idle);
   },
 };
-
-function require_focus() {
-  return execFileSync("xdotool", ["getwindowfocus", "getwindowname"], { encoding: "utf8" }).trim();
-}
 
 async function logOneSet(app) {
   await app.press("Start set");

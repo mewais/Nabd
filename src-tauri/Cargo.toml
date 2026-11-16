@@ -52,11 +52,12 @@ nabd-native = { workspace = true }
 nabd-ipc = { workspace = true }
 
 # Linux idle time and tray-host detection speak D-Bus, X11 and Wayland directly.
-# All four are pure Rust (zbus and gtk are already in the tree through Tauri),
+# All are pure Rust (zbus, gtk and gdkx11 are already in the tree through Tauri),
 # so no extra system library is linked: no libXss, no libwayland.
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = "5"
 gtk = "0.18"
+gdkx11 = "0.18"
 x11rb = { version = "0.13", features = ["screensaver"] }
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging"] }
