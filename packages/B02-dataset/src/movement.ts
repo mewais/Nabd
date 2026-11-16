@@ -1,6 +1,6 @@
 import type { Equipment, MuscleKey, TrackingType } from "@nabd/domain";
 
-export type Laterality = "bilateral" | "unilateral";
+type Laterality = "bilateral" | "unilateral";
 
 /**
  * One way of moving, independent of what it is loaded with. The catalog lists

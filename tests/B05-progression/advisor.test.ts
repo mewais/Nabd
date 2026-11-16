@@ -11,7 +11,7 @@ import {
 } from "../support/domain-factories";
 
 const TODAY = dateKey(nov(16));
-const range8to12 = prescription(threeSets);
+const range8to12 = prescription(threeSets());
 
 function advise(
   ex: Exercise,

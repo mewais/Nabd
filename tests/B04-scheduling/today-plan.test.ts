@@ -57,7 +57,7 @@ describe("TodayPlan for a fixed day", () => {
     ).toEqual([]);
     const orphan: Program = {
       ...fixedProgram,
-      days: [{ ...fixedProgram.days[0]!, exercises: [row("gone", threeSets), benchRow] }],
+      days: [{ ...fixedProgram.days[0]!, exercises: [row("gone", threeSets()), benchRow] }],
     };
     expect(build([], dayState(MONDAY), orphan).items.map((i) => i.exercise.name)).toEqual([
       "Bench",

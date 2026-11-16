@@ -23,9 +23,9 @@ export const dip = exercise({ name: "Dip" });
 export const lookup = lookupIn([bench, fly, raise, dip]);
 
 export const MONDAY = nov(16);
-export const benchRow = row(bench.id, [warmup(12), ...threeSets]);
-export const flyRow = row(fly.id, threeSets, { supersetId: "ss" });
-export const raiseRow = row(raise.id, threeSets, { supersetId: "ss" });
+export const benchRow = row(bench.id, [warmup(12), ...threeSets()]);
+export const flyRow = row(fly.id, threeSets(), { supersetId: "ss" });
+export const raiseRow = row(raise.id, threeSets(), { supersetId: "ss" });
 
 /** Push on Monday (bench, then fly and raise as a superset), Pull on Wednesday (dips). */
 export const fixedProgram: Program = {
@@ -34,14 +34,14 @@ export const fixedProgram: Program = {
   schedule: "weekday",
   days: [
     { id: "mon", name: "Push", weekday: 1, exercises: [benchRow, flyRow, raiseRow], slots: [] },
-    { id: "wed", name: "Pull", weekday: 3, exercises: [row(dip.id, threeSets)], slots: [] },
+    { id: "wed", name: "Pull", weekday: 3, exercises: [row(dip.id, threeSets())], slots: [] },
   ],
 };
 
 export const floating: Program = { ...fixedProgram, schedule: "floating" };
 
 /** What a cycled slot prescribes in these tests. */
-export const slotSets = () => prescription(threeSets, { rest: 60 });
+export const slotSets = () => prescription(threeSets(), { rest: 60 });
 
 /** A floating cycled plan: day A has a two-exercise pool, a one-exercise pool and an empty one; day B is empty. */
 export const cycled: Program = {

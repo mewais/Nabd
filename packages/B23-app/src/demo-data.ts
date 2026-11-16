@@ -20,9 +20,15 @@ function planned(
 
 /** The day's main lift: a warm-up, then three sets at RPE 8 with a long rest. */
 function mainLift(exId: string, lo: number, hi: number): ExercisePrescription {
-  const hard: SetSpec = { ...working(lo, hi), val: 8 };
-  const sets: SetSpec[] = [{ type: "warmup", a: hi + 2 }, hard, hard, hard];
+  const hard = (): SetSpec => ({ ...working(lo, hi), val: 8 });
+  const sets: SetSpec[] = [{ type: "warmup", a: hi + 2 }, hard(), hard(), hard()];
   return planned(exId, lo, hi, { intensity: "rpe", rest: 150, sets });
+}
+
+/** Three timed holds of `seconds`. */
+function hold(exId: string, seconds: number): ExercisePrescription {
+  const sets: SetSpec[] = [1, 2, 3].map(() => ({ type: "working", a: seconds }));
+  return { id: exId, exId, repMode: "time", intensity: "none", rest: 60, sets };
 }
 
 const day = (id: string, name: string, exercises: ExercisePrescription[]): Day => ({
@@ -41,22 +47,24 @@ export const DEMO_PROGRAM: Program = {
   days: [
     day("push", "Push", [
       mainLift("bench_press__barbell", 8, 10),
+      planned("incline_bench_press__dumbbell", 10, 12),
       planned("fly__dumbbell", 12, 15, { supersetId: "push-superset" }),
       planned("lateral_raise__dumbbell", 15, 20, { supersetId: "push-superset" }),
+      planned("overhead_triceps_extension__dumbbell", 12, 15),
     ]),
     day("pull", "Pull", [
       mainLift("pull_up__pullupbar", 6, 8),
+      planned("row__barbell", 8, 10),
       planned("row__dumbbell", 10, 12),
-      planned("hammer_curl__dumbbell", 10, 12),
+      planned("hammer_curl__dumbbell", 10, 12, { supersetId: "pull-superset" }),
+      planned("curl__barbell", 10, 12, { supersetId: "pull-superset" }),
     ]),
     day("legs", "Legs", [
       mainLift("back_squat__barbell", 6, 8),
+      planned("romanian_deadlift__barbell", 8, 10),
+      planned("walking_lunge__dumbbell", 10, 12),
       planned("calf_raise__dumbbell", 12, 15, { rest: 60 }),
-      planned("plank__bodyweight", 45, 45, {
-        repMode: "time",
-        rest: 60,
-        sets: [{ type: "working", a: 45 }],
-      }),
+      hold("plank__bodyweight", 45),
     ]),
   ],
 };

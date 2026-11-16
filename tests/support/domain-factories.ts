@@ -47,7 +47,7 @@ export const working = (lo: number, hi?: number, val?: number): SetSpec => ({
 export const warmup = (reps: number): SetSpec => ({ type: "warmup", a: reps });
 
 /** The prescription most tests train on: three working sets of 8–12. */
-export const threeSets: SetSpec[] = [working(8, 12), working(8, 12), working(8, 12)];
+export const threeSets = (): SetSpec[] => [working(8, 12), working(8, 12), working(8, 12)];
 
 export function prescription(sets: SetSpec[], overrides: Partial<Prescription> = {}): Prescription {
   return { repMode: "range", intensity: "none", rest: 90, sets, ...overrides };

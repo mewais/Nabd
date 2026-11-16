@@ -9,7 +9,7 @@ export const APPDATA_VERSION = 2;
 
 /**
  * The export/import snapshot. Most fields are optional on import so partial or
- * older documents still apply cleanly (B10 handles migration/merge).
+ * older documents still apply cleanly (@nabd/serialization migrates them first).
  */
 export const AppDataSchema = z.object({
   app: z.literal("Nabd"),

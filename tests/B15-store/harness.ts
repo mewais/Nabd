@@ -11,8 +11,8 @@ import { logged, nov, row, threeSets } from "../support/domain-factories";
 export const BENCH = "bench_press__barbell";
 export const FLY = "fly__dumbbell";
 export const ROW = "row__barbell";
-export const benchRow = row(BENCH, threeSets);
-export const flyRow = row(FLY, threeSets);
+export const benchRow = row(BENCH, threeSets());
+export const flyRow = row(FLY, threeSets());
 
 /** Floating two-day plan: Push (bench, fly) then Pull (row). */
 export const program: Program = {
@@ -21,7 +21,7 @@ export const program: Program = {
   schedule: "floating",
   days: [
     { id: "push", name: "Push", weekday: null, exercises: [benchRow, flyRow], slots: [] },
-    { id: "pull", name: "Pull", weekday: null, exercises: [row(ROW, threeSets)], slots: [] },
+    { id: "pull", name: "Pull", weekday: null, exercises: [row(ROW, threeSets())], slots: [] },
   ],
 };
 
