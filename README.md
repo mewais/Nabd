@@ -162,10 +162,14 @@ pnpm lint:rust          # rustfmt + clippy, over the whole Cargo workspace
 pnpm check              # all of the above
 ```
 
-Besides the usual rules, ESLint enforces two things about this code base
+Besides the usual rules, ESLint enforces three things about this code base
 (`eslint.config.js`, `scripts/eslint/`): the dependency direction between packages
-described under [Layout](#layout), and one import style — types come in their own
-`import type { … }` statement, and a module is imported once per kind.
+described under [Layout](#layout); one import style — types come in their own
+`import type { … }` statement, and a module is imported once per kind; and that styling
+stays in the design system (`scripts/eslint/styling.js`) — outside it there is no
+`style` attribute, no colour spelled out (`var(--…)`, `color-mix(…)`, hex, `rgb(…)`),
+no number for a font size, gap, padding or margin, and no raw `<button>`, `<input>`,
+`<select>` or `<textarea>`. A genuine one-off is disabled on its line, with the reason.
 
 The app's version is written in `package.json` (which `tauri.conf.json` and the UI
 read) and in `src-tauri/Cargo.toml`; `src-tauri/build.rs` refuses to build when the
@@ -220,9 +224,11 @@ restart. `NABD_SMOKE_BINARY=<path>` tests an existing binary instead of building
 Not covered anywhere: the tray icon and its menu, desktop notifications, system-wide
 idle time, autostart, and everything Windows-specific.
 
-`scripts/visual/capture.mjs` drives the browser demo through every screen and modal, in
-both themes, and saves screenshots; `scripts/visual/make-icon.mjs` renders the app
-icon's source image (`src-tauri/icons/source.png`) from the in-app logo, from which
+`pnpm visual` (`e2e/visual/`) photographs every screen, modal and overlay state in both
+themes, on the e2e fixture and its fake clock, into `e2e/visual/shots/` (`OUT=<dir>` for
+elsewhere, `URL=<app>` for an app already being served) — for comparing two builds by
+eye; `pnpm e2e` does not run it. `scripts/visual/make-icon.mjs` renders the app icon's
+source image (`src-tauri/icons/source.png`) from the in-app logo, from which
 `pnpm tauri icon` makes the icons the bundle uses.
 
 ## Layout
@@ -258,7 +264,9 @@ packages/
   ipc-client      the typed boundary to the Rust backend, and an in-memory stand-in
   store           Zustand store, one file per slice: state, actions, memoized selectors,
                   and what holds after every change (settle.ts)
-  design-system   theme, tokens and every presentational primitive
+  design-system   theme, tokens (colours and tints, spacing, type roles, radii,
+                  shadows, layers) and every presentational primitive: layout (Row,
+                  Stack, Grid, Divider…), Text, Card, ButtonBase under every control
   bodymap         the anatomical SVG map (its vendored drawing in src/drawing/) and the
                   per-muscle meter
   shell           the app chrome: sidebar, top bar, notice banner
@@ -280,8 +288,9 @@ src-tauri/
 tests/                 tests/<package>/, tests/rust/<crate>/, and the shared kits:
                        tests/support/ (builders, exercises, programs, world, dom) and
                        tests/rust/common/
-e2e/                   Playwright specs of the whole UI, with their page objects
-scripts/               the Vitest setup file, the local ESLint rules, the visual scripts
+e2e/                   Playwright specs of the whole UI, with their page objects, and
+                       the screenshot capture (visual/)
+scripts/               the Vitest setup file, the local ESLint rules, the icon script
                        and the Linux smoke test
 ```
 
