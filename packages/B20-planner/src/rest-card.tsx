@@ -1,13 +1,13 @@
 import { Button, Card, Eyebrow, RADIUS, TEXT } from "@nabd/design-system";
+import type { RestColumnVM } from "./board-vm";
 
 export interface RestCardProps {
-  /** "Tue" */
-  label: string;
-  onAddDay: () => void;
+  column: RestColumnVM;
+  onAddDay: (weekday: number) => void;
 }
 
 /** A weekday with no training day yet. */
-export function RestCard({ label, onAddDay }: RestCardProps): JSX.Element {
+export function RestCard({ column, onAddDay }: RestCardProps): JSX.Element {
   return (
     <Card
       padding={11}
@@ -19,15 +19,15 @@ export function RestCard({ label, onAddDay }: RestCardProps): JSX.Element {
         flexDirection: "column",
       }}
     >
-      <Eyebrow>{label}</Eyebrow>
+      <Eyebrow>{column.label}</Eyebrow>
       <div style={{ ...TEXT.label, color: "var(--text3)", margin: "5px 0 auto" }}>Rest</div>
       <Button
         variant="ghost"
         size="sm"
         dashed
         block
-        ariaLabel={`Add a day on ${label}`}
-        onClick={onAddDay}
+        ariaLabel={column.addLabel}
+        onClick={() => onAddDay(column.weekday)}
       >
         + Add day
       </Button>

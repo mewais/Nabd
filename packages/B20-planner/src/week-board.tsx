@@ -26,13 +26,7 @@ export function WeekBoard({ board }: WeekBoardProps): JSX.Element {
           case "day":
             return <DayCard key={column.dayId} day={column} onSelect={actions.selectDay} />;
           case "rest":
-            return (
-              <RestCard
-                key={column.weekday}
-                label={column.label}
-                onAddDay={() => actions.addDay(column.weekday)}
-              />
-            );
+            return <RestCard key={column.weekday} column={column} onAddDay={actions.addDay} />;
           case "add":
             return <AddCard key="add" onAdd={() => actions.addDay(null)} />;
         }

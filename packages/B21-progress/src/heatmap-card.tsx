@@ -14,13 +14,7 @@ export function HeatmapCard({ heatmap }: { heatmap: HeatmapVM }): JSX.Element {
           {isEmpty(muscles) ? (
             <EmptyNote>{muscles.empty}</EmptyNote>
           ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                columnGap: 26,
-              }}
-            >
+            <div style={{ columnWidth: 260, columnGap: 26 }}>
               {muscles.map((muscle) => (
                 <MuscleBar key={muscle.muscle} {...muscle} />
               ))}

@@ -10,10 +10,11 @@ export interface ProgressionCardProps {
 
 /** Every exercise with history: trend, personal best and gain since the first session. */
 export function ProgressionCard({ progression, onOpenChart }: ProgressionCardProps): JSX.Element {
+  const empty = isEmpty(progression);
   return (
     <Card
       title="Progression & records"
-      subtitle="Trend & personal best · click a row for full history"
+      subtitle={`Trend & personal best${empty ? "" : " · click a row for full history"}`}
     >
       {isEmpty(progression) ? (
         <EmptyNote>{progression.empty}</EmptyNote>

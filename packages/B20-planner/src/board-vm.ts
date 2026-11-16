@@ -1,7 +1,7 @@
 // The week board: Mon–Sun for a weekday schedule, DAY 1..N plus "add" for a floating one.
 
 import type { Day, Program, Schedule } from "@nabd/domain";
-import { MUSCLE_NAMES, weekdayShort } from "@nabd/domain";
+import { MUSCLE_NAMES, weekdayName, weekdayShort } from "@nabd/domain";
 import type { ExerciseLookup } from "@nabd/program-editor";
 import { WEEK_ORDER } from "@nabd/program-editor";
 
@@ -22,11 +22,17 @@ export interface DayColumnVM {
   editing: boolean;
 }
 
+export interface RestColumnVM {
+  kind: "rest";
+  /** "Tue" */
+  label: string;
+  weekday: number;
+  /** "Add a day on Tuesday" */
+  addLabel: string;
+}
+
 /** One column of the board: a day's card, a free weekday, or the add tile. */
-export type BoardColumnVM =
-  | DayColumnVM
-  | { kind: "rest"; label: string; weekday: number }
-  | { kind: "add" };
+export type BoardColumnVM = DayColumnVM | RestColumnVM | { kind: "add" };
 
 export interface BoardVM {
   schedule: Schedule;
@@ -77,7 +83,8 @@ export function buildBoard(
     columns: WEEK_ORDER.map((weekday): BoardColumnVM => {
       const label = weekdayShort(weekday);
       const day = program.days.find((d) => d.weekday === weekday);
-      return day ? dayColumn(day, label) : { kind: "rest", label, weekday };
+      if (day) return dayColumn(day, label);
+      return { kind: "rest", label, weekday, addLabel: `Add a day on ${weekdayName(weekday)}` };
     }),
   };
 }

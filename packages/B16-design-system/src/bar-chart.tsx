@@ -59,6 +59,7 @@ export function BarChart({
           aria-current={bar.highlight ? true : undefined}
           style={{
             flex: 1,
+            minWidth: 0,
             height: "100%",
             display: "flex",
             flexDirection: "column",

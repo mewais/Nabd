@@ -1,19 +1,14 @@
-// Shared fixtures for the planner suites: two realistic programs and a harness
-// that applies every `cb.onEdit(edit)` to a real ProgramEditor, so tests can
-// assert on the program a click produces instead of on how the UI asked for it.
+// Shared fixtures for the planner suites: two realistic programs and the
+// view-model built from them the way the app does it.
 
-import React from "react";
-import { render } from "@testing-library/react";
-import { vi } from "vitest";
-import type { Coverage, Program } from "@nabd/domain";
-import { MUSCLES } from "@nabd/domain";
+import { MuscleVolume } from "@nabd/coverage";
+import type { Program } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
-import { ProgramEditor } from "@nabd/program-editor";
-import type { ProgramEdit } from "@nabd/program-editor";
-import { PlannerScreen } from "@nabd/planner";
-import type { PlannerCallbacks } from "@nabd/planner";
+import type { ExerciseLookup } from "@nabd/program-editor";
+import { buildPlannerVM } from "@nabd/planner";
+import type { PlannerVM } from "@nabd/planner";
 
-export const library = ExerciseLibrary.catalog;
+export const lookup: ExerciseLookup = (exId) => ExerciseLibrary.catalog.byId(exId);
 
 export const BENCH = "bench_press__barbell";
 export const DB_BENCH = "bench_press__dumbbell";
@@ -203,88 +198,21 @@ export const floating = (program: Program): Program => ({
   days: program.days.map((day) => ({ ...day, weekday: null })),
 });
 
-export const NO_COVERAGE = Object.fromEntries(MUSCLES.map((m) => [m, 0])) as Coverage;
-
-export interface EditSink {
-  cb: {
-    [K in keyof PlannerCallbacks]: PlannerCallbacks[K] & ReturnType<typeof vi.fn>;
-  };
-  /** The program after every edit received so far. */
-  readonly program: Program;
-  /** How many edits have been received. */
-  readonly edits: number;
-}
-
-/**
- * Planner callbacks whose `onEdit` runs each edit against a real ProgramEditor
- * (ids "new-1", "new-2", … and the catalog as the exercise lookup).
- */
-export function editSink(initial: Program, onChange?: (next: Program) => void): EditSink {
-  let current = initial;
-  let nextId = 0;
-  const newId = (): string => `new-${++nextId}`;
-  const onEdit = vi.fn((edit: ProgramEdit) => {
-    current = edit(new ProgramEditor(current, newId, (exId) => library.byId(exId)));
-    onChange?.(current);
+/** The planner view-model for a program, built the way the app builds it. */
+export function vmOf(program: Program, editDayId: string | null = null): PlannerVM {
+  return buildPlannerVM({
+    program,
+    editDayId,
+    lookup,
+    volume: MuscleVolume.ofProgram(program, lookup),
   });
-  return {
-    cb: {
-      onEdit,
-      onSelectDay: vi.fn(),
-      onAddExercise: vi.fn(),
-      onAddPool: vi.fn(),
-    },
-    get program() {
-      return current;
-    },
-    get edits() {
-      return onEdit.mock.calls.length;
-    },
-  };
 }
 
-/**
- * Render the whole planner the way the app drives it: edits update the program
- * and re-render, selecting a day on the board makes it the edited day.
- */
-export function renderPlanner(
-  initial: Program,
-  options: {
-    editDayId?: string | null;
-    volumeBars?: { muscle: string; name: string; sets: number; pct: number }[];
-  } = {},
-) {
-  let sink!: EditSink;
-
-  function Harness(): JSX.Element {
-    const [program, setProgram] = React.useState(initial);
-    const [editDayId, setEditDayId] = React.useState(options.editDayId ?? null);
-    const [ownSink] = React.useState(() => {
-      const created = editSink(initial, setProgram);
-      created.cb.onSelectDay.mockImplementation(setEditDayId);
-      return created;
-    });
-    sink = ownSink;
-    return (
-      <PlannerScreen
-        program={program}
-        library={library}
-        editDayId={editDayId}
-        volumeBars={options.volumeBars ?? []}
-        coverage={NO_COVERAGE}
-        cb={ownSink.cb}
-      />
-    );
-  }
-
-  const view = render(<Harness />);
-  return {
-    ...view,
-    cb: sink.cb,
-    /** The latest program (after every edit so far). */
-    program: (): Program => sink.program,
-    edits: (): number => sink.edits,
-  };
+/** The editor of a program that has days. */
+export function editorOf(program: Program, editDayId: string | null = null) {
+  const { editor } = vmOf(program, editDayId);
+  if (!editor) throw new Error("the program has no day to edit");
+  return editor;
 }
 
 /** Find a day by id, failing loudly if it is gone. */

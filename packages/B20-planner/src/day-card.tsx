@@ -1,4 +1,4 @@
-import { CardButton, Chip, Eyebrow, LiveDot, TEXT } from "@nabd/design-system";
+import { CardButton, Chip, Eyebrow, TEXT } from "@nabd/design-system";
 import type { DayColumnVM } from "./board-vm";
 
 export interface DayCardProps {
@@ -14,10 +14,7 @@ export function DayCard({ day, onSelect }: DayCardProps): JSX.Element {
       onClick={() => onSelect(day.dayId)}
       style={{ minHeight: 150 }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Eyebrow>{day.label}</Eyebrow>
-        {day.editing && <LiveDot active={false} />}
-      </div>
+      <Eyebrow>{day.label}</Eyebrow>
       <div style={{ ...TEXT.cardTitle, margin: "5px 0 8px" }}>{day.name}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {day.chips.map((chip, index) => (
