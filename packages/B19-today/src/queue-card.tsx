@@ -2,7 +2,7 @@ import { Card, TEXT } from "@nabd/design-system";
 import { QueueRow } from "./queue-row";
 import type { QueueRowVM } from "./queue-vm";
 
-export interface QueueCardProps {
+interface QueueCardProps {
   dayName: string | null;
   rows: QueueRowVM[];
   onStart: (itemId: string) => void;

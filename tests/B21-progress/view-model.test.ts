@@ -7,8 +7,6 @@ import {
   NO_COVERAGE,
   PLANK,
   PULL_UP,
-  dayLog,
-  history,
   loggedSet,
   progressVM,
   shown,

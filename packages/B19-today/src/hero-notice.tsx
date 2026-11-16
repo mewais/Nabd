@@ -1,7 +1,7 @@
 import { Button, COLOR, Card, Icon, TEXT } from "@nabd/design-system";
 import type { HeroNoticeVM } from "./hero-vm";
 
-export interface HeroNoticeProps {
+interface HeroNoticeProps {
   vm: HeroNoticeVM;
   onLogOther: () => void;
 }

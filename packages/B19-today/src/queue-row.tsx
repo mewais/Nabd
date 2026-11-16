@@ -1,7 +1,7 @@
 import { Button, FONT, TEXT } from "@nabd/design-system";
 import type { QueueRowVM } from "./queue-vm";
 
-export interface QueueRowProps {
+interface QueueRowProps {
   row: QueueRowVM;
   onStart: (itemId: string) => void;
   onToggleSkip: (itemId: string) => void;

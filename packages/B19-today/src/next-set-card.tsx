@@ -1,7 +1,7 @@
 import { AdviceCard, Button, Card, Chip, Eyebrow, FONT } from "@nabd/design-system";
 import type { NextSetVM } from "./hero-vm";
 
-export interface NextSetCardProps {
+interface NextSetCardProps {
   vm: NextSetVM;
   onStart: () => void;
   onSnooze: () => void;

@@ -33,6 +33,20 @@ describe("BarChart", () => {
     expect(fill(highlighted).style.background).not.toBe(fill(plain).style.background);
   });
 
+  it("keeps a bar whose caption is blank", () => {
+    render(
+      <BarChart
+        bars={[
+          { label: "9a", heightPct: 40 },
+          { label: "", heightPct: 80 },
+        ]}
+        height={124}
+        ariaLabel="Sets by hour"
+      />,
+    );
+    expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual(["9a", ""]);
+  });
+
   it("accepts bars that share a caption", () => {
     render(
       <BarChart

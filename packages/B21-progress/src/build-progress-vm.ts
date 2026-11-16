@@ -6,15 +6,7 @@ import type { Coverage } from "@nabd/domain";
 import { MUSCLES, parseDateKey } from "@nabd/domain";
 import { formatAmount, formatGain } from "@nabd/progression";
 import type { ExerciseProgress } from "./exercise-progress";
-import {
-  NO_SETS,
-  calendar,
-  completion,
-  kpis,
-  timeOfDay,
-  triggers,
-  weekly,
-} from "./stats-sections";
+import { NO_SETS, calendar, completion, kpis, timeOfDay, triggers, weekly } from "./stats-sections";
 import type { HeatmapVM, ProgressVM, ProgressionRowVM } from "./view-model";
 
 function heatmap(coverage: Coverage): HeatmapVM {

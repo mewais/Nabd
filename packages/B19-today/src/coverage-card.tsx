@@ -15,7 +15,7 @@ const STYLE_OPTIONS: readonly SegOption<MapStyle>[] = [
   { k: "outline", label: "Outline" },
 ];
 
-export interface CoverageCardProps {
+interface CoverageCardProps {
   vm: CoverageVM;
   onMapView: (view: BodyView) => void;
   onMapStyle: (style: MapStyle) => void;

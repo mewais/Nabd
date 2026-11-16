@@ -2,7 +2,7 @@ import { HeroNotice } from "./hero-notice";
 import type { HeroVM } from "./hero-vm";
 import { NextSetCard } from "./next-set-card";
 
-export interface HeroCardProps {
+interface HeroCardProps {
   vm: HeroVM;
   onStart: () => void;
   onSnooze: () => void;
