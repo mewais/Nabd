@@ -6,8 +6,8 @@
 // The shared checks (checks.mjs) on a copy of the .app, with HOME in a
 // temporary folder — so the database lands in ~/Library/Application
 // Support/<identifier> and the login entry in ~/Library/LaunchAgents/Nabd.plist
-// there, and the account's own are left alone: first launch (and the menu-bar
-// item), restart, single instance, closing to the menu bar, the login launch
+// there, and the account's own are left alone: first launch, restart,
+// single instance, closing to the menu bar, the login launch
 // starting hidden, and the menu-bar item's menu and its Quit. Windows are
 // seen through the window server's list (macos-windows.swift, no permission
 // needed); closing the window and choosing from the menu go through System

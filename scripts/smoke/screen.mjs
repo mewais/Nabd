@@ -12,7 +12,7 @@
 //            needs the accessibility permission
 //
 // Each screen has the same face: shown(), count(), close(), describe(), and,
-// where the platform has them, focused(), trayItem() and input().
+// where the platform has them, focused() and input().
 
 import { execFileSync, spawn } from "node:child_process";
 import process from "node:process";
@@ -158,14 +158,15 @@ function macosScreen(executable) {
       .filter(Boolean)
       .map((line) => JSON.parse(line));
   };
-  // Layer 0 holds ordinary windows; the menu-bar item's window is at the status level.
-  const shownWindows = () => windows().filter((w) => w.layer === 0 && w.onscreen);
+  // Layer 0 holds ordinary windows, and also the app's strips of menu bar
+  // (offscreen, 30 points high): the main window is never under 640 high.
+  const shownWindows = () =>
+    windows().filter((w) => w.layer === 0 && w.onscreen && w.height >= MIN_WINDOW_HEIGHT);
   const pid = () => run("sh", ["-c", `pgrep -x '${executable}' | head -n 1`]);
   return {
     shown: () => shownWindows().length > 0,
     count: () => shownWindows().length,
     focused: () => null,
-    trayItem: () => windows().some((w) => w.layer === STATUS_WINDOW_LEVEL),
     close: () =>
       systemEvents(
         `tell (first process whose unix id is ${pid()}) to ` +
@@ -178,8 +179,8 @@ function macosScreen(executable) {
   };
 }
 
-/** kCGStatusWindowLevel: where menu-bar items are drawn. */
-const STATUS_WINDOW_LEVEL = 25;
+/** Below the main window's smallest height (640), above any strip of menu bar. */
+const MIN_WINDOW_HEIGHT = 200;
 
 /**
  * Run AppleScript lines inside `tell application "System Events"`, with a

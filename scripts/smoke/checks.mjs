@@ -112,12 +112,6 @@ export const CHECKS = {
       { timeoutMs: 10_000 },
     );
     ok(`"Open at startup" (on by default) writes the login entry, with ${AUTOSTART_ARG}`);
-    if (ctx.screen.trayItem) {
-      await eventually("the menu-bar item's window", ctx.screen.trayItem, {
-        found: ctx.screen.describe,
-      });
-      ok("the menu-bar item is there");
-    }
     if (ctx.tray) return ctx.end(app);
     ctx.screen.close();
     await expectCleanExit(app, "closing the window (no tray)");
@@ -311,7 +305,8 @@ function reportFailure(ctx, name, error, since) {
     }
     console.error(`--- ${title}\n${text}`);
   };
-  report(`FAIL ${name}: ${error.message}`);
+  // linux-smoke.sh shows the results file as it goes, and the rest on failure.
+  if (process.env.NABD_SMOKE_RESULTS) report(`FAIL ${name}: ${error.message}`);
   console.error(`FAIL ${name}: ${error instanceof SmokeFailure ? error.message : error.stack}`);
   section("the screen", ctx.screen.describe);
   section(`the data folder (${dataDir()})`, () =>
