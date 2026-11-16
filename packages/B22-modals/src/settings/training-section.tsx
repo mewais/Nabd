@@ -22,7 +22,6 @@ export function TrainingSection({ training, onChange }: TrainingSectionProps): J
     <FormSection title="Training">
       <FormRow title="Weight unit" hint="Show and enter weights in this unit.">
         <Segmented
-          ariaLabel="Weight unit"
           options={UNIT_OPTIONS}
           value={training.unit}
           onChange={(weightUnit) => onChange({ weightUnit })}

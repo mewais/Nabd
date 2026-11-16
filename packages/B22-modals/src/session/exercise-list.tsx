@@ -28,14 +28,7 @@ export function ExerciseList({ rows, onPick, onLogOther }: ExerciseListProps): J
           <ExerciseRow key={row.itemId} row={row} onPick={onPick} />
         ))}
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        dashed
-        block
-        onClick={onLogOther}
-        style={{ marginTop: 10 }}
-      >
+      <Button variant="ghost" size="sm" dashed block onClick={onLogOther} style={{ marginTop: 10 }}>
         + Something else
       </Button>
     </nav>

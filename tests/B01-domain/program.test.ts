@@ -38,8 +38,10 @@ describe("ProgramSchema", () => {
   });
 
   it("pins a day to a weekday 0–6, or to none", () => {
-    for (const weekday of [0, 6, null]) expect(accepts(withDay({ weekday })), `${weekday}`).toBe(true);
-    for (const weekday of [-1, 7, 1.5]) expect(accepts(withDay({ weekday })), `${weekday}`).toBe(false);
+    for (const weekday of [0, 6, null])
+      expect(accepts(withDay({ weekday })), `${weekday}`).toBe(true);
+    for (const weekday of [-1, 7, 1.5])
+      expect(accepts(withDay({ weekday })), `${weekday}`).toBe(false);
   });
 
   it("a prescription rests for whole, non-negative seconds and may carry notes", () => {

@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 import { useStore } from "zustand";
 import type { StoreApi } from "zustand";
-import type { NabdStore } from "@nabd/store";
+import type { NabdActions, NabdStore } from "@nabd/store";
 
 export const StoreContext = createContext<StoreApi<NabdStore> | null>(null);
 
@@ -17,6 +17,6 @@ export function useNabd<T>(selector: (state: NabdStore) => T): T {
 }
 
 /** The store's actions. They never change, so this never re-renders. */
-export function useActions(): NabdStore {
+export function useActions(): NabdActions {
   return useStoreApi().getState();
 }

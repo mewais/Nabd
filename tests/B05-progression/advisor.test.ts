@@ -1,10 +1,17 @@
 import { dateKey, kgFromDisplay } from "@nabd/domain";
 import type { Exercise, LoggedSet, SetSpec, TrackingType } from "@nabd/domain";
 import { ExerciseHistory, ProgressionAdvisor } from "@nabd/progression";
-import { exercise, logged, nov, prescription, working } from "../support/domain-factories";
+import {
+  exercise,
+  logged,
+  nov,
+  prescription,
+  threeSets,
+  working,
+} from "../support/domain-factories";
 
 const TODAY = dateKey(nov(16));
-const range8to12 = prescription([working(8, 12), working(8, 12), working(8, 12)]);
+const range8to12 = prescription(threeSets);
 
 function advise(
   ex: Exercise,

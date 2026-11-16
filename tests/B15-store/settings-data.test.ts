@@ -28,6 +28,7 @@ describe("settings and data", () => {
 
   it("export reports where the file went, or why it failed", async () => {
     const app = await boot();
+    vi.mocked(app.client.exportData).mockResolvedValueOnce("/downloads/nabd-data.json");
     await app.get().exportData();
     expect(app.get().notice).toEqual({
       kind: "info",

@@ -1,15 +1,14 @@
-import type { Exercise, Program } from "@nabd/domain";
+import type { Program } from "@nabd/domain";
 import { EMPTY_PROGRAM } from "@nabd/domain";
 import { ProgramEditor, daySummary } from "@nabd/program-editor";
 import type { EditRef, ProgramEdit } from "@nabd/program-editor";
-import { exercise } from "../support/domain-factories";
+import { exercise, lookupIn } from "../support/domain-factories";
 
 const bench = exercise({ name: "Bench", group: "Chest" });
 const fly = exercise({ name: "Fly", group: "Chest" });
 const row = exercise({ name: "Row", group: "Back", primary: ["lats"] });
 const plank = exercise({ name: "Plank", group: "Abs", primary: ["abs"], tracking: "duration" });
-const lookup = (id: string): Exercise | undefined =>
-  [bench, fly, row, plank].find((e) => e.id === id);
+const lookup = lookupIn([bench, fly, row, plank]);
 
 let counter = 0;
 

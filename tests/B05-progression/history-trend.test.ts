@@ -6,7 +6,6 @@ import {
   formatAmount,
   formatGain,
   strengthScore,
-  trendPoints,
 } from "@nabd/progression";
 import { exercise, logged, nov } from "../support/domain-factories";
 
@@ -133,11 +132,5 @@ describe("formatting", () => {
     expect(formatGain(2.5, "kg")).toBe("+2.5 kg");
     expect(formatGain(-1, "reps")).toBe("-1 reps");
     expect(formatGain(0, "reps")).toBe("0 reps");
-  });
-
-  it("maps a series onto an SVG box, highest value at the top", () => {
-    expect(trendPoints([1, 2, 3], 100, 50, 10)).toBe("10.0,40.0 50.0,25.0 90.0,10.0");
-    expect(trendPoints([5], 100, 50, 10)).toBe("10.0,25.0");
-    expect(trendPoints([4, 4], 100, 50, 10)).toBe("10.0,25.0 90.0,25.0");
   });
 });

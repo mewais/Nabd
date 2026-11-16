@@ -3,7 +3,8 @@ import { MUSCLE_REGION_MAP, MUSCLES } from "@nabd/domain";
 describe("MUSCLE_REGION_MAP", () => {
   it("places every tracking muscle on at least one body-map region", () => {
     expect(Object.keys(MUSCLE_REGION_MAP).sort()).toEqual([...MUSCLES].sort());
-    for (const muscle of MUSCLES) expect(MUSCLE_REGION_MAP[muscle].length, muscle).toBeGreaterThan(0);
+    for (const muscle of MUSCLES)
+      expect(MUSCLE_REGION_MAP[muscle].length, muscle).toBeGreaterThan(0);
   });
 
   it("lets muscles the map cannot tell apart share a region", () => {

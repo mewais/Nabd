@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MuscleKeySchema, type MuscleKey } from "./muscles";
 import { SetTypeSchema } from "./program";
 import { dateKey } from "./dates";
+import { musclesOf, type Exercise } from "./exercise";
 
 /** What prompted a logged set. */
 const TriggerSchema = z.enum(["idle", "timer", "manual"]);
@@ -28,6 +29,25 @@ export const LoggedSetSchema = z.object({
   setType: SetTypeSchema.default("working"),
 });
 export type LoggedSet = z.infer<typeof LoggedSetSchema>;
+
+/** What a history row records beyond its exercise and its moment. */
+export type SetDetails = Pick<
+  LoggedSet,
+  "id" | "value" | "weight" | "trigger" | "planItemId" | "setType"
+>;
+
+/** The history row for a set of `exercise` performed at `at`. */
+export function loggedSet(exercise: Exercise, at: Date, details: SetDetails): LoggedSet {
+  return {
+    ...details,
+    exId: exercise.id,
+    exercise: exercise.name,
+    group: exercise.group,
+    muscles: musclesOf(exercise),
+    ts: at.toISOString(),
+    date: dateKey(at),
+  };
+}
 
 /** A warm-up says nothing about volume or progress, so most counts leave it out. */
 export const isWarmup = (set: Pick<LoggedSet, "setType">): boolean => set.setType === "warmup";

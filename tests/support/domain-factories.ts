@@ -8,7 +8,7 @@ import type {
   Prescription,
   SetSpec,
 } from "@nabd/domain";
-import { dateKey, musclesOf } from "@nabd/domain";
+import { loggedSet } from "@nabd/domain";
 
 let nextId = 0;
 const uid = (prefix: string): string => `${prefix}-${++nextId}`;
@@ -70,19 +70,13 @@ export function logged(
   weight: number | null,
   overrides: Partial<LoggedSet> = {},
 ): LoggedSet {
-  return {
+  const details = {
     id: uid("set"),
-    exId: ex.id,
-    exercise: ex.name,
-    group: ex.group,
-    muscles: musclesOf(ex),
     value: reps,
     weight,
-    ts: at.toISOString(),
-    date: dateKey(at),
     trigger: "manual",
     planItemId: null,
     setType: "working",
-    ...overrides,
-  };
+  } as const;
+  return { ...loggedSet(ex, at, details), ...overrides };
 }

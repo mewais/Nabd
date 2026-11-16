@@ -3,7 +3,8 @@
 
 import type { LoggedSet, Program } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
-import type { BootSnapshot, IpcClient, Singletons } from "@nabd/ipc-client";
+import { createMemoryBackend } from "@nabd/ipc-client";
+import type { BootSnapshot, MemoryBackend } from "@nabd/ipc-client";
 import { createNabdStore, selectTodayPlan } from "@nabd/store";
 import { logged, nov, row, threeSets } from "../support/domain-factories";
 
@@ -28,47 +29,25 @@ export const program: Program = {
 export const benchSet = (at: Date, overrides: Partial<LoggedSet> = {}): LoggedSet =>
   logged(ExerciseLibrary.catalog.byId(BENCH)!, at, 8, 40, overrides);
 
-/** An in-memory backend that behaves like the real one, plus spies on the native calls. */
-export function fakeBackend(initial: Partial<BootSnapshot> = {}) {
-  const data: BootSnapshot = {
-    program: null,
-    settings: null,
-    customExercises: null,
-    rotationState: null,
-    dayState: null,
-    dayLog: null,
-    history: [],
-    ...initial,
-  };
-  const client: IpcClient = {
-    loadAll: async () => structuredClone(data),
-    save: vi.fn(async (key: keyof Singletons, value: unknown) => {
-      data[key] = structuredClone(value);
-    }),
-    saveMany: vi.fn(async (values: Partial<Singletons>) => {
-      Object.assign(data, structuredClone(values));
-    }),
-    appendSet: vi.fn(async (set) => {
-      data.history.push(set);
-    }),
-    deleteSet: vi.fn(async (id) => {
-      data.history = data.history.filter((s) => (s as LoggedSet).id !== id);
-    }),
-    exportData: vi.fn(async () => "/downloads/nabd-data.json"),
-    importData: vi.fn(async (imported) => {
-      Object.assign(data, imported);
-    }),
-    notify: vi.fn(async () => {}),
-    platformCapabilities: async () => ({ tray: true, glass: true, idle: true }),
-    sendTestNotification: vi.fn(async () => {}),
-    setGlass: vi.fn(async () => {}),
-    setAutostart: vi.fn(async () => {}),
-    updateTray: vi.fn(async () => {}),
-    quit: vi.fn(async () => {}),
-    onTick: async () => () => {},
-    onTrayAction: async () => () => {},
-  };
-  return { client, data };
+/** The client calls the tests assert on or make fail. */
+const SPIED = [
+  "save",
+  "saveMany",
+  "appendSet",
+  "deleteSet",
+  "exportData",
+  "importData",
+  "sendTestNotification",
+  "setGlass",
+  "setAutostart",
+  "quit",
+] as const;
+
+/** An in-memory backend on a computer that supports everything, with spies on its calls. */
+export function fakeBackend(initial: Partial<BootSnapshot> = {}): MemoryBackend {
+  const backend = createMemoryBackend(initial, { tray: true, glass: true, idle: true });
+  for (const call of SPIED) vi.spyOn(backend.client, call);
+  return backend;
 }
 
 /** A booted store on Monday 16 Nov 2026 (10:00 unless told otherwise), with a clock the test controls. */

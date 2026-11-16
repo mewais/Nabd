@@ -27,7 +27,7 @@ describe("buildToastVM", () => {
   });
 
   it("is null while no set is due", () => {
-    expect(buildToastVM(next, { state: "waiting", at: nov(16, 11, 20) })).toBeNull();
+    expect(buildToastVM(next, { state: "off_hours", at: nov(17, 9, 0) })).toBeNull();
     expect(buildToastVM(next, { state: "paused" })).toBeNull();
   });
 

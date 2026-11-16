@@ -1,5 +1,5 @@
 import type { LoggedSet, Trigger } from "@nabd/domain";
-import { SECONDS_STEP, dateKey, isTimeBased, isWeighted, musclesOf, roundKg } from "@nabd/domain";
+import { SECONDS_STEP, isTimeBased, isWeighted, loggedSet, roundKg } from "@nabd/domain";
 import type { PlanItem } from "@nabd/scheduling";
 import type { Performance } from "@nabd/progression";
 
@@ -82,22 +82,15 @@ export class LogSession {
 
   /** The history row for this draft, logged against `item` at `at`. */
   toLoggedSet(item: PlanItem, id: string, at: Date): LoggedSet {
-    const { exercise } = item;
     const { reps, weight } = this.performance(item);
-    return {
+    return loggedSet(item.exercise, at, {
       id,
-      exId: exercise.id,
-      exercise: exercise.name,
-      group: exercise.group,
-      muscles: musclesOf(exercise),
       value: reps,
       weight,
-      ts: at.toISOString(),
-      date: dateKey(at),
       trigger: this.trigger,
       planItemId: item.id,
       setType: item.nextSet?.type ?? "working",
-    };
+    });
   }
 
   /** Whole seconds of rest left at `now`. */

@@ -1,14 +1,22 @@
-import type { Exercise, Program } from "@nabd/domain";
+import type { Program } from "@nabd/domain";
 import { MUSCLES } from "@nabd/domain";
 import { FULL_COVERAGE_SETS, MuscleVolume, insight, recommendation } from "@nabd/coverage";
-import { exercise, logged, nov, row, working } from "../support/domain-factories";
+import {
+  exercise,
+  logged,
+  lookupIn,
+  nov,
+  row,
+  threeSets,
+  warmup,
+  working,
+} from "../support/domain-factories";
 
 const press = exercise({ primary: ["chest"], secondary: ["triceps", "front_delts"] });
 const fly = exercise({ primary: ["chest"], secondary: [] });
 const curl = exercise({ primary: ["biceps"], secondary: ["forearms"] });
-const lookup = (id: string): Exercise | undefined => [press, fly, curl].find((e) => e.id === id);
+const lookup = lookupIn([press, fly, curl]);
 
-const threeSets = [working(8, 12), working(8, 12), working(8, 12)];
 const prescription = { repMode: "range" as const, intensity: "none" as const, rest: 60 };
 
 describe("planned volume", () => {
@@ -24,7 +32,7 @@ describe("planned volume", () => {
           weekday: 1,
           slots: [],
           exercises: [
-            row(press.id, [{ type: "warmup", a: 10 }, ...threeSets]),
+            row(press.id, [warmup(10), ...threeSets]),
             row(curl.id, [working(10), { type: "drop", a: 10 }]),
             row("missing", threeSets),
           ],

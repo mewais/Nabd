@@ -1,10 +1,4 @@
-import type {
-  Equipment,
-  Exercise,
-  MuscleGroup,
-  MuscleKey,
-  TrackingType,
-} from "@nabd/domain";
+import type { Equipment, Exercise, MuscleGroup, MuscleKey, TrackingType } from "@nabd/domain";
 import {
   EQUIPMENT_KEYS,
   EQUIPMENT_NAMES,

@@ -1,4 +1,4 @@
-import type { Exercise, LoggedSet, Program } from "@nabd/domain";
+import type { LoggedSet, Program } from "@nabd/domain";
 import { dateKey, freshDayState } from "@nabd/domain";
 import { ProgressionAdvisor } from "@nabd/progression";
 import { TodayPlan } from "@nabd/scheduling";
@@ -10,13 +10,22 @@ import {
   formatPerformance,
   formatTarget,
 } from "@nabd/session";
-import { exercise, logged, nov, prescription, row, working } from "../support/domain-factories";
+import {
+  exercise,
+  logged,
+  lookupIn,
+  nov,
+  prescription,
+  row,
+  warmup,
+  working,
+} from "../support/domain-factories";
 
 const TODAY = nov(16);
 const curl = exercise({ name: "Curl" });
 const plank = exercise({ name: "Plank", tracking: "duration" });
-const curlRow = row(curl.id, [{ type: "warmup", a: 15 }, working(8, 12), working(8, 12)]);
-const plankRow = row(plank.id, [{ type: "working", a: 45 }], { repMode: "time" });
+const curlRow = row(curl.id, [warmup(15), working(8, 12), working(8, 12)]);
+const plankRow = row(plank.id, [working(45)], { repMode: "time" });
 
 const program: Program = {
   name: "P",
@@ -32,7 +41,7 @@ function itemsFor(history: LoggedSet[]): { curlItem: PlanItem; plankItem: PlanIt
     dayState: freshDayState(TODAY),
     rotation: {},
     history,
-    lookup: (id): Exercise | undefined => [curl, plank].find((e) => e.id === id),
+    lookup: lookupIn([curl, plank]),
   });
   return { curlItem: plan.item(curlRow.id)!, plankItem: plan.item(plankRow.id)! };
 }
@@ -118,6 +127,27 @@ describe("LogSession", () => {
     const moved = resting.focus(plankItem, { reps: 45, weight: null });
     expect(moved.trigger).toBe("idle");
     expect(moved.restRemaining(nov(16, 10, 1))).toBe(30);
+  });
+
+  it("becomes a history row for its exercise, stamped with the plan item and the moment", () => {
+    const at = nov(16, 10, 5);
+    expect(session.withReps(9).toLoggedSet(curlItem, "set-1", at)).toEqual({
+      id: "set-1",
+      exId: curl.id,
+      exercise: "Curl",
+      group: curl.group,
+      muscles: [...curl.primary, ...curl.secondary],
+      value: 9,
+      weight: 25,
+      ts: at.toISOString(),
+      date: dateKey(at),
+      trigger: "idle",
+      planItemId: curlRow.id,
+      // The curl's next prescribed set is its warm-up.
+      setType: "warmup",
+    });
+    const hold = session.focus(plankItem, { reps: 45, weight: null });
+    expect(hold.toLoggedSet(plankItem, "set-2", at)).toMatchObject({ value: 45, weight: null });
   });
 
   it("counts rest down to zero; no rest prescribed means none", () => {

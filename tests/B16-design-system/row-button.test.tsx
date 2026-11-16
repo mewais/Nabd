@@ -24,6 +24,19 @@ describe("RowButton", () => {
     );
     expect(screen.getByRole("button", { name: "Open Pull-Up history" })).toBeInTheDocument();
   });
+
+  it("marks the row that is selected in its list", () => {
+    render(
+      <>
+        <RowButton onClick={vi.fn()} current>
+          Bench Press
+        </RowButton>
+        <RowButton onClick={vi.fn()}>Plank</RowButton>
+      </>,
+    );
+    expect(screen.getByRole("button", { name: "Bench Press", current: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Plank", current: false })).toBeInTheDocument();
+  });
 });
 
 describe("EmptyNote", () => {

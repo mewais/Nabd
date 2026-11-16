@@ -71,19 +71,3 @@ export function exerciseTrends(
     ];
   });
 }
-
-/** SVG polyline points for a series drawn inside a `w`×`h` box with `pad` padding. */
-export function trendPoints(series: number[], w: number, h: number, pad: number): string {
-  const min = Math.min(...series);
-  const span = Math.max(...series) - min;
-  const xStep = series.length > 1 ? (w - 2 * pad) / (series.length - 1) : 0;
-
-  return series
-    .map((value, i) => {
-      const level = span === 0 ? 0.5 : (value - min) / span;
-      const x = pad + i * xStep;
-      const y = pad + (1 - level) * (h - 2 * pad);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-}

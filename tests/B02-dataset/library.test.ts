@@ -96,6 +96,12 @@ describe("ExerciseLibrary", () => {
     expect(catalog.withCustom([])).toBe(catalog);
   });
 
+  it("offers its lookup as a function that can be handed to the engines", () => {
+    const { lookup } = library;
+    expect(lookup(custom.id)).toBe(custom);
+    expect(lookup("nope")).toBeUndefined();
+  });
+
   it("finds by name, group and owned equipment, in any combination", () => {
     expect(library.find({ text: "  odd LIFT " })).toEqual([custom]);
     expect(library.find({})).toHaveLength(catalog.find({}).length + 1);

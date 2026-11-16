@@ -20,7 +20,6 @@ export function AppearanceSection({ appearance, onChange }: AppearanceSectionPro
     <FormSection title="Appearance">
       <FormRow title="Theme" hint="Sets text & contrast.">
         <Segmented
-          ariaLabel="Theme"
           options={THEME_OPTIONS}
           value={appearance.theme}
           onChange={(theme) => onChange({ theme })}

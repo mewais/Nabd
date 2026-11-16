@@ -78,7 +78,9 @@ describe("LibraryModal · browsing", () => {
     browsing();
     expect(screen.getByRole("dialog", { name: "Add Exercise" })).toBeInTheDocument();
     expect(row("Bench Press").getByText("Chest, Triceps · Weight & reps · Barbell")).toBeVisible();
-    expect(row("Goblet Squat").getByText("Quads, Glutes · Weight & reps · Kettlebell")).toBeVisible();
+    expect(
+      row("Goblet Squat").getByText("Quads, Glutes · Weight & reps · Kettlebell"),
+    ).toBeVisible();
   });
 
   it("reflects the current search and reports what is typed", () => {
