@@ -45,7 +45,11 @@ describe("an unfinished floating day at rollover", () => {
 
   it("adds each day's sets to what the earlier days left, in the visit begun on the first", () => {
     const history = [...monday(), benchSet(10, { setType: "working" })];
-    const tuesdaySet = logged(EX.bench, nov(17, 10), 10, 40, { planItemId: benchRow.id });
+    // Logged on the visit's second day, so in the session it began on.
+    const tuesdaySet = logged(EX.bench, nov(17, 10), 10, 40, {
+      planItemId: benchRow.id,
+      session: dateKey(MONDAY),
+    });
     const state = afterMonday(history).dayState;
     const next = rollOver({
       ...input(),

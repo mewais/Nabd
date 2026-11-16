@@ -106,6 +106,16 @@ describe("Stepper", () => {
       expect(field()).toHaveValue("40");
     });
 
+    it("Enter on a number the owner would not take shows what it kept, and enters nothing", () => {
+      render(<Owned start={40} max={500} />);
+      type("99999");
+      press("Enter");
+      expect(onEnter).not.toHaveBeenCalled();
+      expect(field()).toHaveValue("40");
+      press("Enter");
+      expect(onEnter).toHaveBeenCalledWith(40);
+    });
+
     it("Enter does nothing while the field holds no number", () => {
       render(<Owned start={40} />);
       type("");

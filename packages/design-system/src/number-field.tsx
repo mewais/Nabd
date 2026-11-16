@@ -57,8 +57,10 @@ export function NumberField(props: NumberFieldProps): JSX.Element {
       setDraft(null);
       onStep(event.key === "ArrowUp" ? 1 : -1);
     } else if (event.key === "Enter" && (draft === null || typedNumber(draft) !== null)) {
+      // A number the owner would not take is not entered: the field shows what it kept instead.
+      const taken = draft === null || typedNumber(draft) === value;
       setDraft(null);
-      onEnter?.();
+      if (taken) onEnter?.();
     }
   };
 

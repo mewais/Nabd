@@ -62,13 +62,15 @@ export function rollOver(input: TodayPlanInput): Rollover {
 }
 
 /**
- * The visit an unfinished floating day comes back as: the one it continued,
- * or one begun on the day that ended; null when it has nothing behind it.
+ * The visit an unfinished floating day comes back as: the session the day's
+ * sets belong to (the visit it continued, or one begun on the day that ended),
+ * so the days of one visit never split across two sessions; null when it has
+ * nothing behind it.
  */
 function continued(ended: TodayPlan): CarriedVisit | null {
   const items = ended.ledger.carryOver;
   if (Object.keys(items).length === 0) return null;
-  return { startedOn: ended.continuesFrom ?? ended.date, items };
+  return { startedOn: ended.session, items };
 }
 
 /**

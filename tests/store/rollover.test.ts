@@ -89,6 +89,21 @@ describe("across restarts and days", () => {
     });
   });
 
+  it("a visit that comes back again stays the session its sets joined, after what it carried was edited away", async () => {
+    const app = await boot({ program: catalogPushPull });
+    await app.log(catalogBenchRow.id, 1);
+    app.advanceTo(nov(17, 9, 30));
+    await app.log(catalogFlyRow.id, 1);
+    // What Monday carried leaves the plan; Tuesday's set already belongs to Monday's session.
+    const push = catalogPushPull.days[0]!.id;
+    app.get().editProgram((editor) => editor.removeExercise(push, catalogBenchRow.id));
+    app.advanceTo(nov(18, 9, 30));
+    expect(app.plan().session).toBe(dateKey(nov(16)));
+    await app.log(catalogFlyRow.id, 1);
+    const fly = app.get().history.filter((set) => set.exId === catalogFlyRow.exId);
+    expect(fly.map((set) => set.session)).toEqual([dateKey(nov(16)), dateKey(nov(16))]);
+  });
+
   it("keeps a day's sets in one session when the schedule is switched while a visit continues", async () => {
     const app = await boot({ program: catalogPushPull });
     await app.log(catalogBenchRow.id, 1);

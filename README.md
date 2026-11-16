@@ -130,7 +130,7 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   weight increment (Settings → Training; 2.5 kg or 5 lb unless you choose your own,
   which a change of unit leaves alone), so 8 × 25 lb suggests 9 × 25 lb or 8 × 27.5 lb.
   Where a set is prescribed at a %1RM or an RPE and the exercise has an estimated 1RM
-  (Epley, from its latest session), the load follows the prescription instead, rounded
+  (Epley, from its latest session, reading at most 15 reps of a set), the load follows the prescription instead, rounded
   to your increment, for the bottom of the rep range: a %1RM is that share of the
   estimate ("70% of your estimated max (86 kg)"), an RPE is 10 − RPE reps in reserve,
   the load at which the prescribed reps plus those in reserve make up the estimate
@@ -145,7 +145,9 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   exercise whose load would round to nothing stays reps-first. Every load suggested is
   one the form takes: never above the most a set can record (1000 kg), and never less
   than one increment for an exercise that needs a bar or a dumbbell — a deload there
-  stops at one increment, and the form's − does too.
+  stops at one increment, and the form's − does too; a load typed outside those bounds
+  is not taken: Enter or leaving the field brings back the last load it took, and that
+  Enter does not log the set.
   A bodyweight exercise with nothing added is plain reps — "12 reps", then "8 + 2.5 kg
   or 13 reps" at the top of the range — and only an exercise that needs a bar or a
   dumbbell asks you to pick a starting weight. Warm-ups are left out of progression,
