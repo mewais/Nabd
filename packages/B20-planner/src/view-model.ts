@@ -9,7 +9,7 @@ import type {
   Program,
   RepMode,
 } from "@nabd/domain";
-import { EQUIPMENT_NAMES, MUSCLE_NAMES } from "@nabd/domain";
+import { EQUIPMENT_NAMES, MUSCLE_NAMES, plural } from "@nabd/domain";
 import type { ExerciseLibrary } from "@nabd/dataset";
 import { WEEK_ORDER, daySummary } from "@nabd/program-editor";
 
@@ -173,7 +173,7 @@ function slotRow(slot: CycledSlot, library: ExerciseLibrary): EditorRow {
       muscle: slot.muscle,
       muscleName: MUSCLE_NAMES[slot.muscle],
       poolNames: slot.pool.map((id) => ({ id, name: library.byId(id)?.name ?? id })),
-      poolStr: `${slot.pool.length} exercises`,
+      poolStr: plural(slot.pool.length, "exercise"),
       block: buildSetBlock(slot),
     },
   };

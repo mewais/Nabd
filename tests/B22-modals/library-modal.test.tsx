@@ -148,12 +148,7 @@ describe("LibraryModal · browsing", () => {
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
 
-  // Suspected source bug (packages/B22-modals/src/library-modal.ts, ~lines 321–342):
-  // the dashed "create a custom exercise" button under the list is rendered with
-  // no children and no aria-label — the refactor dropped the old `createLabel`
-  // prop ("Create a custom exercise" in the design) without replacing its text —
-  // so the button is blank on screen and has no accessible name.
-  it.fails("offers a labelled way to create a custom exercise", () => {
+  it("offers a labelled way to create a custom exercise", () => {
     const { props } = setup();
     fireEvent.click(screen.getByRole("button", { name: /create/i }));
     expect(props.onStartCreate).toHaveBeenCalledTimes(1);

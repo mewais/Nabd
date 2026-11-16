@@ -139,7 +139,7 @@ describe("QueueCard", () => {
   it("shows the day's name and each exercise with its progress", () => {
     const { rowOf } = setup();
     expect(screen.getByText("Push")).toBeInTheDocument();
-    expect(rowOf("Bench Press").getByText("1/1 sets")).toBeInTheDocument();
+    expect(rowOf("Bench Press").getByText("1/1 set")).toBeInTheDocument();
     expect(rowOf("Push-Up").getByText("1/2 sets")).toBeInTheDocument();
     expect(rowOf("Barbell Row").getByText("Skipped")).toBeInTheDocument();
     expect(rowOf("Dumbbell Curl").getByText("0 sets")).toBeInTheDocument();

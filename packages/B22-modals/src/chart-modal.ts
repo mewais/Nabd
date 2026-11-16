@@ -1,4 +1,5 @@
 import React from "react";
+import { plural } from "@nabd/domain";
 import type { ExerciseTrend } from "@nabd/progression";
 import { formatAmount, formatGain, trendPoints } from "@nabd/progression";
 import { CloseButton, ModalShell } from "./modal-shell";
@@ -131,7 +132,7 @@ export function FullHistoryChartModal(_p: ChartModalProps): JSX.Element {
         React.createElement(
           "div",
           { style: { fontSize: 12, color: "var(--text3)", marginTop: 2 } },
-          `Since ${vm.startLabel} · ${vm.sessions} sessions`,
+          `Since ${vm.startLabel} · ${plural(vm.sessions, "session")}`,
         ),
       ),
       React.createElement(CloseButton, { onClose }),

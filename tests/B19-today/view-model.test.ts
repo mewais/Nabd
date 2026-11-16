@@ -238,7 +238,7 @@ describe("buildTodayVM · queue", () => {
   it("the first exercise still owing sets is next; later ones are pending", () => {
     expect(row("p-pushup")).toMatchObject({ state: "next", badge: "1/2 sets", skipLabel: "Skip" });
     expect(row("p-dip")).toMatchObject({ state: "pending", badge: "0/2 sets", skipLabel: "Skip" });
-    expect(row("p-plank")).toMatchObject({ state: "pending", badge: "0/1 sets" });
+    expect(row("p-plank")).toMatchObject({ state: "pending", badge: "0/1 set" });
     expect(queue().queue.filter((r) => r.state === "next")).toHaveLength(1);
   });
 

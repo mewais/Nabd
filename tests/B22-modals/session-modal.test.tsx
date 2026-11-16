@@ -197,9 +197,7 @@ describe("SessionModal", () => {
     expect(screen.getByText("No sets logged yet today")).toBeInTheDocument();
   });
 
-  // Suspected source bug (packages/B22-modals/src/session-modal.ts, footer text):
-  // the count is not pluralised, so one set reads "1 sets logged today".
-  it.fails("the footer says '1 set', not '1 sets', after a single set", () => {
+  it("the footer says '1 set', not '1 sets', after a single set", () => {
     setup(sessionVM({ program: pushDay(), history: [did("p-row", "row", 12, 50)] }, "p-row"));
     expect(screen.getByText("1 set logged today")).toBeInTheDocument();
   });

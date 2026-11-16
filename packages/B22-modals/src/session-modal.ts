@@ -3,7 +3,7 @@
 import React from "react";
 import type { CSSProperties } from "react";
 import type { WeightUnit } from "@nabd/domain";
-import { MUSCLE_NAMES, displayWeight, isTimeBased, isWeighted } from "@nabd/domain";
+import { MUSCLE_NAMES, displayWeight, isTimeBased, isWeighted, plural } from "@nabd/domain";
 import type { PlanItem, TodayPlan } from "@nabd/scheduling";
 import type { AdviceWording, Coach, LogSession } from "@nabd/session";
 import { describeAdvice, formatDuration, formatPerformance, formatTarget } from "@nabd/session";
@@ -52,7 +52,7 @@ const musclesOf = (item: PlanItem): string[] =>
 
 function setLabel(item: PlanItem): string {
   if (item.isExtra) return `Set ${item.done + 1}`;
-  if (item.remaining === 0) return `All ${item.planned} sets done — extra set`;
+  if (item.remaining === 0) return `All ${plural(item.planned, "set")} done — extra set`;
   return `Set ${item.done + 1} of ${item.planned}`;
 }
 
@@ -520,7 +520,9 @@ export function SessionModal(p: SessionModalProps): JSX.Element {
     React.createElement(
       "span",
       { style: { fontSize: 12.5, color: "var(--text3)" } },
-      vm.setsToday === 0 ? "No sets logged yet today" : `${vm.setsToday} sets logged today`,
+      vm.setsToday === 0
+        ? "No sets logged yet today"
+        : `${plural(vm.setsToday, "set")} logged today`,
     ),
     React.createElement(
       "button",

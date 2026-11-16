@@ -4,6 +4,7 @@
 import React from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { Theme } from "@nabd/domain";
+import { plural } from "@nabd/domain";
 import { LiveDot, Icon, Segmented, ThemeProvider } from "@nabd/design-system";
 
 export type Screen = "today" | "planner" | "progress";
@@ -296,7 +297,7 @@ export function Sidebar(p: SidebarProps): JSX.Element {
               color: "var(--text3)",
             },
           },
-          `of ${setsTotal} sets`,
+          `of ${plural(setsTotal, "set")}`,
         ),
       ),
     ),

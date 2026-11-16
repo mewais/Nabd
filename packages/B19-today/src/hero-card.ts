@@ -1,5 +1,6 @@
 import React from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { plural } from "@nabd/domain";
 import { AdviceCard, Button, Card } from "@nabd/design-system";
 import { CARD_STYLE, MONO } from "./styles";
 import type { HeroVM } from "./view-model";
@@ -107,7 +108,7 @@ export function HeroCard(p: HeroCardProps): JSX.Element {
     return React.createElement(Announcement, {
       badge: CHECK_BADGE,
       title: "Day complete",
-      text: `All ${vm.setsDone} sets logged across your workday. Nice work.`,
+      text: `All ${plural(vm.setsDone, "set")} logged across your workday. Nice work.`,
     });
   }
   if (vm.kind === "rest") {

@@ -318,25 +318,29 @@ export function LibraryModal(_p: LibraryModalProps): JSX.Element {
         },
       },
       ...itemRows,
-      React.createElement("button", {
-        onClick: onStartCreate,
-        style: {
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          background: "none",
-          border: "1.5px dashed var(--accent)",
-          borderRadius: 11,
-          padding: 13,
-          cursor: "pointer",
-          fontFamily: "inherit",
-          color: "var(--accent)",
-          fontSize: 13.5,
-          fontWeight: 700,
-          marginTop: 4,
+      React.createElement(
+        "button",
+        {
+          onClick: onStartCreate,
+          style: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            background: "none",
+            border: "1.5px dashed var(--accent)",
+            borderRadius: 11,
+            padding: 13,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            color: "var(--accent)",
+            fontSize: 13.5,
+            fontWeight: 700,
+            marginTop: 4,
+          },
         },
-      }),
+        "Create custom exercise",
+      ),
     );
   } else {
     // creating mode

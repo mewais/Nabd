@@ -241,7 +241,7 @@ describe("ProgramHeader (inside the planner)", () => {
     expect(dayOf(program, "d-pull").slots).toHaveLength(1);
     expect(dayOf(program, "d-pull").slots[0]!.pool).toHaveLength(3);
     // the editor now shows slots instead of exercises
-    expect(screen.getAllByText("EXERCISE POOL · 1 exercises")).toHaveLength(3);
+    expect(screen.getAllByText("EXERCISE POOL · 1 exercise")).toHaveLength(3);
     expect(screen.queryByRole("button", { name: "remove exercise" })).not.toBeInTheDocument();
   });
 

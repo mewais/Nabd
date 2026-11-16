@@ -11,7 +11,7 @@ import type {
   RepMode,
   Schedule,
 } from "@nabd/domain";
-import { MUSCLE_NAMES } from "@nabd/domain";
+import { MUSCLE_NAMES, plural } from "@nabd/domain";
 import type { ExerciseLibrary } from "@nabd/dataset";
 import type { EditRef, ProgramEdit } from "@nabd/program-editor";
 import { BodyMap } from "@nabd/bodymap";
@@ -1605,7 +1605,7 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
                         flex: "none",
                       },
                     },
-                    `${bar.sets} sets`,
+                    plural(bar.sets, "set"),
                   ),
                 ),
               ),

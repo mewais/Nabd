@@ -1,7 +1,7 @@
 // Pure builders: domain objects in, exactly what the Today screen renders out.
 
 import type { MuscleKey, WeightUnit } from "@nabd/domain";
-import { MUSCLE_NAMES, displayWeight } from "@nabd/domain";
+import { MUSCLE_NAMES, displayWeight, plural } from "@nabd/domain";
 import type { PlanItem, TodayPlan } from "@nabd/scheduling";
 import type { Coach, AdviceWording } from "@nabd/session";
 import { describeAdvice, formatTarget } from "@nabd/session";
@@ -98,8 +98,8 @@ function buildQueue(plan: TodayPlan): QueueRowVM[] {
     const badge = item.skipped
       ? "Skipped"
       : item.isExtra
-        ? `${item.done} sets`
-        : `${item.done}/${item.planned} sets`;
+        ? plural(item.done, "set")
+        : `${item.done}/${plural(item.planned, "set")}`;
     const skipLabel = item.skipped
       ? "Restore"
       : item.isExtra
