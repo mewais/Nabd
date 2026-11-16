@@ -68,7 +68,19 @@ const ACTS = {
     clock.advance(3); // 09:06: five minutes into the workday
     expectNudge(await notifications.expect(1), NUDGE.timer);
     await new Promise((r) => setTimeout(r, 3000));
-    console.error("DBG1", screen.focused(), screen.shown());
+    console.error(
+      "DBG1",
+      screen.focused(),
+      screen.shown(),
+      execFileSync(
+        "bash",
+        [
+          "-c",
+          "for w in $(xdotool search --onlyvisible --class nabd); do xprop -id $w _NET_WM_USER_TIME _NET_WM_USER_TIME_WINDOW WM_HINTS; u=$(xprop -id $w _NET_WM_USER_TIME_WINDOW | grep -o '0x[0-9a-f]*'); [ -n \"$u\" ] && xprop -id $u _NET_WM_USER_TIME; done; xprop -root _NET_ACTIVE_WINDOW",
+        ],
+        { encoding: "utf8" },
+      ),
+    );
     // The window hidden in the tray is brought back, without the keyboard.
     await screen.expectShown(true);
     if (screen.focused()) throw new Error("the nudge brought the window back focused");
@@ -89,7 +101,19 @@ const ACTS = {
     await notifications.expectNoMoreThan(2);
     clock.advance(3); // 09:18
     expectNudge(await notifications.expect(3), NUDGE.timer);
-    console.error("DBG3a", screen.focused(), screen.shown());
+    console.error(
+      "DBG3a",
+      screen.focused(),
+      screen.shown(),
+      execFileSync(
+        "bash",
+        [
+          "-c",
+          "for w in $(xdotool search --onlyvisible --class nabd); do xprop -id $w _NET_WM_USER_TIME _NET_WM_USER_TIME_WINDOW WM_HINTS; u=$(xprop -id $w _NET_WM_USER_TIME_WINDOW | grep -o '0x[0-9a-f]*'); [ -n \"$u\" ] && xprop -id $u _NET_WM_USER_TIME; done; xprop -root _NET_ACTIVE_WINDOW",
+        ],
+        { encoding: "utf8" },
+      ),
+    );
     await new Promise((r) => setTimeout(r, 3000));
     console.error("DBG3b", screen.focused(), screen.shown());
 
@@ -150,7 +174,9 @@ const ACTS = {
   },
 };
 
-function require_focus() { return execFileSync('xdotool', ['getwindowfocus','getwindowname'], {encoding:'utf8'}).trim(); }
+function require_focus() {
+  return execFileSync("xdotool", ["getwindowfocus", "getwindowname"], { encoding: "utf8" }).trim();
+}
 
 async function logOneSet(app) {
   await app.press("Start set");
