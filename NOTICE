@@ -9,14 +9,7 @@ This product includes third-party open-source material:
    The SVG path definitions vendored under assets/body/ are derived from this
    project. A copy of the Apache 2.0 license is included at assets/body/LICENSE.
 
-2. Exercise dataset
-   Source: yuhonas/free-exercise-db (https://github.com/yuhonas/free-exercise-db)
-   License: The Unlicense (public domain dedication)
-   Exercise records bundled in packages/B02-dataset/data/ are derived by
-   re-tagging this dataset into the Nabḍ taxonomy. The original snapshot is kept
-   under packages/B02-dataset/data/source/ with its license.
-
-3. Handoff seed exercise library and design tokens
+2. Handoff seed exercise library and design tokens
    Created for Nabḍ; the original anatomical body-map reference in the design
    handoff was adapted from react-native-body-highlighter
    (MIT, (c) 2022 ELABBASSI Hicham). The production app uses the body-muscles

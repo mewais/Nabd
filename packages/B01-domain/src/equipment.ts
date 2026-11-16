@@ -32,4 +32,3 @@ export const EQUIPMENT_NAMES: Record<Equipment, string> = {
   machine: "Plate / pin machines",
   smith: "Smith machine",
 };
-

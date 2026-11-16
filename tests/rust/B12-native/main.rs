@@ -1,264 +1,234 @@
+//! B12 · nabd-native — tray model, notification text and vibrancy alpha.
+
 use nabd_native::{
-    autostart_action, idle_crossed, notif_payload, tray_items, NotifReason, TrayState,
+    notif_payload, tray_items, vibrancy_alpha, NotifReason, TrayItem, TrayState, TRAY_OPEN,
+    TRAY_PAUSE, TRAY_QUIT, TRAY_START, TRAY_STATUS,
 };
 
-// ──────────────────────────────────────────────────────────────
-// idle_crossed
-// ──────────────────────────────────────────────────────────────
+// ── fixtures ─────────────────────────────────────────────────────────────────
 
-#[test]
-fn idle_crossed_below_threshold() {
-    // 29 seconds idle, threshold 30 → not yet crossed
-    assert_eq!(idle_crossed(29, 30), false);
-}
-
-#[test]
-fn idle_crossed_equal_threshold() {
-    // exactly at threshold → crossed (>=)
-    assert_eq!(idle_crossed(30, 30), true);
-}
-
-#[test]
-fn idle_crossed_above_threshold() {
-    // well past threshold
-    assert_eq!(idle_crossed(120, 30), true);
-}
-
-// ──────────────────────────────────────────────────────────────
-// vibrancy_alpha
-// ──────────────────────────────────────────────────────────────
-
-#[test]
-fn vibrancy_alpha_mid_range() {
-    // 0.55 × 255 = 140.25 → round → 140
-    use nabd_native::vibrancy_alpha;
-    assert_eq!(vibrancy_alpha(0.55), 140);
-}
-
-#[test]
-fn vibrancy_alpha_lower_bound() {
-    // 0.2 × 255 = 51.0 → 51
-    use nabd_native::vibrancy_alpha;
-    assert_eq!(vibrancy_alpha(0.2), 51);
-}
-
-#[test]
-fn vibrancy_alpha_upper_bound() {
-    // 0.9 × 255 = 229.5 → round → 230
-    use nabd_native::vibrancy_alpha;
-    assert_eq!(vibrancy_alpha(0.9), 230);
-}
-
-#[test]
-fn vibrancy_alpha_below_range_clamps_to_lower() {
-    // 0.0 is below 0.2 → clamp to 0.2 → 51
-    use nabd_native::vibrancy_alpha;
-    assert_eq!(vibrancy_alpha(0.0), 51);
-}
-
-#[test]
-fn vibrancy_alpha_above_range_clamps_to_upper() {
-    // 1.0 is above 0.9 → clamp to 0.9 → 230
-    use nabd_native::vibrancy_alpha;
-    assert_eq!(vibrancy_alpha(1.0), 230);
-}
-
-// ──────────────────────────────────────────────────────────────
-// tray_items — helpers
-// ──────────────────────────────────────────────────────────────
-
-fn state_with_due_set() -> TrayState {
+fn tray_state(next_exercise: Option<&str>, done: u32, total: u32) -> TrayState {
     TrayState {
-        next_exercise: Some("Squats".to_string()),
-        next_time: Some("14:30".to_string()),
-        done: 2,
-        total: 5,
+        next_exercise: next_exercise.map(str::to_string),
+        done,
+        total,
         paused: false,
     }
 }
 
-fn state_all_done() -> TrayState {
-    TrayState {
-        next_exercise: None,
-        next_time: None,
-        done: 5,
-        total: 5,
-        paused: false,
-    }
+/// The entry with the given id (panics if the menu has none).
+fn item(items: &[TrayItem], id: &str) -> TrayItem {
+    items.iter().find(|item| item.id == id).cloned().unwrap()
 }
 
-fn state_paused() -> TrayState {
-    TrayState {
-        next_exercise: Some("Push-ups".to_string()),
-        next_time: Some("15:00".to_string()),
-        done: 1,
-        total: 3,
-        paused: true,
-    }
-}
-
-// ──────────────────────────────────────────────────────────────
-// tray_items — item count and ordering
-// ──────────────────────────────────────────────────────────────
+// ── vibrancy_alpha ───────────────────────────────────────────────────────────
 
 #[test]
-fn tray_items_count_is_five() {
-    let items = tray_items(&state_with_due_set());
-    assert_eq!(items.len(), 5);
+fn alpha_is_fully_opaque_at_one() {
+    assert_eq!(vibrancy_alpha(1.0), 255);
 }
 
 #[test]
-fn tray_items_ids_in_order() {
-    let items = tray_items(&state_with_due_set());
-    let ids: Vec<&str> = items.iter().map(|i| i.id.as_str()).collect();
+fn alpha_scales_and_rounds_to_nearest() {
+    assert_eq!(vibrancy_alpha(0.5), 128); // 127.5 rounds up
+    assert_eq!(vibrancy_alpha(0.8), 204);
+    assert_eq!(vibrancy_alpha(0.25), 64); // 63.75
+    assert_eq!(vibrancy_alpha(0.26), 66); // 66.3
+}
+
+#[test]
+fn alpha_is_clamped_to_the_minimum_opacity() {
+    let floor = vibrancy_alpha(0.1);
+    assert_eq!(floor, 26); // 25.5 rounds up
+    assert_eq!(vibrancy_alpha(0.0), floor);
+    assert_eq!(vibrancy_alpha(0.05), floor);
+    assert_eq!(vibrancy_alpha(-3.0), floor);
+}
+
+#[test]
+fn alpha_is_clamped_to_fully_opaque_above_one() {
+    assert_eq!(vibrancy_alpha(1.01), 255);
+    assert_eq!(vibrancy_alpha(40.0), 255);
+}
+
+// ── tray_items ───────────────────────────────────────────────────────────────
+
+#[test]
+fn tray_has_five_entries_in_a_fixed_order() {
+    let ids: Vec<&str> = tray_items(&TrayState::default())
+        .iter()
+        .map(|item| item.id)
+        .collect();
+    assert_eq!(
+        ids,
+        [TRAY_STATUS, TRAY_START, TRAY_PAUSE, TRAY_OPEN, TRAY_QUIT]
+    );
     assert_eq!(ids, ["status", "start", "pause", "open", "quit"]);
 }
 
-// ──────────────────────────────────────────────────────────────
-// tray_items — with a due set (not paused)
-// ──────────────────────────────────────────────────────────────
-
 #[test]
-fn tray_items_status_label_with_due_set() {
-    let items = tray_items(&state_with_due_set());
-    assert_eq!(items[0].id, "status");
-    assert_eq!(items[0].label, "Next: Squats @ 14:30");
-    assert_eq!(items[0].enabled, false);
+fn status_shows_the_next_exercise_and_progress() {
+    let items = tray_items(&tray_state(Some("Push-up"), 2, 6));
+    assert_eq!(item(&items, TRAY_STATUS).label, "Next: Push-up · 2/6 sets");
 }
 
 #[test]
-fn tray_items_start_enabled_when_due_set() {
-    let items = tray_items(&state_with_due_set());
-    assert_eq!(items[1].id, "start");
-    assert_eq!(items[1].label, "Start next set");
-    assert_eq!(items[1].enabled, true);
+fn status_says_nothing_planned_when_the_day_is_empty() {
+    let items = tray_items(&tray_state(None, 0, 0));
+    assert_eq!(item(&items, TRAY_STATUS).label, "Nothing planned today");
 }
 
 #[test]
-fn tray_items_pause_label_when_not_paused() {
-    let items = tray_items(&state_with_due_set());
-    assert_eq!(items[2].id, "pause");
-    assert_eq!(items[2].label, "Pause nudges");
-    assert_eq!(items[2].enabled, true);
+fn status_says_all_done_when_nothing_is_left() {
+    let items = tray_items(&tray_state(None, 6, 6));
+    assert_eq!(item(&items, TRAY_STATUS).label, "All done · 6/6 sets");
 }
 
 #[test]
-fn tray_items_open_item() {
-    let items = tray_items(&state_with_due_set());
-    assert_eq!(items[3].id, "open");
-    assert_eq!(items[3].label, "Open Nabd");
-    assert_eq!(items[3].enabled, true);
+fn status_line_is_never_clickable() {
+    for state in [
+        tray_state(Some("Squat"), 1, 4),
+        tray_state(None, 0, 0),
+        tray_state(None, 4, 4),
+    ] {
+        assert!(!item(&tray_items(&state), TRAY_STATUS).enabled);
+    }
 }
 
 #[test]
-fn tray_items_quit_item() {
-    let items = tray_items(&state_with_due_set());
-    assert_eq!(items[4].id, "quit");
-    assert_eq!(items[4].label, "Quit");
-    assert_eq!(items[4].enabled, true);
-}
+fn start_is_enabled_only_when_there_is_a_next_exercise() {
+    let start = |state: &TrayState| item(&tray_items(state), TRAY_START);
 
-// ──────────────────────────────────────────────────────────────
-// tray_items — all sets done (next_exercise is None)
-// ──────────────────────────────────────────────────────────────
-
-#[test]
-fn tray_items_status_label_all_done() {
-    let items = tray_items(&state_all_done());
-    assert_eq!(items[0].id, "status");
-    assert_eq!(items[0].label, "All sets done (5/5)");
-    assert_eq!(items[0].enabled, false);
+    assert!(start(&tray_state(Some("Squat"), 1, 4)).enabled);
+    assert!(!start(&tray_state(None, 0, 0)).enabled);
+    assert!(!start(&tray_state(None, 4, 4)).enabled);
+    assert_eq!(
+        start(&tray_state(Some("Squat"), 1, 4)).label,
+        "Start next set"
+    );
 }
 
 #[test]
-fn tray_items_start_disabled_when_all_done() {
-    let items = tray_items(&state_all_done());
-    assert_eq!(items[1].id, "start");
-    assert_eq!(items[1].label, "Start next set");
-    assert_eq!(items[1].enabled, false);
+fn pause_entry_offers_to_pause_while_running() {
+    let items = tray_items(&tray_state(Some("Squat"), 1, 4));
+    assert_eq!(item(&items, TRAY_PAUSE).label, "Pause nudges");
 }
 
-// ──────────────────────────────────────────────────────────────
-// tray_items — paused state → "Resume nudges"
-// ──────────────────────────────────────────────────────────────
-
 #[test]
-fn tray_items_pause_label_when_paused() {
-    let items = tray_items(&state_paused());
-    assert_eq!(items[2].id, "pause");
-    assert_eq!(items[2].label, "Resume nudges");
-    assert_eq!(items[2].enabled, true);
-}
-
-// ──────────────────────────────────────────────────────────────
-// tray_items — next_time is None (falls back to empty string in label)
-// ──────────────────────────────────────────────────────────────
-
-#[test]
-fn tray_items_status_label_no_next_time() {
+fn pause_entry_offers_to_resume_while_paused() {
     let state = TrayState {
-        next_exercise: Some("Lunges".to_string()),
-        next_time: None,
-        done: 0,
-        total: 4,
-        paused: false,
+        paused: true,
+        ..tray_state(Some("Squat"), 1, 4)
     };
-    let items = tray_items(&state);
-    assert_eq!(items[0].label, "Next: Lunges @ ");
-}
-
-// ──────────────────────────────────────────────────────────────
-// notif_payload
-// ──────────────────────────────────────────────────────────────
-
-#[test]
-fn notif_payload_timer_title() {
-    let p = notif_payload(NotifReason::Timer, "Pull-ups");
-    assert_eq!(p.title, "Time to move");
+    assert_eq!(item(&tray_items(&state), TRAY_PAUSE).label, "Resume nudges");
 }
 
 #[test]
-fn notif_payload_timer_body() {
-    let p = notif_payload(NotifReason::Timer, "Pull-ups");
-    assert_eq!(p.body, "Pull-ups — Interval's up");
+fn pausing_does_not_disable_start() {
+    let state = TrayState {
+        paused: true,
+        ..tray_state(Some("Squat"), 1, 4)
+    };
+    assert!(item(&tray_items(&state), TRAY_START).enabled);
 }
 
 #[test]
-fn notif_payload_idle_title() {
-    let p = notif_payload(NotifReason::Idle, "Planks");
-    assert_eq!(p.title, "Time to move");
+fn pause_open_and_quit_are_always_enabled() {
+    for state in [
+        tray_state(Some("Squat"), 1, 4),
+        tray_state(None, 0, 0),
+        tray_state(None, 4, 4),
+    ] {
+        let items = tray_items(&state);
+        assert!(item(&items, TRAY_PAUSE).enabled);
+        assert!(item(&items, TRAY_OPEN).enabled);
+        assert!(item(&items, TRAY_QUIT).enabled);
+    }
 }
 
 #[test]
-fn notif_payload_idle_body() {
-    let p = notif_payload(NotifReason::Idle, "Planks");
-    assert_eq!(p.body, "Planks — You've gone quiet");
+fn open_and_quit_have_fixed_labels() {
+    let items = tray_items(&TrayState::default());
+    assert_eq!(item(&items, TRAY_OPEN).label, "Open Nabd");
+    assert_eq!(item(&items, TRAY_QUIT).label, "Quit");
 }
 
-// ──────────────────────────────────────────────────────────────
-// autostart_action
-// ──────────────────────────────────────────────────────────────
+// ── TrayState JSON ───────────────────────────────────────────────────────────
 
 #[test]
-fn autostart_action_desired_not_registered() {
-    // want it ON, currently OFF → register
-    assert_eq!(autostart_action(true, false), Some(true));
-}
-
-#[test]
-fn autostart_action_not_desired_registered() {
-    // want it OFF, currently ON → unregister
-    assert_eq!(autostart_action(false, true), Some(false));
-}
-
-#[test]
-fn autostart_action_desired_already_registered() {
-    // want it ON, already ON → nothing to do
-    assert_eq!(autostart_action(true, true), None);
+fn tray_state_deserialises_from_camel_case_json() {
+    let state: TrayState =
+        serde_json::from_str(r#"{"nextExercise":"Plank","done":3,"total":5,"paused":true}"#)
+            .unwrap();
+    assert_eq!(
+        state,
+        TrayState {
+            next_exercise: Some("Plank".to_string()),
+            done: 3,
+            total: 5,
+            paused: true
+        }
+    );
 }
 
 #[test]
-fn autostart_action_not_desired_not_registered() {
-    // want it OFF, already OFF → nothing to do
-    assert_eq!(autostart_action(false, false), None);
+fn tray_state_accepts_a_null_next_exercise() {
+    let state: TrayState =
+        serde_json::from_str(r#"{"nextExercise":null,"done":5,"total":5,"paused":false}"#).unwrap();
+    assert_eq!(state, tray_state(None, 5, 5));
+}
+
+#[test]
+fn tray_state_rejects_missing_or_negative_counts() {
+    assert!(serde_json::from_str::<TrayState>(
+        r#"{"nextExercise":"Plank","total":2,"paused":false}"#
+    )
+    .is_err());
+    assert!(serde_json::from_str::<TrayState>(
+        r#"{"nextExercise":"Plank","done":-1,"total":2,"paused":false}"#
+    )
+    .is_err());
+}
+
+// ── notifications ────────────────────────────────────────────────────────────
+
+#[test]
+fn timer_notification_says_the_interval_is_up() {
+    let payload = notif_payload(NotifReason::Timer, "Push-up");
+    assert_eq!(payload.title, "Time to move");
+    assert_eq!(payload.body, "Push-up — Interval's up");
+}
+
+#[test]
+fn idle_notification_says_you_have_gone_quiet() {
+    let payload = notif_payload(NotifReason::Idle, "Wall sit");
+    assert_eq!(payload.title, "Time to move");
+    assert_eq!(payload.body, "Wall sit — You've gone quiet");
+}
+
+#[test]
+fn notif_payload_serialises_title_and_body() {
+    let payload = notif_payload(NotifReason::Timer, "Squat");
+    assert_eq!(
+        serde_json::to_value(&payload).unwrap(),
+        serde_json::json!({"title": "Time to move", "body": "Squat — Interval's up"})
+    );
+}
+
+#[test]
+fn notif_reason_deserialises_from_lowercase_strings() {
+    assert_eq!(
+        serde_json::from_str::<NotifReason>(r#""timer""#).unwrap(),
+        NotifReason::Timer
+    );
+    assert_eq!(
+        serde_json::from_str::<NotifReason>(r#""idle""#).unwrap(),
+        NotifReason::Idle
+    );
+}
+
+#[test]
+fn notif_reason_rejects_unknown_or_capitalised_values() {
+    assert!(serde_json::from_str::<NotifReason>(r#""Timer""#).is_err());
+    assert!(serde_json::from_str::<NotifReason>(r#""manual""#).is_err());
 }

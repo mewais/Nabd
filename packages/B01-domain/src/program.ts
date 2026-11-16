@@ -24,29 +24,30 @@ export const SetSpecSchema = z.object({
 });
 export type SetSpec = z.infer<typeof SetSpecSchema>;
 
-/** A planned exercise within a day (fixed mode). */
-export const ExercisePrescriptionSchema = z.object({
-  id: z.string(),
-  exId: z.string(),
+/** What to do for one exercise: the sets, how they are measured, rest, notes. */
+export const PrescriptionSchema = z.object({
   repMode: RepModeSchema,
   intensity: IntensitySchema,
+  /** Seconds of rest between back-to-back sets. */
   rest: z.number().int().nonnegative(),
   sets: z.array(SetSpecSchema),
   notes: z.string().optional(),
+});
+export type Prescription = z.infer<typeof PrescriptionSchema>;
+
+/** A planned exercise within a day (fixed mode). */
+export const ExercisePrescriptionSchema = PrescriptionSchema.extend({
+  id: z.string(),
+  exId: z.string(),
   supersetId: z.string().optional(),
 });
 export type ExercisePrescription = z.infer<typeof ExercisePrescriptionSchema>;
 
-/** A cycled slot: targets one specific muscle, a pool of exercises + a shared prescription. */
-export const CycledSlotSchema = z.object({
+/** A cycled slot: targets one muscle with a rotating pool sharing one prescription. */
+export const CycledSlotSchema = PrescriptionSchema.extend({
   id: z.string(),
   muscle: MuscleKeySchema,
   pool: z.array(z.string()),
-  repMode: RepModeSchema,
-  intensity: IntensitySchema,
-  rest: z.number().int().nonnegative(),
-  sets: z.array(SetSpecSchema),
-  notes: z.string().optional(),
 });
 export type CycledSlot = z.infer<typeof CycledSlotSchema>;
 
@@ -73,3 +74,11 @@ export const ProgramSchema = z.object({
   days: z.array(DaySchema),
 });
 export type Program = z.infer<typeof ProgramSchema>;
+
+/** The program a fresh install starts with. */
+export const EMPTY_PROGRAM: Program = {
+  name: "My Plan",
+  type: "fixed",
+  schedule: "weekday",
+  days: [],
+};

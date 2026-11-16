@@ -1,11 +1,5 @@
 /**
- * B16 · @nabd/design-system — value-asserting tests (RED against skeleton).
- *
- * ALL tests should be RED now (skeleton throws "not implemented").
- * Once implemented they must pass at 100% coverage of src/index.ts.
- *
- * Strategy: every exported function / component is called so that v8 coverage
- * reaches 100% of src/**. Assertions encode the concrete expected DOM/values.
+ * B16 · @nabd/design-system — theme helpers and presentational primitives.
  */
 
 // React must be in scope for the classic JSX transform used by vitest/esbuild.
@@ -13,35 +7,30 @@
 // root (packages/B16-design-system) not the test file's directory.
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { THEMES, WALLPAPERS, GLASS_FROST, materialKey, glassTint } from "@nabd/domain";
-import type { Theme, Wallpaper } from "@nabd/domain";
+import { THEMES, GLASS_FROST, materialKey, glassTint } from "@nabd/domain";
+import type { Theme } from "@nabd/domain";
 
 import {
   themeVars,
   rootBackgroundStyle,
-  wallpaperStyle,
   ThemeProvider,
   Button,
   Segmented,
   Stepper,
-  MiniStepper,
   Toggle,
-  Pill,
+  AdviceCard,
   Card,
-  Badge,
-  Donut,
   LiveDot,
   Icon,
   Dropdown,
 } from "@nabd/design-system";
-import type { IconName } from "@nabd/design-system";
+import type { AdviceText, IconName } from "@nabd/design-system";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 const THEMES_LIST: Theme[] = ["light", "dark"];
-const WALLPAPERS_LIST: Wallpaper[] = ["aurora", "dusk", "mesh", "slate"];
 
 const ALL_ICON_NAMES: IconName[] = [
   "today",
@@ -58,6 +47,10 @@ const ALL_ICON_NAMES: IconName[] = [
   "download",
   "upload",
 ];
+
+/** Read a CSS custom property off a style object (not part of CSSProperties' type). */
+const cssVar = (style: React.CSSProperties, name: string): unknown =>
+  (style as Record<string, unknown>)[name];
 
 // ---------------------------------------------------------------------------
 // themeVars
@@ -91,40 +84,40 @@ describe("themeVars", () => {
   test("solid vs glass dark: --surface differs", () => {
     const solid = themeVars("dark", false);
     const glass = themeVars("dark", true);
-    expect(solid["--surface"]).not.toBe(glass["--surface"]);
+    expect(cssVar(solid, "--surface")).not.toBe(cssVar(glass, "--surface"));
   });
 
   test("solid vs glass light: --surface differs", () => {
     const solid = themeVars("light", false);
     const glass = themeVars("light", true);
-    expect(solid["--surface"]).not.toBe(glass["--surface"]);
+    expect(cssVar(solid, "--surface")).not.toBe(cssVar(glass, "--surface"));
   });
 
   test("glass dark has --glow token (not 'none')", () => {
     const vars = themeVars("dark", true);
     // darkGlass --glow is an inset shadow (not 'none')
-    expect(vars["--glow"]).not.toBe("none");
+    expect(cssVar(vars, "--glow")).not.toBe("none");
   });
 
   test("glass light has --glow token (not 'none')", () => {
     const vars = themeVars("light", true);
     // lightGlass --glow is an inset shadow (not 'none')
-    expect(vars["--glow"]).not.toBe("none");
+    expect(cssVar(vars, "--glow")).not.toBe("none");
   });
 
   test("solid dark has --glow = 'none' (no glow for solid)", () => {
     const vars = themeVars("dark", false);
-    expect(vars["--glow"]).toBe("none");
+    expect(cssVar(vars, "--glow")).toBe("none");
   });
 
   test("solid light has --glow = 'none' (no glow for solid)", () => {
     const vars = themeVars("light", false);
-    expect(vars["--glow"]).toBe("none");
+    expect(cssVar(vars, "--glow")).toBe("none");
   });
 
   test("glass dark has --cardshadow matching THEMES.darkGlass", () => {
     const vars = themeVars("dark", true);
-    expect(vars["--cardshadow"]).toBe(THEMES.darkGlass["--cardshadow"]);
+    expect(cssVar(vars, "--cardshadow")).toBe(THEMES.darkGlass["--cardshadow"]);
   });
 
   test("all four materials return all 13 CSS custom properties", () => {
@@ -193,13 +186,6 @@ describe("rootBackgroundStyle", () => {
     expect(style.background as string).toContain("rgba(15,17,24,0.3)");
   });
 
-  test("relaxed floor: dark glass opacity 0.05 clamps to floor (0.1) → rgba(15,17,24,0.1)", () => {
-    const style = rootBackgroundStyle("dark", true, 0.05);
-    // floor is now 0.1, so opacity below 0.1 clamps up to 0.1
-    expect(style.background as string).toBe(glassTint("dark", 0.05));
-    expect(style.background as string).toContain("rgba(15,17,24,0.1)");
-  });
-
   test("relaxed floor: light glass opacity 0.3 passes through → rgba(244,246,251,0.3)", () => {
     const style = rootBackgroundStyle("light", true, 0.3);
     // floor is now 0.1, so opacity 0.3 is no longer clamped
@@ -221,78 +207,6 @@ describe("rootBackgroundStyle", () => {
     const solid = rootBackgroundStyle("dark", false, 0.55);
     const glass = rootBackgroundStyle("dark", true, 0.7);
     expect(solid.background).not.toEqual(glass.background);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// wallpaperStyle
-// ---------------------------------------------------------------------------
-
-describe("wallpaperStyle", () => {
-  test("glass:true → display block", () => {
-    const style = wallpaperStyle("dark", true, "aurora");
-    expect(style).toHaveProperty("display", "block");
-  });
-
-  test("glass:false → display none", () => {
-    const style = wallpaperStyle("dark", false, "aurora");
-    expect(style).toHaveProperty("display", "none");
-  });
-
-  test("glass:true + aurora → background matches WALLPAPERS.aurora", () => {
-    const style = wallpaperStyle("dark", true, "aurora");
-    expect(style).toHaveProperty("background", WALLPAPERS.aurora);
-  });
-
-  test("glass:true + dusk → background matches WALLPAPERS.dusk", () => {
-    const style = wallpaperStyle("dark", true, "dusk");
-    expect(style).toHaveProperty("background", WALLPAPERS.dusk);
-  });
-
-  test("glass:true + mesh → background matches WALLPAPERS.mesh", () => {
-    const style = wallpaperStyle("dark", true, "mesh");
-    expect(style).toHaveProperty("background", WALLPAPERS.mesh);
-  });
-
-  test("glass:true + slate → background matches WALLPAPERS.slate", () => {
-    const style = wallpaperStyle("dark", true, "slate");
-    expect(style).toHaveProperty("background", WALLPAPERS.slate);
-  });
-
-  test("glass:true, light + aurora → background matches WALLPAPERS.aurora", () => {
-    const style = wallpaperStyle("light", true, "aurora");
-    expect(style).toHaveProperty("background", WALLPAPERS.aurora);
-  });
-
-  test("glass:true → position fixed", () => {
-    const style = wallpaperStyle("dark", true, "aurora");
-    expect(style).toHaveProperty("position", "fixed");
-  });
-
-  test("glass:true → inset 0", () => {
-    const style = wallpaperStyle("dark", true, "aurora");
-    expect(style).toHaveProperty("inset", 0);
-  });
-
-  test("glass:true → zIndex 0", () => {
-    const style = wallpaperStyle("dark", true, "aurora");
-    expect(style).toHaveProperty("zIndex", 0);
-  });
-
-  test("light, glass:false → display none", () => {
-    const style = wallpaperStyle("light", false, "aurora");
-    expect(style).toHaveProperty("display", "none");
-  });
-
-  test("dark, glass:false → display none", () => {
-    const style = wallpaperStyle("dark", false, "aurora");
-    expect(style).toHaveProperty("display", "none");
-  });
-
-  test("glass display differs from non-glass display", () => {
-    const glass = wallpaperStyle("dark", true, "aurora");
-    const solid = wallpaperStyle("dark", false, "aurora");
-    expect(glass.display).not.toEqual(solid.display);
   });
 });
 
@@ -606,7 +520,7 @@ describe("Stepper", () => {
     const onInc = vi.fn();
     render(<Stepper value={5} onDec={onDec} onInc={onInc} />);
     const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[0]); // first button = dec
+    fireEvent.click(buttons[0]!); // first button = dec
     expect(onDec).toHaveBeenCalledTimes(1);
     expect(onInc).not.toHaveBeenCalled();
   });
@@ -616,7 +530,7 @@ describe("Stepper", () => {
     const onInc = vi.fn();
     render(<Stepper value={5} onDec={onDec} onInc={onInc} />);
     const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[1]); // second button = inc
+    fireEvent.click(buttons[1]!); // second button = inc
     expect(onInc).toHaveBeenCalledTimes(1);
     expect(onDec).not.toHaveBeenCalled();
   });
@@ -653,47 +567,6 @@ describe("Stepper", () => {
     render(<Stepper value={60} onDec={() => {}} onInc={() => {}} onSet={onSet} />);
     fireEvent.change(screen.getByLabelText("value"), { target: { value: "" } });
     expect(onSet).not.toHaveBeenCalled();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// MiniStepper
-// ---------------------------------------------------------------------------
-
-describe("MiniStepper", () => {
-  test("renders the value", () => {
-    render(<MiniStepper value={3} onDec={() => {}} onInc={() => {}} />);
-    expect(screen.getByText("3")).toBeInTheDocument();
-  });
-
-  test("renders two buttons", () => {
-    render(<MiniStepper value={3} onDec={() => {}} onInc={() => {}} />);
-    expect(screen.getAllByRole("button")).toHaveLength(2);
-  });
-
-  test("clicking first button calls onDec", () => {
-    const onDec = vi.fn();
-    const onInc = vi.fn();
-    render(<MiniStepper value={3} onDec={onDec} onInc={onInc} />);
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[0]);
-    expect(onDec).toHaveBeenCalledTimes(1);
-    expect(onInc).not.toHaveBeenCalled();
-  });
-
-  test("clicking second button calls onInc", () => {
-    const onDec = vi.fn();
-    const onInc = vi.fn();
-    render(<MiniStepper value={3} onDec={onDec} onInc={onInc} />);
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[1]);
-    expect(onInc).toHaveBeenCalledTimes(1);
-    expect(onDec).not.toHaveBeenCalled();
-  });
-
-  test("renders value as ReactNode (string)", () => {
-    render(<MiniStepper value="12" onDec={() => {}} onInc={() => {}} />);
-    expect(screen.getByText("12")).toBeInTheDocument();
   });
 });
 
@@ -760,48 +633,6 @@ describe("Toggle", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Pill
-// ---------------------------------------------------------------------------
-
-describe("Pill", () => {
-  test("renders children text", () => {
-    render(<Pill>Active</Pill>);
-    expect(screen.getByText("Active")).toBeInTheDocument();
-  });
-
-  test("renders in a span element", () => {
-    const { container } = render(<Pill>Active</Pill>);
-    expect(container.querySelector("span")).toBeInTheDocument();
-  });
-
-  test("default tone renders without error", () => {
-    render(<Pill tone="default">default</Pill>);
-    expect(screen.getByText("default")).toBeInTheDocument();
-  });
-
-  test("accent tone renders without error", () => {
-    render(<Pill tone="accent">accent</Pill>);
-    expect(screen.getByText("accent")).toBeInTheDocument();
-  });
-
-  test("accent2 tone renders without error", () => {
-    render(<Pill tone="accent2">accent2</Pill>);
-    expect(screen.getByText("accent2")).toBeInTheDocument();
-  });
-
-  test("accent3 tone renders without error", () => {
-    render(<Pill tone="accent3">accent3</Pill>);
-    expect(screen.getByText("accent3")).toBeInTheDocument();
-  });
-
-  test("merges style prop", () => {
-    const { container } = render(<Pill style={{ opacity: 0.5 }}>styled</Pill>);
-    const span = container.querySelector("span") as HTMLElement;
-    expect(span.style.opacity).toBe("0.5");
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Card
 // ---------------------------------------------------------------------------
 
@@ -831,92 +662,6 @@ describe("Card", () => {
     );
     expect(screen.getByText("A")).toBeInTheDocument();
     expect(screen.getByText("B")).toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Badge
-// ---------------------------------------------------------------------------
-
-describe("Badge", () => {
-  test("renders children text", () => {
-    render(<Badge>New</Badge>);
-    expect(screen.getByText("New")).toBeInTheDocument();
-  });
-
-  test("accent tone renders without error", () => {
-    render(<Badge tone="accent">accent</Badge>);
-    expect(screen.getByText("accent")).toBeInTheDocument();
-  });
-
-  test("accent2 tone renders without error", () => {
-    render(<Badge tone="accent2">accent2</Badge>);
-    expect(screen.getByText("accent2")).toBeInTheDocument();
-  });
-
-  test("accent3 tone renders without error", () => {
-    render(<Badge tone="accent3">accent3</Badge>);
-    expect(screen.getByText("accent3")).toBeInTheDocument();
-  });
-
-  test("muted tone renders without error", () => {
-    render(<Badge tone="muted">muted</Badge>);
-    expect(screen.getByText("muted")).toBeInTheDocument();
-  });
-
-  test("no tone prop renders with default styling", () => {
-    render(<Badge>default</Badge>);
-    expect(screen.getByText("default")).toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Donut
-// ---------------------------------------------------------------------------
-
-describe("Donut", () => {
-  test("renders done value", () => {
-    render(<Donut pct={50} done={3} total={6} />);
-    expect(screen.getByText("3")).toBeInTheDocument();
-  });
-
-  test("renders total value", () => {
-    render(<Donut pct={50} done={3} total={6} />);
-    expect(screen.getByText("6")).toBeInTheDocument();
-  });
-
-  test("renders caption when provided", () => {
-    render(<Donut pct={75} done={3} total={4} caption="today" />);
-    expect(screen.getByText("today")).toBeInTheDocument();
-  });
-
-  test("renders without caption (undefined branch)", () => {
-    render(<Donut pct={40} done={2} total={5} />);
-    expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("5")).toBeInTheDocument();
-    expect(screen.queryByText("today")).toBeNull();
-  });
-
-  test("pct=0 renders 0 progress (done=0)", () => {
-    render(<Donut pct={0} done={0} total={5} />);
-    expect(screen.getByText("0")).toBeInTheDocument();
-    expect(screen.getByText("5")).toBeInTheDocument();
-  });
-
-  test("pct=100 (complete) renders done=total", () => {
-    render(<Donut pct={100} done={8} total={8} />);
-    const eights = screen.getAllByText("8");
-    expect(eights).toHaveLength(2);
-  });
-
-  test("renders a container element (div or svg)", () => {
-    const { container } = render(<Donut pct={50} done={3} total={6} />);
-    expect(container.firstChild).not.toBeNull();
-  });
-
-  test("caption as ReactNode renders a span", () => {
-    render(<Donut pct={50} done={2} total={4} caption={<span>cap</span>} />);
-    expect(screen.getByText("cap")).toBeInTheDocument();
   });
 });
 
@@ -1040,9 +785,9 @@ describe("Dropdown", () => {
     // All three option labels are present in the listbox
     const optionEls = screen.getAllByRole("option");
     expect(optionEls).toHaveLength(3);
-    expect(optionEls[0].textContent).toContain("Weight & reps");
-    expect(optionEls[1].textContent).toContain("Bodyweight reps");
-    expect(optionEls[2].textContent).toContain("Time");
+    expect(optionEls[0]!.textContent).toContain("Weight & reps");
+    expect(optionEls[1]!.textContent).toContain("Bodyweight reps");
+    expect(optionEls[2]!.textContent).toContain("Time");
   });
 
   test("clicking an option calls onChange with that option's key", () => {
@@ -1125,5 +870,67 @@ describe("Dropdown", () => {
     render(<Dropdown value="unknown_key" options={options} onChange={() => {}} />);
     const trigger = screen.getByRole("button");
     expect(trigger.textContent).toContain("unknown_key");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AdviceCard
+// ---------------------------------------------------------------------------
+
+describe("AdviceCard", () => {
+  const advice: AdviceText = {
+    primary: "9 × 60 kg",
+    alternative: "8 × 62.5 kg",
+    reason: "Inside your range — beat last time.",
+    basis: "Last time: 8 × 60 kg",
+  };
+
+  test("shows both targets, what it was based on and the reasoning", () => {
+    const { container } = render(<AdviceCard advice={advice} />);
+    expect(screen.getByText("9 × 60 kg")).toBeInTheDocument();
+    expect(screen.getByText("8 × 62.5 kg")).toBeInTheDocument();
+    expect(container).toHaveTextContent("Try 9 × 60 kg or 8 × 62.5 kg");
+    expect(container).toHaveTextContent("Last time: 8 × 60 kg");
+    expect(container).toHaveTextContent("Inside your range — beat last time.");
+  });
+
+  test("without onApply the targets are plain text, not buttons", () => {
+    render(<AdviceCard advice={advice} />);
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+  });
+
+  test("with onApply each target is a button that applies that option", () => {
+    const onApply = vi.fn();
+    render(<AdviceCard advice={advice} onApply={onApply} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "9 × 60 kg" }));
+    expect(onApply).toHaveBeenLastCalledWith("primary");
+
+    fireEvent.click(screen.getByRole("button", { name: "8 × 62.5 kg" }));
+    expect(onApply).toHaveBeenLastCalledWith("alternative");
+    expect(onApply).toHaveBeenCalledTimes(2);
+  });
+
+  test('with no alternative there is a single target and no "or"', () => {
+    const onApply = vi.fn();
+    const { container } = render(
+      <AdviceCard advice={{ ...advice, alternative: null }} onApply={onApply} />,
+    );
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(container.textContent).not.toMatch(/\bor\b/);
+    expect(container).toHaveTextContent("Try 9 × 60 kg");
+  });
+
+  test("with no history only the reason is shown (no dangling separator)", () => {
+    const first: AdviceText = {
+      primary: "8 × 0 kg",
+      alternative: null,
+      reason: "First time — start light and find your level.",
+      basis: null,
+    };
+    const { container } = render(<AdviceCard advice={first} />);
+    expect(container).toHaveTextContent("First time — start light and find your level.");
+    expect(container.textContent).not.toContain("Last time");
+    expect(container.textContent).not.toContain(" · ");
   });
 });

@@ -14,11 +14,10 @@
   },
   "dependencies": {
     "@nabd/domain": "workspace:*",
-    "@nabd/coverage": "workspace:*",
-    "@nabd/dataset": "workspace:*",
+    "@nabd/scheduling": "workspace:*",
     "@nabd/progression": "workspace:*",
-    "@nabd/design-system": "workspace:*",
-    "@nabd/bodymap": "workspace:*"
+    "@nabd/session": "workspace:*",
+    "@nabd/design-system": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.3.1",

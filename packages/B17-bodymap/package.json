@@ -13,8 +13,7 @@
     "test:cov": "vitest run --coverage"
   },
   "dependencies": {
-    "@nabd/domain": "workspace:*",
-    "@nabd/coverage": "workspace:*"
+    "@nabd/domain": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.3.1",

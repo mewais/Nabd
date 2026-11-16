@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  EQUIPMENT_KEYS,
-  EQUIPMENT_NAMES,
-  EquipmentSchema,
-} from "@nabd/domain";
+import { EQUIPMENT_KEYS, EQUIPMENT_NAMES, EquipmentSchema } from "@nabd/domain";
 
 describe("equipment.ts", () => {
   it("EQUIPMENT_KEYS has exactly 11 entries", () => {

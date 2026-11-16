@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@nabd/domain": "workspace:*",
+    "@nabd/nudge": "workspace:*",
     "@tauri-apps/api": "^2.0.0"
   }
 }

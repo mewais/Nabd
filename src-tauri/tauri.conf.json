@@ -18,17 +18,13 @@
         "minWidth": 980,
         "minHeight": 640,
         "transparent": true,
+        "visible": false,
         "decorations": true,
         "resizable": true
       }
     ],
     "security": {
       "csp": null
-    },
-    "trayIcon": {
-      "id": "nabd-tray",
-      "iconPath": "icons/icon.png",
-      "iconAsTemplate": true
     }
   },
   "bundle": {

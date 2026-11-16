@@ -1,79 +1,56 @@
 /**
- * @nabd/dataset — exercise library: modular movement catalog + runtime accessors.
+ * @nabd/dataset — the exercise library.
  *
- * Architecture:
- *   - movements.ts  → Movement catalog + compose() engine (muscle accuracy layer)
- *   - index.ts      → public API: exercises(), createLibrary(), defaultLibrary()
+ *   movements.ts → Movement catalog + compose() (owns muscle tagging)
+ *   index.ts     → ExerciseLibrary: indexed lookup over catalog + custom exercises
  */
 
-import type { Exercise, MuscleGroup, MuscleKey } from "@nabd/domain";
-import { MUSCLE_PRIMARY_GROUP } from "@nabd/domain";
+import type { Equipment, Exercise, MuscleGroup } from "@nabd/domain";
 import { compose, MOVEMENTS } from "./movements";
 
-// Re-export the Movement model so callers can extend/inspect the catalog.
 export type { Movement, Laterality } from "./movements";
 export { compose, MOVEMENTS } from "./movements";
 
-// ---------------------------------------------------------------------------
-// Core dataset
-// ---------------------------------------------------------------------------
-
-/**
- * Returns the full composed exercise library.
- * Every call re-composes from MOVEMENTS (deterministic, fast).
- */
-export function exercises(): Exercise[] {
-  return compose(MOVEMENTS);
+/** Filters for browsing the library; every field is optional. */
+export interface LibraryQuery {
+  /** Case-insensitive substring of the exercise name. */
+  text?: string;
+  group?: MuscleGroup;
+  /** Keep only exercises doable with this equipment. */
+  equipment?: ReadonlySet<Equipment>;
 }
 
-// ---------------------------------------------------------------------------
-// Library interface
-// ---------------------------------------------------------------------------
+/** An immutable, id-indexed set of exercises. */
+export class ExerciseLibrary {
+  private readonly index: ReadonlyMap<string, Exercise>;
 
-export interface Library {
-  /** All exercises in the library. */
-  all(): Exercise[];
-  /** Find exercise by id. */
-  byId(id: string): Exercise | undefined;
-  /** Case-insensitive substring search on name. */
-  search(q: string): Exercise[];
-  /** Exercises in the given muscle group. */
-  byGroup(group: MuscleGroup): Exercise[];
-  /** Combined primary+secondary muscles of an exercise. */
-  musclesOf(ex: Exercise): MuscleKey[];
-  /** A new Library that also includes the given custom exercises. */
-  withCustom(custom: Exercise[]): Library;
+  constructor(private readonly exercises: readonly Exercise[]) {
+    this.index = new Map(exercises.map((e) => [e.id, e]));
+  }
+
+  /** The built-in catalog (composed once, shared). */
+  static readonly catalog: ExerciseLibrary = new ExerciseLibrary(compose(MOVEMENTS));
+
+  all(): readonly Exercise[] {
+    return this.exercises;
+  }
+
+  byId(id: string): Exercise | undefined {
+    return this.index.get(id);
+  }
+
+  find({ text, group, equipment }: LibraryQuery): Exercise[] {
+    const needle = text?.trim().toLowerCase() ?? "";
+    return this.exercises.filter(
+      (e) =>
+        (needle === "" || e.name.toLowerCase().includes(needle)) &&
+        (group === undefined || e.group === group) &&
+        (equipment === undefined || equipment.has(e.equipment)),
+    );
+  }
+
+  /** A new library that also contains the given custom exercises. */
+  withCustom(custom: readonly Exercise[]): ExerciseLibrary {
+    return custom.length === 0 ? this : new ExerciseLibrary([...this.exercises, ...custom]);
+  }
 }
-
-/** Build a Library over an explicit exercise array (used in tests + app). */
-export function createLibrary(exs: Exercise[]): Library {
-  return {
-    all(): Exercise[] {
-      return exs;
-    },
-    byId(id: string): Exercise | undefined {
-      return exs.find((e) => e.id === id);
-    },
-    search(q: string): Exercise[] {
-      const lower = q.toLowerCase();
-      return exs.filter((e) => e.name.toLowerCase().includes(lower));
-    },
-    byGroup(group: MuscleGroup): Exercise[] {
-      return exs.filter((e) => e.group === group);
-    },
-    musclesOf(ex: Exercise): MuscleKey[] {
-      return [...new Set([...ex.primary, ...ex.secondary])];
-    },
-    withCustom(custom: Exercise[]): Library {
-      return createLibrary([...exs, ...custom]);
-    },
-  };
-}
-
-/** Default library over the composed MOVEMENTS dataset. */
-export function defaultLibrary(): Library {
-  return createLibrary(exercises());
-}
-
-// Re-export MUSCLE_PRIMARY_GROUP for consumers who need group derivation.
-export { MUSCLE_PRIMARY_GROUP };

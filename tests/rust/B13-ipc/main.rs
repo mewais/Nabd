@@ -1,538 +1,417 @@
-//! B13 · nabd-ipc — IPC command-core tests.
-//!
-//! Real value-asserting tests against an in-memory SQLite DB.
-//! Behaviour tests are RED vs the skeleton (unimplemented panic), GREEN once
-//! the code agent implements the bodies. error.rs tests are GREEN immediately
-//! (error infra is already implemented).
-//!
-//! Zero #[should_panic]. Every assertion encodes a concrete expected value.
+//! B13 · nabd-ipc — the command core, driven through its JSON-in/JSON-out API
+//! against an in-memory database.
 
 use nabd_ipc::{
-    self,
-    error::{IpcError, IpcResult},
-    LoggedSetRow,
+    append_set, delete_set, export_data, import_data, init, load_all, save_singleton,
+    starts_minimized, IpcError,
 };
-use nabd_persistence as db;
-use serde_json::Value;
+use rusqlite::Connection;
+use serde_json::{json, Value};
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+const KV_KEYS: [&str; 6] = [
+    "program",
+    "settings",
+    "customExercises",
+    "rotationState",
+    "dayState",
+    "dayLog",
+];
 
-/// Open a fresh in-memory DB and call init so every behaviour test starts
-/// with a ready schema.
-fn fresh_db() -> rusqlite::Connection {
-    let c = db::open_memory().expect("open_memory must succeed");
-    nabd_ipc::init(&c).expect("init must succeed on a fresh in-memory DB");
+// ── fixtures ─────────────────────────────────────────────────────────────────
+
+/// A fresh, initialised in-memory database.
+fn fresh_db() -> Connection {
+    let c = Connection::open_in_memory().unwrap();
+    init(&c).unwrap();
     c
 }
 
-/// Parse the JSON string returned by load_all / export_data.
-fn parse(s: &str) -> Value {
-    serde_json::from_str(s).expect("returned string must be valid JSON")
+/// A complete logged set as the frontend sends it.
+fn set_json(id: &str, ts: &str) -> Value {
+    json!({
+        "id": id,
+        "exId": "push-up",
+        "exercise": "Push-up",
+        "group": "chest",
+        "muscles": ["chest", "triceps"],
+        "value": 12.0,
+        "weight": null,
+        "ts": ts,
+        "date": &ts[..10],
+        "trigger": "manual",
+        "planItemId": "item-1",
+        "setType": "working",
+    })
 }
 
-/// Build a minimal valid LoggedSetRow for test use.
-fn make_row(id: &str, ts: &str, date: &str) -> LoggedSetRow {
-    LoggedSetRow {
-        id: id.to_string(),
-        ex_id: "ex-push-up".to_string(),
-        exercise: "Push-up".to_string(),
-        group: "Chest".to_string(),
-        muscles: vec!["pectoralis major".to_string(), "triceps".to_string()],
-        value: 12.0,
-        weight: None,
-        ts: ts.to_string(),
-        date: date.to_string(),
-        trigger: "manual".to_string(),
+fn append(c: &Connection, id: &str, ts: &str) {
+    append_set(c, &set_json(id, ts).to_string()).unwrap();
+}
+
+/// The boot snapshot, parsed.
+fn snapshot(c: &Connection) -> Value {
+    serde_json::from_str(&load_all(c).unwrap()).unwrap()
+}
+
+fn history_ids(c: &Connection) -> Vec<String> {
+    snapshot(c)["history"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| row["id"].as_str().unwrap().to_string())
+        .collect()
+}
+
+/// The export document, parsed.
+fn exported(c: &Connection) -> Value {
+    serde_json::from_str(&export_data(c).unwrap()).unwrap()
+}
+
+// ── init / load_all ──────────────────────────────────────────────────────────
+
+#[test]
+fn init_can_be_called_on_every_boot() {
+    let c = fresh_db();
+    save_singleton(&c, "program", r#"{"days":[]}"#).unwrap();
+    init(&c).unwrap();
+    assert_eq!(snapshot(&c)["program"], json!({"days": []}));
+}
+
+#[test]
+fn load_all_on_an_empty_db_has_every_key_null_and_no_history() {
+    let snap = snapshot(&fresh_db());
+    let obj = snap.as_object().unwrap();
+
+    assert_eq!(obj.len(), KV_KEYS.len() + 1);
+    for key in KV_KEYS {
+        assert_eq!(
+            obj.get(key),
+            Some(&Value::Null),
+            "{key} should be present and null"
+        );
+    }
+    assert_eq!(obj["history"], json!([]));
+}
+
+#[test]
+fn load_all_returns_singletons_as_json_values_not_strings() {
+    let c = fresh_db();
+    save_singleton(&c, "settings", r#"{"intervalMin":45}"#).unwrap();
+    save_singleton(&c, "customExercises", "[]").unwrap();
+
+    let snap = snapshot(&c);
+    assert_eq!(snap["settings"], json!({"intervalMin": 45}));
+    assert_eq!(snap["customExercises"], json!([]));
+    assert_eq!(snap["program"], Value::Null);
+}
+
+// ── save_singleton ───────────────────────────────────────────────────────────
+
+#[test]
+fn save_singleton_accepts_every_known_key() {
+    let c = fresh_db();
+    for (n, key) in KV_KEYS.iter().enumerate() {
+        save_singleton(&c, key, &json!({ "n": n }).to_string()).unwrap();
+    }
+    let snap = snapshot(&c);
+    for (n, key) in KV_KEYS.iter().enumerate() {
+        assert_eq!(snap[*key], json!({ "n": n }));
     }
 }
 
-// ─── init + load_all ────────────────────────────────────────────────────────
-
-/// After init, load_all on an empty DB must return a JSON object where all six
-/// singleton keys are null and history is an empty array.
 #[test]
-fn load_all_empty_db_all_null_history_empty() {
+fn save_singleton_overwrites_the_previous_value() {
     let c = fresh_db();
-    let raw = nabd_ipc::load_all(&c).expect("load_all must not error on empty DB");
-    let v = parse(&raw);
+    save_singleton(&c, "dayLog", r#"{"sets":1}"#).unwrap();
+    save_singleton(&c, "dayLog", r#"{"sets":2}"#).unwrap();
+    assert_eq!(snapshot(&c)["dayLog"], json!({"sets": 2}));
+}
 
-    // All six singletons must be present and null.
-    assert_eq!(v["program"], Value::Null, "program must be null on empty DB");
-    assert_eq!(v["settings"], Value::Null, "settings must be null on empty DB");
-    assert_eq!(v["theme"], Value::Null, "theme must be null on empty DB");
-    assert_eq!(
-        v["customExercises"], Value::Null,
-        "customExercises must be null on empty DB"
+#[test]
+fn save_singleton_rejects_an_unknown_key() {
+    let c = fresh_db();
+    let err = save_singleton(&c, "theme", r#""dark""#).unwrap_err();
+    assert!(
+        matches!(&err, IpcError::BadKey(key) if key == "theme"),
+        "got {err:?}"
     );
-    assert_eq!(
-        v["rotationState"], Value::Null,
-        "rotationState must be null on empty DB"
+    assert!(!snapshot(&c).as_object().unwrap().contains_key("theme"));
+}
+
+#[test]
+fn save_singleton_does_not_let_history_be_written_as_a_singleton() {
+    let c = fresh_db();
+    let err = save_singleton(&c, "history", "[]").unwrap_err();
+    assert!(matches!(err, IpcError::BadKey(_)), "got {err:?}");
+}
+
+#[test]
+fn save_singleton_rejects_invalid_json_and_keeps_the_old_value() {
+    let c = fresh_db();
+    save_singleton(&c, "settings", r#"{"ok":true}"#).unwrap();
+
+    let err = save_singleton(&c, "settings", "{not json").unwrap_err();
+
+    assert!(matches!(err, IpcError::BadJson(_)), "got {err:?}");
+    assert_eq!(snapshot(&c)["settings"], json!({"ok": true}));
+}
+
+// ── append_set / delete_set ──────────────────────────────────────────────────
+
+#[test]
+fn append_set_shows_up_in_the_snapshot_unchanged() {
+    let c = fresh_db();
+    let set = set_json("a", "2025-03-01T10:00:00.000Z");
+    append_set(&c, &set.to_string()).unwrap();
+    assert_eq!(snapshot(&c)["history"], json!([set]));
+}
+
+#[test]
+fn append_set_fills_defaults_for_a_set_without_plan_item_or_set_type() {
+    let c = fresh_db();
+    let mut set = set_json("a", "2025-03-01T10:00:00.000Z");
+    let fields = set.as_object_mut().unwrap();
+    fields.remove("planItemId");
+    fields.remove("setType");
+
+    append_set(&c, &set.to_string()).unwrap();
+
+    let stored = &snapshot(&c)["history"][0];
+    assert_eq!(stored["planItemId"], Value::Null);
+    assert_eq!(stored["setType"], "working");
+}
+
+#[test]
+fn history_is_returned_oldest_first() {
+    let c = fresh_db();
+    append(&c, "late", "2025-03-02T08:00:00.000Z");
+    append(&c, "early", "2025-03-01T08:00:00.000Z");
+    assert_eq!(history_ids(&c), ["early", "late"]);
+}
+
+#[test]
+fn append_set_rejects_a_malformed_row() {
+    let c = fresh_db();
+
+    let not_json = append_set(&c, "nope").unwrap_err();
+    let missing_fields = append_set(&c, r#"{"id":"a"}"#).unwrap_err();
+
+    assert!(matches!(not_json, IpcError::BadJson(_)), "got {not_json:?}");
+    assert!(
+        matches!(missing_fields, IpcError::BadJson(_)),
+        "got {missing_fields:?}"
     );
+    assert!(history_ids(&c).is_empty());
+}
+
+#[test]
+fn append_set_reports_a_duplicate_id_as_a_storage_error() {
+    let c = fresh_db();
+    append(&c, "a", "2025-03-01T10:00:00.000Z");
+
+    let err = append_set(&c, &set_json("a", "2025-03-01T11:00:00.000Z").to_string()).unwrap_err();
+
+    assert!(matches!(err, IpcError::Storage(_)), "got {err:?}");
+    assert_eq!(history_ids(&c), ["a"]);
+}
+
+#[test]
+fn delete_set_removes_only_that_set() {
+    let c = fresh_db();
+    append(&c, "a", "2025-03-01T10:00:00.000Z");
+    append(&c, "b", "2025-03-01T11:00:00.000Z");
+    delete_set(&c, "a").unwrap();
+    assert_eq!(history_ids(&c), ["b"]);
+}
+
+#[test]
+fn delete_set_of_an_unknown_id_succeeds_and_changes_nothing() {
+    let c = fresh_db();
+    append(&c, "a", "2025-03-01T10:00:00.000Z");
+    delete_set(&c, "missing").unwrap();
+    assert_eq!(history_ids(&c), ["a"]);
+}
+
+// ── export_data ──────────────────────────────────────────────────────────────
+
+#[test]
+fn export_of_an_empty_db_has_only_app_version_and_empty_history() {
     assert_eq!(
-        v["dayState"], Value::Null,
-        "dayState must be null on empty DB"
+        exported(&fresh_db()),
+        json!({"app": "Nabd", "version": 2, "history": []})
     );
-
-    // history must be an empty array, not null, not missing.
-    let hist = v["history"].as_array().expect("history must be a JSON array");
-    assert_eq!(hist.len(), 0, "history must be empty on fresh DB");
 }
 
-// ─── save_singleton ──────────────────────────────────────────────────────────
-
-/// Saving a valid key/value succeeds, and load_all reflects the stored value
-/// as a parsed JSON value (not a raw string).
 #[test]
-fn save_singleton_theme_dark_round_trips() {
+fn export_includes_stored_singletons_and_history_and_omits_nulls() {
     let c = fresh_db();
-    nabd_ipc::save_singleton(&c, "theme", "\"dark\"").expect("save_singleton must succeed");
-    let raw = nabd_ipc::load_all(&c).expect("load_all must not error");
-    let v = parse(&raw);
-    // The stored JSON string "\"dark\"" must be decoded back to the string "dark".
-    assert_eq!(v["theme"], Value::String("dark".to_string()));
+    save_singleton(&c, "program", r#"{"days":[]}"#).unwrap();
+    save_singleton(&c, "settings", r#"{"theme":"dark"}"#).unwrap();
+    let set = set_json("a", "2025-03-01T10:00:00.000Z");
+    append_set(&c, &set.to_string()).unwrap();
+
+    assert_eq!(
+        exported(&c),
+        json!({
+            "app": "Nabd",
+            "version": 2,
+            "program": {"days": []},
+            "settings": {"theme": "dark"},
+            "history": [set],
+        })
+    );
 }
 
-/// Saving each of the six canonical keys must succeed.
 #[test]
-fn save_singleton_all_valid_keys_accepted() {
-    let c = fresh_db();
-    let payloads: &[(&str, &str)] = &[
-        ("program", "{\"id\":\"pgm-1\"}"),
-        ("settings", "{\"unit\":\"kg\"}"),
-        ("theme", "\"light\""),
-        ("customExercises", "[]"),
-        ("rotationState", "null"),
-        ("dayState", "{\"day\":0}"),
-    ];
-    for (key, value) in payloads {
-        nabd_ipc::save_singleton(&c, key, value)
-            .unwrap_or_else(|e| panic!("save_singleton({key}) must succeed, got: {e}"));
-    }
-    let raw = nabd_ipc::load_all(&c).expect("load_all must not error");
-    let v = parse(&raw);
+fn export_can_be_imported_into_another_db() {
+    let source = fresh_db();
+    save_singleton(&source, "program", r#"{"days":["mon"]}"#).unwrap();
+    save_singleton(&source, "dayLog", r#"{"sets":3}"#).unwrap();
+    append(&source, "a", "2025-03-01T10:00:00.000Z");
+    append(&source, "b", "2025-03-02T10:00:00.000Z");
 
-    assert_eq!(v["theme"], Value::String("light".to_string()));
-    assert_eq!(v["settings"]["unit"], Value::String("kg".to_string()));
-    assert_eq!(v["customExercises"], Value::Array(vec![]));
-    assert_eq!(v["rotationState"], Value::Null);
-    assert_eq!(v["dayState"]["day"], Value::Number(0.into()));
+    let target = fresh_db();
+    import_data(&target, &export_data(&source).unwrap()).unwrap();
+
+    assert_eq!(snapshot(&target), snapshot(&source));
 }
 
-/// Saving an unknown key must return IpcError::BadKey (not panic, not BadJson).
+// ── import_data ──────────────────────────────────────────────────────────────
+
 #[test]
-fn save_singleton_bad_key_returns_bad_key_error() {
+fn import_replaces_present_singletons_and_the_history() {
     let c = fresh_db();
-    let result = nabd_ipc::save_singleton(&c, "unknownKey", "\"value\"");
-    match result {
-        Err(IpcError::BadKey(k)) => {
-            assert_eq!(k, "unknownKey", "BadKey must carry the rejected key name");
-        }
-        Err(other) => panic!("expected IpcError::BadKey, got: {other:?}"),
-        Ok(_) => panic!("expected Err(BadKey), got Ok"),
-    }
-}
+    save_singleton(&c, "program", r#"{"name":"old"}"#).unwrap();
+    append(&c, "old", "2025-03-01T10:00:00.000Z");
 
-/// Saving a valid key with invalid JSON must return IpcError::BadJson.
-#[test]
-fn save_singleton_bad_json_returns_bad_json_error() {
-    let c = fresh_db();
-    let result = nabd_ipc::save_singleton(&c, "theme", "not-json{{{");
-    match result {
-        Err(IpcError::BadJson(_)) => {}
-        Err(other) => panic!("expected IpcError::BadJson, got: {other:?}"),
-        Ok(_) => panic!("expected Err(BadJson), got Ok"),
-    }
-}
-
-// ─── append_set ──────────────────────────────────────────────────────────────
-
-/// A valid row appended via append_set appears in load_all history with correct
-/// field values (round-trip).
-#[test]
-fn append_set_valid_row_appears_in_load_all_history() {
-    let c = fresh_db();
-    let row = make_row("set-001", "2024-03-15T10:00:00Z", "2024-03-15");
-    let row_json = serde_json::to_string(&row).expect("serialisation must succeed");
-
-    nabd_ipc::append_set(&c, &row_json).expect("append_set must succeed");
-
-    let raw = nabd_ipc::load_all(&c).expect("load_all must not error");
-    let v = parse(&raw);
-    let hist = v["history"].as_array().expect("history must be an array");
-    assert_eq!(hist.len(), 1, "history must contain exactly one row");
-
-    let r = &hist[0];
-    assert_eq!(r["id"], Value::String("set-001".to_string()));
-    // JSON boundary is camelCase to match the TypeScript LoggedSet contract.
-    assert_eq!(r["exId"], Value::String("ex-push-up".to_string()));
-    assert_eq!(r["exercise"], Value::String("Push-up".to_string()));
-    assert_eq!(r["group"], Value::String("Chest".to_string()));
-    assert_eq!(r["value"], serde_json::json!(12.0));
-    assert_eq!(r["weight"], Value::Null);
-    assert_eq!(r["ts"], Value::String("2024-03-15T10:00:00Z".to_string()));
-    assert_eq!(r["date"], Value::String("2024-03-15".to_string()));
-    assert_eq!(r["trigger"], Value::String("manual".to_string()));
-    let muscles = r["muscles"].as_array().expect("muscles must be array");
-    assert_eq!(muscles.len(), 2);
-    assert_eq!(muscles[0], Value::String("pectoralis major".to_string()));
-    assert_eq!(muscles[1], Value::String("triceps".to_string()));
-}
-
-/// Contract guard: the exact camelCase JSON the TypeScript client sends
-/// (`exId`, not `ex_id`) must deserialize and persist. This is what the live
-/// "Log this set" button posts; a snake_case-only struct silently rejected it.
-#[test]
-fn append_set_accepts_camelcase_js_payload() {
-    let c = fresh_db();
-    let js_payload = r#"{"id":"js-1","exId":"bench_press__barbell","exercise":"Barbell Bench Press","group":"Chest","muscles":["chest"],"value":8,"weight":60,"ts":"2024-03-15T10:00:00Z","date":"2024-03-15","trigger":"manual"}"#;
-    nabd_ipc::append_set(&c, js_payload).expect("append_set must accept camelCase JS payload");
-
-    let v = parse(&nabd_ipc::load_all(&c).expect("load_all must not error"));
-    let hist = v["history"].as_array().expect("history must be an array");
-    assert_eq!(hist.len(), 1);
-    assert_eq!(hist[0]["exId"], Value::String("bench_press__barbell".to_string()));
-    assert_eq!(hist[0]["weight"], serde_json::json!(60.0));
-}
-
-/// Appending multiple sets preserves insertion order and all rows appear.
-#[test]
-fn append_set_multiple_rows_all_appear_in_order() {
-    let c = fresh_db();
-    let row1 = make_row("set-a", "2024-03-15T09:00:00Z", "2024-03-15");
-    let row2 = make_row("set-b", "2024-03-15T10:00:00Z", "2024-03-15");
-
-    nabd_ipc::append_set(&c, &serde_json::to_string(&row1).unwrap())
-        .expect("append row1 must succeed");
-    nabd_ipc::append_set(&c, &serde_json::to_string(&row2).unwrap())
-        .expect("append row2 must succeed");
-
-    let raw = nabd_ipc::load_all(&c).expect("load_all must not error");
-    let v = parse(&raw);
-    let hist = v["history"].as_array().expect("history must be array");
-    assert_eq!(hist.len(), 2, "history must contain two rows");
-    // history ordered by ts ascending
-    assert_eq!(hist[0]["id"], Value::String("set-a".to_string()));
-    assert_eq!(hist[1]["id"], Value::String("set-b".to_string()));
-}
-
-/// Appending malformed JSON must return IpcError::BadJson.
-#[test]
-fn append_set_bad_json_returns_bad_json_error() {
-    let c = fresh_db();
-    let result = nabd_ipc::append_set(&c, "{invalid json!!!");
-    match result {
-        Err(IpcError::BadJson(_)) => {}
-        Err(other) => panic!("expected IpcError::BadJson, got: {other:?}"),
-        Ok(_) => panic!("expected Err(BadJson), got Ok"),
-    }
-}
-
-/// Appending a JSON object that is not a valid LoggedSetRow must return BadJson.
-#[test]
-fn append_set_wrong_shape_returns_bad_json_error() {
-    let c = fresh_db();
-    // Valid JSON but completely wrong shape — missing required fields.
-    let result = nabd_ipc::append_set(&c, "{\"foo\":\"bar\"}");
-    match result {
-        Err(IpcError::BadJson(_)) => {}
-        Err(other) => panic!("expected IpcError::BadJson, got: {other:?}"),
-        Ok(_) => panic!("expected Err(BadJson) for wrong-shape object, got Ok"),
-    }
-}
-
-/// A row with a non-null weight round-trips through append_set / load_all.
-#[test]
-fn append_set_weighted_row_weight_preserved() {
-    let c = fresh_db();
-    let mut row = make_row("set-w", "2024-03-15T10:00:00Z", "2024-03-15");
-    row.weight = Some(80.5);
-    nabd_ipc::append_set(&c, &serde_json::to_string(&row).unwrap())
-        .expect("append weighted row must succeed");
-
-    let raw = nabd_ipc::load_all(&c).expect("load_all must not error");
-    let v = parse(&raw);
-    let hist = v["history"].as_array().unwrap();
-    assert_eq!(hist.len(), 1);
-    assert_eq!(hist[0]["weight"], serde_json::json!(80.5));
-}
-
-// ─── export_data ─────────────────────────────────────────────────────────────
-
-/// export_data on an empty DB returns envelope with app:"Nabd", version:1,
-/// null singletons and empty history array.
-#[test]
-fn export_data_empty_db_envelope_structure() {
-    let c = fresh_db();
-    let raw = nabd_ipc::export_data(&c).expect("export_data must not error");
-    let v = parse(&raw);
-
-    assert_eq!(v["app"], Value::String("Nabd".to_string()), "app must be \"Nabd\"");
-    assert_eq!(v["version"], Value::Number(1.into()), "version must be 1");
-
-    // All six singletons null.
-    assert_eq!(v["program"], Value::Null);
-    assert_eq!(v["settings"], Value::Null);
-    assert_eq!(v["theme"], Value::Null);
-    assert_eq!(v["customExercises"], Value::Null);
-    assert_eq!(v["rotationState"], Value::Null);
-    assert_eq!(v["dayState"], Value::Null);
-
-    // Empty history array.
-    let hist = v["history"].as_array().expect("history must be an array");
-    assert_eq!(hist.len(), 0);
-}
-
-/// export_data reflects previously saved singletons.
-#[test]
-fn export_data_reflects_saved_singletons() {
-    let c = fresh_db();
-    nabd_ipc::save_singleton(&c, "theme", "\"dark\"").expect("save theme");
-    nabd_ipc::save_singleton(&c, "settings", "{\"unit\":\"lbs\"}").expect("save settings");
-
-    let raw = nabd_ipc::export_data(&c).expect("export_data must not error");
-    let v = parse(&raw);
-
-    assert_eq!(v["app"], Value::String("Nabd".to_string()));
-    assert_eq!(v["version"], Value::Number(1.into()));
-    assert_eq!(v["theme"], Value::String("dark".to_string()));
-    assert_eq!(v["settings"]["unit"], Value::String("lbs".to_string()));
-    // Unsaved singletons still null.
-    assert_eq!(v["program"], Value::Null);
-}
-
-/// export_data reflects appended history rows.
-#[test]
-fn export_data_reflects_history() {
-    let c = fresh_db();
-    let row = make_row("exp-001", "2024-03-15T10:00:00Z", "2024-03-15");
-    nabd_ipc::append_set(&c, &serde_json::to_string(&row).unwrap()).expect("append");
-
-    let raw = nabd_ipc::export_data(&c).expect("export_data must not error");
-    let v = parse(&raw);
-
-    assert_eq!(v["app"], Value::String("Nabd".to_string()));
-    assert_eq!(v["version"], Value::Number(1.into()));
-    let hist = v["history"].as_array().expect("history must be array");
-    assert_eq!(hist.len(), 1);
-    assert_eq!(hist[0]["id"], Value::String("exp-001".to_string()));
-    assert_eq!(hist[0]["exercise"], Value::String("Push-up".to_string()));
-}
-
-// ─── import_data ─────────────────────────────────────────────────────────────
-
-/// Importing a full AppData document sets all singletons and replaces history.
-#[test]
-fn import_data_full_document_applies_singletons_and_history() {
-    let c = fresh_db();
-    // Pre-seed some data that will be replaced.
-    nabd_ipc::save_singleton(&c, "theme", "\"light\"").expect("pre-seed theme");
-    let old_row = make_row("old-set", "2024-01-01T00:00:00Z", "2024-01-01");
-    nabd_ipc::append_set(&c, &serde_json::to_string(&old_row).unwrap()).expect("pre-seed row");
-
-    let new_row = make_row("new-set", "2024-03-15T10:00:00Z", "2024-03-15");
-    let import_doc = serde_json::json!({
+    let new_set = set_json("new", "2025-04-01T10:00:00.000Z");
+    let doc = json!({
         "app": "Nabd",
-        "version": 1,
-        "program": {"id": "pgm-imported"},
-        "settings": {"unit": "kg"},
-        "theme": "dark",
-        "customExercises": [{"id": "ce-1"}],
-        "rotationState": {"rotation": 0},
-        "dayState": {"day": 2},
-        "history": [new_row]
+        "version": 2,
+        "program": {"name": "new"},
+        "settings": {"theme": "light"},
+        "history": [new_set],
     });
+    import_data(&c, &doc.to_string()).unwrap();
 
-    nabd_ipc::import_data(&c, &import_doc.to_string()).expect("import_data must succeed");
-
-    let raw = nabd_ipc::load_all(&c).expect("load_all must not error");
-    let v = parse(&raw);
-
-    // Theme overwritten with the imported value.
-    assert_eq!(v["theme"], Value::String("dark".to_string()));
-    // Other singletons set.
-    assert_eq!(v["program"]["id"], Value::String("pgm-imported".to_string()));
-    assert_eq!(v["settings"]["unit"], Value::String("kg".to_string()));
-    let ce = v["customExercises"].as_array().expect("customExercises array");
-    assert_eq!(ce.len(), 1);
-    assert_eq!(ce[0]["id"], Value::String("ce-1".to_string()));
-    assert_eq!(v["rotationState"]["rotation"], Value::Number(0.into()));
-    assert_eq!(v["dayState"]["day"], Value::Number(2.into()));
-
-    // Old history row gone; new one present.
-    let hist = v["history"].as_array().expect("history array");
-    assert_eq!(hist.len(), 1, "old history must be replaced, not merged");
-    assert_eq!(hist[0]["id"], Value::String("new-set".to_string()));
+    let snap = snapshot(&c);
+    assert_eq!(snap["program"], json!({"name": "new"}));
+    assert_eq!(snap["settings"], json!({"theme": "light"}));
+    assert_eq!(snap["history"], json!([new_set]));
 }
 
-/// Partial import (only program key present) sets only that key; others untouched.
 #[test]
-fn import_data_partial_doc_only_sets_present_keys() {
+fn import_leaves_absent_singletons_and_absent_history_alone() {
     let c = fresh_db();
-    // Pre-set theme before the partial import.
-    nabd_ipc::save_singleton(&c, "theme", "\"dark\"").expect("pre-set theme");
-    let existing_row = make_row("keep-set", "2024-03-15T10:00:00Z", "2024-03-15");
-    nabd_ipc::append_set(&c, &serde_json::to_string(&existing_row).unwrap())
-        .expect("pre-seed history");
+    save_singleton(&c, "program", r#"{"name":"kept"}"#).unwrap();
+    save_singleton(&c, "settings", r#"{"theme":"dark"}"#).unwrap();
+    append(&c, "kept", "2025-03-01T10:00:00.000Z");
 
-    // Partial doc: only program is supplied.
-    let partial = serde_json::json!({
-        "program": {"id": "pgm-partial"}
+    import_data(&c, r#"{"settings":{"theme":"light"}}"#).unwrap();
+
+    let snap = snapshot(&c);
+    assert_eq!(snap["program"], json!({"name": "kept"}));
+    assert_eq!(snap["settings"], json!({"theme": "light"}));
+    assert_eq!(history_ids(&c), ["kept"]);
+}
+
+#[test]
+fn import_with_an_empty_history_array_clears_the_history() {
+    let c = fresh_db();
+    append(&c, "gone", "2025-03-01T10:00:00.000Z");
+    import_data(&c, r#"{"history":[]}"#).unwrap();
+    assert!(history_ids(&c).is_empty());
+}
+
+#[test]
+fn import_ignores_keys_that_are_not_singletons() {
+    let c = fresh_db();
+    import_data(&c, r#"{"app":"Nabd","version":2,"theme":"dark"}"#).unwrap();
+
+    let snap = snapshot(&c);
+    let obj = snap.as_object().unwrap();
+    assert_eq!(obj.len(), KV_KEYS.len() + 1);
+    assert!(KV_KEYS.iter().all(|key| obj[*key].is_null()));
+}
+
+#[test]
+fn import_rejects_json_that_is_not_an_object() {
+    let c = fresh_db();
+    save_singleton(&c, "program", r#"{"name":"kept"}"#).unwrap();
+
+    for bad in ["[]", "42", r#""text""#, "null", "{broken"] {
+        let err = import_data(&c, bad).unwrap_err();
+        assert!(matches!(err, IpcError::BadJson(_)), "{bad}: got {err:?}");
+    }
+    assert_eq!(snapshot(&c)["program"], json!({"name": "kept"}));
+}
+
+#[test]
+fn import_changes_nothing_when_a_history_row_is_malformed() {
+    let c = fresh_db();
+    save_singleton(&c, "program", r#"{"name":"old"}"#).unwrap();
+    append(&c, "old", "2025-03-01T10:00:00.000Z");
+    let before = snapshot(&c);
+
+    let doc = json!({
+        "program": {"name": "new"},
+        "history": [set_json("good", "2025-04-01T10:00:00.000Z"), {"id": "bad"}],
     });
-    nabd_ipc::import_data(&c, &partial.to_string()).expect("partial import must succeed");
+    let err = import_data(&c, &doc.to_string()).unwrap_err();
 
-    let raw = nabd_ipc::load_all(&c).expect("load_all must not error");
-    let v = parse(&raw);
-
-    // Program was set.
-    assert_eq!(v["program"]["id"], Value::String("pgm-partial".to_string()));
-    // Theme untouched (was "dark", not in partial doc).
-    assert_eq!(v["theme"], Value::String("dark".to_string()));
-    // History not touched (no history key in partial doc).
-    let hist = v["history"].as_array().expect("history array");
-    assert_eq!(hist.len(), 1, "history must be unchanged by partial import");
-    assert_eq!(hist[0]["id"], Value::String("keep-set".to_string()));
-    // Other singletons still null.
-    assert_eq!(v["settings"], Value::Null);
+    assert!(matches!(err, IpcError::BadJson(_)), "got {err:?}");
+    assert_eq!(snapshot(&c), before);
 }
 
-/// Importing with no singletons or history key in the document is a no-op.
 #[test]
-fn import_data_empty_object_is_noop() {
+fn import_changes_nothing_when_history_rows_clash_in_the_database() {
     let c = fresh_db();
-    nabd_ipc::save_singleton(&c, "theme", "\"dark\"").expect("pre-set theme");
+    save_singleton(&c, "program", r#"{"name":"old"}"#).unwrap();
+    append(&c, "old", "2025-03-01T10:00:00.000Z");
+    let before = snapshot(&c);
 
-    nabd_ipc::import_data(&c, "{}").expect("empty-object import must succeed");
-
-    let raw = nabd_ipc::load_all(&c).expect("load_all must not error");
-    let v = parse(&raw);
-    assert_eq!(v["theme"], Value::String("dark".to_string()), "theme must be unchanged");
-}
-
-/// Importing an invalid JSON string must return IpcError::BadJson.
-#[test]
-fn import_data_bad_json_returns_bad_json_error() {
-    let c = fresh_db();
-    let result = nabd_ipc::import_data(&c, "not valid json {{");
-    match result {
-        Err(IpcError::BadJson(_)) => {}
-        Err(other) => panic!("expected IpcError::BadJson, got: {other:?}"),
-        Ok(_) => panic!("expected Err(BadJson), got Ok"),
-    }
-}
-
-/// Importing with a history array of invalid row shapes must return BadJson.
-#[test]
-fn import_data_history_wrong_shape_returns_bad_json_error() {
-    let c = fresh_db();
-    // history items are wrong shape — missing all required LoggedSetRow fields.
-    let doc = serde_json::json!({
-        "history": [{"totally": "wrong"}]
+    // Both rows are well-formed, so the failure happens mid-transaction.
+    let doc = json!({
+        "program": {"name": "new"},
+        "history": [
+            set_json("dup", "2025-04-01T10:00:00.000Z"),
+            set_json("dup", "2025-04-02T10:00:00.000Z"),
+        ],
     });
-    let result = nabd_ipc::import_data(&c, &doc.to_string());
-    match result {
-        Err(IpcError::BadJson(_)) => {}
-        Err(other) => panic!("expected IpcError::BadJson, got: {other:?}"),
-        Ok(_) => panic!("expected Err(BadJson) for wrong-shape history rows, got Ok"),
-    }
+    let err = import_data(&c, &doc.to_string()).unwrap_err();
+
+    assert!(matches!(err, IpcError::Storage(_)), "got {err:?}");
+    assert_eq!(snapshot(&c), before);
 }
 
-/// Import replaces (not merges) history: pre-existing rows are gone after import.
+// ── starts_minimized ─────────────────────────────────────────────────────────
+
 #[test]
-fn import_data_history_replaces_not_merges() {
+fn starts_minimized_defaults_to_false_without_settings() {
+    assert!(!starts_minimized(&fresh_db()).unwrap());
+}
+
+#[test]
+fn starts_minimized_defaults_to_false_when_the_flag_is_absent() {
     let c = fresh_db();
-    // Pre-seed two rows.
-    let r1 = make_row("pre-1", "2024-01-01T00:00:00Z", "2024-01-01");
-    let r2 = make_row("pre-2", "2024-01-02T00:00:00Z", "2024-01-02");
-    nabd_ipc::append_set(&c, &serde_json::to_string(&r1).unwrap()).expect("append r1");
-    nabd_ipc::append_set(&c, &serde_json::to_string(&r2).unwrap()).expect("append r2");
-
-    // Import with a single different row.
-    let imported_row = make_row("post-1", "2024-03-15T10:00:00Z", "2024-03-15");
-    let doc = serde_json::json!({
-        "history": [imported_row]
-    });
-    nabd_ipc::import_data(&c, &doc.to_string()).expect("import must succeed");
-
-    let raw = nabd_ipc::load_all(&c).expect("load_all must not error");
-    let v = parse(&raw);
-    let hist = v["history"].as_array().expect("history array");
-    assert_eq!(hist.len(), 1, "history must be replaced, not merged (2 pre + 1 imported = 1)");
-    assert_eq!(hist[0]["id"], Value::String("post-1".to_string()));
+    save_singleton(&c, "settings", r#"{"theme":"dark"}"#).unwrap();
+    assert!(!starts_minimized(&c).unwrap());
 }
 
-// ─── error.rs — GREEN tests (infrastructure already implemented) ─────────────
-
-/// IpcError::BadKey carries the key name and formats correctly.
 #[test]
-fn error_bad_key_display() {
-    let e = IpcError::BadKey("unknownKey".to_string());
-    let msg = e.to_string();
-    assert!(
-        msg.contains("unknownKey"),
-        "BadKey Display must include the key name, got: {msg}"
-    );
+fn starts_minimized_follows_the_stored_flag() {
+    let c = fresh_db();
+
+    save_singleton(&c, "settings", r#"{"minimizedByDefault":true}"#).unwrap();
+    assert!(starts_minimized(&c).unwrap());
+
+    save_singleton(&c, "settings", r#"{"minimizedByDefault":false}"#).unwrap();
+    assert!(!starts_minimized(&c).unwrap());
 }
 
-/// IpcError::BadJson formats correctly.
 #[test]
-fn error_bad_json_display() {
-    let e = IpcError::BadJson("unexpected end of input".to_string());
-    let msg = e.to_string();
-    assert!(
-        msg.contains("unexpected end of input"),
-        "BadJson Display must include the error detail, got: {msg}"
-    );
-}
-
-/// IpcError::Storage formats correctly.
-#[test]
-fn error_storage_display() {
-    let e = IpcError::Storage("disk full".to_string());
-    let msg = e.to_string();
-    assert!(
-        msg.contains("disk full"),
-        "Storage Display must include the detail, got: {msg}"
-    );
-}
-
-/// From<nabd_persistence::Error> yields IpcError::Storage.
-#[test]
-fn error_from_persistence_error_yields_storage() {
-    // Trigger a real persistence error: query on a connection with no schema.
-    let c = db::open_memory().expect("open_memory must succeed");
-    // get_kv on a connection with no tables returns a rusqlite error → persistence::Error.
-    // We exercise the From conversion by converting explicitly.
-    let persistence_err: nabd_persistence::Error =
-        rusqlite::Error::QueryReturnedNoRows.into();
-    let ipc_err = IpcError::from(persistence_err);
-    match ipc_err {
-        IpcError::Storage(msg) => {
-            assert!(!msg.is_empty(), "Storage message must not be empty");
-        }
-        other => panic!("expected IpcError::Storage, got: {other:?}"),
-    }
-}
-
-/// From<serde_json::Error> yields IpcError::BadJson.
-#[test]
-fn error_from_serde_json_error_yields_bad_json() {
-    let serde_err: serde_json::Error =
-        serde_json::from_str::<Value>("{{invalid").unwrap_err();
-    let ipc_err = IpcError::from(serde_err);
-    match ipc_err {
-        IpcError::BadJson(msg) => {
-            assert!(!msg.is_empty(), "BadJson message must not be empty");
-        }
-        other => panic!("expected IpcError::BadJson, got: {other:?}"),
-    }
-}
-
-/// IpcResult is a type alias for Result<T, IpcError> and works as expected.
-#[test]
-fn error_ipc_result_type_alias() {
-    let ok: IpcResult<u32> = Ok(42);
-    assert_eq!(ok.unwrap(), 42);
-
-    let err: IpcResult<u32> = Err(IpcError::BadKey("x".to_string()));
-    assert!(err.is_err());
+fn starts_minimized_is_false_when_the_flag_is_not_a_boolean() {
+    let c = fresh_db();
+    save_singleton(&c, "settings", r#"{"minimizedByDefault":"yes"}"#).unwrap();
+    assert!(!starts_minimized(&c).unwrap());
 }

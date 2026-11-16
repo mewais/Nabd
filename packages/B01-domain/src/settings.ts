@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EQUIPMENT_KEYS, EquipmentSchema } from "./equipment";
 
 /** The two real themes (translucency is a separate modifier, not a theme). */
 export const ThemeSchema = z.enum(["light", "dark"]);
@@ -22,32 +23,10 @@ export function kgFromDisplay(value: number, unit: WeightUnit): number {
   return Math.round(kg * 1000) / 1000;
 }
 
-/** The +/- step size, in kg, for the given unit (2.5 kg or 5 lb). */
-export function weightStepKg(unit: WeightUnit): number {
-  return unit === "lb" ? 5 / LB_PER_KG : 2.5;
-}
-
-/** The +/- step size as shown to the user (2.5 for kg, 5 for lb). */
-export function weightStepLabel(unit: WeightUnit): number {
-  return unit === "lb" ? 5 : 2.5;
-}
-
 /** Format a canonical kg weight for display, e.g. "60 kg" / "132.3 lb". */
 export function formatWeight(kg: number, unit: WeightUnit): string {
   return `${displayWeight(kg, unit)} ${unit}`;
 }
-
-/** Preview wallpapers (used behind the glass material). */
-export const WallpaperSchema = z.enum([
-  "aurora",
-  "dusk",
-  "slate",
-  "mesh",
-  "sand",
-  "frost",
-  "mixed",
-]);
-export type Wallpaper = z.infer<typeof WallpaperSchema>;
 
 export const SettingsSchema = z.object({
   theme: ThemeSchema,
@@ -55,15 +34,23 @@ export const SettingsSchema = z.object({
   glass: z.boolean(),
   /** Glass tint strength (0.1–1.0). */
   opacity: z.number().min(0.1).max(1),
-  wallpaper: WallpaperSchema,
   openAtStartup: z.boolean(),
   minimizedByDefault: z.boolean(),
-  /** Minutes between sets (timer length). */
+  /** Minutes after a set before the timer nudges for the next one. */
   interval: z.number().int().min(5).max(180),
-  /** Seconds of idle before a nudge. */
+  /** Minimum minutes after a set before an idle moment may nudge. */
+  minGap: z.number().int().min(1).max(180),
+  /** Seconds without keyboard/mouse that count as an idle moment. */
   idleNudge: z.number().int().min(5).max(600),
+  /** Workday bounds (minutes since midnight); the app never nudges outside them. */
+  workStart: z.number().int().min(0).max(1439),
+  workEnd: z.number().int().min(1).max(1440),
   /** Weight unit for display + input (weights are stored canonically in kg). */
   weightUnit: WeightUnitSchema,
+  /** Smallest weight jump the user can make, in the display unit. */
+  weightIncrement: z.number().positive().max(50),
+  /** Equipment the user owns; the exercise library is filtered to it. */
+  equipment: z.array(EquipmentSchema),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 
@@ -71,18 +58,16 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "dark",
   glass: false,
   opacity: 0.7,
-  wallpaper: "aurora",
   openAtStartup: true,
   minimizedByDefault: false,
   interval: 50,
+  minGap: 15,
   idleNudge: 30,
+  workStart: 9 * 60,
+  workEnd: 18 * 60,
   weightUnit: "kg",
-};
-
-/** Per-theme glass opacity bounds (floors relaxed — user controls legibility). */
-export const GLASS_OPACITY: Record<Theme, { floor: number; max: number }> = {
-  light: { floor: 0.1, max: 1 },
-  dark: { floor: 0.1, max: 1 },
+  weightIncrement: 2.5,
+  equipment: [...EQUIPMENT_KEYS],
 };
 
 /** The material key for a theme + glass flag. */
@@ -91,14 +76,5 @@ export function materialKey(theme: Theme, glass: boolean): Material {
   return glass ? ((theme + "Glass") as Material) : theme;
 }
 
-/** Scheduling + behavior defaults. */
-export const DEFAULTS = {
-  /** First slot of the workday: 09:30 as minutes from midnight. */
-  startMin: 9 * 60 + 30,
-  intervalMin: 50,
-  idleNudgeSec: 30,
-  /** Coverage bump applied per logged set. */
-  coveragePerSet: 4,
-  /** Snooze length in seconds. */
-  snoozeSec: 5 * 60,
-} as const;
+/** How long a snoozed or dismissed nudge stays quiet, in minutes. */
+export const SNOOZE_MINUTES = 5;

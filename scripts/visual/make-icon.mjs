@@ -21,10 +21,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" 
 
 const b = await chromium.launch({ headless: true });
 const p = await b.newPage({ viewport: { width: 1024, height: 1024 }, deviceScaleFactor: 1 });
-await p.setContent(
-  `<body style="margin:0">${svg}</body>`,
-  { waitUntil: "networkidle" },
-);
+await p.setContent(`<body style="margin:0">${svg}</body>`, { waitUntil: "networkidle" });
 await p.locator("svg").screenshot({ path: "src-tauri/icons/source.png", omitBackground: true });
 await b.close();
 console.log("icon source.png written");

@@ -1,14 +1,35 @@
-// @nabd/planner — Plan screen: program header, week board, day editor (fixed
-// set tables + supersets + cycled slots), coverage rail. Pure view-model builders
-// + presentational React. Mutations are callbacks (wired to the store in B23).
+// @nabd/planner — the Plan screen: program header, week board, day editor
+// (set tables, supersets, cycled slots) and the live coverage rail.
 
 import React from "react";
-import type { Program, ExercisePrescription, CycledSlot, MuscleKey } from "@nabd/domain";
-import { MUSCLE_NAMES, MUSCLES, EQUIPMENT_NAMES } from "@nabd/domain";
-import type { Library } from "@nabd/dataset";
-import { boardLayout, daySummary } from "@nabd/program-editor";
+import type {
+  Coverage,
+  Intensity,
+  MuscleKey,
+  Program,
+  ProgramType,
+  RepMode,
+  Schedule,
+} from "@nabd/domain";
+import { MUSCLE_NAMES } from "@nabd/domain";
+import type { ExerciseLibrary } from "@nabd/dataset";
+import type { EditRef, ProgramEdit } from "@nabd/program-editor";
 import { BodyMap } from "@nabd/bodymap";
-import { Segmented, MiniStepper, Button } from "@nabd/design-system";
+import { Segmented } from "@nabd/design-system";
+import { buildBoard, buildEditor } from "./view-model";
+import type { BoardColVM, EditorVM, ExerciseCardVM, SetBlockVM } from "./view-model";
+
+export { buildBoard, buildEditor, buildSetBlock } from "./view-model";
+export type {
+  BoardChip,
+  BoardColVM,
+  CycledSlotVM,
+  EditorRow,
+  EditorVM,
+  ExerciseCardVM,
+  SetBlockVM,
+  SetRowVM,
+} from "./view-model";
 
 /**
  * Anatomically-ordered MuscleKey list for the cycled-slot target picker.
@@ -40,363 +61,41 @@ const MUSCLES_ANATOMICAL: MuscleKey[] = [
   "neck",
 ];
 
-// ---------- view-model builders (pure) ----------
-
-export interface SetRowVM {
-  index: number;
-  badgeLabel: string; // "W" / "1".. / "D"
-  badgeKind: "warm" | "work" | "drop";
-  typeName: string;
-  repA: number;
-  repB: number | null;
-  repsStr: string; // "8–10" / "12" / "45s"
-  isTime: boolean;
-  hasB: boolean;
-  showInt: boolean;
-  intStr: string; // "8" / "70%"
-}
-export interface SetBlockVM {
-  rows: SetRowVM[];
-  repMode: import("@nabd/domain").RepMode;
-  intensity: import("@nabd/domain").Intensity;
-  showIntCol: boolean;
-  repHeader: string; // "REPS" / "TIME"
-  intHeader: string; // "RPE" / "%1RM" / ""
-  gridCols: string;
-  restStr: string; // "2:30"
-  notes: string;
-}
-
-export interface EditRef {
-  kind: "ex" | "slot";
-  id: string;
-}
-
-/** Build the set-table view model for an exercise prescription or cycled slot. */
-export function buildSetBlock(_p: ExercisePrescription | CycledSlot): SetBlockVM {
-  const { repMode, intensity, rest, sets, notes } = _p;
-
-  const showIntCol = intensity !== "none";
-  const repHeader = repMode === "time" ? "TIME" : "REPS";
-  const intHeader = intensity === "rpe" ? "RPE" : intensity === "pct" ? "%1RM" : "";
-  const gridCols = showIntCol ? "30px minmax(150px,1fr) 86px 26px" : "30px minmax(150px,1fr) 26px";
-
-  const mins = Math.floor(rest / 60);
-  const secs = rest % 60;
-  const restStr = `${mins}:${secs.toString().padStart(2, "0")}`;
-
-  let workingCount = 0;
-  const rows: SetRowVM[] = sets.map((set, i) => {
-    let badgeLabel: string;
-    let badgeKind: "warm" | "work" | "drop";
-    let typeName: string;
-
-    if (set.type === "warmup") {
-      badgeLabel = "W";
-      badgeKind = "warm";
-      typeName = "Warm-up";
-    } else if (set.type === "drop") {
-      badgeLabel = "D";
-      badgeKind = "drop";
-      typeName = "Drop set";
-    } else {
-      workingCount += 1;
-      badgeLabel = String(workingCount);
-      badgeKind = "work";
-      typeName = "Working";
-    }
-
-    const repA = set.a;
-    const repB = set.b != null ? set.b : null;
-    const hasB = repMode === "range" && repB != null;
-
-    let repsStr: string;
-    if (repMode === "time") {
-      repsStr = `${set.a}s`;
-    } else if (repMode === "range" && repB != null) {
-      repsStr = `${set.a}–${repB}`;
-    } else {
-      repsStr = `${set.a}`;
-    }
-
-    const showInt = showIntCol;
-    let intStr = "";
-    if (showInt && set.val != null) {
-      intStr = intensity === "pct" ? `${set.val}%` : `${set.val}`;
-    }
-
-    return {
-      index: i,
-      badgeLabel,
-      badgeKind,
-      typeName,
-      repA,
-      repB,
-      repsStr,
-      isTime: repMode === "time",
-      hasB,
-      showInt,
-      intStr,
-    };
-  });
-
-  return {
-    rows,
-    repMode,
-    intensity,
-    showIntCol,
-    repHeader,
-    intHeader,
-    gridCols,
-    restStr,
-    notes: notes ?? "",
-  };
-}
-
-export interface ExerciseCardVM {
-  id: string;
-  name: string;
-  muscles: string;
-  equip: string;
-  block: SetBlockVM;
-  supersetTag: string | null; // "A1"/"A2" within a superset, else null
-}
-export interface CycledSlotVM {
-  id: string;
-  muscle: MuscleKey;
-  muscleName: string;
-  poolNames: { id: string; name: string }[];
-  poolStr: string;
-  block: SetBlockVM;
-}
-export type EditorRow =
-  | { kind: "ex"; ex: ExerciseCardVM }
-  | { kind: "superset"; members: ExerciseCardVM[] }
-  | { kind: "slot"; slot: CycledSlotVM };
-
-export interface EditorVM {
-  exists: boolean;
-  dayId: string;
-  name: string;
-  isFixed: boolean;
-  isWeekday: boolean;
-  dayOrderLabel: string;
-  weekday: number | null;
-  summary: string;
-  rows: EditorRow[];
-}
-
-/** Build the day-editor view model. */
-export function buildEditor(
-  _program: Program,
-  _editDayId: string | null,
-  _library: Library,
-): EditorVM {
-  const days = _program.days;
-
-  if (days.length === 0) {
-    return {
-      exists: false,
-      dayId: "",
-      name: "",
-      isFixed: _program.type === "fixed",
-      isWeekday: _program.schedule === "weekday",
-      dayOrderLabel: "Day 1",
-      weekday: null,
-      summary: "",
-      rows: [],
-    };
-  }
-
-  // Pick the day: editDayId or first
-  let day = _editDayId != null ? days.find((d) => d.id === _editDayId) : undefined;
-  if (day == null && _editDayId != null) {
-    // editDayId given but not found → exists=false
-    return {
-      exists: false,
-      dayId: "",
-      name: "",
-      isFixed: _program.type === "fixed",
-      isWeekday: _program.schedule === "weekday",
-      dayOrderLabel: "Day 1",
-      weekday: null,
-      summary: "",
-      rows: [],
-    };
-  }
-  if (day == null) {
-    day = days[0];
-  }
-
-  const dayIndex = days.indexOf(day);
-  const isFixed = _program.type === "fixed";
-  const isWeekday = _program.schedule === "weekday";
-  const summary = daySummary(day, _program.type);
-
-  let rows: EditorRow[];
-
-  if (isFixed) {
-    // Group consecutive exercises with same supersetId
-    const exercises = day.exercises;
-    rows = [];
-    let i = 0;
-
-    while (i < exercises.length) {
-      const ex = exercises[i];
-      if (ex.supersetId) {
-        // Find all consecutive exercises sharing this supersetId
-        const sid = ex.supersetId;
-        const members: ExerciseCardVM[] = [];
-        let j = i;
-        let memberIndex = 0;
-        while (j < exercises.length && exercises[j].supersetId === sid) {
-          memberIndex += 1;
-          const e = exercises[j];
-          const libEx = _library.byId(e.exId);
-          const name = libEx?.name ?? e.exId;
-          const allMuscles = libEx ? [...libEx.primary, ...libEx.secondary] : [];
-          const muscles = allMuscles.map((m) => MUSCLE_NAMES[m]).join(", ");
-          const equip = libEx ? EQUIPMENT_NAMES[libEx.equipment].toUpperCase() : "";
-          const block = buildSetBlock(e);
-          const tag = `A${memberIndex}`;
-          members.push({ id: e.id, name, muscles, equip, block, supersetTag: tag });
-          j++;
-        }
-        rows.push({ kind: "superset", members });
-        i = j;
-      } else {
-        const libEx = _library.byId(ex.exId);
-        const name = libEx?.name ?? ex.exId;
-        const allMuscles = libEx ? [...libEx.primary, ...libEx.secondary] : [];
-        const muscles = allMuscles.map((m) => MUSCLE_NAMES[m]).join(", ");
-        const equip = libEx ? EQUIPMENT_NAMES[libEx.equipment].toUpperCase() : "";
-        const block = buildSetBlock(ex);
-        const exCard: ExerciseCardVM = {
-          id: ex.id,
-          name,
-          muscles,
-          equip,
-          block,
-          supersetTag: null,
-        };
-        rows.push({ kind: "ex", ex: exCard });
-        i++;
-      }
-    }
-  } else {
-    // Cycled: slots
-    rows = day.slots.map((slot) => {
-      const muscleName = MUSCLE_NAMES[slot.muscle];
-      const poolNames = slot.pool.map((exId) => {
-        const libEx = _library.byId(exId);
-        return { id: exId, name: libEx?.name ?? exId };
-      });
-      const poolStr = `${slot.pool.length} exercises`;
-      const block = buildSetBlock(slot);
-      const slotVM: CycledSlotVM = {
-        id: slot.id,
-        muscle: slot.muscle,
-        muscleName,
-        poolNames,
-        poolStr,
-        block,
-      };
-      return { kind: "slot" as const, slot: slotVM };
-    });
-  }
-
-  return {
-    exists: true,
-    dayId: day.id,
-    name: day.name,
-    isFixed,
-    isWeekday,
-    dayOrderLabel: `Day ${dayIndex + 1}`,
-    weekday: day.weekday,
-    summary,
-    rows,
-  };
-}
-
-export interface BoardChip {
-  name: string;
-  superset: boolean;
-}
-export interface BoardColVM {
-  kind: "day" | "rest" | "add";
-  label: string;
-  weekday?: number;
-  dayId?: string;
-  name?: string;
-  chips?: BoardChip[];
-  more?: number;
-  editing?: boolean;
-}
-
-/** Build the week-board columns. */
-export function buildBoard(
-  _program: Program,
-  _editDayId: string | null,
-  _library?: Library,
-): BoardColVM[] {
-  const layout = boardLayout(_program);
-
-  return layout.map((col) => {
-    if (col.kind === "add") {
-      return { kind: "add" as const, label: col.label };
-    }
-    if (col.kind === "rest") {
-      return { kind: "rest" as const, label: col.label, weekday: col.weekday };
-    }
-    // day
-    const card = col.card!;
-    const editing = _editDayId != null && card.dayId === _editDayId;
-    // Resolve exercise names for fixed-mode chips (boardLayout uses raw exId)
-    const chips: BoardChip[] =
-      _program.type === "fixed" && _library != null
-        ? card.chips.map((ch) => ({
-            name: _library.byId(ch.name)?.name ?? ch.name,
-            superset: ch.superset,
-          }))
-        : card.chips;
-    const result: BoardColVM = {
-      kind: "day" as const,
-      label: col.label,
-      dayId: card.dayId,
-      name: card.name,
-      chips,
-      more: card.more,
-    };
-    if (col.weekday !== undefined) {
-      result.weekday = col.weekday;
-    }
-    if (editing) {
-      result.editing = true;
-    }
-    return result;
-  });
-}
-
 // ---------- components ----------
 
-/** All planner mutation callbacks (wired to the store). */
+/** What the planner asks of the app. Every program change goes through `onEdit`. */
 export interface PlannerCallbacks {
-  onSetType: (t: "fixed" | "cycled") => void;
-  onSetSchedule: (s: "weekday" | "floating") => void;
+  onEdit: (edit: ProgramEdit) => void;
   onSelectDay: (dayId: string) => void;
-  onRenameDay: (dayId: string, name: string) => void;
-  onSetWeekday: (dayId: string, weekday: number) => void;
-  onAddDay: (weekday: number | null) => void;
-  onRemoveDay: (dayId: string) => void;
-  onAddExercise: (dayId: string) => void; // opens library
-  onRemoveExercise: (dayId: string, rowId: string) => void;
-  onToggleSuperset: (dayId: string, rowId: string) => void;
-  onAddSlot: (dayId: string, muscle: MuscleKey) => void;
-  onRemoveSlot: (dayId: string, slotId: string) => void;
-  onAddPool: (dayId: string, slotId: string) => void; // opens library
-  onRemoveFromPool: (dayId: string, slotId: string, exId: string) => void;
-  onEdit: (dayId: string, ref: EditRef, op: string, ...args: number[]) => void;
-  onNotes: (dayId: string, ref: EditRef, notes: string) => void;
+  /** Open the library to add an exercise to a fixed day. */
+  onAddExercise: (dayId: string) => void;
+  /** Open the library to add an exercise to a cycled slot's pool. */
+  onAddPool: (dayId: string, slotId: string) => void;
+}
+
+/** A pair of arrows that move something one place earlier (-1) or later (+1). */
+function MoveButtons(p: {
+  onMove: (direction: number) => void;
+  horizontal?: boolean;
+}): JSX.Element {
+  const [earlier, later] = p.horizontal ? ["◀", "▶"] : ["▲", "▼"];
+  const arrow = (label: string, glyph: string, direction: number) =>
+    React.createElement(
+      "button",
+      {
+        "aria-label": label,
+        title: label,
+        onClick: () => p.onMove(direction),
+        style: { ...miniBtn, fontSize: 9 },
+      },
+      glyph,
+    );
+  return React.createElement(
+    "div",
+    { style: { display: "inline-flex", gap: 3, flex: "none" } },
+    arrow("Move earlier", earlier, -1),
+    arrow("Move later", later, 1),
+  );
 }
 
 export interface SetTableProps {
@@ -440,9 +139,6 @@ export function SetTable(_p: SetTableProps): JSX.Element {
     { k: "rpe", label: "RPE" },
     { k: "pct", label: "%1RM" },
   ];
-
-  const repModeIdx: Record<string, number> = { range: 0, fixed: 1, time: 2 };
-  const intensityIdx: Record<string, number> = { none: 0, rpe: 1, pct: 2 };
 
   // Table header row
   const headerRow = React.createElement(
@@ -565,7 +261,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
               "button",
               {
                 style: miniBtn,
-                onClick: () => cb.onEdit(dayId, refTarget, "stepVal", row.index, -1),
+                onClick: () => cb.onEdit((e) => e.stepVal(dayId, refTarget, row.index, -1)),
               },
               "−",
             ),
@@ -586,7 +282,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
               "button",
               {
                 style: miniBtn,
-                onClick: () => cb.onEdit(dayId, refTarget, "stepVal", row.index, 1),
+                onClick: () => cb.onEdit((e) => e.stepVal(dayId, refTarget, row.index, 1)),
               },
               "+",
             ),
@@ -607,7 +303,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
         {
           style: badgeStyle,
           title: `${row.typeName} — click to change`,
-          onClick: () => cb.onEdit(dayId, refTarget, "cycleSetType", row.index),
+          onClick: () => cb.onEdit((e) => e.cycleSetType(dayId, refTarget, row.index)),
         },
         row.badgeLabel,
       ),
@@ -620,7 +316,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
           "button",
           {
             style: miniBtn,
-            onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 1, -1),
+            onClick: () => cb.onEdit((e) => e.stepRep(dayId, refTarget, row.index, "a", -1)),
           },
           "−",
         ),
@@ -642,7 +338,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
           "button",
           {
             style: miniBtn,
-            onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 1, 1),
+            onClick: () => cb.onEdit((e) => e.stepRep(dayId, refTarget, row.index, "a", 1)),
           },
           "+",
         ),
@@ -655,7 +351,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
               "button",
               {
                 style: miniBtn,
-                onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 0, -1),
+                onClick: () => cb.onEdit((e) => e.stepRep(dayId, refTarget, row.index, "b", -1)),
               },
               "−",
             )
@@ -680,7 +376,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
               "button",
               {
                 style: miniBtn,
-                onClick: () => cb.onEdit(dayId, refTarget, "stepRep", row.index, 0, 1),
+                onClick: () => cb.onEdit((e) => e.stepRep(dayId, refTarget, row.index, "b", 1)),
               },
               "+",
             )
@@ -715,7 +411,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
             fontSize: 14,
             justifySelf: "end" as const,
           },
-          onClick: () => cb.onEdit(dayId, refTarget, "removeSet", row.index),
+          onClick: () => cb.onEdit((e) => e.removeSet(dayId, refTarget, row.index)),
           "aria-label": "remove",
         },
         "×",
@@ -753,7 +449,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       React.createElement(Segmented, {
         options: repModeOptions,
         value: repMode,
-        onChange: (k) => cb.onEdit(dayId, refTarget, "setRepMode", repModeIdx[k]),
+        onChange: (k) => cb.onEdit((e) => e.setRepMode(dayId, refTarget, k as RepMode)),
         small: true,
       }),
     ),
@@ -775,7 +471,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       React.createElement(Segmented, {
         options: intensityOptions,
         value: intensity,
-        onChange: (k) => cb.onEdit(dayId, refTarget, "setIntensity", intensityIdx[k]),
+        onChange: (k) => cb.onEdit((e) => e.setIntensity(dayId, refTarget, k as Intensity)),
         small: true,
       }),
     ),
@@ -796,7 +492,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       ),
       React.createElement(
         "button",
-        { style: miniBtn, onClick: () => cb.onEdit(dayId, refTarget, "setRest", -1) },
+        { style: miniBtn, onClick: () => cb.onEdit((e) => e.stepRest(dayId, refTarget, -1)) },
         "−",
       ),
       React.createElement(
@@ -813,7 +509,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
       ),
       React.createElement(
         "button",
-        { style: miniBtn, onClick: () => cb.onEdit(dayId, refTarget, "setRest", 1) },
+        { style: miniBtn, onClick: () => cb.onEdit((e) => e.stepRest(dayId, refTarget, 1)) },
         "+",
       ),
     ),
@@ -839,7 +535,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
             cursor: "pointer",
             padding: 0,
           },
-          onClick: () => cb.onEdit(dayId, refTarget, "addSet"),
+          onClick: () => cb.onEdit((e) => e.addSet(dayId, refTarget)),
         },
         "+ Add set",
       ),
@@ -856,7 +552,7 @@ export function SetTable(_p: SetTableProps): JSX.Element {
             cursor: "pointer",
             padding: 0,
           },
-          onClick: () => cb.onEdit(dayId, refTarget, "addWarmup"),
+          onClick: () => cb.onEdit((e) => e.addWarmup(dayId, refTarget)),
         },
         "+ Warmup",
       ),
@@ -877,14 +573,13 @@ export function SetTable(_p: SetTableProps): JSX.Element {
         outline: "none",
       },
       onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-        cb.onNotes(dayId, refTarget, e.target.value),
+        cb.onEdit((editor) => editor.setNotes(dayId, refTarget, e.target.value)),
     }),
   );
 
   return React.createElement(
     "div",
     null,
-    // Set rows FIRST (so +/− buttons have expected DOM position for tests)
     React.createElement(
       "div",
       { style: { marginTop: 13 } },
@@ -895,7 +590,6 @@ export function SetTable(_p: SetTableProps): JSX.Element {
         ...setRows,
       ),
     ),
-    // Controls (REPS/LOAD segmented + REST stepper) AFTER set rows
     controlsRow,
     footer,
   );
@@ -939,11 +633,24 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
         },
         "PROGRAM",
       ),
-      React.createElement(
-        "div",
-        { style: { fontSize: 22, fontWeight: 800, letterSpacing: "-.02em" } },
-        name,
-      ),
+      React.createElement("input", {
+        value: name,
+        "aria-label": "Program name",
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+          cb.onEdit((editor) => editor.rename(e.target.value)),
+        style: {
+          fontSize: 22,
+          fontWeight: 800,
+          letterSpacing: "-.02em",
+          fontFamily: "inherit",
+          color: "var(--text)",
+          background: "transparent",
+          border: "none",
+          outline: "none",
+          padding: 0,
+          width: 280,
+        },
+      }),
     ),
     // Fixed|Cycled segmented
     React.createElement(
@@ -961,7 +668,7 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
       React.createElement(Segmented, {
         options: typeOptions,
         value: type,
-        onChange: (k) => cb.onSetType(k as "fixed" | "cycled"),
+        onChange: (k) => cb.onEdit((e) => e.setType(k as ProgramType)),
       }),
     ),
     // Weekdays|Floating segmented
@@ -980,7 +687,7 @@ export function ProgramHeader(_p: ProgramHeaderProps): JSX.Element {
       React.createElement(Segmented, {
         options: scheduleOptions,
         value: schedule,
-        onChange: (k) => cb.onSetSchedule(k as "weekday" | "floating"),
+        onChange: (k) => cb.onEdit((e) => e.setSchedule(k as Schedule)),
       }),
     ),
   );
@@ -1020,7 +727,7 @@ export function WeekBoard(_p: WeekBoardProps): JSX.Element {
             cursor: "pointer",
             fontFamily: "inherit",
           },
-          onClick: () => cb.onAddDay(null),
+          onClick: () => cb.onEdit((e) => e.addDay(null)),
         },
         React.createElement("span", { style: { fontSize: 24 } }, "+"),
         React.createElement("span", { style: { fontSize: 12, fontWeight: 600 } }, col.label),
@@ -1072,7 +779,7 @@ export function WeekBoard(_p: WeekBoardProps): JSX.Element {
               cursor: "pointer",
               padding: 8,
             },
-            onClick: () => cb.onAddDay(col.weekday!),
+            onClick: () => cb.onEdit((e) => e.addDay(col.weekday!)),
           },
           "+ Add day",
         ),
@@ -1187,15 +894,10 @@ export interface DayEditorProps {
 }
 
 // Weekday labels for the picker
-const WD_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 const WD_LABELS_LONG = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 export function DayEditor(_p: DayEditorProps): JSX.Element {
   const { editor, muscles, cb } = _p;
-
-  if (!editor.exists) {
-    return React.createElement("div", null);
-  }
 
   const { dayId, name, isFixed, isWeekday, weekday, dayOrderLabel, summary, rows } = editor;
 
@@ -1226,26 +928,34 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
                 cursor: "pointer",
                 padding: 0,
               },
-              onClick: () => cb.onSetWeekday(dayId, wd),
+              onClick: () => cb.onEdit((e) => e.setWeekday(dayId, wd)),
             },
             label,
           );
         }),
       )
     : React.createElement(
-        "span",
-        {
-          style: {
-            fontSize: 11,
-            fontFamily: "'JetBrains Mono',monospace",
-            color: "var(--text3)",
-            border: "1px solid var(--line)",
-            borderRadius: 7,
-            padding: "6px 10px",
-            letterSpacing: ".04em",
+        "div",
+        { style: { display: "flex", alignItems: "center", gap: 6 } },
+        React.createElement(
+          "span",
+          {
+            style: {
+              fontSize: 11,
+              fontFamily: "'JetBrains Mono',monospace",
+              color: "var(--text3)",
+              border: "1px solid var(--line)",
+              borderRadius: 7,
+              padding: "6px 10px",
+              letterSpacing: ".04em",
+            },
           },
-        },
-        `${dayOrderLabel} · floating`,
+          `${dayOrderLabel} · floating`,
+        ),
+        React.createElement(MoveButtons, {
+          horizontal: true,
+          onMove: (direction) => cb.onEdit((e) => e.moveDay(dayId, direction)),
+        }),
       );
 
   const renderExCard = (ex: ExerciseCardVM, inSuperset = false): JSX.Element =>
@@ -1304,6 +1014,9 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
           },
           ex.equip,
         ),
+        React.createElement(MoveButtons, {
+          onMove: (direction) => cb.onEdit((e) => e.moveExercise(dayId, ex.id, direction)),
+        }),
         React.createElement(
           "button",
           {
@@ -1317,7 +1030,7 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
               lineHeight: 1,
             },
             "aria-label": "remove exercise",
-            onClick: () => cb.onRemoveExercise(dayId, ex.id),
+            onClick: () => cb.onEdit((e) => e.removeExercise(dayId, ex.id)),
           },
           "×",
         ),
@@ -1348,7 +1061,7 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
                   padding: 0,
                 },
                 "aria-label": "toggle superset",
-                onClick: () => cb.onToggleSuperset(dayId, ex.id),
+                onClick: () => cb.onEdit((e) => e.toggleSuperset(dayId, ex.id)),
               },
               "⛓ Superset ↓",
             ),
@@ -1369,7 +1082,7 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
                   cursor: "pointer",
                 },
                 "aria-label": "toggle superset",
-                onClick: () => cb.onToggleSuperset(dayId, ex.id),
+                onClick: () => cb.onEdit((e) => e.toggleSuperset(dayId, ex.id)),
               },
               "Unlink",
             ),
@@ -1444,6 +1157,9 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
             `Targets ${slot.muscleName} · cycles its pool`,
           ),
         ),
+        React.createElement(MoveButtons, {
+          onMove: (direction) => cb.onEdit((e) => e.moveSlot(dayId, slot.id, direction)),
+        }),
         React.createElement(
           "button",
           {
@@ -1456,7 +1172,7 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
               lineHeight: 1,
             },
             "aria-label": "remove slot",
-            onClick: () => cb.onRemoveSlot(dayId, slot.id),
+            onClick: () => cb.onEdit((e) => e.removeSlot(dayId, slot.id)),
           },
           "×",
         ),
@@ -1510,7 +1226,7 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
                     padding: 0,
                   },
                   "aria-label": "remove from pool",
-                  onClick: () => cb.onRemoveFromPool(dayId, slot.id, pn.id),
+                  onClick: () => cb.onEdit((e) => e.removeFromPool(dayId, slot.id, pn.id)),
                 },
                 "×",
               ),
@@ -1618,7 +1334,7 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
                   fontFamily: "inherit",
                   fontWeight: 600,
                 },
-                onClick: () => cb.onAddSlot(dayId, m),
+                onClick: () => cb.onEdit((e) => e.addSlot(dayId, m)),
               },
               MUSCLE_NAMES[m],
             ),
@@ -1667,7 +1383,8 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
           outline: "none",
           borderBottom: "1px solid transparent",
         },
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) => cb.onRenameDay(dayId, e.target.value),
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+          cb.onEdit((editor) => editor.renameDay(dayId, e.target.value)),
       }),
       weekdayPicker,
       React.createElement("span", { style: { fontSize: 12, color: "var(--text3)" } }, summary),
@@ -1686,7 +1403,7 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
             cursor: "pointer",
             padding: "7px 11px",
           },
-          onClick: () => cb.onRemoveDay(dayId),
+          onClick: () => cb.onEdit((e) => e.removeDay(dayId)),
         },
         "Delete day",
       ),
@@ -1713,11 +1430,11 @@ export function DayEditor(_p: DayEditorProps): JSX.Element {
 
 export interface PlannerScreenProps {
   program: Program;
-  library: Library;
+  library: ExerciseLibrary;
   editDayId: string | null;
   /** per-muscle planned volume bars for the coverage rail. */
   volumeBars: { muscle: string; name: string; sets: number; pct: number }[];
-  coverage: import("@nabd/domain").Coverage;
+  coverage: Coverage;
   cb: PlannerCallbacks;
 }
 
@@ -1748,7 +1465,7 @@ export function PlannerScreen(_p: PlannerScreenProps): JSX.Element {
     // Week board
     React.createElement(WeekBoard, { columns, cb }),
     // Editor + coverage rail row (when editor exists)
-    editor.exists
+    editor !== null
       ? React.createElement(
           "div",
           {

@@ -2,7 +2,7 @@
 // wires store state/actions to these). Small pure helpers for greeting/clock.
 
 import React from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { Theme } from "@nabd/domain";
 import { LiveDot, Icon, Segmented, ThemeProvider } from "@nabd/design-system";
 
@@ -48,20 +48,6 @@ export function formatDate(now: Date): string {
   return `${day} · ${month} ${date}`;
 }
 
-/** "HH:MM" 24h clock. */
-export function formatClock(now: Date): string {
-  const h = String(now.getHours()).padStart(2, "0");
-  const m = String(now.getMinutes()).padStart(2, "0");
-  return `${h}:${m}`;
-}
-
-/** "M:SS" from seconds (for next/idle). */
-export function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = String(seconds % 60).padStart(2, "0");
-  return `${mins}:${secs}`;
-}
-
 export interface SidebarProps {
   screen: Screen;
   onNavigate: (s: Screen) => void;
@@ -69,7 +55,6 @@ export interface SidebarProps {
   setsTotal: number;
   /** 0-100 ring fill. */
   pct: number;
-  caption: string;
 }
 
 const NAV_ITEMS: Array<{ key: Screen; label: string; icon: "today" | "plan" | "progress" }> = [
@@ -79,9 +64,7 @@ const NAV_ITEMS: Array<{ key: Screen; label: string; icon: "today" | "plan" | "p
 ];
 
 export function Sidebar(p: SidebarProps): JSX.Element {
-  const { screen, onNavigate, setsDone, setsTotal, pct, caption } = p;
-  const navLabelSet = new Set(NAV_ITEMS.map((item) => item.label));
-  const donutCaption = navLabelSet.has(caption) ? undefined : caption;
+  const { screen, onNavigate, setsDone, setsTotal, pct } = p;
 
   const navButtons = NAV_ITEMS.map((item) => {
     const isActive = screen === item.key;
@@ -317,19 +300,6 @@ export function Sidebar(p: SidebarProps): JSX.Element {
         ),
       ),
     ),
-    donutCaption !== undefined &&
-      React.createElement(
-        "div",
-        {
-          style: {
-            fontSize: 12,
-            color: "var(--text2)",
-            textAlign: "center",
-            lineHeight: 1.4,
-          },
-        },
-        donutCaption,
-      ),
   );
 
   return React.createElement(
@@ -362,10 +332,12 @@ export interface TopBarProps {
   greeting: string;
   dateStr: string;
   clockStr: string;
-  nextStr: string;
-  idleStr: string;
-  idleActive: boolean;
-  notifActive: boolean;
+  /** Where nudging stands, e.g. "Next nudge at 11:40". */
+  nudgeLine: string;
+  /** A set is due right now. */
+  due: boolean;
+  paused: boolean;
+  onTogglePause: () => void;
   theme: Theme;
   onTheme: (t: Theme) => void;
   /** Whether the glass/translucency mode is currently on. */
@@ -373,6 +345,26 @@ export interface TopBarProps {
   /** Called when the Glass toggle button is clicked. */
   onToggleGlass: () => void;
   onOpenSettings: () => void;
+}
+
+/** A top-bar pill button that lights up while its mode is on. */
+function pillToggle(on: boolean): CSSProperties {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 7,
+    padding: "0 14px",
+    boxSizing: "border-box",
+    background: on ? "var(--accent)" : "var(--surface2)",
+    color: on ? "#fff" : "var(--text2)",
+    border: "1px solid var(--line)",
+    borderRadius: 10,
+    fontSize: 12.5,
+    fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
+    fontWeight: on ? 600 : 400,
+    cursor: "pointer",
+    transition: "background 0.14s ease, color 0.14s ease",
+  };
 }
 
 const THEME_OPTIONS = [
@@ -385,10 +377,10 @@ export function TopBar(p: TopBarProps): JSX.Element {
     greeting: greetingText,
     dateStr,
     clockStr,
-    nextStr,
-    idleStr,
-    idleActive,
-    notifActive,
+    nudgeLine,
+    due,
+    paused,
+    onTogglePause,
     theme,
     onTheme,
     glass,
@@ -468,28 +460,14 @@ export function TopBar(p: TopBarProps): JSX.Element {
       React.createElement(
         "span",
         { style: { display: "flex", alignItems: "center", gap: 7 } },
-        React.createElement(LiveDot, { active: notifActive }),
+        React.createElement(LiveDot, { active: due }),
         clockStr,
       ),
       separator,
-      // next timer
       React.createElement(
         "span",
-        { style: { color: "var(--text3)" } },
-        "next ",
-        React.createElement("span", { style: { color: "var(--text)", fontWeight: 600 } }, nextStr),
-      ),
-      separator,
-      // idle
-      React.createElement(
-        "span",
-        {
-          "data-idle-active": idleActive ? "true" : undefined,
-          style: {
-            color: idleActive ? "var(--accent)" : "var(--text3)",
-          },
-        },
-        `idle ${idleStr}`,
+        { style: { color: due ? "var(--accent)" : "var(--text3)" } },
+        nudgeLine,
       ),
     ),
     // Right: theme segmented + Glass button + settings
@@ -502,29 +480,23 @@ export function TopBar(p: TopBarProps): JSX.Element {
         value: theme,
         onChange: (k) => onTheme(k as Theme),
       }),
-      // Glass toggle button — pill, same height as Segmented (~34px via padding)
+      React.createElement(
+        "button",
+        {
+          onClick: onTogglePause,
+          title: paused ? "Resume nudges" : "Pause nudges",
+          "data-paused": paused ? "true" : "false",
+          style: pillToggle(paused),
+        },
+        paused ? "Resume" : "Pause",
+      ),
       React.createElement(
         "button",
         {
           onClick: onToggleGlass,
           title: "Translucent window",
           "data-glass-active": glass ? "true" : "false",
-          style: {
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 7,
-            padding: "0 14px",
-            boxSizing: "border-box",
-            background: glass ? "var(--accent)" : "var(--surface2)",
-            color: glass ? "#fff" : "var(--text2)",
-            border: "1px solid var(--line)",
-            borderRadius: 10,
-            fontSize: 12.5,
-            fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
-            fontWeight: glass ? 600 : 400,
-            cursor: "pointer",
-            transition: "background 0.14s ease, color 0.14s ease",
-          },
+          style: pillToggle(glass),
         },
         React.createElement(
           "svg",

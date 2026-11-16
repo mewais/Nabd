@@ -1,78 +1,90 @@
-// @nabd/nudge — pure idle+timer nudge engine.
+// @nabd/nudge — decides, from the wall clock, when the user should be told to move.
 
-import type { Slot } from "@nabd/domain";
+import type { Settings } from "@nabd/domain";
+import { addDays, atMinuteOfDay, formatClock, SNOOZE_MINUTES } from "@nabd/domain";
 
 export type NudgeReason = "timer" | "idle";
 
-export interface Notif {
-  slot: Slot;
-  reason: NudgeReason;
-  label: string;
-}
-
-export interface NudgeState {
-  secondsToNext: number;
+/** Everything the policy needs to know about the moment. */
+export interface NudgeContext {
+  now: Date;
+  /** When the last set was logged today, if any. */
+  lastSetAt: Date | null;
+  /** Nudges are silenced until this time (snooze / dismissal). */
+  snoozedUntil: Date | null;
+  /** Seconds since the last keyboard/mouse input. */
   idleSeconds: number;
-  idleNudge: number;
-  /** Whether a modal/notif is currently open (suppresses new notifs). */
-  busy: boolean;
-  notif: Notif | null;
+  /** The user paused nudges. */
+  paused: boolean;
+  /** There is at least one prescribed set left today. */
+  hasWork: boolean;
 }
 
-export interface TickInput {
-  state: NudgeState;
-  currentSlot: Slot | null;
-}
+export type NudgeStatus =
+  /** A set is due right now. */
+  | { state: "due"; reason: NudgeReason }
+  /** Counting down; the timer fires at `at` unless an idle moment comes first. */
+  | { state: "waiting"; at: Date; idleFrom: Date }
+  /** Outside the workday; counting resumes at `at`. */
+  | { state: "off_hours"; at: Date }
+  | { state: "paused" }
+  | { state: "nothing_left" };
+
+type NudgeSettings = Pick<Settings, "interval" | "minGap" | "idleNudge" | "workStart" | "workEnd">;
+
+const MS_PER_MINUTE = 60_000;
+const later = (a: Date, b: Date | null): Date => (b !== null && b > a ? b : a);
+const plusMinutes = (d: Date, minutes: number): Date =>
+  new Date(d.getTime() + minutes * MS_PER_MINUTE);
 
 /**
- * Advance one second: decrement secondsToNext (floored at 0), increment
- * idleSeconds. Raise a notif when secondsToNext hits 0 OR idleSeconds >=
- * idleNudge (timer wins ties), unless busy or a notif already exists or there is
- * no current slot.
+ * The nudge rules:
+ *  - never outside the workday, while paused, or with nothing left to do;
+ *  - the timer nudges `interval` minutes after the last set (or the workday start);
+ *  - an idle moment nudges earlier, but never sooner than `minGap` minutes after it;
+ *  - a snooze silences both until it expires.
  */
-export function tick({ state, currentSlot }: TickInput): NudgeState {
-  const secondsToNext = Math.max(0, state.secondsToNext - 1);
-  const idleSeconds = state.idleSeconds + 1;
+export class NudgePolicy {
+  constructor(private readonly settings: NudgeSettings) {}
 
-  let notif = state.notif;
+  evaluate(ctx: NudgeContext): NudgeStatus {
+    const { now } = ctx;
+    const { interval, minGap, idleNudge, workStart, workEnd } = this.settings;
+    if (!ctx.hasWork) return { state: "nothing_left" };
+    if (ctx.paused) return { state: "paused" };
 
-  if (!state.busy && notif === null && currentSlot !== null) {
-    if (secondsToNext === 0) {
-      notif = dueNotif("timer", currentSlot);
-    } else if (idleSeconds >= state.idleNudge) {
-      notif = dueNotif("idle", currentSlot);
-    }
+    const opens = atMinuteOfDay(now, workStart);
+    const closes = atMinuteOfDay(now, workEnd);
+    if (now < opens) return { state: "off_hours", at: opens };
+    if (now >= closes) return { state: "off_hours", at: atMinuteOfDay(addDays(now, 1), workStart) };
+
+    const since = later(opens, ctx.lastSetAt);
+    const timerAt = later(plusMinutes(since, interval), ctx.snoozedUntil);
+    const idleFrom = later(plusMinutes(since, Math.min(minGap, interval)), ctx.snoozedUntil);
+
+    if (now >= timerAt) return { state: "due", reason: "timer" };
+    if (now >= idleFrom && ctx.idleSeconds >= idleNudge) return { state: "due", reason: "idle" };
+    return { state: "waiting", at: timerAt, idleFrom };
   }
 
-  return {
-    secondsToNext,
-    idleSeconds,
-    idleNudge: state.idleNudge,
-    busy: state.busy,
-    notif,
-  };
+  /** When a snooze started at `now` expires. */
+  static snoozeUntil(now: Date): Date {
+    return plusMinutes(now, SNOOZE_MINUTES);
+  }
 }
 
-/** Build the due-notification for a reason + slot. */
-export function dueNotif(reason: NudgeReason, slot: Slot): Notif {
-  return {
-    slot,
-    reason,
-    label: reason === "idle" ? "You've gone quiet" : "Interval's up",
-  };
-}
-
-/** Reset the idle counter to 0. */
-export function resetIdle(state: NudgeState): NudgeState {
-  return { ...state, idleSeconds: 0 };
-}
-
-/** Snooze: clear notif, set timer to snooze length, reset idle. */
-export function snooze(state: NudgeState, snoozeSec: number): NudgeState {
-  return { ...state, notif: null, secondsToNext: snoozeSec, idleSeconds: 0 };
-}
-
-/** Reset the timer to the full interval (after a set is logged). */
-export function resetTimer(state: NudgeState, intervalMin: number): NudgeState {
-  return { ...state, secondsToNext: intervalMin * 60, idleSeconds: 0, notif: null };
+/** A one-line, human description of where nudging stands. */
+export function describeNudge(status: NudgeStatus): string {
+  switch (status.state) {
+    case "due":
+      return status.reason === "idle" ? "You've gone quiet" : "Interval's up";
+    case "waiting":
+      return `Next nudge at ${formatClock(status.at)}, sooner if you go idle`;
+    case "off_hours":
+      return `Quiet until ${formatClock(status.at)}`;
+    case "paused":
+      return "Nudges paused";
+    case "nothing_left":
+      return "Nothing left today";
+  }
 }

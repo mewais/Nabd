@@ -13,7 +13,6 @@
     "test:cov": "vitest run --coverage"
   },
   "dependencies": {
-    "@nabd/domain": "workspace:*",
-    "@nabd/dataset": "workspace:*"
+    "@nabd/domain": "workspace:*"
   }
 }

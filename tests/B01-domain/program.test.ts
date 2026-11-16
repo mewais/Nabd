@@ -71,7 +71,7 @@ describe("program.ts", () => {
     });
 
     it("missing type is rejected", () => {
-      const { type: _type, ...noType } = validSetSpec;
+      const { type: _omittedType, ...noType } = validSetSpec;
       const result = SetSpecSchema.safeParse(noType);
       expect(result.success).toBe(false);
     });
@@ -133,7 +133,7 @@ describe("program.ts", () => {
     });
 
     it("old group shape (MuscleGroup string) is rejected", () => {
-      const { muscle: _muscle, ...withoutMuscle } = validCycledSlot;
+      const { muscle: _omittedMuscle, ...withoutMuscle } = validCycledSlot;
       const result = CycledSlotSchema.safeParse({ ...withoutMuscle, group: "Chest" });
       expect(result.success).toBe(false);
     });

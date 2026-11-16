@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { ProgramSchema } from "./program";
 import { ExerciseSchema } from "./exercise";
-import { SettingsSchema, ThemeSchema } from "./settings";
-import { LoggedSetSchema, RotationStateSchema } from "./runtime";
+import { SettingsSchema } from "./settings";
+import { LoggedSetSchema, RotationStateSchema, DayStateSchema, DayLogSchema } from "./runtime";
 
 /** Current export/import envelope version. */
-export const APPDATA_VERSION = 1;
+export const APPDATA_VERSION = 2;
 
 /**
  * The export/import snapshot. Most fields are optional on import so partial or
@@ -18,8 +18,9 @@ export const AppDataSchema = z.object({
   program: ProgramSchema.optional(),
   customExercises: z.array(ExerciseSchema).optional(),
   settings: SettingsSchema.partial().optional(),
-  theme: ThemeSchema.optional(),
   history: z.array(LoggedSetSchema).optional(),
   rotationState: RotationStateSchema.optional(),
+  dayState: DayStateSchema.optional(),
+  dayLog: DayLogSchema.optional(),
 });
 export type AppData = z.infer<typeof AppDataSchema>;

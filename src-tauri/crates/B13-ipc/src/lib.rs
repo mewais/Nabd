@@ -1,9 +1,7 @@
-//! B13 · nabd-ipc — IPC command-core (no Tauri deps).
+//! B13 · nabd-ipc — the IPC command core (no Tauri dependency).
 //!
-//! Pure command handlers that take a `&Connection` and JSON in/out, delegating
-//! to nabd-persistence. The thin `#[tauri::command]` wrappers that call these
-//! live in the Tauri binary (B23). Keeping the core Tauri-free makes it 100%
-//! unit testable against an in-memory database.
+//! Each handler takes a `&Connection` and JSON in/out and delegates to
+//! nabd-persistence. The `#[tauri::command]` wrappers live in the binary.
 
 use nabd_persistence as db;
 use rusqlite::Connection;
@@ -12,86 +10,87 @@ use serde_json::{json, Map, Value};
 pub mod error;
 pub use error::{IpcError, IpcResult};
 
-/// Ensure the schema exists (called once on boot before other commands).
+/// Version stamped on exported documents (the TypeScript `APPDATA_VERSION`).
+const EXPORT_VERSION: i64 = 2;
+
+/// Ensure the schema exists and is current (called once on boot).
 pub fn init(c: &Connection) -> IpcResult<()> {
-    db::init_schema(c).unwrap();
-    Ok(())
+    Ok(db::init_schema(c)?)
 }
 
-/// Read the KV singletons and history from DB into a JSON object map.
-fn read_snapshot(c: &Connection) -> Map<String, Value> {
+/// Every singleton (stored JSON value, or null) plus the `history` array.
+fn snapshot(c: &Connection) -> IpcResult<Map<String, Value>> {
     let mut obj = Map::new();
     for key in db::KV_KEYS {
-        let raw = db::get_kv(c, key).unwrap();
-        let val: Value = match raw {
-            Some(s) => serde_json::from_str(&s).unwrap(),
+        let value = match db::get_kv(c, key)? {
+            Some(json) => serde_json::from_str(&json)?,
             None => Value::Null,
         };
-        obj.insert(key.to_string(), val);
+        obj.insert(key.to_string(), value);
     }
-    let rows = db::all_history(c).unwrap();
-    let mut history = Vec::with_capacity(rows.len());
-    for r in &rows {
-        history.push(serde_json::to_value(r).unwrap());
-    }
-    obj.insert("history".to_string(), Value::Array(history));
-    obj
+    obj.insert(
+        "history".to_string(),
+        serde_json::to_value(db::all_history(c)?)?,
+    );
+    Ok(obj)
 }
 
-/// Boot snapshot: a JSON object string with keys program, settings, theme,
-/// customExercises, rotationState, dayState (each the stored JSON value or
-/// null) and `history` (array of logged sets). The frontend hydrates from this.
+/// The boot snapshot the frontend hydrates from, as a JSON object string.
 pub fn load_all(c: &Connection) -> IpcResult<String> {
-    let obj = read_snapshot(c);
-    Ok(serde_json::to_string(&Value::Object(obj)).unwrap())
+    Ok(Value::Object(snapshot(c)?).to_string())
 }
 
-/// Persist one singleton JSON blob. `key` must be one of db::KV_KEYS, else
-/// `IpcError::BadKey`. `value` must be valid JSON, else `IpcError::BadJson`.
+/// Persist one singleton JSON blob. `key` must be one of `db::KV_KEYS`.
 pub fn save_singleton(c: &Connection, key: &str, value: &str) -> IpcResult<()> {
     if !db::KV_KEYS.contains(&key) {
         return Err(IpcError::BadKey(key.to_string()));
     }
-    // Validate that value is valid JSON.
-    let _: Value = serde_json::from_str(value)?;
-    db::set_kv(c, key, value).unwrap();
-    Ok(())
+    serde_json::from_str::<Value>(value)?;
+    Ok(db::set_kv(c, key, value)?)
 }
 
-/// Append one logged set (row_json is a LoggedSetRow). Invalid JSON → BadJson.
+/// Append one logged set (`row_json` is a `LoggedSetRow`).
 pub fn append_set(c: &Connection, row_json: &str) -> IpcResult<()> {
     let row: db::LoggedSetRow = serde_json::from_str(row_json)?;
-    db::append_history(c, &row).unwrap();
-    Ok(())
+    Ok(db::append_history(c, &row)?)
 }
 
-/// Build the export document (AppData-shaped JSON string) from the DB.
+/// Delete one logged set by id.
+pub fn delete_set(c: &Connection, id: &str) -> IpcResult<()> {
+    Ok(db::delete_history(c, id)?)
+}
+
+/// The export document: the snapshot without nulls, stamped with app + version.
 pub fn export_data(c: &Connection) -> IpcResult<String> {
-    let mut obj = read_snapshot(c);
+    let mut obj = snapshot(c)?;
+    obj.retain(|_, value| !value.is_null());
     obj.insert("app".to_string(), json!("Nabd"));
-    obj.insert("version".to_string(), json!(1));
-    Ok(serde_json::to_string(&Value::Object(obj)).unwrap())
+    obj.insert("version".to_string(), json!(EXPORT_VERSION));
+    Ok(serde_json::to_string_pretty(&Value::Object(obj))?)
 }
 
-/// Apply an imported AppData JSON: upsert each present singleton and replace
-/// history. Invalid JSON or wrong shape → BadJson. Partial documents allowed.
+/// Apply an (already validated) export document: every singleton present is
+/// replaced, and so is the history when present. All or nothing.
 pub fn import_data(c: &Connection, json: &str) -> IpcResult<()> {
-    // Parse directly as an object map — non-object JSON yields BadJson via From.
-    let obj: Map<String, Value> = serde_json::from_str(json)?;
-
-    for key in db::KV_KEYS {
-        if let Some(val) = obj.get(key) {
-            db::set_kv(c, key, &serde_json::to_string(val).unwrap()).unwrap();
-        }
-    }
-
-    if let Some(history_val) = obj.get("history") {
-        let rows: Vec<db::LoggedSetRow> = serde_json::from_value(history_val.clone())?;
-        db::replace_history(c, &rows).unwrap();
-    }
-
-    Ok(())
+    let doc: Map<String, Value> = serde_json::from_str(json)?;
+    let singletons: Vec<(&str, String)> = db::KV_KEYS
+        .iter()
+        .filter_map(|key| doc.get(*key).map(|value| (*key, value.to_string())))
+        .collect();
+    let history: Option<Vec<db::LoggedSetRow>> = match doc.get("history") {
+        Some(rows) => Some(serde_json::from_value(rows.clone())?),
+        None => None,
+    };
+    Ok(db::replace_all(c, &singletons, history.as_deref())?)
 }
 
-// Re-export the row type so the binary and tests share it.
+/// Whether the stored settings ask for the window to stay hidden at launch.
+pub fn starts_minimized(c: &Connection) -> IpcResult<bool> {
+    let settings: Value = match db::get_kv(c, "settings")? {
+        Some(json) => serde_json::from_str(&json)?,
+        None => Value::Null,
+    };
+    Ok(settings["minimizedByDefault"].as_bool().unwrap_or(false))
+}
+
 pub use db::LoggedSetRow;

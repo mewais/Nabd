@@ -101,22 +101,6 @@ export const GROUP_PRIMARY_MUSCLE: Record<MuscleGroup, MuscleKey> = {
   Abs: "abs",
 };
 
-/** All fine muscles a group encompasses (informational; primary listed first). */
-export const GROUP_MUSCLES: Record<MuscleGroup, MuscleKey[]> = {
-  Chest: ["chest"],
-  Back: ["lats", "rhomboids", "lower_traps", "lower_back"],
-  Traps: ["upper_traps", "lower_traps", "rhomboids"],
-  Shoulders: ["side_delts", "front_delts", "rear_delts"],
-  Triceps: ["triceps"],
-  Biceps: ["biceps"],
-  Forearms: ["forearms"],
-  Quads: ["quads", "hip_flexors"],
-  Hamstrings: ["hamstrings"],
-  Glutes: ["glutes", "abductors", "adductors"],
-  Calves: ["calves", "tibialis"],
-  Abs: ["abs", "obliques"],
-};
-
 /**
  * Canonical browse-category group for each fine muscle. Used to derive an
  * exercise's `group` (library category) from its primary muscle, so the create

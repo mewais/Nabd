@@ -1,122 +1,98 @@
-// @nabd/ipc-client — typed wrappers over the Tauri IPC commands (B13 + B23
-// native commands). A pluggable transport (the `invoke` function) is injected so
-// tests can run without a Tauri runtime.
+// @nabd/ipc-client — the typed boundary to the native backend. The transport
+// (`invoke`) is injected so the client runs without a Tauri runtime in tests.
 
 import type {
-  Program,
-  Settings,
-  Theme,
+  AppData,
+  DayRecord,
+  DayState,
   Exercise,
   LoggedSet,
+  Program,
   RotationState,
-  DayState,
+  Settings,
 } from "@nabd/domain";
+import type { NudgeReason } from "@nabd/nudge";
 
-/** The Tauri invoke signature (cmd name + args → result). Injectable for tests. */
+/** The Tauri invoke signature (command name + args → result). */
 export type Invoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 
-/** Boot snapshot returned by `load_all` (singletons parsed; history array). */
-export interface BootSnapshot {
-  program: Program | null;
-  settings: Settings | null;
-  theme: Theme | null;
-  customExercises: Exercise[] | null;
-  rotationState: RotationState | null;
-  dayState: DayState | null;
-  history: LoggedSet[];
+/** The singleton blobs the backend stores, by key. */
+export interface Singletons {
+  program: Program;
+  settings: Settings;
+  customExercises: Exercise[];
+  rotationState: RotationState;
+  dayState: DayState;
+  dayLog: DayRecord[];
 }
 
-/** The client surface the store uses. */
+/** What the backend holds at boot: each singleton (null if never saved) + history. */
+export type BootSnapshot = { [K in keyof Singletons]: unknown } & { history: unknown[] };
+
+/** What the tray menu shows. */
+export interface TrayState {
+  nextExercise: string | null;
+  done: number;
+  total: number;
+  paused: boolean;
+}
+
+/** Tray menu actions the backend forwards to the frontend. */
+export type TrayAction = "start" | "pause";
+
 export interface IpcClient {
-  init(): Promise<void>;
   loadAll(): Promise<BootSnapshot>;
-  saveSingleton(key: string, value: unknown): Promise<void>;
-  appendSet(row: LoggedSet): Promise<void>;
+  save<K extends keyof Singletons>(key: K, value: Singletons[K]): Promise<void>;
+  appendSet(set: LoggedSet): Promise<void>;
+  deleteSet(id: string): Promise<void>;
+  /** Write the export file; resolves to where it was saved. */
   exportData(): Promise<string>;
-  importData(json: string): Promise<void>;
-  // native (no-ops/handled in the binary; thin invoke wrappers here)
-  notify(reason: "timer" | "idle", exercise: string): Promise<void>;
+  importData(data: AppData): Promise<void>;
+  notify(reason: NudgeReason, exercise: string): Promise<void>;
   setVibrancy(opacity: number): Promise<void>;
+  setAutostart(enabled: boolean): Promise<void>;
+  updateTray(state: TrayState): Promise<void>;
+  /** Seconds since the last OS-wide keyboard/mouse input. */
   getIdleSeconds(): Promise<number>;
+  /** Subscribe to tray menu actions; resolves to an unsubscribe function. */
+  onTrayAction(handler: (action: TrayAction) => void): Promise<() => void>;
 }
 
-/** Build a client over an injected invoke transport (used in tests + app). */
-export function createIpcClient(invoke: Invoke): IpcClient {
+/** Subscribes to a backend event; resolves to an unsubscribe function. */
+export type Listen = <T>(event: string, handler: (payload: T) => void) => Promise<() => void>;
+
+/** Build a client over the given transport. */
+export function createIpcClient(invoke: Invoke, listen: Listen): IpcClient {
   return {
-    init(): Promise<void> {
-      return invoke("init");
+    async loadAll() {
+      return JSON.parse(await invoke<string>("load_all")) as BootSnapshot;
     },
-
-    async loadAll(): Promise<BootSnapshot> {
-      const raw = await invoke<string>("load_all");
-      const {
-        program = null,
-        settings = null,
-        theme = null,
-        customExercises = null,
-        rotationState = null,
-        dayState = null,
-        history = [],
-      } = JSON.parse(raw) as {
-        program?: Program | null;
-        settings?: Settings | null;
-        theme?: Theme | null;
-        customExercises?: Exercise[] | null;
-        rotationState?: RotationState | null;
-        dayState?: DayState | null;
-        history?: LoggedSet[];
-      };
-      return { program, settings, theme, customExercises, rotationState, dayState, history };
-    },
-
-    saveSingleton(key: string, value: unknown): Promise<void> {
-      return invoke("save_singleton", { key, value: JSON.stringify(value) });
-    },
-
-    appendSet(row: LoggedSet): Promise<void> {
-      return invoke("append_set", { rowJson: JSON.stringify(row) });
-    },
-
-    exportData(): Promise<string> {
-      return invoke("export_data");
-    },
-
-    importData(json: string): Promise<void> {
-      return invoke("import_data", { json });
-    },
-
-    notify(reason: "timer" | "idle", exercise: string): Promise<void> {
-      return invoke("notify", { reason, exercise });
-    },
-
-    setVibrancy(opacity: number): Promise<void> {
-      return invoke("set_vibrancy", { opacity });
-    },
-
-    getIdleSeconds(): Promise<number> {
-      return invoke("get_idle_seconds");
-    },
+    save: (key, value) => invoke("save_singleton", { key, value: JSON.stringify(value) }),
+    appendSet: (set) => invoke("append_set", { rowJson: JSON.stringify(set) }),
+    deleteSet: (id) => invoke("delete_set", { id }),
+    exportData: () => invoke("export_data"),
+    importData: (data) => invoke("import_data", { json: JSON.stringify(data) }),
+    notify: (reason, exercise) => invoke("notify", { reason, exercise }),
+    setVibrancy: (opacity) => invoke("set_vibrancy", { opacity }),
+    setAutostart: (enabled) => invoke("set_autostart", { enabled }),
+    updateTray: (state) => invoke("update_tray", { state }),
+    getIdleSeconds: () => invoke("get_idle_seconds"),
+    onTrayAction: (handler) => listen<TrayAction>("tray-action", handler),
   };
 }
 
-/** Whether a Tauri runtime is present (window.__TAURI_INTERNALS__). */
+/** Whether a Tauri runtime is present. */
 export function isTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
-/**
- * The real transport: dynamically uses @tauri-apps/api `invoke` when running in
- * Tauri, else a no-op/throwing fallback for plain-web/test contexts.
- */
-export function tauriInvoke(): Invoke {
-  if (isTauri()) {
-    return <T>(cmd: string, args?: Record<string, unknown>): Promise<T> => import("@tauri-apps/api/core").then(({ invoke }) => invoke<T>(cmd, args));
-  }
-  return <T>(_cmd: string, _args?: Record<string, unknown>): Promise<T> =>
-    Promise.reject(new Error("tauri unavailable"));
-}
-
-/** Default client bound to the real Tauri transport. */
-export function defaultClient(): IpcClient {
-  return createIpcClient(tauriInvoke());
+/** The client bound to the real Tauri runtime. */
+export function tauriClient(): IpcClient {
+  const invoke: Invoke = (cmd, args) =>
+    import("@tauri-apps/api/core").then((api) => api.invoke(cmd, args));
+  const listen: Listen = (event, handler) =>
+    import("@tauri-apps/api/event").then((api) =>
+      api.listen(event, (e) => handler(e.payload as never)),
+    );
+  return createIpcClient(invoke, listen);
 }

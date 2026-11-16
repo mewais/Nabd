@@ -1,21 +1,17 @@
-/** @jsxImportSource react */
 /**
  * Tests for @nabd/bodymap — regionMuscles, regionStyle, BodyMap, MuscleBar.
  * Uses the new react-native-body-highlighter asset (slug-based, path arrays).
  * Covers every export and branch → 100% coverage of src/index.ts.
  */
 
+// React must be in scope: the tests are compiled with the classic JSX transform.
+import React from "react";
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { FRONT_MUSCLES, BACK_MUSCLES, VIEWBOX } from "../../assets/body/index";
 import { MUSCLE_NAMES } from "@nabd/domain";
 import type { Coverage, MuscleKey } from "@nabd/domain";
-import {
-  regionMuscles,
-  regionStyle,
-  BodyMap,
-  MuscleBar,
-} from "@nabd/bodymap";
+import { regionMuscles, regionStyle, BodyMap, MuscleBar } from "@nabd/bodymap";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -25,21 +21,43 @@ import {
 function totalPathCount(parts: typeof FRONT_MUSCLES): number {
   let n = 0;
   for (const p of parts) {
-    n += (p.path.left?.length ?? 0);
-    n += (p.path.right?.length ?? 0);
-    n += (p.path.center?.length ?? 0);
-    n += (p.path.common?.length ?? 0);
+    n += p.path.left?.length ?? 0;
+    n += p.path.right?.length ?? 0;
+    n += p.path.center?.length ?? 0;
+    n += p.path.common?.length ?? 0;
   }
   return n;
 }
 
 /** Build a Coverage where every muscle is set to `defaultVal`. */
-function makeCoverage(overrides: Partial<Record<MuscleKey, number>> = {}, defaultVal = 0): Coverage {
+function makeCoverage(
+  overrides: Partial<Record<MuscleKey, number>> = {},
+  defaultVal = 0,
+): Coverage {
   const muscles: MuscleKey[] = [
-    "front_delts", "side_delts", "rear_delts", "neck", "upper_traps",
-    "rhomboids", "lower_traps", "lats", "lower_back", "chest", "abs",
-    "obliques", "quads", "hamstrings", "glutes", "abductors", "adductors",
-    "calves", "tibialis", "hip_flexors", "biceps", "triceps", "forearms",
+    "front_delts",
+    "side_delts",
+    "rear_delts",
+    "neck",
+    "upper_traps",
+    "rhomboids",
+    "lower_traps",
+    "lats",
+    "lower_back",
+    "chest",
+    "abs",
+    "obliques",
+    "quads",
+    "hamstrings",
+    "glutes",
+    "abductors",
+    "adductors",
+    "calves",
+    "tibialis",
+    "hip_flexors",
+    "biceps",
+    "triceps",
+    "forearms",
   ];
   const cov: Partial<Record<MuscleKey, number>> = {};
   for (const m of muscles) cov[m] = defaultVal;
@@ -405,7 +423,7 @@ describe("BodyMap", () => {
     const paths = Array.from(container.querySelectorAll("path"));
     const targetPath = paths.find((p) => p.getAttribute("d") === firstChestPath);
     expect(targetPath).not.toBeUndefined();
-    expect((targetPath as HTMLElement).style.fill).toBe("var(--accent)");
+    expect(targetPath!.style.fill).toBe("var(--accent)");
   });
 
   it("front view: head paths (unmapped) have neutral fill even at full coverage", () => {
@@ -429,7 +447,7 @@ describe("BodyMap", () => {
     const paths = Array.from(container.querySelectorAll("path"));
     const targetPath = paths.find((p) => p.getAttribute("d") === firstGlutealPath);
     expect(targetPath).not.toBeUndefined();
-    expect((targetPath as HTMLElement).style.fill).toBe("var(--accent)");
+    expect(targetPath!.style.fill).toBe("var(--accent)");
   });
 
   it("outline style: a muscle slug path carries accent stroke", () => {
@@ -441,7 +459,7 @@ describe("BodyMap", () => {
     const paths = Array.from(container.querySelectorAll("path"));
     const targetPath = paths.find((p) => p.getAttribute("d") === firstBicepsPath);
     expect(targetPath).not.toBeUndefined();
-    expect((targetPath as HTMLElement).style.stroke).toBe("var(--accent)");
+    expect(targetPath!.style.stroke).toBe("var(--accent)");
   });
 
   it("default style is heat (no style prop)", () => {
@@ -452,7 +470,7 @@ describe("BodyMap", () => {
     const paths = Array.from(container.querySelectorAll("path"));
     const targetPath = paths.find((p) => p.getAttribute("d") === firstChestPath);
     expect(targetPath).not.toBeUndefined();
-    expect((targetPath as HTMLElement).style.fill).toBe("var(--accent)");
+    expect(targetPath!.style.fill).toBe("var(--accent)");
   });
 
   it("renders a <title> element for a tracked muscle region with muscle name and avg %", () => {
@@ -460,9 +478,7 @@ describe("BodyMap", () => {
     const cov = makeCoverage({ chest: 75 });
     const { container } = render(<BodyMap side="front" coverage={cov} style="heat" />);
     const titles = Array.from(container.querySelectorAll("title"));
-    const chestTitle = titles.find(
-      (t) => t.textContent === `${MUSCLE_NAMES["chest"]} · 75%`
-    );
+    const chestTitle = titles.find((t) => t.textContent === `${MUSCLE_NAMES["chest"]} · 75%`);
     expect(chestTitle).not.toBeUndefined();
   });
 
@@ -472,9 +488,7 @@ describe("BodyMap", () => {
     const { container } = render(<BodyMap side="front" coverage={cov} style="heat" />);
     const titles = Array.from(container.querySelectorAll("title"));
     // Title should contain all 3 muscle names and 50%
-    const deltaTitle = titles.find(
-      (t) => t.textContent !== null && t.textContent.includes("50%")
-    );
+    const deltaTitle = titles.find((t) => t.textContent !== null && t.textContent.includes("50%"));
     expect(deltaTitle).not.toBeUndefined();
     expect(deltaTitle!.textContent).toContain("Front Delts");
     expect(deltaTitle!.textContent).toContain("Side Delts");
@@ -542,27 +556,21 @@ describe("MuscleBar", () => {
   it("bar width style reflects pct (50% → width 50%)", () => {
     const { container } = render(<MuscleBar muscle="front_delts" pct={50} />);
     const bars = container.querySelectorAll("[style]");
-    const barEl = Array.from(bars).find(
-      (el) => (el as HTMLElement).style.width === "50%"
-    );
+    const barEl = Array.from(bars).find((el) => (el as HTMLElement).style.width === "50%");
     expect(barEl).not.toBeUndefined();
   });
 
   it("bar width style reflects pct (20% → width 20%)", () => {
     const { container } = render(<MuscleBar muscle="biceps" pct={20} />);
     const bars = container.querySelectorAll("[style]");
-    const barEl = Array.from(bars).find(
-      (el) => (el as HTMLElement).style.width === "20%"
-    );
+    const barEl = Array.from(bars).find((el) => (el as HTMLElement).style.width === "20%");
     expect(barEl).not.toBeUndefined();
   });
 
   it("bar width style reflects pct (70% → width 70%)", () => {
     const { container } = render(<MuscleBar muscle="hamstrings" pct={70} />);
     const bars = container.querySelectorAll("[style]");
-    const barEl = Array.from(bars).find(
-      (el) => (el as HTMLElement).style.width === "70%"
-    );
+    const barEl = Array.from(bars).find((el) => (el as HTMLElement).style.width === "70%");
     expect(barEl).not.toBeUndefined();
   });
 

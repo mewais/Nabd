@@ -1,289 +1,28 @@
-// @nabd/progress — Progress screen: KPI strip, consistency (calendar|weekly),
-// completion, time-of-day, trigger mix, sets-per-muscle heatmap, progression rows.
-// Pure view-model builders (over @nabd/analytics + @nabd/progression) + React.
+// @nabd/progress — the Progress screen: KPIs, consistency, completion, when and
+// why sets get logged, muscle heatmap, and per-exercise progression.
 
 import React from "react";
-import type { Coverage, LoggedSet } from "@nabd/domain";
-import { displayWeight } from "@nabd/domain";
-import {
-  streak,
-  completionThisWeek,
-  setsThisWeek,
-  activeDays30,
-  calendarHeatmap,
-  weeklyBars,
-  completionLast7,
-  timeOfDay,
-  triggerMix,
-} from "@nabd/analytics";
-import { fullHistorySeries, trendPoints, personalBest, gain, formatGain } from "@nabd/progression";
+import type { Coverage } from "@nabd/domain";
 import { Segmented } from "@nabd/design-system";
 import { BodyMap } from "@nabd/bodymap";
+import type {
+  BarVM,
+  CalendarCellVM,
+  Kpi,
+  ProgressionRowVM,
+  ProgressVM,
+  TriggerSeg,
+} from "./view-model";
 
-// ---------- helpers ----------
-
-/**
- * Format a number cleanly: at most 1 decimal place, dropping trailing ".0".
- * Examples: fmt(88) → "88", fmt(85.3) → "85.3", fmt(86.666…) → "86.7".
- */
-function fmt(n: number): string {
-  const s = n.toFixed(1);
-  return s.endsWith(".0") ? s.slice(0, -2) : s;
-}
-
-// ---------- view-model builders (pure) ----------
-
-export interface Kpi {
-  label: string;
-  value: string;
-  unit: string;
-}
-export function buildKpis(history: LoggedSet[], plannedPerWeek: number, now: Date): Kpi[] {
-  return [
-    {
-      label: "Current streak",
-      value: String(streak(history, now)),
-      unit: "days",
-    },
-    {
-      label: "Completion this wk",
-      value: String(completionThisWeek(history, plannedPerWeek, now)),
-      unit: "%",
-    },
-    {
-      label: "Sets this week",
-      value: String(setsThisWeek(history, now)),
-      unit: "sets",
-    },
-    {
-      label: "Active days 30d",
-      value: String(activeDays30(history, now)),
-      unit: "days",
-    },
-  ];
-}
-
-export interface CalendarCellVM {
-  day: number;
-  level: number; // -1 future, 0..3
-}
-export function buildCalendar(
-  history: LoggedSet[],
-  now: Date,
-): {
-  month: string;
-  cells: CalendarCellVM[];
-} {
-  const MONTHS = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-  const month = `${MONTHS[now.getUTCMonth()]} ${now.getUTCFullYear()}`;
-  const cells = calendarHeatmap(history, now);
-  return { month, cells };
-}
-
-export interface BarVM {
-  label: string;
-  value: number;
-  heightPct: number; // 0-100 relative to max
-  current?: boolean;
-}
-const MONTH_ABBR = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-export function buildWeekly(history: LoggedSet[], now: Date): BarVM[] {
-  const raw = weeklyBars(history, now);
-  const max = Math.max(...raw);
-
-  // Compute the Monday of the current week (UTC)
-  const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-  const daysToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  const currentMonday = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysToMon),
-  );
-
-  return raw.map((v, i) => {
-    let label: string;
-    if (i === raw.length - 1) {
-      label = "This wk";
-    } else {
-      const weekOffset = i - (raw.length - 1); // e.g. -7, -6, ..., -1
-      const weekStart = new Date(
-        Date.UTC(
-          currentMonday.getUTCFullYear(),
-          currentMonday.getUTCMonth(),
-          currentMonday.getUTCDate() + weekOffset * 7,
-        ),
-      );
-      label = `${MONTH_ABBR[weekStart.getUTCMonth()]} ${weekStart.getUTCDate()}`;
-    }
-    return {
-      label,
-      value: v,
-      heightPct: max === 0 ? 0 : Math.round((v / max) * 100),
-      current: i === raw.length - 1 ? true : undefined,
-    };
-  });
-}
-
-export function buildCompletion(
-  history: LoggedSet[],
-  plannedPerDay: number,
-  now: Date,
-): {
-  weekPct: string;
-  days: BarVM[];
-} {
-  // Day labels: single-letter day-of-week abbreviation
-  const DOW_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
-
-  // completionLast7 returns percentages for last 7 days (oldest first)
-  const pcts = completionLast7(history, plannedPerDay, now);
-
-  // weekPct: rounded mean of the 7 daily completion percentages.
-  const weekPct = `${Math.round(pcts.reduce((sum, v) => sum + v, 0) / pcts.length)}%`;
-
-  // Build date labels for last 7 days, oldest first (index 0 = 6 days ago)
-  const todayMidnight = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
-  const days: BarVM[] = pcts.map((value, i) => {
-    const dayOffset = i - 6;
-    const d = new Date(
-      Date.UTC(
-        todayMidnight.getUTCFullYear(),
-        todayMidnight.getUTCMonth(),
-        todayMidnight.getUTCDate() + dayOffset,
-      ),
-    );
-    const label = DOW_LABELS[d.getUTCDay()] as string;
-    return {
-      label,
-      value,
-      heightPct: value,
-      current: i === 6 ? true : undefined,
-    };
-  });
-
-  return { weekPct, days };
-}
-
-/** Format an hour number as a label like "9a", "12p", "6p". */
-function hourLabel(hour: number): string {
-  if (hour === 0) return "12a";
-  if (hour < 12) return `${hour}a`;
-  if (hour === 12) return "12p";
-  return `${hour - 12}p`;
-}
-
-export function buildTimeOfDay(history: LoggedSet[]): { bars: BarVM[]; peakLabel: string } {
-  const { buckets, peak } = timeOfDay(history);
-  const max = Math.max(...buckets.map((b) => b.count));
-
-  const bars: BarVM[] = buckets.map((b) => ({
-    label: hourLabel(b.hour),
-    value: b.count,
-    heightPct: max === 0 ? 0 : Math.round((b.count / max) * 100),
-  }));
-
-  const peakLabel = hourLabel(peak);
-  return { bars, peakLabel };
-}
-
-export interface TriggerSeg {
-  label: string;
-  pct: number;
-  color: string; // css var
-}
-export function buildTriggerMix(history: LoggedSet[]): TriggerSeg[] {
-  const mix = triggerMix(history);
-  return [
-    { label: "Idle detected", pct: mix.idle, color: "var(--accent)" },
-    { label: "Timer", pct: mix.timer, color: "var(--accent2)" },
-    { label: "Manual", pct: mix.manual, color: "var(--accent3)" },
-  ];
-}
-
-export interface ProgressionRowVM {
-  index: number;
-  exercise: string;
-  points: string; // sparkline polyline
-  pr: string;
-  gainStr: string;
-  up: boolean;
-}
-/** One row per exercise that has history (best-set series). */
-export function buildProgression(
-  history: LoggedSet[],
-  exNames: Record<string, string>,
-  weightUnit: string = "kg",
-): ProgressionRowVM[] {
-  // Collect unique exIds in order of first appearance
-  const seen = new Map<string, boolean>();
-  const exIds: string[] = [];
-  for (const s of history) {
-    if (!seen.has(s.exId)) {
-      seen.set(s.exId, true);
-      exIds.push(s.exId);
-    }
-  }
-
-  const rows: ProgressionRowVM[] = [];
-  for (let i = 0; i < exIds.length; i++) {
-    const exId = exIds[i] as string;
-
-    // Determine unit: configured weight unit if any logged set has weight, else reps
-    const hasWeight = history.some((s) => s.exId === exId && s.weight !== null);
-    const unit = hasWeight ? weightUnit : "reps";
-
-    // Series values are stored in kg; convert to the display unit for weighted
-    // exercises so the numbers match the label (reps-based series stay as-is).
-    const rawSeries = fullHistorySeries(history, exId);
-    const series =
-      hasWeight && weightUnit === "lb" ? rawSeries.map((v) => displayWeight(v, "lb")) : rawSeries;
-
-    const pb = personalBest(series);
-    const g = gain(series);
-    const gainStr = formatGain(g, unit);
-
-    const pr = `${fmt(pb)} ${unit}`;
-    const points = trendPoints(series, 120, 34, 5);
-
-    rows.push({
-      index: i,
-      exercise: exNames[exId] ?? exId,
-      points,
-      pr,
-      gainStr,
-      up: g >= 0,
-    });
-  }
-
-  return rows;
-}
+export { buildProgressVM } from "./view-model";
+export type {
+  ProgressVM,
+  Kpi,
+  CalendarCellVM,
+  BarVM,
+  TriggerSeg,
+  ProgressionRowVM,
+} from "./view-model";
 
 // ---------- components ----------
 
@@ -306,48 +45,23 @@ function cellColor(level: number): string {
 // Weekday header labels S M T W T F S
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
-/**
- * KpiStrip: renders 4 KPI tiles in a responsive 4-column grid.
- *
- * When two KPIs share the same value string, only the first occurrence is
- * rendered as a text node for that value (to keep `getByText` queries unique).
- * Subsequent duplicate values are stored in a data attribute instead.
- */
+/** The four headline numbers across the top of the screen. */
 export function KpiStrip(p: { kpis: Kpi[] }): JSX.Element {
-  const seenValues = new Set<string>();
-
   const tiles = p.kpis.map((kpi, i) => {
-    const isFirstOccurrence = !seenValues.has(kpi.value);
-    seenValues.add(kpi.value);
-
-    // Render value as text only for the first occurrence of that value string.
-    const valueEl = isFirstOccurrence
-      ? React.createElement(
-          "span",
-          {
-            key: "v",
-            className: "kpi-value",
-            style: {
-              fontFamily: "'JetBrains Mono',monospace",
-              fontSize: 30,
-              fontWeight: 600,
-              letterSpacing: "-0.02em",
-            },
-          },
-          kpi.value,
-        )
-      : React.createElement("span", {
-          key: "v",
-          className: "kpi-value",
-          "data-value": kpi.value,
-          style: {
-            fontFamily: "'JetBrains Mono',monospace",
-            fontSize: 30,
-            fontWeight: 600,
-            letterSpacing: "-0.02em",
-          },
-        });
-
+    const valueEl = React.createElement(
+      "span",
+      {
+        key: "v",
+        className: "kpi-value",
+        style: {
+          fontFamily: "'JetBrains Mono',monospace",
+          fontSize: 30,
+          fontWeight: 600,
+          letterSpacing: "-0.02em",
+        },
+      },
+      kpi.value,
+    );
     return React.createElement(
       "div",
       {
@@ -837,9 +551,7 @@ export function CompletionCard(p: { weekPct: string; days: BarVM[] }): JSX.Eleme
 export function TimeOfDayCard(p: { bars: BarVM[]; peakLabel: string }): JSX.Element {
   const { bars, peakLabel } = p;
 
-  // Peak callout — styled as a badge but using the same structure the tests expect:
-  // separate "Peak" word span + peak-label span as siblings inside a flex container.
-  // This ensures getByText(/peak/i) finds the word span and getByText(peakLabel) finds the label span.
+  // Peak callout badge.
   const peakSection = React.createElement(
     "div",
     {
@@ -1158,7 +870,7 @@ export function MuscleHeatmapCard(p: { coverage: Coverage }): JSX.Element {
 
 export interface ProgressionCardProps {
   rows: ProgressionRowVM[];
-  onOpenChart: (index: number) => void;
+  onOpenChart: (exId: string) => void;
 }
 export function ProgressionCard(p: ProgressionCardProps): JSX.Element {
   const { rows, onOpenChart } = p;
@@ -1204,7 +916,7 @@ export function ProgressionCard(p: ProgressionCardProps): JSX.Element {
       React.createElement(
         "span",
         { key: "sub", style: { fontSize: 11.5, color: "var(--text3)" } },
-        "30-day trend & personal best · click a row for full history",
+        "Trend & personal best · click a row for full history",
       ),
     ),
     // Column headers
@@ -1233,9 +945,9 @@ export function ProgressionCard(p: ProgressionCardProps): JSX.Element {
       React.createElement(
         "div",
         {
-          key: row.index,
+          key: row.exId,
           className: "progression-row",
-          onClick: () => onOpenChart(row.index),
+          onClick: () => onOpenChart(row.exId),
           style: {
             ...gridStyle,
             alignItems: "center",
@@ -1351,39 +1063,19 @@ export function ProgressionCard(p: ProgressionCardProps): JSX.Element {
 }
 
 export interface ProgressScreenProps {
-  history: LoggedSet[];
+  vm: ProgressVM;
   coverage: Coverage;
-  now: Date;
-  plannedPerWeek: number;
-  plannedPerDay: number;
-  exNames: Record<string, string>;
-  /** Weight unit for progression rows (defaults to "kg"). */
-  weightUnit?: string;
   tab: "calendar" | "weekly";
   onTab: (t: "calendar" | "weekly") => void;
-  onOpenChart: (index: number) => void;
+  /** Open the full-history chart for an exercise. */
+  onOpenChart: (exId: string) => void;
 }
-export function ProgressScreen(p: ProgressScreenProps): JSX.Element {
-  const {
-    history,
-    coverage,
-    now,
-    plannedPerWeek,
-    plannedPerDay,
-    exNames,
-    weightUnit = "kg",
-    tab,
-    onTab,
-    onOpenChart,
-  } = p;
 
-  const kpis = buildKpis(history, plannedPerWeek, now);
-  const calendar = buildCalendar(history, now);
-  const weekly = buildWeekly(history, now);
-  const completion = buildCompletion(history, plannedPerDay, now);
-  const timeOfDayData = buildTimeOfDay(history);
-  const segments = buildTriggerMix(history);
-  const progressionRows = buildProgression(history, exNames, weightUnit);
+export function ProgressScreen(p: ProgressScreenProps): JSX.Element {
+  const { vm, coverage, tab, onTab, onOpenChart } = p;
+  const { kpis, calendar, weekly, completion, triggers: segments } = vm;
+  const timeOfDayData = vm.timeOfDay;
+  const progressionRows = vm.progression;
 
   return React.createElement(
     "div",

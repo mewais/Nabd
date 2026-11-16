@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@nabd/domain": "workspace:*",
-    "@nabd/coverage": "workspace:*",
+    "@nabd/scheduling": "workspace:*",
     "@nabd/progression": "workspace:*"
   }
 }

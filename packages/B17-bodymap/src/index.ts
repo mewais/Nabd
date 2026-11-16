@@ -78,7 +78,7 @@ export function BodyMap(p: BodyMapProps): JSX.Element {
     if (mappedMuscles.length > 0) {
       const sum = mappedMuscles.reduce(
         (acc, m) => acc + Math.min(100, Math.max(0, coverage[m])),
-        0
+        0,
       );
       const avg = Math.round(sum / mappedMuscles.length);
       const names = mappedMuscles.map((m) => MUSCLE_NAMES[m]).join(", ");
@@ -101,8 +101,8 @@ export function BodyMap(p: BodyMapProps): JSX.Element {
           "path",
           { key, d, style: s },
           // Only attach title to the first path of a mapped region
-          i === 0 && titleEl !== null ? titleEl : null
-        )
+          i === 0 && titleEl !== null ? titleEl : null,
+        ),
       );
     }
   }
@@ -149,7 +149,7 @@ export function MuscleBar(p: MuscleBarProps): JSX.Element {
             color: recColor,
           },
         },
-        recLabel
+        recLabel,
       )
     : null;
 
@@ -175,7 +175,7 @@ export function MuscleBar(p: MuscleBarProps): JSX.Element {
           color: "var(--text)",
         },
       },
-      name
+      name,
     ),
     createElement(
       "div",
@@ -202,7 +202,7 @@ export function MuscleBar(p: MuscleBarProps): JSX.Element {
           width: `${rounded}%`,
           transition: "width .5s",
         },
-      })
+      }),
     ),
     createElement(
       "span",
@@ -217,8 +217,8 @@ export function MuscleBar(p: MuscleBarProps): JSX.Element {
           flex: "none",
         },
       },
-      `${rounded}%`
+      `${rounded}%`,
     ),
-    recTag
+    recTag,
   );
 }

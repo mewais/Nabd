@@ -3,8 +3,8 @@
 
 import React from "react";
 import type { ReactNode, CSSProperties } from "react";
-import type { Theme, Wallpaper } from "@nabd/domain";
-import { THEMES, WALLPAPERS, GLASS_FROST, materialKey, glassTint } from "@nabd/domain";
+import type { Theme } from "@nabd/domain";
+import { THEMES, GLASS_FROST, materialKey, glassTint } from "@nabd/domain";
 
 /** CSS custom-property style object for a theme + glass flag (the active material). */
 export function themeVars(_theme: Theme, _glass: boolean): CSSProperties {
@@ -25,25 +25,6 @@ export function rootBackgroundStyle(
     };
   }
   return { background: "var(--bg)" };
-}
-
-/** Fixed full-bleed wallpaper layer (only shown under glass). */
-export function wallpaperStyle(
-  _theme: Theme,
-  _glass: boolean,
-  _wallpaper: Wallpaper,
-): CSSProperties {
-  if (_glass) {
-    return {
-      position: "fixed",
-      inset: 0,
-      zIndex: 0,
-      background: WALLPAPERS[_wallpaper],
-      backgroundSize: "cover",
-      display: "block",
-    };
-  }
-  return { display: "none" };
 }
 
 export interface ThemeProviderProps {
@@ -293,23 +274,6 @@ export function Stepper(_p: StepperProps): JSX.Element {
   );
 }
 
-export interface MiniStepperProps {
-  onDec: () => void;
-  onInc: () => void;
-  value: ReactNode;
-}
-/** Compact inline +/- used in the planner set table. */
-export function MiniStepper(_p: MiniStepperProps): JSX.Element {
-  const { value, onDec, onInc } = _p;
-  return React.createElement(
-    "div",
-    { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
-    React.createElement("button", { onClick: onDec }, "−"),
-    React.createElement("span", null, value),
-    React.createElement("button", { onClick: onInc }, "+"),
-  );
-}
-
 export interface ToggleProps {
   on: boolean;
   onChange: (on: boolean) => void;
@@ -349,37 +313,96 @@ export function Toggle(_p: ToggleProps): JSX.Element {
   );
 }
 
-export interface PillProps {
-  children: ReactNode;
-  tone?: "default" | "accent" | "accent2" | "accent3";
-  style?: CSSProperties;
+/** A suggested target in words (structurally the session package's AdviceWording). */
+export interface AdviceText {
+  primary: string;
+  alternative: string | null;
+  reason: string;
+  basis: string | null;
 }
-export function Pill(_p: PillProps): JSX.Element {
-  const { children, tone = "default", style } = _p;
+export interface AdviceCardProps {
+  advice: AdviceText;
+  /** When given, each target becomes a button that applies it. */
+  onApply?: (which: "primary" | "alternative") => void;
+}
 
-  let color: string;
-  if (tone === "accent") {
-    color = "var(--accent)";
-  } else if (tone === "accent2") {
-    color = "var(--accent2)";
-  } else if (tone === "accent3") {
-    color = "var(--accent3)";
-  } else {
-    color = "var(--text2)";
-  }
+const ADVICE_TARGET: CSSProperties = {
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: 13.5,
+  fontWeight: 700,
+  color: "var(--text)",
+  background: "transparent",
+  border: "none",
+  padding: 0,
+};
+
+/** The coach's suggestion: a target, an optional alternative, and the reasoning. */
+export function AdviceCard(_p: AdviceCardProps): JSX.Element {
+  const { advice, onApply } = _p;
+  const target = (which: "primary" | "alternative", text: string) =>
+    onApply
+      ? React.createElement(
+          "button",
+          {
+            onClick: () => onApply(which),
+            title: "Use this",
+            style: {
+              ...ADVICE_TARGET,
+              cursor: "pointer",
+              textDecoration: "underline dotted",
+              textUnderlineOffset: 3,
+            },
+          },
+          text,
+        )
+      : React.createElement("b", { style: ADVICE_TARGET }, text);
 
   return React.createElement(
-    "span",
+    "div",
     {
       style: {
-        display: "inline-block",
-        padding: "2px 10px",
-        borderRadius: 999,
-        background: color,
-        ...style,
+        display: "flex",
+        alignItems: "center",
+        gap: 11,
+        background: "var(--surface2)",
+        border: "1px solid var(--line)",
+        borderRadius: 11,
+        padding: "12px 15px",
       },
     },
-    children,
+    React.createElement(
+      "div",
+      {
+        style: {
+          width: 26,
+          height: 26,
+          flexShrink: 0,
+          borderRadius: 8,
+          background: "var(--accent)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+      },
+      React.createElement(Icon, { name: "bolt", size: 15, stroke: "#fff" }),
+    ),
+    React.createElement(
+      "div",
+      { style: { fontSize: 13.5, color: "var(--text2)", lineHeight: 1.45 } },
+      React.createElement(
+        "div",
+        null,
+        "Try ",
+        target("primary", advice.primary),
+        advice.alternative !== null ? " or " : null,
+        advice.alternative !== null ? target("alternative", advice.alternative) : null,
+      ),
+      React.createElement(
+        "div",
+        { style: { fontSize: 12, color: "var(--text3)" } },
+        [advice.basis, advice.reason].filter((line) => line !== null).join(" · "),
+      ),
+    ),
   );
 }
 
@@ -400,79 +423,6 @@ export function Card(_p: CardProps): JSX.Element {
       },
     },
     children,
-  );
-}
-
-export interface BadgeProps {
-  children: ReactNode;
-  tone?: "accent" | "accent2" | "accent3" | "muted";
-}
-export function Badge(_p: BadgeProps): JSX.Element {
-  const { children, tone } = _p;
-
-  let color: string;
-  if (tone === "accent") {
-    color = "var(--accent)";
-  } else if (tone === "accent2") {
-    color = "var(--accent2)";
-  } else if (tone === "accent3") {
-    color = "var(--accent3)";
-  } else if (tone === "muted") {
-    color = "var(--text3)";
-  } else {
-    color = "var(--text2)";
-  }
-
-  return React.createElement(
-    "span",
-    {
-      style: {
-        display: "inline-block",
-        padding: "1px 6px",
-        borderRadius: 4,
-        background: color,
-        fontSize: "0.75rem",
-      },
-    },
-    children,
-  );
-}
-
-export interface DonutProps {
-  /** 0–100 progress. */
-  pct: number;
-  done: number;
-  total: number;
-  caption?: ReactNode;
-}
-/** Conic-gradient progress ring (sidebar day donut). */
-export function Donut(_p: DonutProps): JSX.Element {
-  const { pct, done, total, caption } = _p;
-
-  const children: ReactNode[] = [
-    React.createElement("span", { key: "done" }, done),
-    React.createElement("span", { key: "total" }, total),
-  ];
-
-  if (caption !== undefined) {
-    children.push(React.createElement("span", { key: "caption" }, caption));
-  }
-
-  return React.createElement(
-    "div",
-    {
-      style: {
-        width: 80,
-        height: 80,
-        borderRadius: "50%",
-        background: `conic-gradient(var(--accent) ${pct}%, var(--surface2) ${pct}%)`,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-      },
-    },
-    ...children,
   );
 }
 

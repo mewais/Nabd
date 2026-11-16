@@ -10,6 +10,9 @@ path = "src/lib.rs"
 [dependencies]
 serde = { workspace = true }
 
+[dev-dependencies]
+serde_json = { workspace = true }
+
 [[test]]
 name = "native_tests"
 path = "../../../tests/rust/B12-native/main.rs"

@@ -1,84 +1,39 @@
-// @nabd/serialization — pure import/export (de)serialization + migration.
+// @nabd/serialization — validates (and migrates) a document before it is imported.
 
-import type {
-  AppData,
-  Program,
-  Exercise,
-  Settings,
-  Theme,
-  LoggedSet,
-  RotationState,
-} from "@nabd/domain";
+import type { AppData } from "@nabd/domain";
 import { AppDataSchema, APPDATA_VERSION } from "@nabd/domain";
 
-export interface SnapshotInput {
-  program: Program;
-  customExercises: Exercise[];
-  settings: Settings;
-  theme: Theme;
-  history: LoggedSet[];
-  rotationState: RotationState;
-  exportedAt: string;
-}
+export type ImportResult = { ok: true; data: AppData } | { ok: false; errors: string[] };
 
-/** Build the export envelope (stable, pretty-serializable). */
-export function serialize(input: SnapshotInput): AppData {
-  return {
-    app: "Nabd",
-    version: APPDATA_VERSION,
-    exportedAt: input.exportedAt,
-    program: input.program,
-    customExercises: input.customExercises,
-    settings: input.settings,
-    theme: input.theme,
-    history: input.history,
-    rotationState: input.rotationState,
-  };
-}
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** Serialize to a JSON string (2-space indent), matching nabd-data.json. */
-export function serializeToJson(input: SnapshotInput): string {
-  return JSON.stringify(serialize(input), null, 2);
-}
-
-export interface DeserializeResult {
-  ok: boolean;
-  /** Validated, migrated partial state to merge in (only present fields). */
-  data: Partial<SnapshotInput> & { theme?: Theme };
-  errors: string[];
-}
-
-/** Parse + validate + migrate an unknown imported value. Bad fields are dropped. */
-export function deserialize(value: unknown): DeserializeResult {
-  const parsed = AppDataSchema.safeParse(value);
-  if (!parsed.success) {
-    const errors = parsed.error.errors.map((e) => e.message);
-    return { ok: false, data: {}, errors };
+/**
+ * Bring an older export up to the current shape.
+ * v1 → v2: the theme moved from a top-level field into `settings`.
+ */
+function migrate(doc: Record<string, unknown>): Record<string, unknown> {
+  const { theme, ...rest } = doc;
+  if (theme !== undefined) {
+    rest.settings = { ...(isRecord(rest.settings) ? rest.settings : {}), theme };
   }
-  const migrated = migrate(parsed.data);
-  const data: Partial<SnapshotInput> & { theme?: Theme } = {};
-  if (migrated.program !== undefined) data.program = migrated.program;
-  if (migrated.customExercises !== undefined) data.customExercises = migrated.customExercises;
-  if (migrated.settings !== undefined) data.settings = migrated.settings as Settings;
-  if (migrated.theme !== undefined) data.theme = migrated.theme;
-  if (migrated.history !== undefined) data.history = migrated.history;
-  if (migrated.rotationState !== undefined) data.rotationState = migrated.rotationState;
-  return { ok: true, data, errors: [] };
+  return { ...rest, version: APPDATA_VERSION };
 }
 
-/** Parse a JSON string then deserialize; never throws (errors reported). */
-export function deserializeJson(json: string): DeserializeResult {
-  let parsed: unknown;
+/** Parse, migrate and validate an import file's text. Never throws. */
+export function parseImport(json: string): ImportResult {
+  let raw: unknown;
   try {
-    parsed = JSON.parse(json);
+    raw = JSON.parse(json);
   } catch {
-    return { ok: false, data: {}, errors: ["invalid json"] };
+    return { ok: false, errors: ["This file is not valid JSON."] };
   }
-  return deserialize(parsed);
-}
+  if (!isRecord(raw)) return { ok: false, errors: ["This file is not a Nabd export."] };
 
-/** Migrate an older AppData envelope to the current version. */
-export function migrate(data: AppData): AppData {
-  // v1 is current; identity transform — structure ready for future versions.
-  return { ...data, version: APPDATA_VERSION };
+  const parsed = AppDataSchema.safeParse(migrate(raw));
+  if (parsed.success) return { ok: true, data: parsed.data };
+  return {
+    ok: false,
+    errors: parsed.error.errors.map((e) => `${e.path.join(".") || "document"}: ${e.message}`),
+  };
 }

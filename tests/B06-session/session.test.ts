@@ -1,1092 +1,172 @@
-// Tests for @nabd/session — all cases from AGENT.md.
-// Against the skeleton every test is RED ("not implemented"), but every exported
-// function is invoked so coverage of src/index.ts is 100%.
-
-import { describe, it, expect } from "vitest";
+import type { Exercise, LoggedSet, Program } from "@nabd/domain";
+import { dateKey } from "@nabd/domain";
+import { ProgressionAdvisor } from "@nabd/progression";
+import { TodayPlan } from "@nabd/scheduling";
+import type { PlanItem } from "@nabd/scheduling";
 import {
-  openSession,
-  logSet,
-  switchExercise,
-  stepReps,
-  stepWeight,
-  setReps,
-  setWeight,
-  applyCoverage,
+  Coach,
+  LogSession,
+  describeAdvice,
+  formatDuration,
+  formatPerformance,
+  formatTarget,
 } from "@nabd/session";
-import type { HistoryLookup } from "@nabd/session";
-import type { Slot, ActiveSession, Coverage } from "@nabd/domain";
-import { DEFAULTS, MUSCLES } from "@nabd/domain";
+import { exercise, logged, nov, prescription, row, working } from "../support/domain-factories";
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
+const TODAY = nov(16);
+const curl = exercise({ name: "Curl" });
+const plank = exercise({ name: "Plank", tracking: "duration" });
+const curlRow = row(curl.id, [{ type: "warmup", a: 15 }, working(8, 12), working(8, 12)]);
+const plankRow = row(plank.id, [{ type: "working", a: 45 }], { repMode: "time" });
 
-/** Build a minimal Slot fixture with sensible defaults. */
-function makeSlot(
-  overrides: Partial<Slot> & {
-    id: string;
-    exId: string;
-    sets: number;
-    done: number;
-    status: Slot["status"];
-  },
-): Slot {
-  return {
-    exercise: "Bench Press",
-    group: "Chest",
-    muscles: ["chest"],
-    min: 9 * 60 + 30,
-    timeStr: "09:30",
-    result: "",
-    ...overrides,
-  } as Slot;
-}
-
-/** A bodyweight slot (no weight). */
-const slotA: Slot = makeSlot({
-  id: "slot-a",
-  exId: "bench-press",
-  exercise: "Bench Press",
-  group: "Chest",
-  muscles: ["chest"],
-  sets: 3,
-  done: 0,
-  status: "now",
-  result: "",
-});
-
-/** A second slot that is still upcoming. */
-const slotB: Slot = makeSlot({
-  id: "slot-b",
-  exId: "squat",
-  exercise: "Squat",
-  group: "Quads",
-  muscles: ["quads", "glutes"],
-  sets: 2,
-  done: 0,
-  status: "upcoming",
-  result: "",
-});
-
-/** A third slot (also upcoming) so we can test chain promotions. */
-const slotC: Slot = makeSlot({
-  id: "slot-c",
-  exId: "deadlift",
-  exercise: "Deadlift",
-  group: "Back",
-  muscles: ["lats", "lower_back"],
-  sets: 1,
-  done: 0,
-  status: "upcoming",
-  result: "",
-});
-
-/** History lookup stub — no prior history for any exercise. */
-const noHistory: HistoryLookup = (_exId: string) => null;
-
-/** History lookup stub with a previous result for bench-press. */
-const withBenchHistory: HistoryLookup = (exId: string) => {
-  if (exId === "bench-press") {
-    return { sets: 3, reps: 8, weight: 60 };
-  }
-  return null;
+const program: Program = {
+  name: "P",
+  type: "fixed",
+  schedule: "floating",
+  days: [{ id: "d", name: "D", weekday: null, exercises: [curlRow, plankRow], slots: [] }],
 };
 
-/** Weighted slot (weight_reps tracking). */
-const weightedSlot: Slot = makeSlot({
-  id: "slot-w",
-  exId: "bench-press",
-  exercise: "Bench Press",
-  group: "Chest",
-  muscles: ["chest"],
-  tracking: "weight_reps",
-  sets: 3,
-  done: 0,
-  status: "now",
-  result: "",
-});
-
-/** Bodyweight (reps-only, unweighted) slot. */
-const bodyweightSlot: Slot = makeSlot({
-  id: "slot-bw",
-  exId: "situp",
-  exercise: "Sit-Up",
-  group: "Abs",
-  muscles: ["abs"],
-  tracking: "bodyweight_reps",
-  sets: 3,
-  done: 0,
-  status: "now",
-  result: "",
-});
-
-/** Time-based slot (duration tracking). */
-const timeSlot: Slot = makeSlot({
-  id: "slot-t",
-  exId: "plank",
-  exercise: "Plank",
-  group: "Abs",
-  muscles: ["abs"],
-  tracking: "duration",
-  sets: 3,
-  done: 0,
-  status: "now",
-  result: "",
-});
-
-/** Build an ActiveSession for a weighted exercise. */
-function makeWeightedSession(overrides: Partial<ActiveSession> = {}): ActiveSession {
-  return {
-    slotId: "slot-w",
-    exercise: "Bench Press",
-    group: "Chest",
-    muscles: ["chest"],
-    weighted: true,
-    unit: "reps",
-    reps: 8,
-    weight: 60,
-    sugg: { sets: 3, reps: 8, weight: 60, note: "", up: true },
-    last: null,
-    logged: [],
-    allDone: false,
-    ...overrides,
-  };
+function itemsFor(history: LoggedSet[]): { curlItem: PlanItem; plankItem: PlanItem } {
+  const plan = TodayPlan.build({
+    program,
+    date: TODAY,
+    dayState: { date: dateKey(TODAY), floatingIndex: 0, skipped: [], extras: [] },
+    rotation: {},
+    history,
+    lookup: (id): Exercise | undefined => [curl, plank].find((e) => e.id === id),
+  });
+  return { curlItem: plan.item(curlRow.id)!, plankItem: plan.item(plankRow.id)! };
 }
 
-/** Build an ActiveSession for a bodyweight/reps-only exercise. */
-function makeBodyweightSession(overrides: Partial<ActiveSession> = {}): ActiveSession {
-  return {
-    slotId: "slot-a",
-    exercise: "Bench Press",
-    group: "Chest",
-    muscles: ["chest"],
-    weighted: false,
-    unit: "reps",
-    reps: 10,
-    weight: 0,
-    sugg: { sets: 3, reps: 10, weight: null, note: "", up: true },
-    last: null,
-    logged: [],
-    allDone: false,
-    ...overrides,
-  };
-}
+const coachFor = (history: LoggedSet[]): Coach =>
+  new Coach(history, new ProgressionAdvisor(2.5), dateKey(TODAY));
 
-/** Build an ActiveSession for a time-based exercise. */
-function makeTimeSession(overrides: Partial<ActiveSession> = {}): ActiveSession {
-  return {
-    slotId: "slot-t",
-    exercise: "Plank",
-    group: "Abs",
-    muscles: ["abs"],
-    weighted: false,
-    unit: "sec",
-    reps: 30,
-    weight: 0,
-    sugg: { sets: 3, reps: 30, weight: null, note: "", up: true },
-    last: null,
-    logged: [],
-    allDone: false,
-    ...overrides,
-  };
-}
+describe("Coach", () => {
+  const lastWeek = [logged(curl, nov(9, 10), 8, 25), logged(curl, nov(9, 11), 7, 25)];
 
-/** Build a zero-filled Coverage map. */
-function zeroCoverage(): Coverage {
-  return Object.fromEntries(MUSCLES.map((m) => [m, 0])) as Coverage;
-}
-
-// ---------------------------------------------------------------------------
-// openSession
-// ---------------------------------------------------------------------------
-
-describe("openSession", () => {
-  it("returns an ActiveSession with correct slotId and exercise info", () => {
-    const sess = openSession(slotA, noHistory);
-    expect(sess.slotId).toBe("slot-a");
-    expect(sess.exercise).toBe("Bench Press");
-    expect(sess.group).toBe("Chest");
-    expect(sess.muscles).toEqual(["chest"]);
+  it("gives no progression advice for a warm-up set", () => {
+    expect(coachFor(lastWeek).adviceFor(itemsFor(lastWeek).curlItem)).toBeNull();
   });
 
-  it("starts with empty logged (receipt) and allDone=false", () => {
-    const sess = openSession(slotA, noHistory);
-    expect(sess.logged).toEqual([]);
-    expect(sess.allDone).toBe(false);
-  });
-
-  it("populates suggestion from history when no prior history", () => {
-    const sess = openSession(slotA, noHistory);
-    // suggest() with no history for a non-weighted, non-time track defaults to
-    // {sets:3, reps:10, weight:null, note:"", up:true} per B05-progression spec.
-    expect(sess.sugg.sets).toBe(3);
-    expect(sess.sugg.reps).toBe(10);
-    expect(sess.sugg.weight).toBeNull();
-    expect(sess.sugg.note).toBe("");
-    expect(sess.sugg.up).toBe(true);
-  });
-
-  it("sets reps from suggestion when there is no history", () => {
-    const sess = openSession(slotA, noHistory);
-    expect(sess.reps).toBe(sess.sugg.reps);
-  });
-
-  it("fields come from history (last session), not the suggestion", () => {
-    // history: reps 8 @ 60kg → fields show 8 and 60 (the user's actuals)
-    const sess = openSession(weightedSlot, withBenchHistory);
-    expect(sess.weighted).toBe(true);
-    expect(sess.reps).toBe(8);
-    expect(sess.weight).toBe(60);
-    // the +2.5 bump lives ONLY in the suggestion, never in the fields
-    expect(sess.sugg.weight).toBe(62.5);
-    expect(sess.sugg.note).toBe("+2.5 kg over last session");
-  });
-
-  it("weight field is 0 when a weighted exercise has no history", () => {
-    const sess = openSession(weightedSlot, noHistory);
-    expect(sess.weight).toBe(0);
-  });
-
-  it("weighted exercise shows the weight field even with NO history (from tracking type)", () => {
-    const sess = openSession(weightedSlot, noHistory);
-    expect(sess.weighted).toBe(true);
-  });
-
-  it("bodyweight (reps-only) exercise is not weighted", () => {
-    const sess = openSession(bodyweightSlot, noHistory);
-    expect(sess.weighted).toBe(false);
-    expect(sess.unit).toBe("reps");
-  });
-
-  it("unit is 'sec' for time-based exercises (from tracking type)", () => {
-    const sess = openSession(timeSlot, noHistory);
-    expect(sess.slotId).toBe("slot-t");
-    expect(sess.exercise).toBe("Plank");
-    expect(sess.unit).toBe("sec");
-  });
-
-  it("falls back to history when slot has no tracking (legacy slot)", () => {
-    const legacy = makeSlot({
-      id: "slot-legacy",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 3,
-      done: 0,
-      status: "now",
-      result: "",
+  it("advises each working set against the same working set of last session", () => {
+    const warmedUp = [
+      ...lastWeek,
+      logged(curl, nov(16, 9), 15, 10, { planItemId: curlRow.id, setType: "warmup" }),
+    ];
+    expect(coachFor(warmedUp).adviceFor(itemsFor(warmedUp).curlItem)?.primary).toEqual({
+      reps: 9,
+      weight: 25,
     });
-    expect(openSession(legacy, withBenchHistory).weighted).toBe(true);
-    expect(openSession(legacy, noHistory).weighted).toBe(false);
+
+    const oneDone = [...warmedUp, logged(curl, nov(16, 10), 9, 25, { planItemId: curlRow.id })];
+    const second = coachFor(oneDone).adviceFor(itemsFor(oneDone).curlItem);
+    expect(second?.kind).toBe("reach_range");
+    expect(second?.basis).toEqual({ reps: 7, weight: 25 });
   });
 
-  it("last is null when no history", () => {
-    const sess = openSession(slotA, noHistory);
-    expect(sess.last).toBeNull();
+  it("pre-fills the form with what the user last actually did, today included", () => {
+    expect(coachFor(lastWeek).startFor(itemsFor(lastWeek).curlItem)).toEqual({
+      reps: 7,
+      weight: 25,
+    });
+    const today = [...lastWeek, logged(curl, nov(16, 10), 10, 27.5, { planItemId: curlRow.id })];
+    expect(coachFor(today).startFor(itemsFor(today).curlItem)).toEqual({ reps: 10, weight: 27.5 });
   });
 
-  it("last is set when history is available", () => {
-    const sess = openSession(slotA, withBenchHistory);
-    expect(sess.last).toEqual({ sets: 3, reps: 8, weight: 60 });
-  });
-
-  it("lb unit: suggestion note + bump use the lb step", () => {
-    const sess = openSession(weightedSlot, withBenchHistory, "lb");
-    // bump is +5 lb in kg ≈ 2.268 added to 60kg history
-    expect(sess.sugg.weight).toBeCloseTo(62.268, 3);
-    expect(sess.sugg.note).toBe("+5 lb over last session");
-    // the field still shows the stored kg history value
-    expect(sess.weight).toBe(60);
+  it("with no history, starts from the prescription", () => {
+    const { curlItem, plankItem } = itemsFor([]);
+    expect(coachFor([]).startFor(curlItem)).toEqual({ reps: 15, weight: 0 });
+    expect(coachFor([]).startFor(plankItem)).toEqual({ reps: 45, weight: null });
   });
 });
 
-// ---------------------------------------------------------------------------
-// logSet — single set (not completing the exercise)
-// ---------------------------------------------------------------------------
+describe("LogSession", () => {
+  const { curlItem, plankItem } = itemsFor([]);
+  const session = LogSession.open(curlItem, { reps: 8, weight: 25 }, "idle");
 
-describe("logSet — single set (sets > 1, done stays 'now')", () => {
-  it("increments slot done from 0 to 1", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const { slots: updatedSlots } = logSet(session, slots, noHistory);
-    const updatedA = updatedSlots.find((s) => s.id === "slot-a")!;
-    expect(updatedA.done).toBe(1);
+  it("opens on an exercise with a starting draft and remembers what prompted it", () => {
+    expect(session).toMatchObject({ itemId: curlRow.id, reps: 8, weight: 25, trigger: "idle" });
+    expect(session.performance(curlItem)).toEqual({ reps: 8, weight: 25 });
   });
 
-  it("status stays 'now' when sets > 1 and not complete", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const { slots: updatedSlots } = logSet(session, slots, noHistory);
-    const updatedA = updatedSlots.find((s) => s.id === "slot-a")!;
-    expect(updatedA.status).toBe("now");
+  it("steps reps by one, seconds by five, and never below one", () => {
+    expect(session.stepReps(curlItem, 1).reps).toBe(9);
+    expect(session.withReps(1).stepReps(curlItem, -1).reps).toBe(1);
+    const hold = session.focus(plankItem, { reps: 45, weight: null });
+    expect(hold.stepReps(plankItem, 1).reps).toBe(50);
+    expect(hold.performance(plankItem)).toEqual({ reps: 50 - 5, weight: null });
   });
 
-  it("result stays empty string when not yet done", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const { slots: updatedSlots } = logSet(session, slots, noHistory);
-    const updatedA = updatedSlots.find((s) => s.id === "slot-a")!;
-    expect(updatedA.result).toBe("");
+  it("steps and sets load, never below zero, ignoring garbage", () => {
+    expect(session.stepWeight(1, 2.5).weight).toBe(27.5);
+    expect(session.stepWeight(-20, 2.5).weight).toBe(0);
+    expect(session.withWeight(12.3456).weight).toBe(12.346);
+    expect(session.withWeight(Number.NaN).weight).toBe(25);
+    expect(session.withReps(Number.NaN).reps).toBe(8);
+    expect(session.withReps(9.9).reps).toBe(9);
   });
 
-  it("receipt has 1 item after 1 logSet call", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const result = logSet(session, slots, noHistory);
-    expect(result.session.logged).toHaveLength(1);
+  it("keeps the trigger and the running rest when moving to another exercise", () => {
+    const resting = session.resting(nov(16, 10, 0), 90);
+    const moved = resting.focus(plankItem, { reps: 45, weight: null });
+    expect(moved.trigger).toBe("idle");
+    expect(moved.restRemaining(nov(16, 10, 1))).toBe(30);
   });
 
-  it("coverageMuscles matches the logged slot's muscles", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const { coverageMuscles } = logSet(session, slots, noHistory);
-    expect(coverageMuscles).toEqual(["chest"]);
-  });
-
-  it("form stays on same exercise when sets remain", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const { session: nextSession } = logSet(session, slots, noHistory);
-    expect(nextSession.slotId).toBe("slot-a");
-    expect(nextSession.exercise).toBe("Bench Press");
-  });
-
-  it("receiptItem has correct exercise, group and setStr (bodyweight reps)", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a", reps: 12 });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const { receiptItem } = logSet(session, slots, noHistory);
-    expect(receiptItem.exercise).toBe("Bench Press");
-    expect(receiptItem.group).toBe("Chest");
-    // bodyweight: "<v> reps"
-    expect(receiptItem.setStr).toBe("12 reps");
-  });
-
-  it("logged record has correct exId, exercise, group, muscles, trigger='manual'", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a", reps: 10 });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const { logged } = logSet(session, slots, noHistory);
-    expect(logged.exId).toBe("bench-press");
-    expect(logged.exercise).toBe("Bench Press");
-    expect(logged.group).toBe("Chest");
-    expect(logged.muscles).toEqual(["chest"]);
-    expect(logged.trigger).toBe("manual");
-    expect(logged.value).toBe(10);
+  it("counts rest down to zero; no rest prescribed means none", () => {
+    const resting = session.resting(nov(16, 10, 0), 90);
+    expect(resting.restRemaining(nov(16, 10, 0))).toBe(90);
+    expect(resting.restRemaining(nov(16, 10, 5))).toBe(0);
+    expect(session.resting(nov(16, 10, 0), 0).restRemaining(nov(16, 10, 0))).toBe(0);
+    expect(session.restRemaining(nov(16, 10, 0))).toBe(0);
   });
 });
 
-// ---------------------------------------------------------------------------
-// logSet — completing an exercise (done reaches sets)
-// ---------------------------------------------------------------------------
+describe("wording", () => {
+  it("describes a performed set for each way of tracking", () => {
+    expect(formatPerformance({ reps: 9, weight: 25 }, "weight_reps", "kg")).toBe("9 × 25 kg");
+    expect(formatPerformance({ reps: 9, weight: 11.34 }, "weight_reps", "lb")).toBe("9 × 25 lb");
+    expect(formatPerformance({ reps: 12, weight: null }, "bodyweight_reps", "kg")).toBe("12 reps");
+    expect(formatPerformance({ reps: 8, weight: 10 }, "weighted_bodyweight", "kg")).toBe(
+      "8 + 10 kg",
+    );
+    expect(formatPerformance({ reps: 8, weight: 20 }, "assisted_bodyweight", "kg")).toBe(
+      "8 − 20 kg assist",
+    );
+    expect(formatPerformance({ reps: 45, weight: null }, "duration", "kg")).toBe("45 s");
+    expect(formatPerformance({ reps: 40, weight: 20 }, "weight_duration", "kg")).toBe(
+      "40 s · 20 kg",
+    );
+  });
 
-describe("logSet — completing an exercise", () => {
-  it("done reaches sets → status becomes 'done'", () => {
-    // Slot with sets=1, done=0 — one logSet call completes it
-    const singleSlot: Slot = makeSlot({
-      id: "slot-a",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
+  it("describes what a prescribed set asks for", () => {
+    const ranged = prescription([working(8, 12)], { intensity: "rpe" });
+    expect(formatTarget({ type: "working", a: 8, b: 12, val: 8 }, ranged)).toBe(
+      "Working set · 8–12 reps · RPE 8",
+    );
+    expect(formatTarget({ type: "warmup", a: 12 }, ranged)).toBe("Warm-up · 12 reps");
+    const pct = prescription([working(5)], { repMode: "fixed", intensity: "pct" });
+    expect(formatTarget({ type: "drop", a: 5, val: 70 }, pct)).toBe("Drop set · 5 reps · 70% 1RM");
+    expect(formatTarget({ type: "working", a: 45 }, plankRow)).toBe("Working set · 45 s");
+  });
+
+  it("puts advice into words, with the alternative and what it was based on", () => {
+    const history = [logged(curl, nov(9), 8, 25)];
+    const warmUp = logged(curl, nov(16, 9), 15, 10, { planItemId: curlRow.id, setType: "warmup" });
+    const all = [...history, warmUp];
+    const real = coachFor(all).adviceFor(itemsFor(all).curlItem);
+    expect(describeAdvice(real, "weight_reps", "kg")).toEqual({
+      primary: "9 × 25 kg",
+      alternative: "8 × 27.5 kg",
+      reason: "Inside your range — beat last time.",
+      basis: "Last time: 8 × 25 kg",
     });
-
-    const session = makeBodyweightSession({ slotId: "slot-a", reps: 10 });
-    const slots = [singleSlot, { ...slotB }];
-
-    const { slots: updatedSlots } = logSet(session, slots, noHistory);
-    const updated = updatedSlots.find((s) => s.id === "slot-a")!;
-    expect(updated.status).toBe("done");
-    expect(updated.done).toBe(1);
+    expect(describeAdvice(null, "weight_reps", "kg")).toBeNull();
   });
 
-  it("result string set when done → 'done' (bodyweight, no weight)", () => {
-    const singleSlot: Slot = makeSlot({
-      id: "slot-a",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
-    });
-
-    const session = makeBodyweightSession({ slotId: "slot-a", reps: 10, weighted: false });
-    const slots = [singleSlot, { ...slotB }];
-
-    const { slots: updatedSlots } = logSet(session, slots, noHistory);
-    const updated = updatedSlots.find((s) => s.id === "slot-a")!;
-    // result = "<sets>×<reps>" for bodyweight
-    expect(updated.result).toMatch(/1×10/);
-  });
-
-  it("result string includes weight component when weighted", () => {
-    const singleSlot: Slot = makeSlot({
-      id: "slot-w",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
-    });
-
-    const session = makeWeightedSession({
-      slotId: "slot-w",
-      reps: 8,
-      weight: 60,
-      sets: 1,
-    } as unknown as Partial<ActiveSession>);
-    const slots = [singleSlot, { ...slotB }];
-
-    const { slots: updatedSlots } = logSet(session, slots, noHistory);
-    const updated = updatedSlots.find((s) => s.id === "slot-w")!;
-    // result should contain weight info: "1×8 · 60kg" or similar
-    expect(updated.result).toMatch(/1×8/);
-    expect(updated.result).toMatch(/60/);
-  });
-
-  it("first 'upcoming' slot is promoted to 'now' on completion", () => {
-    const singleSlot: Slot = makeSlot({
-      id: "slot-a",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
-    });
-
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [singleSlot, { ...slotB }, { ...slotC }];
-
-    const { slots: updatedSlots } = logSet(session, slots, noHistory);
-    const updatedB = updatedSlots.find((s) => s.id === "slot-b")!;
-    // First upcoming should have been promoted to "now"
-    expect(updatedB.status).toBe("now");
-  });
-
-  it("only the first 'upcoming' slot is promoted (not all)", () => {
-    const singleSlot: Slot = makeSlot({
-      id: "slot-a",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
-    });
-
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [singleSlot, { ...slotB }, { ...slotC }];
-
-    const { slots: updatedSlots } = logSet(session, slots, noHistory);
-    const updatedC = updatedSlots.find((s) => s.id === "slot-c")!;
-    // Second upcoming should remain "upcoming"
-    expect(updatedC.status).toBe("upcoming");
-  });
-
-  it("form advances to next pending slot after completion", () => {
-    const singleSlot: Slot = makeSlot({
-      id: "slot-a",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
-    });
-
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [singleSlot, { ...slotB }];
-
-    const { session: nextSession } = logSet(session, slots, noHistory);
-    // After slot-a completes, form should move to slot-b
-    expect(nextSession.slotId).toBe("slot-b");
-    expect(nextSession.exercise).toBe("Squat");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// logSet — last pending (allDone)
-// ---------------------------------------------------------------------------
-
-describe("logSet — last pending slot (allDone=true)", () => {
-  it("allDone becomes true when no more pending slots remain", () => {
-    const singleSlot: Slot = makeSlot({
-      id: "slot-a",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
-    });
-
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [singleSlot]; // only one slot
-
-    const { session: nextSession } = logSet(session, slots, noHistory);
-    expect(nextSession.allDone).toBe(true);
-  });
-
-  it("allDone with no other upcoming slots — still logs the set", () => {
-    const singleSlot: Slot = makeSlot({
-      id: "slot-a",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
-    });
-
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [singleSlot];
-
-    const { logged, receiptItem } = logSet(session, slots, noHistory);
-    // logged record must contain concrete values for the set that was just recorded
-    expect(logged.exId).toBe("bench-press");
-    expect(logged.exercise).toBe("Bench Press");
-    expect(logged.group).toBe("Chest");
-    expect(logged.muscles).toEqual(["chest"]);
-    expect(logged.value).toBe(10);
-    expect(logged.weight).toBeNull();
-    expect(logged.trigger).toBe("manual");
-    // receipt item must describe the set correctly
-    expect(receiptItem.exercise).toBe("Bench Press");
-    expect(receiptItem.group).toBe("Chest");
-    expect(receiptItem.setStr).toBe("10 reps");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// logSet — multi-set same exercise (receipt accumulation)
-// ---------------------------------------------------------------------------
-
-describe("logSet — multi-set receipt accumulation", () => {
-  it("receipt accumulates across multiple logSet calls", () => {
-    // slot-a has 3 sets
-    const session1 = makeBodyweightSession({ slotId: "slot-a", reps: 10 });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    // First log
-    const result1 = logSet(session1, slots, noHistory);
-    expect(result1.session.logged).toHaveLength(1);
-
-    // Second log (use updated slots and session)
-    const result2 = logSet(result1.session, result1.slots, noHistory);
-    expect(result2.session.logged).toHaveLength(2);
-  });
-
-  it("done increments correctly across multiple calls on same slot", () => {
-    const session1 = makeBodyweightSession({ slotId: "slot-a", reps: 10 });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const result1 = logSet(session1, slots, noHistory);
-    const slotAfter1 = result1.slots.find((s) => s.id === "slot-a")!;
-    expect(slotAfter1.done).toBe(1);
-
-    const result2 = logSet(result1.session, result1.slots, noHistory);
-    const slotAfter2 = result2.slots.find((s) => s.id === "slot-a")!;
-    expect(slotAfter2.done).toBe(2);
-  });
-
-  it("receipt is preserved (stays non-empty) when form advances to next slot", () => {
-    // Use a slot with 1 set so it completes on first logSet
-    const oneSetSlot: Slot = makeSlot({
-      id: "slot-a",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
-    });
-
-    const session = makeBodyweightSession({ slotId: "slot-a" });
-    const slots = [oneSetSlot, { ...slotB }];
-
-    const result = logSet(session, slots, noHistory);
-    // Form advances to slotB, but receipt from slotA should be preserved
-    expect(result.session.logged).toHaveLength(1);
-    expect(result.session.logged[0].exercise).toBe("Bench Press");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// logSet — setStr formatting
-// ---------------------------------------------------------------------------
-
-describe("logSet — setStr formatting", () => {
-  it("bodyweight/reps-only: setStr is '<v> reps'", () => {
-    const session = makeBodyweightSession({
-      slotId: "slot-a",
-      reps: 12,
-      weighted: false,
-      unit: "reps",
-    });
-    const slots = [{ ...slotA }];
-
-    const { receiptItem } = logSet(session, slots, noHistory);
-    expect(receiptItem.setStr).toBe("12 reps");
-  });
-
-  it("time-based: setStr is '<v>s'", () => {
-    const session = makeTimeSession({ slotId: "slot-t", reps: 45, weighted: false, unit: "sec" });
-    const slots = [{ ...timeSlot }];
-
-    const { receiptItem } = logSet(session, slots, noHistory);
-    expect(receiptItem.setStr).toBe("45s");
-  });
-
-  it("weighted: setStr is '<v> · <w> kg' (default kg unit)", () => {
-    const sess = makeWeightedSession({
-      slotId: "slot-w",
-      reps: 8,
-      weight: 60,
-      weighted: true,
-      unit: "reps",
-    });
-    const slots = [{ ...weightedSlot }];
-
-    const { receiptItem } = logSet(sess, slots, noHistory);
-    expect(receiptItem.setStr).toBe("8 · 60 kg");
-  });
-
-  it("weight value in setStr has no trailing decimal when whole number", () => {
-    const sess = makeWeightedSession({
-      slotId: "slot-w",
-      reps: 5,
-      weight: 100,
-      weighted: true,
-      unit: "reps",
-    });
-    const slots = [{ ...weightedSlot }];
-
-    const { receiptItem } = logSet(sess, slots, noHistory);
-    expect(receiptItem.setStr).toBe("5 · 100 kg");
-  });
-
-  it("weighted with lb unit: setStr converts kg → lb", () => {
-    const sess = makeWeightedSession({
-      slotId: "slot-w",
-      reps: 8,
-      weight: 60,
-      weighted: true,
-      unit: "reps",
-    });
-    const slots = [{ ...weightedSlot }];
-
-    const { receiptItem } = logSet(sess, slots, noHistory, "lb");
-    expect(receiptItem.setStr).toContain("lb");
-    expect(receiptItem.setStr).toBe("8 · 132.3 lb");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// logSet — result string formatting (when completing)
-// ---------------------------------------------------------------------------
-
-describe("logSet — result string formatting on completion", () => {
-  it("bodyweight: result is '<sets>×<reps>'", () => {
-    const oneSetSlot: Slot = makeSlot({
-      id: "slot-a",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
-    });
-    const session = makeBodyweightSession({ slotId: "slot-a", reps: 10, weighted: false });
-    const { slots: updatedSlots } = logSet(session, [oneSetSlot], noHistory);
-    const updated = updatedSlots.find((s) => s.id === "slot-a")!;
-    expect(updated.result).toBe("1×10");
-  });
-
-  it("weighted: result is '<sets>×<reps> · <w>'", () => {
-    const oneSetSlot: Slot = makeSlot({
-      id: "slot-w",
-      exId: "bench-press",
-      exercise: "Bench Press",
-      group: "Chest",
-      muscles: ["chest"],
-      sets: 1,
-      done: 0,
-      status: "now",
-      result: "",
-    });
-    const sess = makeWeightedSession({ slotId: "slot-w", reps: 8, weight: 60, weighted: true });
-    const { slots: updatedSlots } = logSet(sess, [oneSetSlot], noHistory);
-    const updated = updatedSlots.find((s) => s.id === "slot-w")!;
-    // result = "1×8 · 60"  (or "1×8 · 60kg")
-    expect(updated.result).toMatch(/1×8/);
-    expect(updated.result).toMatch(/60/);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// logSet — logged record weight field
-// ---------------------------------------------------------------------------
-
-describe("logSet — logged record weight field", () => {
-  it("logged.weight is null for bodyweight exercises", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a", reps: 10, weighted: false });
-    const slots = [{ ...slotA }];
-    const { logged } = logSet(session, slots, noHistory);
-    expect(logged.weight).toBeNull();
-  });
-
-  it("logged.weight is set for weighted exercises", () => {
-    const sess = makeWeightedSession({ slotId: "slot-w", reps: 8, weight: 60, weighted: true });
-    const slots = [{ ...weightedSlot }];
-    const { logged } = logSet(sess, slots, noHistory);
-    expect(logged.weight).toBe(60);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// switchExercise
-// ---------------------------------------------------------------------------
-
-describe("switchExercise", () => {
-  it("form swaps to the target slot", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a", logged: [] });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const nextSession = switchExercise(session, slots, "slot-b", noHistory);
-    expect(nextSession.slotId).toBe("slot-b");
-    expect(nextSession.exercise).toBe("Squat");
-    expect(nextSession.muscles).toEqual(["quads", "glutes"]);
-  });
-
-  it("preserves existing logged receipt when switching", () => {
-    const session = makeBodyweightSession({
-      slotId: "slot-a",
-      logged: [{ exercise: "Bench Press", group: "Chest", setStr: "10 reps" }],
-    });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const nextSession = switchExercise(session, slots, "slot-b", noHistory);
-    expect(nextSession.logged).toHaveLength(1);
-    expect(nextSession.logged[0].exercise).toBe("Bench Press");
-  });
-
-  it("allDone remains false after switching", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a", logged: [] });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const nextSession = switchExercise(session, slots, "slot-b", noHistory);
-    expect(nextSession.allDone).toBe(false);
-  });
-
-  it("fresh suggestion is built for the switched-to slot", () => {
-    const session = makeBodyweightSession({ slotId: "slot-a", logged: [] });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const nextSession = switchExercise(session, slots, "slot-b", noHistory);
-    // Suggestion for the switched-to slot (squat, no history, non-weighted) defaults to
-    // {sets:3, reps:10, weight:null, note:"", up:true} per B05-progression spec.
-    expect(nextSession.sugg.sets).toBe(3);
-    expect(nextSession.sugg.reps).toBe(10);
-    expect(nextSession.sugg.weight).toBeNull();
-    expect(nextSession.sugg.note).toBe("");
-    expect(nextSession.sugg.up).toBe(true);
-  });
-
-  it("preserves multiple logged items", () => {
-    const session = makeBodyweightSession({
-      slotId: "slot-a",
-      logged: [
-        { exercise: "Bench Press", group: "Chest", setStr: "10 reps" },
-        { exercise: "Bench Press", group: "Chest", setStr: "10 reps" },
-      ],
-    });
-    const slots = [{ ...slotA }, { ...slotB }];
-
-    const nextSession = switchExercise(session, slots, "slot-b", noHistory);
-    expect(nextSession.logged).toHaveLength(2);
-  });
-
-  it("threads the weight unit into the switched-to suggestion", () => {
-    const session = makeWeightedSession({ slotId: "slot-w", logged: [] });
-    const slots = [{ ...weightedSlot }, { ...slotB }];
-    const nextSession = switchExercise(session, slots, "slot-w", withBenchHistory, "lb");
-    expect(nextSession.sugg.note).toBe("+5 lb over last session");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// stepReps — reps unit
-// ---------------------------------------------------------------------------
-
-describe("stepReps — reps unit", () => {
-  it("+1 delta on reps unit → reps increases by 1", () => {
-    const session = makeBodyweightSession({ unit: "reps", reps: 10 });
-    const next = stepReps(session, 1);
-    expect(next.reps).toBe(11);
-  });
-
-  it("-1 delta on reps unit → reps decreases by 1", () => {
-    const session = makeBodyweightSession({ unit: "reps", reps: 10 });
-    const next = stepReps(session, -1);
-    expect(next.reps).toBe(9);
-  });
-
-  it("reps cannot go below 1 (floor at 1)", () => {
-    const session = makeBodyweightSession({ unit: "reps", reps: 1 });
-    const next = stepReps(session, -1);
-    expect(next.reps).toBe(1);
-  });
-
-  it("large negative delta still floors at 1", () => {
-    const session = makeBodyweightSession({ unit: "reps", reps: 5 });
-    const next = stepReps(session, -100);
-    expect(next.reps).toBe(1);
-  });
-
-  it("returns a new session (does not mutate input)", () => {
-    const session = makeBodyweightSession({ unit: "reps", reps: 10 });
-    const next = stepReps(session, 1);
-    expect(next).not.toBe(session);
-    expect(session.reps).toBe(10); // original unchanged
-  });
-});
-
-// ---------------------------------------------------------------------------
-// stepReps — sec unit (×5)
-// ---------------------------------------------------------------------------
-
-describe("stepReps — sec unit (step by 5)", () => {
-  it("+1 delta on sec unit → reps increases by 5", () => {
-    const session = makeTimeSession({ unit: "sec", reps: 30 });
-    const next = stepReps(session, 1);
-    expect(next.reps).toBe(35);
-  });
-
-  it("-1 delta on sec unit → reps decreases by 5", () => {
-    const session = makeTimeSession({ unit: "sec", reps: 30 });
-    const next = stepReps(session, -1);
-    expect(next.reps).toBe(25);
-  });
-
-  it("sec unit also floors at 1", () => {
-    const session = makeTimeSession({ unit: "sec", reps: 3 });
-    const next = stepReps(session, -1);
-    // 3 - 5 = -2, but floor at 1
-    expect(next.reps).toBe(1);
-  });
-
-  it("+2 delta on sec unit → reps increases by 10", () => {
-    const session = makeTimeSession({ unit: "sec", reps: 30 });
-    const next = stepReps(session, 2);
-    expect(next.reps).toBe(40);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// stepWeight — ±2.5 increments
-// ---------------------------------------------------------------------------
-
-describe("stepWeight", () => {
-  it("+1 delta → weight increases by 2.5", () => {
-    const session = makeWeightedSession({ weight: 60 });
-    const next = stepWeight(session, 1);
-    expect(next.weight).toBeCloseTo(62.5, 5);
-  });
-
-  it("-1 delta → weight decreases by 2.5", () => {
-    const session = makeWeightedSession({ weight: 60 });
-    const next = stepWeight(session, -1);
-    expect(next.weight).toBeCloseTo(57.5, 5);
-  });
-
-  it("weight cannot go below 0 (floor at 0)", () => {
-    const session = makeWeightedSession({ weight: 0 });
-    const next = stepWeight(session, -1);
-    expect(next.weight).toBe(0);
-  });
-
-  it("weight floor at 0 for small initial weight", () => {
-    const session = makeWeightedSession({ weight: 2.5 });
-    const next = stepWeight(session, -2); // 2.5 - 5 = -2.5 → 0
-    expect(next.weight).toBe(0);
-  });
-
-  it("rounds correctly to avoid floating-point drift", () => {
-    // 0.1 + 2.5 should not produce floating-point noise
-    const session = makeWeightedSession({ weight: 0.1 });
-    const next = stepWeight(session, 1);
-    // Should be 2.6 (rounded to 1dp)
-    expect(next.weight).toBeCloseTo(2.6, 5);
-  });
-
-  it("+2 delta → weight increases by 5.0", () => {
-    const session = makeWeightedSession({ weight: 60 });
-    const next = stepWeight(session, 2);
-    expect(next.weight).toBeCloseTo(65, 5);
-  });
-
-  it("returns a new session (does not mutate input)", () => {
-    const session = makeWeightedSession({ weight: 60 });
-    const next = stepWeight(session, 1);
-    expect(next).not.toBe(session);
-    expect(session.weight).toBe(60); // original unchanged
-  });
-
-  it("large negative delta → floors at 0", () => {
-    const session = makeWeightedSession({ weight: 5 });
-    const next = stepWeight(session, -100);
-    expect(next.weight).toBe(0);
-  });
-
-  it("uses an explicit stepKg (e.g. lb step ≈ 2.268 kg)", () => {
-    const session = makeWeightedSession({ weight: 60 });
-    const next = stepWeight(session, 1, 2.268);
-    expect(next.weight).toBeCloseTo(62.3, 1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// setReps / setWeight — typed (absolute) values
-// ---------------------------------------------------------------------------
-
-describe("setReps (typed value)", () => {
-  it("sets reps to an exact typed value", () => {
-    const next = setReps(makeWeightedSession({ reps: 8 }), 13);
-    expect(next.reps).toBe(13);
-  });
-
-  it("floors fractional input to an integer", () => {
-    const next = setReps(makeWeightedSession({ reps: 8 }), 9.7);
-    expect(next.reps).toBe(9);
-  });
-
-  it("clamps below 1 up to 1", () => {
-    const next = setReps(makeWeightedSession({ reps: 8 }), 0);
-    expect(next.reps).toBe(1);
-  });
-
-  it("non-finite input keeps the current reps", () => {
-    const next = setReps(makeWeightedSession({ reps: 8 }), NaN);
-    expect(next.reps).toBe(8);
-  });
-
-  it("does not mutate the input session", () => {
-    const session = makeWeightedSession({ reps: 8 });
-    const next = setReps(session, 12);
-    expect(next).not.toBe(session);
-    expect(session.reps).toBe(8);
-  });
-});
-
-describe("setWeight (typed value)", () => {
-  it("sets weight to an exact typed value (irregular increment)", () => {
-    const next = setWeight(makeWeightedSession({ weight: 60 }), 62.3);
-    expect(next.weight).toBeCloseTo(62.3, 5);
-  });
-
-  it("clamps negatives to 0", () => {
-    const next = setWeight(makeWeightedSession({ weight: 60 }), -5);
-    expect(next.weight).toBe(0);
-  });
-
-  it("rounds to one decimal place", () => {
-    const next = setWeight(makeWeightedSession({ weight: 60 }), 62.34);
-    expect(next.weight).toBeCloseTo(62.3, 5);
-  });
-
-  it("non-finite input keeps the current weight", () => {
-    const next = setWeight(makeWeightedSession({ weight: 60 }), NaN);
-    expect(next.weight).toBe(60);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// applyCoverage
-// ---------------------------------------------------------------------------
-
-describe("applyCoverage", () => {
-  it("bumps the specified muscles by DEFAULTS.coveragePerSet", () => {
-    const cov = zeroCoverage();
-    const next = applyCoverage(cov, ["chest"]);
-    expect(next["chest"]).toBe(DEFAULTS.coveragePerSet);
-  });
-
-  it("bumps multiple muscles", () => {
-    const cov = zeroCoverage();
-    const next = applyCoverage(cov, ["quads", "glutes"]);
-    expect(next["quads"]).toBe(DEFAULTS.coveragePerSet);
-    expect(next["glutes"]).toBe(DEFAULTS.coveragePerSet);
-  });
-
-  it("accumulates across multiple calls", () => {
-    const cov = zeroCoverage();
-    const after1 = applyCoverage(cov, ["chest"]);
-    const after2 = applyCoverage(after1, ["chest"]);
-    expect(after2["chest"]).toBe(DEFAULTS.coveragePerSet * 2);
-  });
-
-  it("does not mutate the input coverage", () => {
-    const cov = zeroCoverage();
-    applyCoverage(cov, ["chest"]);
-    expect(cov["chest"]).toBe(0);
-  });
-
-  it("only affects specified muscles, not others", () => {
-    const cov = zeroCoverage();
-    const next = applyCoverage(cov, ["chest"]);
-    expect(next["quads"]).toBe(0);
-    expect(next["lats"]).toBe(0);
-  });
-
-  it("empty muscles array leaves coverage unchanged", () => {
-    const cov = zeroCoverage();
-    const next = applyCoverage(cov, []);
-    // All values should still be 0
-    for (const muscle of MUSCLES) {
-      expect(next[muscle]).toBe(0);
-    }
-  });
-
-  it("coverage can exceed 100 (no clamping enforced here)", () => {
-    // applyCoverage just delegates to B03-coverage bump — no clamping required in session
-    const cov = zeroCoverage();
-    let curr = cov;
-    // Apply 30 times (4 per set * 30 = 120 > 100)
-    for (let i = 0; i < 30; i++) {
-      curr = applyCoverage(curr, ["chest"]);
-    }
-    expect(curr["chest"]).toBeGreaterThan(100);
+  it("formats durations as M:SS", () => {
+    expect(formatDuration(0)).toBe("0:00");
+    expect(formatDuration(75)).toBe("1:15");
+    expect(formatDuration(600)).toBe("10:00");
   });
 });

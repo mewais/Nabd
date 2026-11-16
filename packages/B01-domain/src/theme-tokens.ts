@@ -1,5 +1,4 @@
-import type { Theme, Wallpaper, Material } from "./settings";
-import { GLASS_OPACITY } from "./settings";
+import type { Theme, Material } from "./settings";
 
 /**
  * The four materials: two solid themes (light/dark) and their glass variants.
@@ -83,24 +82,7 @@ export const GLASS_TINT_RGB: Record<Theme, string> = {
 
 export const GLASS_FROST = "blur(34px) saturate(1.7)";
 
-/** The live glass tint `rgba(...)` for a theme + requested opacity (floor-clamped). */
+/** The live glass tint `rgba(...)` for a theme at the given opacity. */
 export function glassTint(theme: Theme, opacity: number): string {
-  const { floor, max } = GLASS_OPACITY[theme];
-  const op = Math.max(floor, Math.min(max, opacity));
-  return `rgba(${GLASS_TINT_RGB[theme]},${op})`;
+  return `rgba(${GLASS_TINT_RGB[theme]},${opacity})`;
 }
-
-/** Preview wallpapers (verbatim from the design handoff). */
-export const WALLPAPERS: Record<Wallpaper, string> = {
-  aurora:
-    "radial-gradient(120% 120% at 18% 8%, #1d4e6b 0%, #16324a 36%, #0d1b2e 70%, #07101f 100%), radial-gradient(80% 90% at 88% 22%, rgba(86,180,160,0.55), transparent 60%)",
-  dusk: "radial-gradient(120% 120% at 80% 10%, #6a3a6e 0%, #3f2a55 42%, #221a36 78%, #140f22 100%), radial-gradient(70% 80% at 12% 86%, rgba(214,119,87,0.5), transparent 60%)",
-  slate: "linear-gradient(140deg, #20242e 0%, #161922 55%, #0e1016 100%)",
-  mesh: "radial-gradient(60% 70% at 20% 20%, #2b5e8c, transparent 60%), radial-gradient(55% 65% at 82% 18%, #6b3f86, transparent 60%), radial-gradient(70% 70% at 70% 88%, #1f7a63, transparent 60%), linear-gradient(135deg, #0e1626, #161226)",
-  sand: "radial-gradient(120% 120% at 15% 12%, #fbe7cf 0%, #f3d3ad 40%, #e7b98a 72%, #d99a6c 100%), radial-gradient(70% 80% at 88% 20%, rgba(255,255,255,0.6), transparent 60%)",
-  frost:
-    "radial-gradient(120% 120% at 20% 10%, #eef3fb 0%, #d8e4f3 44%, #bfd0e8 74%, #a7bcde 100%), radial-gradient(65% 75% at 85% 85%, rgba(255,255,255,0.7), transparent 60%)",
-  mixed: "linear-gradient(120deg, #0e1626 0%, #2b3a55 38%, #c9b89a 62%, #f1e4cf 100%)",
-};
-
-export const TRANSLUCENT_FROST = GLASS_FROST;

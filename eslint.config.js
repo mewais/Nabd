@@ -13,7 +13,6 @@ export default [
       "**/target/**",
       "**/node_modules/**",
       "assets/body/**",
-      "packages/B02-dataset/data/**",
       "design_handoff_nabd_workout_tracker/**",
     ],
   },
@@ -31,8 +30,13 @@ export default [
     },
     rules: {
       ...tseslint.configs.recommended.rules,
+      // TypeScript itself reports undefined names (and knows the DOM + test globals).
+      "no-undef": "off",
       "react-hooks/rules-of-hooks": "error",
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
     settings: { react: { version: "detect" } },
   },

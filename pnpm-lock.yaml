@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@eslint/js':
+        specifier: ^9.39.4
+        version: 9.39.4
       '@playwright/test':
         specifier: ^1.61.0
         version: 1.61.0
@@ -92,18 +95,12 @@ importers:
 
   packages/B03-coverage:
     dependencies:
-      '@nabd/dataset':
-        specifier: workspace:*
-        version: link:../B02-dataset
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
 
   packages/B04-scheduling:
     dependencies:
-      '@nabd/dataset':
-        specifier: workspace:*
-        version: link:../B02-dataset
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
@@ -116,24 +113,21 @@ importers:
 
   packages/B06-session:
     dependencies:
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
       '@nabd/progression':
         specifier: workspace:*
         version: link:../B05-progression
+      '@nabd/scheduling':
+        specifier: workspace:*
+        version: link:../B04-scheduling
 
   packages/B07-nudge:
     dependencies:
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
-      '@nabd/scheduling':
-        specifier: workspace:*
-        version: link:../B04-scheduling
 
   packages/B08-analytics:
     dependencies:
@@ -143,9 +137,6 @@ importers:
 
   packages/B09-program-editor:
     dependencies:
-      '@nabd/dataset':
-        specifier: workspace:*
-        version: link:../B02-dataset
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
@@ -161,6 +152,9 @@ importers:
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
+      '@nabd/nudge':
+        specifier: workspace:*
+        version: link:../B07-nudge
       '@tauri-apps/api':
         specifier: ^2.0.0
         version: 2.11.1
@@ -200,6 +194,9 @@ importers:
       '@nabd/session':
         specifier: workspace:*
         version: link:../B06-session
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
       zustand:
         specifier: ^4.5.5
         version: 4.5.7(@types/react@18.3.31)(react@18.3.1)
@@ -221,9 +218,6 @@ importers:
 
   packages/B17-bodymap:
     dependencies:
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
@@ -239,9 +233,6 @@ importers:
 
   packages/B18-shell:
     dependencies:
-      '@nabd/bodymap':
-        specifier: workspace:*
-        version: link:../B17-bodymap
       '@nabd/design-system':
         specifier: workspace:*
         version: link:../B16-design-system
@@ -260,18 +251,27 @@ importers:
 
   packages/B19-today:
     dependencies:
+      '@nabd/analytics':
+        specifier: workspace:*
+        version: link:../B08-analytics
       '@nabd/bodymap':
         specifier: workspace:*
         version: link:../B17-bodymap
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
       '@nabd/design-system':
         specifier: workspace:*
         version: link:../B16-design-system
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
+      '@nabd/nudge':
+        specifier: workspace:*
+        version: link:../B07-nudge
+      '@nabd/scheduling':
+        specifier: workspace:*
+        version: link:../B04-scheduling
+      '@nabd/session':
+        specifier: workspace:*
+        version: link:../B06-session
       '@testing-library/react':
         specifier: ^16.0.1
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -287,9 +287,6 @@ importers:
       '@nabd/bodymap':
         specifier: workspace:*
         version: link:../B17-bodymap
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
       '@nabd/dataset':
         specifier: workspace:*
         version: link:../B02-dataset
@@ -320,9 +317,6 @@ importers:
       '@nabd/bodymap':
         specifier: workspace:*
         version: link:../B17-bodymap
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
       '@nabd/design-system':
         specifier: workspace:*
         version: link:../B16-design-system
@@ -344,15 +338,6 @@ importers:
 
   packages/B22-modals:
     dependencies:
-      '@nabd/bodymap':
-        specifier: workspace:*
-        version: link:../B17-bodymap
-      '@nabd/coverage':
-        specifier: workspace:*
-        version: link:../B03-coverage
-      '@nabd/dataset':
-        specifier: workspace:*
-        version: link:../B02-dataset
       '@nabd/design-system':
         specifier: workspace:*
         version: link:../B16-design-system
@@ -362,6 +347,12 @@ importers:
       '@nabd/progression':
         specifier: workspace:*
         version: link:../B05-progression
+      '@nabd/scheduling':
+        specifier: workspace:*
+        version: link:../B04-scheduling
+      '@nabd/session':
+        specifier: workspace:*
+        version: link:../B06-session
       '@testing-library/react':
         specifier: ^16.0.1
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -374,21 +365,12 @@ importers:
 
   packages/B23-app:
     dependencies:
-      '@nabd/analytics':
-        specifier: workspace:*
-        version: link:../B08-analytics
-      '@nabd/bodymap':
-        specifier: workspace:*
-        version: link:../B17-bodymap
       '@nabd/coverage':
         specifier: workspace:*
         version: link:../B03-coverage
       '@nabd/dataset':
         specifier: workspace:*
         version: link:../B02-dataset
-      '@nabd/design-system':
-        specifier: workspace:*
-        version: link:../B16-design-system
       '@nabd/domain':
         specifier: workspace:*
         version: link:../B01-domain
@@ -398,21 +380,18 @@ importers:
       '@nabd/modals':
         specifier: workspace:*
         version: link:../B22-modals
+      '@nabd/nudge':
+        specifier: workspace:*
+        version: link:../B07-nudge
       '@nabd/planner':
         specifier: workspace:*
         version: link:../B20-planner
-      '@nabd/program-editor':
-        specifier: workspace:*
-        version: link:../B09-program-editor
       '@nabd/progress':
         specifier: workspace:*
         version: link:../B21-progress
       '@nabd/progression':
         specifier: workspace:*
         version: link:../B05-progression
-      '@nabd/scheduling':
-        specifier: workspace:*
-        version: link:../B04-scheduling
       '@nabd/shell':
         specifier: workspace:*
         version: link:../B18-shell
@@ -1539,6 +1518,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'

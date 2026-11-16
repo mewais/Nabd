@@ -52,8 +52,8 @@ export interface Movement {
   id: string;
   /** Display name, e.g. "Bench Press". */
   name: string;
-  /** Prime movers ONLY. */
-  primary: MuscleKey[];
+  /** Prime movers ONLY; the first decides the exercise's group. */
+  primary: [MuscleKey, ...MuscleKey[]];
   /** Assisting muscles ONLY. */
   secondary: MuscleKey[];
   /** Compatible equipment list. */
@@ -86,35 +86,12 @@ function deriveTracking(m: Movement, eq: Equipment): TrackingType {
   return "weight_reps";
 }
 
-function deriveTimeBased(tracking: TrackingType, m: Movement): boolean {
-  if (m.timeBased !== undefined) return m.timeBased;
-  return (
-    tracking === "duration" || tracking === "weight_duration" || tracking === "distance_duration"
-  );
-}
-
 function deriveName(m: Movement, eq: Equipment, uni: boolean): string {
-  // Unilateral override takes priority
   if (uni && m.nameOverride?.["uni"]) return m.nameOverride["uni"];
-  // Equipment-specific override
-  if (m.nameOverride?.[eq]) {
-    const base = m.nameOverride[eq]!;
-    if (uni) {
-      return isLower(m.primary[0]) ? `Single-Leg ${base}` : `Single-Arm ${base}`;
-    }
-    return base;
-  }
-  // Default naming
   const prefix = EQUIPMENT_NAME_PREFIX[eq];
-  const base = prefix === "" ? m.name : `${prefix} ${m.name}`;
-  if (uni) {
-    return isLower(m.primary[0]) ? `Single-Leg ${base}` : `Single-Arm ${base}`;
-  }
-  return base;
-}
-
-function deriveSecondary(m: Movement): MuscleKey[] {
-  return [...new Set(m.secondary)];
+  const base = m.nameOverride?.[eq] ?? (prefix === "" ? m.name : `${prefix} ${m.name}`);
+  if (!uni) return base;
+  return `${isLower(m.primary[0]) ? "Single-Leg" : "Single-Arm"} ${base}`;
 }
 
 export function compose(movements: Movement[]): Exercise[] {
@@ -126,20 +103,17 @@ export function compose(movements: Movement[]): Exercise[] {
         const uni = lat === "unilateral";
         const id = `${m.id}__${eq}${uni ? "__uni" : ""}`;
         const name = deriveName(m, eq, uni);
-        const secondary = deriveSecondary(m);
         const group: MuscleGroup = MUSCLE_PRIMARY_GROUP[m.primary[0]];
         const tracking = deriveTracking(m, eq);
-        const timeBased = deriveTimeBased(tracking, m);
 
         result.push({
           id,
           name,
           group,
           primary: [...m.primary],
-          secondary,
+          secondary: [...new Set(m.secondary)],
           equipment: eq,
           tracking,
-          timeBased,
           custom: false,
         });
       }

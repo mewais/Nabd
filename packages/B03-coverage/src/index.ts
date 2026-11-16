@@ -1,150 +1,124 @@
-// @nabd/coverage — pure coverage & volume engine.
+// @nabd/coverage — per-muscle training volume, from the plan or from history.
 
-import type { Coverage, MuscleKey, Program, Exercise, LoggedSet } from "@nabd/domain";
+import type { Coverage, Exercise, LoggedSet, MuscleKey, Program } from "@nabd/domain";
 import { MUSCLES } from "@nabd/domain";
 
-/** Per-muscle planned working-set volume. */
-export type Volume = Partial<Record<MuscleKey, number>>;
-
+export type ExerciseLookup = (exId: string) => Exercise | undefined;
 export type Recommendation = "rest" | "push" | "none";
 
-/** Look up an exercise by id (provided by @nabd/dataset at the call site). */
-export type ExerciseLookup = (exId: string) => Exercise | undefined;
+/** Weekly sets that count as fully covering a muscle. */
+export const FULL_COVERAGE_SETS = 16;
+const SECONDARY_WEIGHT = 0.5;
+const COVERAGE_WINDOW_DAYS = 7;
+const REST_AT_PCT = 66;
+const PUSH_AT_PCT = 38;
+const INSIGHT_MUSCLES = 3;
 
 /**
- * Weekly volume per muscle across a program. Primary muscle = full working-set
- * count, secondary = half. Warmup sets excluded.
- *
- * Fixed program: each exercise's working-set count adds full to each primary
- * muscle and half to each secondary muscle.
- *
- * Cycled program: each slot's muscle profile is averaged across the pool.
- * - workingCount = number of working sets in the slot.
- * - Resolve each exId in slot.pool via lookup; collect resolved Exercise objects
- *   (skip ids that resolve to undefined).
- * - n = number of resolved pool exercises.
- * - If n === 0 (empty pool or none resolve): fall back to crediting slot.muscle
- *   the full workingCount (so a freshly-added, still-empty slot still shows its
- *   intended target).
- * - Else: since only ONE pool exercise rotates in per session, average the muscle
- *   profile across the pool. For each resolved exercise, weight is 1.0 per
- *   primary muscle and 0.5 per secondary muscle. For each muscle m, add
- *   workingCount * (sumOfWeightsForM_acrossPool / n).
+ * Sets per muscle. A set counts fully toward an exercise's primary muscles and
+ * half toward its secondary ones.
  */
-export function computePlanVolume(program: Program, lookup: ExerciseLookup): Volume {
-  const vol: Volume = {};
+export class MuscleVolume {
+  private readonly sets = new Map<MuscleKey, number>();
 
-  function add(muscle: MuscleKey, amount: number): void {
-    vol[muscle] = (vol[muscle] ?? 0) + amount;
+  /** Credit `count` sets of an exercise (fractional when averaging over a pool). */
+  credit(muscles: Pick<Exercise, "primary" | "secondary">, count: number): void {
+    for (const m of muscles.primary) this.add(m, count);
+    for (const m of muscles.secondary) this.add(m, count * SECONDARY_WEIGHT);
   }
 
-  for (const day of program.days) {
-    if (program.type === "fixed") {
-      for (const ep of day.exercises) {
-        const exercise = lookup(ep.exId);
-        if (exercise === undefined) continue;
-        const workingCount = ep.sets.filter((s) => s.type === "working").length;
-        for (const muscle of exercise.primary) {
-          add(muscle, workingCount);
+  add(muscle: MuscleKey, sets: number): void {
+    this.sets.set(muscle, this.of(muscle) + sets);
+  }
+
+  of(muscle: MuscleKey): number {
+    return this.sets.get(muscle) ?? 0;
+  }
+
+  /** Trained muscles with their set counts, most-trained first. */
+  ranked(): { muscle: MuscleKey; sets: number }[] {
+    return [...this.sets]
+      .map(([muscle, sets]) => ({ muscle, sets }))
+      .sort((a, b) => b.sets - a.sets);
+  }
+
+  /** 0–100 per muscle, saturating at {@link FULL_COVERAGE_SETS}. */
+  toCoverage(): Coverage {
+    return Object.fromEntries(
+      MUSCLES.map((m) => [m, Math.min(100, (this.of(m) / FULL_COVERAGE_SETS) * 100)]),
+    ) as Coverage;
+  }
+
+  /**
+   * What one pass through the program trains. A cycled slot only runs one pool
+   * exercise per session, so its sets are spread evenly over the pool; an empty
+   * pool still credits the slot's target muscle.
+   */
+  static ofProgram(program: Program, lookup: ExerciseLookup): MuscleVolume {
+    const volume = new MuscleVolume();
+    const workingSets = (p: { sets: { type: string }[] }): number =>
+      p.sets.filter((s) => s.type !== "warmup").length;
+
+    for (const day of program.days) {
+      if (program.type === "fixed") {
+        for (const row of day.exercises) {
+          const exercise = lookup(row.exId);
+          if (exercise) volume.credit(exercise, workingSets(row));
         }
-        for (const muscle of exercise.secondary) {
-          add(muscle, workingCount * 0.5);
-        }
+        continue;
       }
-    } else {
-      // cycled
       for (const slot of day.slots) {
-        const workingCount = slot.sets.filter((s) => s.type === "working").length;
-        const resolved = slot.pool
-          .map((exId) => lookup(exId))
-          .filter((ex): ex is Exercise => ex !== undefined);
-        const n = resolved.length;
-
-        if (n === 0) {
-          // Fallback: credit the slot's declared target muscle with the full count
-          add(slot.muscle, workingCount);
-        } else {
-          // Average muscle profile across the pool exercises
-          const weights = new Map<MuscleKey, number>();
-          for (const ex of resolved) {
-            for (const muscle of ex.primary) {
-              weights.set(muscle, (weights.get(muscle) ?? 0) + 1.0);
-            }
-            for (const muscle of ex.secondary) {
-              weights.set(muscle, (weights.get(muscle) ?? 0) + 0.5);
-            }
-          }
-          for (const [muscle, sumWeight] of weights) {
-            add(muscle, workingCount * (sumWeight / n));
-          }
-        }
+        const pool = slot.pool.map(lookup).filter((e): e is Exercise => e !== undefined);
+        if (pool.length === 0) volume.add(slot.muscle, workingSets(slot));
+        for (const exercise of pool) volume.credit(exercise, workingSets(slot) / pool.length);
       }
     }
+    return volume;
   }
 
-  return vol;
-}
-
-/** Convert volume to 0–100 coverage (saturating at a reference weekly volume). */
-export function planCoverage(volume: Volume): Coverage {
-  const cov = emptyCoverage();
-  for (const muscle of MUSCLES) {
-    const vol = volume[muscle] ?? 0;
-    cov[muscle] = Math.min(100, (vol / 16) * 100);
-  }
-  return cov;
-}
-
-/** Build 7-day coverage from logged-set history (recency-weighted). */
-export function coverageFrom7dHistory(history: LoggedSet[], now: Date): Coverage {
-  const cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const vol: Partial<Record<MuscleKey, number>> = {};
-
-  for (const loggedSet of history) {
-    const ts = new Date(loggedSet.ts);
-    if (ts < cutoff) continue;
-
-    const muscles = loggedSet.muscles;
-    for (let i = 0; i < muscles.length; i++) {
-      const muscle = muscles[i];
-      const amount = i === 0 ? 1 : 0.5;
-      vol[muscle] = (vol[muscle] ?? 0) + amount;
+  /**
+   * What was actually trained in the week ending at `now` (warm-ups excluded).
+   * Sets of an exercise no longer in the library fall back to their logged
+   * muscle list, first muscle primary.
+   */
+  static ofRecentHistory(
+    history: readonly LoggedSet[],
+    lookup: ExerciseLookup,
+    now: Date,
+  ): MuscleVolume {
+    const volume = new MuscleVolume();
+    const cutoff = now.getTime() - COVERAGE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    for (const set of history) {
+      if (set.setType === "warmup" || new Date(set.ts).getTime() < cutoff) continue;
+      const [first, ...rest] = set.muscles;
+      volume.credit(lookup(set.exId) ?? { primary: first ? [first] : [], secondary: rest }, 1);
     }
+    return volume;
   }
-
-  const cov = emptyCoverage();
-  for (const muscle of MUSCLES) {
-    const v = vol[muscle] ?? 0;
-    cov[muscle] = Math.min(100, (v / 16) * 100);
-  }
-  return cov;
 }
 
-/** Apply one logged set's muscles to a coverage map (primary full, secondary half). */
-export function applySetDelta(cov: Coverage, muscles: MuscleKey[], perSet: number): Coverage {
-  const next = { ...cov };
-  for (const muscle of muscles) {
-    next[muscle] = Math.min(100, next[muscle] + perSet);
-  }
-  return next;
-}
-
-/** rest if pct >= 66, push if pct <= 38, else none. */
+/** rest when well covered, push when lagging. */
 export function recommendation(pct: number): Recommendation {
-  if (pct >= 66) return "rest";
-  if (pct <= 38) return "push";
+  if (pct >= REST_AT_PCT) return "rest";
+  if (pct <= PUSH_AT_PCT) return "push";
   return "none";
 }
 
-/** Highest-covered (rest) and lowest-covered (push) muscles, names ready to show. */
-export function insight(cov: Coverage): { rest: MuscleKey[]; push: MuscleKey[] } {
-  const sorted = [...MUSCLES].sort((a, b) => cov[b] - cov[a]);
-  const rest = sorted.slice(0, 2);
-  const push = sorted.slice(-2).reverse();
-  return { rest, push };
-}
-
-/** An all-zero coverage map over every muscle. */
-export function emptyCoverage(): Coverage {
-  return Object.fromEntries(MUSCLES.map((m) => [m, 0])) as Coverage;
+/**
+ * The most over- and under-trained muscles. Only muscles the plan actually
+ * targets can be "lagging" — nobody needs to be told to push a muscle they
+ * never meant to train.
+ */
+export function insight(
+  actual: Coverage,
+  planned: MuscleVolume,
+): { rest: MuscleKey[]; push: MuscleKey[] } {
+  const most = [...MUSCLES].sort((a, b) => actual[b] - actual[a]);
+  const least = [...MUSCLES].sort((a, b) => actual[a] - actual[b]);
+  return {
+    rest: most.filter((m) => recommendation(actual[m]) === "rest").slice(0, INSIGHT_MUSCLES),
+    push: least
+      .filter((m) => planned.of(m) > 0 && recommendation(actual[m]) === "push")
+      .slice(0, INSIGHT_MUSCLES),
+  };
 }
