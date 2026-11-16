@@ -1,2 +1,10 @@
-packages/B02-dataset/data/source/* linguist-vendored
-assets/body/muscles.*.ts linguist-vendored
+# LF everywhere, so formatting checks agree on Windows and Linux checkouts.
+* text=auto eol=lf
+
+*.woff2 binary
+*.png binary
+*.ico binary
+*.icns binary
+
+assets/body/bodydata.ts linguist-vendored
+packages/B23-app/public/fonts/** linguist-vendored
