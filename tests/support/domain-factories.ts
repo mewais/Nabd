@@ -1,13 +1,14 @@
-// Small builders for domain objects used across the engine test suites.
+// Small builders for domain objects, shared by every test suite.
 
 import type {
   Exercise,
+  ExerciseLookup,
   ExercisePrescription,
   LoggedSet,
   Prescription,
   SetSpec,
 } from "@nabd/domain";
-import { dateKey } from "@nabd/domain";
+import { dateKey, musclesOf } from "@nabd/domain";
 
 let nextId = 0;
 const uid = (prefix: string): string => `${prefix}-${++nextId}`;
@@ -29,8 +30,24 @@ export function exercise(overrides: Partial<Exercise> = {}): Exercise {
   };
 }
 
-export const working = (a: number, b?: number): SetSpec =>
-  b === undefined ? { type: "working", a } : { type: "working", a, b };
+/** Looks exercises up among the given ones, the way a library would. */
+export const lookupIn =
+  (exercises: readonly Exercise[]): ExerciseLookup =>
+  (exId) =>
+    exercises.find((e) => e.id === exId);
+
+/** A working set of `lo` reps (or seconds), or of `lo`–`hi`, optionally at an RPE / %1RM of `val`. */
+export const working = (lo: number, hi?: number, val?: number): SetSpec => ({
+  type: "working",
+  a: lo,
+  ...(hi === undefined ? {} : { b: hi }),
+  ...(val === undefined ? {} : { val }),
+});
+
+export const warmup = (reps: number): SetSpec => ({ type: "warmup", a: reps });
+
+/** The prescription most tests train on: three working sets of 8–12. */
+export const threeSets: SetSpec[] = [working(8, 12), working(8, 12), working(8, 12)];
 
 export function prescription(sets: SetSpec[], overrides: Partial<Prescription> = {}): Prescription {
   return { repMode: "range", intensity: "none", rest: 90, sets, ...overrides };
@@ -58,7 +75,7 @@ export function logged(
     exId: ex.id,
     exercise: ex.name,
     group: ex.group,
-    muscles: [...ex.primary, ...ex.secondary],
+    muscles: musclesOf(ex),
     value: reps,
     weight,
     ts: at.toISOString(),

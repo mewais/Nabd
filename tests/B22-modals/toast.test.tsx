@@ -2,46 +2,42 @@
  * B22 · @nabd/modals — NotificationToast: the "time to move" nudge.
  */
 
-// React must be in scope: the tests are compiled with the classic JSX transform.
-import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { NotificationToast } from "@nabd/modals";
+import type { ToastActions, ToastVM } from "@nabd/modals";
 
 describe("NotificationToast", () => {
+  const VM: ToastVM = {
+    reason: "You've gone quiet",
+    exercise: "Bench Press",
+    detail: "Chest · set 2 of 3",
+  };
   const setup = () => {
-    const onConfirm = vi.fn();
-    const onSnooze = vi.fn();
-    render(
-      <NotificationToast
-        reasonLabel="You've gone quiet"
-        exercise="Bench Press"
-        sub="Set 2 of 3 · Working set · 8–12 reps"
-        onConfirm={onConfirm}
-        onSnooze={onSnooze}
-      />,
-    );
-    return { onConfirm, onSnooze };
+    const actions: ToastActions = { start: vi.fn(), snooze: vi.fn() };
+    render(<NotificationToast vm={VM} actions={actions} />);
+    return actions;
   };
 
   it("says why it fired and which set is up", () => {
     setup();
-    expect(screen.getByText("TIME TO MOVE")).toBeInTheDocument();
-    expect(screen.getByText("You've gone quiet")).toBeInTheDocument();
-    expect(screen.getByText("Bench Press")).toBeInTheDocument();
-    expect(screen.getByText("Set 2 of 3 · Working set · 8–12 reps")).toBeInTheDocument();
+    const toast = screen.getByRole("status");
+    expect(toast).toHaveTextContent("Time to move");
+    expect(toast).toHaveTextContent("You've gone quiet");
+    expect(toast).toHaveTextContent("Bench Press");
+    expect(toast).toHaveTextContent("Chest · set 2 of 3");
   });
 
-  it("Let's go confirms without snoozing", () => {
-    const { onConfirm, onSnooze } = setup();
+  it("Let's go starts the set without snoozing", () => {
+    const actions = setup();
     fireEvent.click(screen.getByRole("button", { name: "Let's go" }));
-    expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(onSnooze).not.toHaveBeenCalled();
+    expect(actions.start).toHaveBeenCalledTimes(1);
+    expect(actions.snooze).not.toHaveBeenCalled();
   });
 
-  it("Snooze snoozes without confirming", () => {
-    const { onConfirm, onSnooze } = setup();
+  it("Snooze snoozes without starting", () => {
+    const actions = setup();
     fireEvent.click(screen.getByRole("button", { name: "Snooze" }));
-    expect(onSnooze).toHaveBeenCalledTimes(1);
-    expect(onConfirm).not.toHaveBeenCalled();
+    expect(actions.snooze).toHaveBeenCalledTimes(1);
+    expect(actions.start).not.toHaveBeenCalled();
   });
 });

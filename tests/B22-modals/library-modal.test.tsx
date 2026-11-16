@@ -3,238 +3,241 @@
  * creating a custom exercise.
  */
 
-// React must be in scope: the tests are compiled with the classic JSX transform.
-import React from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { LibraryModal } from "@nabd/modals";
-import type { LibraryItem, LibraryModalProps } from "@nabd/modals";
+import type { LibraryActions, LibraryVM } from "@nabd/modals";
 
-const ITEMS: LibraryItem[] = [
-  {
-    id: "bench",
-    name: "Bench Press",
-    muscles: "Chest, Triceps",
-    trackLabel: "Weight & reps",
-    equip: "Barbell",
-    custom: false,
-  },
-  {
-    id: "my-squat",
-    name: "Goblet Squat",
-    muscles: "Quads, Glutes",
-    trackLabel: "Weight & reps",
-    equip: "Kettlebell",
-    custom: true,
-  },
-];
+type BrowseVM = Extract<LibraryVM, { mode: "browse" }>;
+type CreateVM = Extract<LibraryVM, { mode: "create" }>;
 
-const chips = (active: string[]) =>
-  [
-    { k: "chest", label: "Chest" },
-    { k: "quads", label: "Quads" },
-    { k: "glutes", label: "Glutes" },
-  ].map((c) => ({ ...c, active: active.includes(c.k) }));
-
-function setup(over: Partial<LibraryModalProps> = {}) {
-  const props: LibraryModalProps = {
-    title: "Add an exercise",
-    creating: false,
+const BROWSE: BrowseVM = {
+  title: "Add Exercise",
+  mode: "browse",
+  browser: {
     search: "",
-    groupChips: [
-      { k: "all", label: "All", active: true },
-      { k: "Chest", label: "Chest", active: false },
-      { k: "Quads", label: "Quads", active: false },
+    group: "all",
+    rows: [
+      {
+        id: "bench",
+        name: "Bench Press",
+        detail: "Chest, Triceps · Weight & reps · Barbell",
+        custom: false,
+        addLabel: "Add Bench Press",
+      },
+      {
+        id: "my-squat",
+        name: "Goblet Squat",
+        detail: "Quads, Glutes · Weight & reps · Kettlebell",
+        custom: true,
+        addLabel: "Add Goblet Squat",
+      },
     ],
-    items: ITEMS,
-    emptyMsg: "No exercises match.",
-    draftName: "",
-    draftTrack: "weight_reps",
-    draftEquip: "dumbbell",
-    primaryChips: chips([]),
-    secondaryChips: chips([]),
-    onClose: vi.fn(),
-    onSearch: vi.fn(),
-    onGroup: vi.fn(),
-    onPick: vi.fn(),
-    onCopy: vi.fn(),
-    onDeleteCustom: vi.fn(),
-    onStartCreate: vi.fn(),
-    onCancelCreate: vi.fn(),
-    onDraftName: vi.fn(),
-    onDraftTrack: vi.fn(),
-    onDraftEquip: vi.fn(),
-    onTogglePrimary: vi.fn(),
-    onToggleSecondary: vi.fn(),
-    onCreate: vi.fn(),
-    ...over,
+    emptyNote: null,
+  },
+};
+
+const CREATE: CreateVM = {
+  title: "Add Exercise",
+  mode: "create",
+  form: {
+    name: "Goblet Squat",
+    primary: ["quads"],
+    secondary: [],
+    equipment: "dumbbell",
+    tracking: "weight_reps",
+    canCreate: true,
+  },
+};
+
+function setup(vm: LibraryVM) {
+  const actions: LibraryActions = {
+    closeLibrary: vi.fn(),
+    patchLibrary: vi.fn(),
+    pickExercise: vi.fn(),
+    startDraft: vi.fn(),
+    patchDraft: vi.fn(),
+    cancelDraft: vi.fn(),
+    saveDraft: vi.fn(),
+    deleteCustomExercise: vi.fn(),
   };
-  const view = render(<LibraryModal {...props} />);
-  /** The row (add + duplicate [+ delete] buttons) of the exercise called `name`. */
-  const itemRow = (name: string) => {
-    const row = screen.getByText(name).closest("button")?.parentElement;
-    if (!row) throw new Error(`no library row for "${name}"`);
-    return within(row);
-  };
-  /** The chips under the section headed `heading` in the create form. */
-  const section = (heading: string) => {
-    const block = screen.getByText(heading).parentElement;
-    if (!block) throw new Error(`no section "${heading}"`);
-    return within(block);
-  };
-  return { props, itemRow, section, ...view };
+  render(<LibraryModal vm={vm} actions={actions} />);
+  return actions;
 }
 
 describe("LibraryModal · browsing", () => {
-  it("shows the title and each exercise with its muscles, tracking and equipment", () => {
-    setup();
-    expect(screen.getByText("Add an exercise")).toBeInTheDocument();
-    expect(screen.getByText("Bench Press")).toBeInTheDocument();
-    expect(screen.getByText("Chest, Triceps · Weight & reps · Barbell")).toBeInTheDocument();
-    expect(screen.getByText("Quads, Glutes · Weight & reps · Kettlebell")).toBeInTheDocument();
+  const browsing = (browser: Partial<BrowseVM["browser"]> = {}) =>
+    setup({ ...BROWSE, browser: { ...BROWSE.browser, ...browser } });
+  /** The row (add, duplicate and maybe delete buttons) of the exercise called `name`. */
+  const row = (name: string) => {
+    const item = screen.getByRole("button", { name: `Add ${name}` }).closest("li");
+    if (!item) throw new Error(`no library row for "${name}"`);
+    return within(item);
+  };
+
+  it("is a dialog with the title, listing each exercise with its details", () => {
+    browsing();
+    expect(screen.getByRole("dialog", { name: "Add Exercise" })).toBeInTheDocument();
+    expect(row("Bench Press").getByText("Chest, Triceps · Weight & reps · Barbell")).toBeVisible();
+    expect(row("Goblet Squat").getByText("Quads, Glutes · Weight & reps · Kettlebell")).toBeVisible();
   });
 
   it("reflects the current search and reports what is typed", () => {
-    const { props } = setup({ search: "ben" });
-    const box = screen.getByRole("searchbox");
+    const actions = browsing({ search: "ben" });
+    const box = screen.getByRole("searchbox", { name: "Search exercises" });
     expect(box).toHaveValue("ben");
     fireEvent.change(box, { target: { value: "bench" } });
-    expect(props.onSearch).toHaveBeenCalledWith("bench");
+    expect(actions.patchLibrary).toHaveBeenCalledWith({ search: "bench" });
   });
 
   it("marks the active group filter and reports a newly chosen one", () => {
-    const { props } = setup();
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Quads" })).toHaveAttribute("aria-pressed", "false");
+    const actions = browsing({ group: "Chest" });
+    const groups = within(screen.getByRole("group", { name: "Muscle group" }));
+    expect(groups.getByRole("button", { name: "Chest" })).toHaveAttribute("aria-pressed", "true");
+    expect(groups.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "false");
 
-    fireEvent.click(screen.getByRole("button", { name: "Quads" }));
-    expect(props.onGroup).toHaveBeenCalledWith("Quads");
+    fireEvent.click(groups.getByRole("button", { name: "Quads" }));
+    expect(actions.patchLibrary).toHaveBeenLastCalledWith({ group: "Quads" });
+  });
+
+  it("choosing All clears the group filter", () => {
+    const actions = browsing({ group: "Chest" });
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(actions.patchLibrary).toHaveBeenLastCalledWith({ group: null });
   });
 
   it("picking an exercise reports its id", () => {
-    const { props, itemRow } = setup();
-    fireEvent.click(itemRow("Goblet Squat").getByRole("button", { name: "add" }));
-    expect(props.onPick).toHaveBeenCalledTimes(1);
-    expect(props.onPick).toHaveBeenCalledWith("my-squat");
-    expect(props.onCopy).not.toHaveBeenCalled();
+    const actions = browsing();
+    fireEvent.click(screen.getByRole("button", { name: "Add Goblet Squat" }));
+    expect(actions.pickExercise).toHaveBeenCalledTimes(1);
+    expect(actions.pickExercise).toHaveBeenCalledWith("my-squat");
+    expect(actions.startDraft).not.toHaveBeenCalled();
   });
 
   it("any exercise can be duplicated into a custom one", () => {
-    const { props, itemRow } = setup();
-    fireEvent.click(itemRow("Bench Press").getByRole("button", { name: "duplicate" }));
-    expect(props.onCopy).toHaveBeenCalledWith("bench");
-    expect(props.onPick).not.toHaveBeenCalled();
+    const actions = browsing();
+    fireEvent.click(row("Bench Press").getByRole("button", { name: "Duplicate & edit" }));
+    expect(actions.startDraft).toHaveBeenCalledWith("bench");
+    expect(actions.pickExercise).not.toHaveBeenCalled();
   });
 
   it("only custom exercises are badged and can be deleted", () => {
-    const { props, itemRow } = setup();
-    expect(itemRow("Bench Press").queryByRole("button", { name: "delete" })).toBeNull();
-    expect(itemRow("Bench Press").queryByText("CUSTOM")).toBeNull();
-    expect(itemRow("Goblet Squat").getByText("CUSTOM")).toBeInTheDocument();
+    const actions = browsing();
+    const remove = { name: "Delete custom exercise" };
+    expect(row("Bench Press").queryByRole("button", remove)).toBeNull();
+    expect(row("Bench Press").queryByText("CUSTOM")).toBeNull();
+    expect(row("Goblet Squat").getByText("CUSTOM")).toBeInTheDocument();
 
-    fireEvent.click(itemRow("Goblet Squat").getByRole("button", { name: "delete" }));
-    expect(props.onDeleteCustom).toHaveBeenCalledWith("my-squat");
-    expect(props.onPick).not.toHaveBeenCalled();
+    fireEvent.click(row("Goblet Squat").getByRole("button", remove));
+    expect(actions.deleteCustomExercise).toHaveBeenCalledWith("my-squat");
+    expect(actions.pickExercise).not.toHaveBeenCalled();
   });
 
-  it("shows the empty message when nothing matches", () => {
-    setup({ items: [], search: "zzz" });
+  it("shows the empty note when nothing matches", () => {
+    browsing({ rows: [], emptyNote: "No exercises match." });
     expect(screen.getByText("No exercises match.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "add" })).toBeNull();
+    expect(screen.queryByRole("listitem")).toBeNull();
   });
 
   it("the ✕ closes the library", () => {
-    const { props } = setup();
+    const actions = browsing();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    expect(props.onClose).toHaveBeenCalledTimes(1);
+    expect(actions.closeLibrary).toHaveBeenCalledTimes(1);
   });
 
-  it("offers a labelled way to create a custom exercise", () => {
-    const { props } = setup();
-    fireEvent.click(screen.getByRole("button", { name: /create/i }));
-    expect(props.onStartCreate).toHaveBeenCalledTimes(1);
+  it("offers to create a custom exercise from scratch", () => {
+    const actions = browsing();
+    fireEvent.click(screen.getByRole("button", { name: "Create custom exercise" }));
+    expect(actions.startDraft).toHaveBeenCalledTimes(1);
+    expect(actions.startDraft).toHaveBeenCalledWith();
   });
 });
 
 describe("LibraryModal · creating a custom exercise", () => {
-  const creating = (over: Partial<LibraryModalProps> = {}) =>
-    setup({ creating: true, draftName: "Goblet Squat", primaryChips: chips(["quads"]), ...over });
+  const creating = (form: Partial<CreateVM["form"]> = {}) =>
+    setup({ ...CREATE, form: { ...CREATE.form, ...form } });
+  const section = (title: string) => within(screen.getByRole("region", { name: title }));
 
   it("replaces the list and search with the form", () => {
     creating();
     expect(screen.queryByRole("searchbox")).toBeNull();
-    expect(screen.queryByText("Bench Press")).toBeNull();
-    expect(screen.getByPlaceholderText("Exercise name")).toHaveValue("Goblet Squat");
+    expect(screen.queryByRole("listitem")).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Exercise name" })).toHaveValue("Goblet Squat");
   });
 
   it("reports edits to the name", () => {
-    const { props } = creating();
-    fireEvent.change(screen.getByPlaceholderText("Exercise name"), {
+    const actions = creating();
+    fireEvent.change(screen.getByRole("textbox", { name: "Exercise name" }), {
       target: { value: "Goblet Squat (pause)" },
     });
-    expect(props.onDraftName).toHaveBeenCalledWith("Goblet Squat (pause)");
+    expect(actions.patchDraft).toHaveBeenCalledWith({ name: "Goblet Squat (pause)" });
   });
 
-  it("toggles primary and secondary muscles independently", () => {
-    const { props, section } = creating();
-    const primary = section("PRIMARY MUSCLES");
-    const secondary = section("SECONDARY MUSCLES");
+  it("adds and removes primary muscles, leaving the secondary ones alone", () => {
+    const actions = creating();
+    const primary = section("Primary muscles");
     expect(primary.getByRole("button", { name: "Quads" })).toHaveAttribute("aria-pressed", "true");
-    expect(secondary.getByRole("button", { name: "Quads" })).toHaveAttribute(
+    expect(section("Secondary muscles").getByRole("button", { name: "Quads" })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
 
     fireEvent.click(primary.getByRole("button", { name: "Glutes" }));
-    expect(props.onTogglePrimary).toHaveBeenCalledWith("glutes");
-    expect(props.onToggleSecondary).not.toHaveBeenCalled();
+    expect(actions.patchDraft).toHaveBeenLastCalledWith({ primary: ["quads", "glutes"] });
+    fireEvent.click(primary.getByRole("button", { name: "Quads" }));
+    expect(actions.patchDraft).toHaveBeenLastCalledWith({ primary: [] });
+  });
+
+  it("adds and removes secondary muscles, leaving the primary ones alone", () => {
+    const actions = creating({ secondary: ["glutes"] });
+    const secondary = section("Secondary muscles");
 
     fireEvent.click(secondary.getByRole("button", { name: "Chest" }));
-    expect(props.onToggleSecondary).toHaveBeenCalledWith("chest");
-    expect(props.onTogglePrimary).toHaveBeenCalledTimes(1);
+    expect(actions.patchDraft).toHaveBeenLastCalledWith({ secondary: ["glutes", "chest"] });
+    fireEvent.click(secondary.getByRole("button", { name: "Glutes" }));
+    expect(actions.patchDraft).toHaveBeenLastCalledWith({ secondary: [] });
   });
 
   it("shows how the exercise is tracked and reports a new choice", () => {
-    const { props } = creating();
-    const trigger = screen.getByRole("button", { name: "HOW TO TRACK IT" });
+    const actions = creating();
+    const trigger = screen.getByRole("button", { name: "How to track it" });
     expect(trigger).toHaveTextContent("Weight & reps");
 
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("option", { name: "Reps only" }));
-    expect(props.onDraftTrack).toHaveBeenCalledWith("reps_only");
-    expect(props.onDraftEquip).not.toHaveBeenCalled();
+    expect(actions.patchDraft).toHaveBeenCalledWith({ tracking: "reps_only" });
   });
 
   it("shows the equipment and reports a new choice", () => {
-    const { props } = creating();
-    const trigger = screen.getByRole("button", { name: "EQUIPMENT" });
+    const actions = creating();
+    const trigger = screen.getByRole("button", { name: "Equipment" });
     expect(trigger).toHaveTextContent("Dumbbells");
 
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("option", { name: "Kettlebell" }));
-    expect(props.onDraftEquip).toHaveBeenCalledWith("kettlebell");
+    expect(actions.patchDraft).toHaveBeenCalledWith({ equipment: "kettlebell" });
   });
 
-  it("Create is available once a primary muscle is chosen", () => {
-    const { props } = creating();
+  it("Create saves the draft when it can be created", () => {
+    const actions = creating();
     const create = screen.getByRole("button", { name: "Create" });
     expect(create).toBeEnabled();
     fireEvent.click(create);
-    expect(props.onCreate).toHaveBeenCalledTimes(1);
+    expect(actions.saveDraft).toHaveBeenCalledTimes(1);
   });
 
-  it("Create is disabled until a primary muscle is chosen", () => {
-    const { props } = creating({ primaryChips: chips([]), secondaryChips: chips(["glutes"]) });
+  it("Create is disabled while the draft cannot be created", () => {
+    const actions = creating({ primary: [], canCreate: false });
     const create = screen.getByRole("button", { name: "Create" });
     expect(create).toBeDisabled();
     fireEvent.click(create);
-    expect(props.onCreate).not.toHaveBeenCalled();
+    expect(actions.saveDraft).not.toHaveBeenCalled();
   });
 
-  it("Back returns to browsing without creating", () => {
-    const { props } = creating();
+  it("Back returns to browsing without creating or closing", () => {
+    const actions = creating();
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(props.onCancelCreate).toHaveBeenCalledTimes(1);
-    expect(props.onCreate).not.toHaveBeenCalled();
-    expect(props.onClose).not.toHaveBeenCalled();
+    expect(actions.cancelDraft).toHaveBeenCalledTimes(1);
+    expect(actions.saveDraft).not.toHaveBeenCalled();
+    expect(actions.closeLibrary).not.toHaveBeenCalled();
   });
 });

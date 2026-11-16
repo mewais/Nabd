@@ -99,7 +99,7 @@ export function readSnapshot(
  * Whether a problem stops its value from being saved. Unreadable history rows
  * do not: sets are stored one row each, so new ones overwrite nothing.
  */
-export const blocksSaving = (problem: LoadProblem): boolean => problem.source !== "history";
+const blocksSaving = (problem: LoadProblem): boolean => problem.source !== "history";
 
 /** What to tell the user about data that could not be read; null when all of it could. */
 export function loadNotice(problems: readonly LoadProblem[]): Notice | null {

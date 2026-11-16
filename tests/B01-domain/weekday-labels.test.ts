@@ -1,4 +1,4 @@
-import { weekdayInitial, weekdayName, weekdayShort } from "@nabd/domain";
+import { WEEK_ORDER, weekdayInitial, weekdayName, weekdayShort } from "@nabd/domain";
 
 describe("weekday labels", () => {
   it("names a weekday the way Date.getDay() numbers it", () => {
@@ -14,5 +14,9 @@ describe("weekday labels", () => {
 
   it("refuses a number that is not a weekday", () => {
     expect(() => weekdayName(7)).toThrow(RangeError);
+  });
+
+  it("orders the week Monday first, Sunday last", () => {
+    expect(WEEK_ORDER.map(weekdayShort)).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
   });
 });

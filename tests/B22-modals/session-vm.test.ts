@@ -3,6 +3,7 @@
  * session against today's plan.
  */
 
+import type { LoggedSet } from "@nabd/domain";
 import { buildSessionVM } from "@nabd/modals";
 import {
   buildWorld,
@@ -29,32 +30,29 @@ describe("buildSessionVM", () => {
   });
 
   it("starts on the warm-up: its target, no advice, the form pre-filled with last time", () => {
-    const vm = sessionVM({ program: pushDay(), history: lastWeek() }, "p-bench");
+    const { form } = sessionVM({ program: pushDay(), history: lastWeek() }, "p-bench");
 
-    expect(vm.exercise).toBe("Bench Press");
-    expect(vm.setLabel).toBe("Set 1 of 3");
-    expect(vm.target).toBe("Warm-up · 10 reps");
-    expect(vm.notes).toBe("Pause at the chest");
-    expect(vm.muscleNames).toEqual(["Chest", "Triceps", "Front Delts"]);
-    expect(vm.advice).toBeNull();
+    expect(form.exercise).toBe("Bench Press");
+    expect(form.setLine).toBe("Set 1 of 3 · Warm-up · 10 reps");
+    expect(form.notes).toBe("Pause at the chest");
+    expect(form.muscleNames).toEqual(["Chest", "Triceps", "Front Delts"]);
+    expect(form.advice).toBeNull();
     // Last week's first working set — the one the first working set is compared against.
-    expect(vm).toMatchObject({
+    expect(form).toMatchObject({
       repsLabel: "Reps",
       reps: 8,
       weight: 60,
       weightLabel: "Weight (kg)",
     });
-    expect(vm.logged).toEqual([]);
-    expect(vm.setsToday).toBe(0);
-    expect(vm.restLabel).toBeNull();
+    expect(form.logged).toEqual([]);
+    expect(form.restLabel).toBeNull();
   });
 
   it("on a working set, carries the coach's advice", () => {
-    const vm = sessionVM({ program: pushDay(), history: warmedUp() }, "p-bench");
+    const { form } = sessionVM({ program: pushDay(), history: warmedUp() }, "p-bench");
 
-    expect(vm.setLabel).toBe("Set 2 of 3");
-    expect(vm.target).toBe("Working set · 8–12 reps · RPE 8");
-    expect(vm.advice).toEqual({
+    expect(form.setLine).toBe("Set 2 of 3 · Working set · 8–12 reps · RPE 8");
+    expect(form.advice).toEqual({
       primary: "9 × 60 kg",
       alternative: "8 × 62.5 kg",
       reason: "Inside your range — beat last time.",
@@ -63,15 +61,17 @@ describe("buildSessionVM", () => {
   });
 
   it("shows loads in pounds for lb users (weights stay stored in kg)", () => {
-    const vm = sessionVM({ program: pushDay(), history: warmedUp() }, "p-bench", { unit: "lb" });
+    const { form } = sessionVM({ program: pushDay(), history: warmedUp() }, "p-bench", {
+      unit: "lb",
+    });
 
-    expect(vm.weightLabel).toBe("Weight (lb)");
-    expect(vm.weight).toBe(132.3);
-    expect(vm.advice?.primary).toBe("9 × 132.3 lb");
-    expect(vm.logged.map((s) => s.text)).toEqual(["10 × 88.2 lb"]);
+    expect(form.weightLabel).toBe("Weight (lb)");
+    expect(form.weight).toBe(132.3);
+    expect(form.advice?.primary).toBe("9 × 132.3 lb");
+    expect(form.logged.map((s) => s.text)).toEqual(["10 × 88.2 lb"]);
   });
 
-  it("lists this exercise's sets from today, oldest first, with ids to undo them", () => {
+  it("lists this exercise's sets from today, oldest first, numbered, with ids to undo them", () => {
     const first = did("p-bench", "bench", 10, 40, { setType: "warmup" });
     const second = did("p-bench", "bench", 9, 60);
     const other = did("p-row", "row", 12, 50);
@@ -80,19 +80,28 @@ describe("buildSessionVM", () => {
       "p-bench",
     );
 
-    expect(vm.logged).toEqual([
-      { id: first.id, text: "10 × 40 kg" },
-      { id: second.id, text: "9 × 60 kg" },
+    expect(vm.form.logged).toEqual([
+      { id: first.id, label: "Set 1", text: "10 × 40 kg", deleteLabel: "Delete set 1" },
+      { id: second.id, label: "Set 2", text: "9 × 60 kg", deleteLabel: "Delete set 2" },
     ]);
-    expect(vm.setsToday).toBe(3);
+  });
+
+  it("the footer counts the sets logged today across all exercises", () => {
+    const footer = (history: LoggedSet[]) =>
+      sessionVM({ program: pushDay(), history }, "p-bench").footer;
+
+    expect(footer(lastWeek())).toBe("No sets logged yet today");
+    expect(footer([did("p-row", "row", 12, 50)])).toBe("1 set logged today");
+    expect(footer([did("p-row", "row", 12, 50), did("p-bench", "bench", 9, 60)])).toBe(
+      "2 sets logged today",
+    );
   });
 
   it("once the prescription is done, further sets are extras with no target", () => {
     const history = [did("p-row", "row", 12, 50), did("p-row", "row", 11, 50)];
-    const vm = sessionVM({ program: pushDay(), history }, "p-row");
+    const { form } = sessionVM({ program: pushDay(), history }, "p-row");
 
-    expect(vm.setLabel).toMatch(/^All 2 sets done/);
-    expect(vm.target).toBeNull();
+    expect(form.setLine).toBe("All 2 sets done — extra set");
   });
 
   it("an unplanned exercise just counts sets", () => {
@@ -103,10 +112,9 @@ describe("buildSessionVM", () => {
     };
     const vm = sessionVM(input, "x-curl");
 
-    expect(vm.exercise).toBe("Dumbbell Curl");
-    expect(vm.setLabel).toBe("Set 3");
-    expect(vm.target).toBeNull();
-    expect(vm.notes).toBe("");
+    expect(vm.form.exercise).toBe("Dumbbell Curl");
+    expect(vm.form.setLine).toBe("Set 3");
+    expect(vm.form.notes).toBe("");
     expect(vm.list.find((r) => r.itemId === "x-curl")).toMatchObject({
       progress: "2",
       active: true,
@@ -131,7 +139,7 @@ describe("buildSessionVM", () => {
       {
         itemId: "p-bench",
         exercise: "Bench Press",
-        muscles: "Chest, Triceps, Front Delts",
+        detail: "Chest, Triceps, Front Delts",
         progress: "1/3",
         complete: false,
         skipped: false,
@@ -140,7 +148,7 @@ describe("buildSessionVM", () => {
       {
         itemId: "p-row",
         exercise: "Barbell Row",
-        muscles: "Lats, Rhomboids, Biceps",
+        detail: "Lats, Rhomboids, Biceps",
         progress: "2/2",
         complete: true,
         skipped: false,
@@ -149,7 +157,7 @@ describe("buildSessionVM", () => {
       {
         itemId: "p-plank",
         exercise: "Plank",
-        muscles: "Abs, Obliques",
+        detail: "Skipped today",
         progress: "0/1",
         complete: false,
         skipped: true,
@@ -160,12 +168,12 @@ describe("buildSessionVM", () => {
 
   it("a timed, unweighted exercise asks for seconds and no load", () => {
     const history = [...lastWeek(), did("p-plank", "plank", 35, null)];
-    const vm = sessionVM({ program: pushDay(), history }, "p-plank");
+    const { form } = sessionVM({ program: pushDay(), history }, "p-plank");
 
-    expect(vm.repsLabel).toBe("Sec");
-    expect(vm.reps).toBe(35);
-    expect(vm.weight).toBeNull();
-    expect(vm.logged.map((s) => s.text)).toEqual(["35 s"]);
+    expect(form.repsLabel).toBe("Sec");
+    expect(form.reps).toBe(35);
+    expect(form.weight).toBeNull();
+    expect(form.logged.map((s) => s.text)).toEqual(["35 s"]);
   });
 
   it("names the load for what it is on assisted and weighted bodyweight exercises", () => {
@@ -175,12 +183,12 @@ describe("buildSessionVM", () => {
     ]);
     const history = [did("p-pullup", "pullup", 8, 20), did("p-dip", "dip", 8, 10)];
 
-    const pullup = sessionVM({ program, history }, "p-pullup");
+    const pullup = sessionVM({ program, history }, "p-pullup").form;
     expect(pullup.weightLabel).toBe("Assistance (kg)");
     expect(pullup.weight).toBe(20);
     expect(pullup.logged.map((s) => s.text)).toEqual(["8 − 20 kg assist"]);
 
-    const dip = sessionVM({ program, history }, "p-dip", { unit: "lb" });
+    const dip = sessionVM({ program, history }, "p-dip", { unit: "lb" }).form;
     expect(dip.weightLabel).toBe("Added weight (lb)");
     expect(dip.weight).toBe(22);
     expect(dip.logged.map((s) => s.text)).toEqual(["8 + 22 lb"]);
@@ -190,13 +198,14 @@ describe("buildSessionVM", () => {
     const { session, plan, coach } = openSession({ program: pushDay() }, "p-bench");
     const loggedAt = nov(16, 10, 30);
     const resting = session.resting(loggedAt, 90);
-    const at = (now: Date) => buildSessionVM({ session: resting, plan, coach, unit: "kg", now });
+    const at = (now: Date) =>
+      buildSessionVM({ session: resting, plan, coach, unit: "kg", now })?.form.restLabel;
     const secondsLater = (s: number) => new Date(loggedAt.getTime() + s * 1000);
 
-    expect(at(loggedAt)?.restLabel).toBe("Rest 1:30");
-    expect(at(secondsLater(10))?.restLabel).toBe("Rest 1:20");
-    expect(at(secondsLater(85))?.restLabel).toBe("Rest 0:05");
-    expect(at(secondsLater(90))?.restLabel).toBeNull();
-    expect(at(secondsLater(300))?.restLabel).toBeNull();
+    expect(at(loggedAt)).toBe("Rest 1:30");
+    expect(at(secondsLater(10))).toBe("Rest 1:20");
+    expect(at(secondsLater(85))).toBe("Rest 0:05");
+    expect(at(secondsLater(90))).toBeNull();
+    expect(at(secondsLater(300))).toBeNull();
   });
 });

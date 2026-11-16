@@ -13,6 +13,7 @@ import {
   displayWeight,
   formatWeight,
   kgFromDisplay,
+  loadStepKg,
 } from "@nabd/domain";
 
 describe("muscle taxonomy", () => {
@@ -62,6 +63,11 @@ describe("weights", () => {
     for (const pounds of [2.5, 25, 27.5, 135, 225]) {
       expect(displayWeight(kgFromDisplay(pounds, "lb"), "lb")).toBe(pounds);
     }
+  });
+
+  it("reads the smallest load step in kg, whatever unit it was chosen in", () => {
+    expect(loadStepKg({ weightIncrement: 2.5, weightUnit: "kg" })).toBe(2.5);
+    expect(loadStepKg({ weightIncrement: 5, weightUnit: "lb" })).toBe(2.268);
   });
 });
 

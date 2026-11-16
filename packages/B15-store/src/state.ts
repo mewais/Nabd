@@ -1,25 +1,23 @@
 import type {
   DayRecord,
   DayState,
-  Equipment,
   Exercise,
   LoggedSet,
+  MapStyle,
+  MapView,
   MuscleGroup,
   MuscleKey,
   Program,
+  ProgressTab,
   RotationState,
+  Screen,
   Settings,
-  TrackingType,
 } from "@nabd/domain";
 import { DEFAULT_SETTINGS, EMPTY_PROGRAM, freshDayState } from "@nabd/domain";
 import type { PlatformCapabilities, Singletons } from "@nabd/ipc-client";
 import type { PendingNudge } from "@nabd/nudge";
 import type { LogSession } from "@nabd/session";
-
-export type Screen = "today" | "planner" | "progress";
-export type MapView = "both" | "front" | "back";
-export type MapStyle = "heat" | "outline";
-export type ProgressTab = "calendar" | "weekly";
+import type { ExerciseDraft } from "./exercise-draft";
 
 /** What picking an exercise in the library does. */
 export type LibraryTarget =
@@ -29,23 +27,6 @@ export type LibraryTarget =
   | { kind: "pool"; dayId: string; slotId: string; muscle: MuscleKey }
   /** Do it today, outside the plan. */
   | { kind: "extra" };
-
-/** The custom-exercise form. */
-export interface ExerciseDraft {
-  name: string;
-  primary: MuscleKey[];
-  secondary: MuscleKey[];
-  equipment: Equipment;
-  tracking: TrackingType;
-}
-
-export const EMPTY_DRAFT: ExerciseDraft = {
-  name: "",
-  primary: [],
-  secondary: [],
-  equipment: "bodyweight",
-  tracking: "weight_reps",
-};
 
 /** Exercise-library modal state; `target` null means the modal is closed. */
 export interface LibraryState {

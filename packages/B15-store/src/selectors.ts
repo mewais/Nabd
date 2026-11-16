@@ -2,7 +2,7 @@
 // cannot go stale; each selector is memoized on the state it reads.
 
 import type { Coverage, DayRecord, Exercise } from "@nabd/domain";
-import { kgFromDisplay, parseDateKey } from "@nabd/domain";
+import { addDays, loadStepKg, parseDateKey } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
 import { TodayPlan } from "@nabd/scheduling";
 import { ProgressionAdvisor } from "@nabd/progression";
@@ -45,15 +45,14 @@ export const selectTodayPlan = memoize(
       rotation,
       history,
       date: parseDateKey(dayState.date),
-      lookup: (id) => library.byId(id),
+      lookup: library.lookup,
     }),
 );
 
 /** Progression advice + form defaults for today's exercises. */
 export const selectCoach = memoize(
-  (s) => [s.history, s.settings.weightIncrement, s.settings.weightUnit, s.dayState.date] as const,
-  (history, increment, unit, today) =>
-    new Coach(history, new ProgressionAdvisor(kgFromDisplay(increment, unit)), today),
+  (s) => [s.history, loadStepKg(s.settings), s.dayState.date] as const,
+  (history, stepKg, today) => new Coach(history, new ProgressionAdvisor(stepKg), today),
 );
 
 /** When the last set of today was logged. */
@@ -109,15 +108,15 @@ export const selectPendingNudge = (s: NabdState): PendingNudge | null => s.pendi
 /** What the plan trains over one pass through the program. */
 export const selectPlannedVolume = memoize(
   (s) => [s.program, selectLibrary(s)] as const,
-  (program, library) => MuscleVolume.ofProgram(program, (id) => library.byId(id)),
+  (program, library) => MuscleVolume.ofProgram(program, library.lookup),
 );
 
 /** What was actually trained in the last 7 days, 0–100 per muscle. */
 export const selectCoverage = memoize(
   (s) => [s.history, selectLibrary(s), s.dayState.date] as const,
   (history, library, today): Coverage => {
-    const endOfToday = new Date(parseDateKey(today).getTime() + 24 * 60 * 60 * 1000);
-    return MuscleVolume.ofRecentHistory(history, (id) => library.byId(id), endOfToday).toCoverage();
+    const endOfToday = addDays(parseDateKey(today), 1);
+    return MuscleVolume.ofRecentHistory(history, library.lookup, endOfToday).toCoverage();
   },
 );
 

@@ -16,7 +16,7 @@ import { TodayPlan } from "@nabd/scheduling";
 import { ProgressionAdvisor } from "@nabd/progression";
 import { Coach } from "@nabd/session";
 import { TrainingStats } from "@nabd/analytics";
-import { exercise, logged, nov } from "./domain-factories";
+import { exercise, logged, nov, row, warmup, working } from "./domain-factories";
 
 /** Monday 16 Nov 2026, 10:30 local — "now" unless a test says otherwise. */
 export const NOW = nov(16, 10, 30);
@@ -92,13 +92,9 @@ export type ExKey = keyof typeof EX;
 
 export const LIBRARY = new ExerciseLibrary(Object.values(EX));
 
-export const warmup = (reps: number): SetSpec => ({ type: "warmup", a: reps });
-export const work = (lo: number, hi?: number, val?: number): SetSpec => ({
-  type: "working",
-  a: lo,
-  ...(hi === undefined ? {} : { b: hi }),
-  ...(val === undefined ? {} : { val }),
-});
+export { warmup };
+/** {@link working}, under the name the view-model suites use. */
+export const work = working;
 
 /** A planned exercise row; its id doubles as the plan-item id. */
 export function planRow(
@@ -107,7 +103,7 @@ export function planRow(
   sets: SetSpec[],
   overrides: Partial<ExercisePrescription> = {},
 ): ExercisePrescription {
-  return { id, exId: EX[ex].id, repMode: "range", intensity: "none", rest: 90, sets, ...overrides };
+  return row(EX[ex].id, sets, { id, ...overrides });
 }
 
 /** A weekday program whose only training day is Monday. */
@@ -174,7 +170,7 @@ export function buildWorld(input: WorldInput) {
     dayState: { ...freshDayState(now), skipped, extras },
     rotation: {},
     history,
-    lookup: (exId) => LIBRARY.byId(exId),
+    lookup: LIBRARY.lookup,
   });
   const coach = new Coach(history, new ProgressionAdvisor(loadStepKg), today);
   const stats = new TrainingStats(history, input.dayLog ?? [], now);

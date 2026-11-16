@@ -4,7 +4,6 @@ import {
   dateKey,
   formatClock,
   formatMinuteOfDay,
-  minuteOfDay,
   parseDateKey,
   startOfDay,
   startOfWeek,
@@ -36,7 +35,6 @@ describe("local date helpers", () => {
   });
 
   it("converts between a time of day and minutes since midnight", () => {
-    expect(minuteOfDay(lateEvening)).toBe(23 * 60 + 30);
     expect(atMinuteOfDay(lateEvening, 9 * 60 + 5)).toEqual(new Date(2026, 10, 16, 9, 5));
     expect(formatMinuteOfDay(545)).toBe("09:05");
     expect(formatClock(lateEvening)).toBe("23:30");

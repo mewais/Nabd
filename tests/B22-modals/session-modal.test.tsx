@@ -1,13 +1,11 @@
 /**
- * B22 · @nabd/modals — SessionModal (the set logger), plus the shared
- * ModalShell / CloseButton behaviour every modal relies on.
+ * B22 · @nabd/modals — SessionModal: the set logger renders its view-model
+ * and reports every action.
  */
 
-// React must be in scope: the tests are compiled with the classic JSX transform.
-import React from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { CloseButton, ModalShell, SessionModal } from "@nabd/modals";
-import type { SessionModalProps, SessionVM } from "@nabd/modals";
+import { SessionModal } from "@nabd/modals";
+import type { SessionActions, SessionVM } from "@nabd/modals";
 import { did, lastWeek, pushDay } from "../support/plan-fixtures";
 import { sessionVM } from "./fixtures";
 
@@ -33,46 +31,41 @@ const benchVM = (): SessionVM =>
   );
 
 function setup(vm: SessionVM = benchVM()) {
-  const props: SessionModalProps = {
-    vm,
-    onPick: vi.fn(),
-    onStepReps: vi.fn(),
-    onStepWeight: vi.fn(),
-    onSetReps: vi.fn(),
-    onSetWeight: vi.fn(),
-    onApplyAdvice: vi.fn(),
-    onLog: vi.fn(),
-    onUndo: vi.fn(),
-    onLogOther: vi.fn(),
-    onClose: vi.fn(),
+  const actions: SessionActions = {
+    focusItem: vi.fn(),
+    stepReps: vi.fn(),
+    stepWeight: vi.fn(),
+    setReps: vi.fn(),
+    setWeight: vi.fn(),
+    applyAdvice: vi.fn(),
+    logSet: vi.fn(),
+    undoSet: vi.fn(),
+    logOther: vi.fn(),
+    close: vi.fn(),
   };
-  const view = render(<SessionModal {...props} />);
+  const view = render(<SessionModal vm={vm} actions={actions} />);
   /** The −/+ buttons that belong to the field labelled `label`. */
   const stepper = (label: string) => {
     const field = screen.getByLabelText(label);
     if (!field.parentElement) throw new Error(`no stepper around "${label}"`);
     return within(field.parentElement);
   };
+  const list = within(screen.getByRole("navigation", { name: "Today's exercises" }));
   /** The row for `exercise` in the left-hand list of today's exercises. */
-  const listRow = (exercise: string): HTMLElement => {
-    const row = screen
-      .getAllByText(exercise)
-      .map((el) => el.closest<HTMLElement>("button[data-row-active]"))
-      .find((el) => el !== null);
-    if (!row) throw new Error(`no list row for "${exercise}"`);
-    return row;
-  };
-  return { props, stepper, listRow, ...view };
+  const listRow = (exercise: string): HTMLElement =>
+    list.getByRole("button", { name: new RegExp(exercise) });
+  return { actions, stepper, listRow, ...view };
 }
 
 describe("SessionModal", () => {
   it("shows the exercise being logged: set position, target, notes and advice", () => {
-    const { container } = setup();
+    setup();
 
+    expect(screen.getByRole("heading", { name: "Bench Press" })).toBeInTheDocument();
     expect(screen.getByText("Set 3 of 3 · Working set · 8–12 reps · RPE 8")).toBeInTheDocument();
     expect(screen.getByText("Pause at the chest")).toBeInTheDocument();
     expect(screen.getByText("Front Delts")).toBeInTheDocument();
-    expect(container).toHaveTextContent("Last time: 7 × 60 kg");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Last time: 7 × 60 kg");
     expect(screen.getByLabelText("Reps")).toHaveValue(9);
     expect(screen.getByLabelText("Weight (kg)")).toHaveValue(60);
   });
@@ -80,9 +73,9 @@ describe("SessionModal", () => {
   it("lists today's exercises and marks the active, finished and skipped ones", () => {
     const { listRow } = setup();
 
-    expect(listRow("Bench Press")).toHaveAttribute("data-row-active", "true");
+    expect(listRow("Bench Press")).toHaveAttribute("aria-current", "true");
     expect(listRow("Bench Press")).toHaveTextContent("2/3");
-    expect(listRow("Barbell Row")).toHaveAttribute("data-row-active", "false");
+    expect(listRow("Barbell Row")).toHaveAttribute("aria-current", "false");
     expect(within(listRow("Barbell Row")).getByLabelText("complete")).toBeInTheDocument();
     expect(within(listRow("Bench Press")).queryByLabelText("complete")).toBeNull();
     expect(listRow("Plank")).toHaveTextContent("Skipped today");
@@ -90,44 +83,43 @@ describe("SessionModal", () => {
   });
 
   it("picking another exercise reports its plan item", () => {
-    const { props, listRow } = setup();
+    const { actions, listRow } = setup();
     fireEvent.click(listRow("Barbell Row"));
-    expect(props.onPick).toHaveBeenCalledTimes(1);
-    expect(props.onPick).toHaveBeenCalledWith("p-row");
+    expect(actions.focusItem).toHaveBeenCalledTimes(1);
+    expect(actions.focusItem).toHaveBeenCalledWith("p-row");
   });
 
   it("the steppers nudge reps and weight down and up", () => {
-    const { props, stepper } = setup();
+    const { actions, stepper } = setup();
 
     fireEvent.click(stepper("Reps").getByRole("button", { name: "increase" }));
-    expect(props.onStepReps).toHaveBeenLastCalledWith(1);
+    expect(actions.stepReps).toHaveBeenLastCalledWith(1);
     fireEvent.click(stepper("Reps").getByRole("button", { name: "decrease" }));
-    expect(props.onStepReps).toHaveBeenLastCalledWith(-1);
-    expect(props.onStepWeight).not.toHaveBeenCalled();
+    expect(actions.stepReps).toHaveBeenLastCalledWith(-1);
+    expect(actions.stepWeight).not.toHaveBeenCalled();
 
     fireEvent.click(stepper("Weight (kg)").getByRole("button", { name: "decrease" }));
-    expect(props.onStepWeight).toHaveBeenLastCalledWith(-1);
+    expect(actions.stepWeight).toHaveBeenLastCalledWith(-1);
     fireEvent.click(stepper("Weight (kg)").getByRole("button", { name: "increase" }));
-    expect(props.onStepWeight).toHaveBeenLastCalledWith(1);
-    expect(props.onStepReps).toHaveBeenCalledTimes(2);
+    expect(actions.stepWeight).toHaveBeenLastCalledWith(1);
+    expect(actions.stepReps).toHaveBeenCalledTimes(2);
   });
 
   it("typed values are reported as numbers; non-numbers are ignored", () => {
-    const { props } = setup();
+    const { actions } = setup();
 
     fireEvent.change(screen.getByLabelText("Reps"), { target: { value: "12" } });
-    expect(props.onSetReps).toHaveBeenLastCalledWith(12);
+    expect(actions.setReps).toHaveBeenLastCalledWith(12);
 
     fireEvent.change(screen.getByLabelText("Weight (kg)"), { target: { value: "62.5" } });
-    expect(props.onSetWeight).toHaveBeenLastCalledWith(62.5);
+    expect(actions.setWeight).toHaveBeenLastCalledWith(62.5);
 
     fireEvent.change(screen.getByLabelText("Reps"), { target: { value: "" } });
-    expect(props.onSetReps).toHaveBeenCalledTimes(1);
+    expect(actions.setReps).toHaveBeenCalledTimes(1);
   });
 
   it("an unweighted exercise has no weight field, and counts seconds when timed", () => {
-    const vm = sessionVM({ program: pushDay(), history: lastWeek() }, "p-plank");
-    setup(vm);
+    setup(sessionVM({ program: pushDay(), history: lastWeek() }, "p-plank"));
 
     expect(screen.getByLabelText("Sec")).toHaveValue(30);
     expect(screen.queryByLabelText(/Weight/)).toBeNull();
@@ -136,111 +128,82 @@ describe("SessionModal", () => {
 
   it("the advice targets apply the suggestion they name", () => {
     const vm = sessionVM({ program: pushDay(), history: [...lastWeek(), SETS.warmup] }, "p-bench");
-    const { props } = setup(vm);
+    const { actions } = setup(vm);
 
     fireEvent.click(screen.getByRole("button", { name: "9 × 60 kg" }));
-    expect(props.onApplyAdvice).toHaveBeenLastCalledWith("primary");
+    expect(actions.applyAdvice).toHaveBeenLastCalledWith("primary");
     fireEvent.click(screen.getByRole("button", { name: "8 × 62.5 kg" }));
-    expect(props.onApplyAdvice).toHaveBeenLastCalledWith("alternative");
+    expect(actions.applyAdvice).toHaveBeenLastCalledWith("alternative");
   });
 
   it("shows no advice for a warm-up", () => {
-    const { container } = setup(sessionVM({ program: pushDay(), history: lastWeek() }, "p-bench"));
+    setup(sessionVM({ program: pushDay(), history: lastWeek() }, "p-bench"));
     expect(screen.getByText("Set 1 of 3 · Warm-up · 10 reps")).toBeInTheDocument();
-    expect(container.textContent).not.toContain("Try ");
+    expect(screen.getByRole("dialog")).not.toHaveTextContent("Try ");
   });
 
   it("Log this set logs, and nothing else", () => {
-    const { props } = setup();
+    const { actions } = setup();
     fireEvent.click(screen.getByRole("button", { name: "Log this set" }));
-    expect(props.onLog).toHaveBeenCalledTimes(1);
-    expect(props.onClose).not.toHaveBeenCalled();
-    expect(props.onUndo).not.toHaveBeenCalled();
+    expect(actions.logSet).toHaveBeenCalledTimes(1);
+    expect(actions.close).not.toHaveBeenCalled();
+    expect(actions.undoSet).not.toHaveBeenCalled();
   });
 
   it("lists the sets logged today and deletes the one that is asked for", () => {
-    const { props } = setup();
+    const { actions } = setup();
+    const logged = within(screen.getByRole("region", { name: "Logged today" }));
 
-    expect(screen.getByText("10 × 40 kg")).toBeInTheDocument();
-    expect(screen.getByText("9 × 60 kg")).toBeInTheDocument();
+    expect(logged.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "Set 110 × 40 kg",
+      "Set 29 × 60 kg",
+    ]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete set 2" }));
-    expect(props.onUndo).toHaveBeenCalledTimes(1);
-    expect(props.onUndo).toHaveBeenCalledWith(SETS.first.id);
+    fireEvent.click(logged.getByRole("button", { name: "Delete set 2" }));
+    expect(actions.undoSet).toHaveBeenCalledTimes(1);
+    expect(actions.undoSet).toHaveBeenCalledWith(SETS.first.id);
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete set 1" }));
-    expect(props.onUndo).toHaveBeenLastCalledWith(SETS.warmup.id);
+    fireEvent.click(logged.getByRole("button", { name: "Delete set 1" }));
+    expect(actions.undoSet).toHaveBeenLastCalledWith(SETS.warmup.id);
   });
 
   it("shows the rest countdown only while resting", () => {
-    const resting = setup({ ...benchVM(), restLabel: "Rest 1:20" });
-    expect(screen.getByText("Rest 1:20")).toBeInTheDocument();
+    const vm = benchVM();
+    const resting = setup({ ...vm, form: { ...vm.form, restLabel: "Rest 1:20" } });
+    expect(screen.getByRole("timer")).toHaveTextContent("Rest 1:20");
     resting.unmount();
 
-    setup({ ...benchVM(), restLabel: null });
-    expect(screen.queryByText(/^Rest \d/)).toBeNull();
+    setup({ ...vm, form: { ...vm.form, restLabel: null } });
+    expect(screen.queryByRole("timer")).toBeNull();
   });
 
   it("+ Something else asks to log an exercise outside the plan", () => {
-    const { props } = setup();
+    const { actions } = setup();
     fireEvent.click(screen.getByRole("button", { name: "+ Something else" }));
-    expect(props.onLogOther).toHaveBeenCalledTimes(1);
-    expect(props.onPick).not.toHaveBeenCalled();
+    expect(actions.logOther).toHaveBeenCalledTimes(1);
+    expect(actions.focusItem).not.toHaveBeenCalled();
   });
 
-  it("the footer counts the sets logged today", () => {
-    const some = setup();
+  it("the footer says how much has been logged today", () => {
+    setup();
     expect(screen.getByText("4 sets logged today")).toBeInTheDocument();
-    some.unmount();
-
-    setup(sessionVM({ program: pushDay() }, "p-bench"));
-    expect(screen.getByText("No sets logged yet today")).toBeInTheDocument();
-  });
-
-  it("the footer says '1 set', not '1 sets', after a single set", () => {
-    setup(sessionVM({ program: pushDay(), history: [did("p-row", "row", 12, 50)] }, "p-row"));
-    expect(screen.getByText("1 set logged today")).toBeInTheDocument();
   });
 
   it("Done, the ✕ and a click on the backdrop all close the logger", () => {
-    const { props, container } = setup();
+    const { actions } = setup();
 
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
-    expect(props.onClose).toHaveBeenCalledTimes(1);
+    expect(actions.close).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    expect(props.onClose).toHaveBeenCalledTimes(2);
-    fireEvent.click(container.querySelector("[data-modal-backdrop]")!);
-    expect(props.onClose).toHaveBeenCalledTimes(3);
+    expect(actions.close).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("dialog").parentElement as HTMLElement);
+    expect(actions.close).toHaveBeenCalledTimes(3);
   });
 
   it("working inside the panel does not close it", () => {
-    const { props } = setup();
+    const { actions } = setup();
     fireEvent.click(screen.getByText("Pause at the chest"));
     fireEvent.click(screen.getByRole("button", { name: "Log this set" }));
-    expect(props.onClose).not.toHaveBeenCalled();
-  });
-});
-
-describe("ModalShell", () => {
-  it("renders its content and closes only when the backdrop itself is clicked", () => {
-    const onClose = vi.fn();
-    const { container } = render(
-      <ModalShell onClose={onClose} zIndex={50} panelStyle={{ width: 300 }}>
-        <p>Panel content</p>
-      </ModalShell>,
-    );
-
-    fireEvent.click(screen.getByText("Panel content"));
-    expect(onClose).not.toHaveBeenCalled();
-
-    fireEvent.click(container.querySelector("[data-modal-backdrop]")!);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("CloseButton is an accessible Close control", () => {
-    const onClose = vi.fn();
-    render(<CloseButton onClose={onClose} />);
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(actions.close).not.toHaveBeenCalled();
   });
 });
