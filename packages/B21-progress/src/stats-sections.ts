@@ -3,11 +3,13 @@
 import type { TrainingStats } from "@nabd/analytics";
 import type { BarDatum } from "@nabd/design-system";
 import type { Trigger } from "@nabd/domain";
+import { weekdayInitial } from "@nabd/domain";
 import type { CalendarLevel, CalendarVM, KpiVM, ProgressVM } from "./view-model";
 
 export const NO_SETS = "No sets logged yet.";
 
-const WEEKDAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"] as const;
+/** Sunday first, the way `Date.getDay()` counts. */
+const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 const MONTH_AND_YEAR = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" });
 const MONTH_AND_DAY = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
 
@@ -45,7 +47,7 @@ export function kpis(stats: TrainingStats): KpiVM[] {
 export function calendar(stats: TrainingStats, today: Date): CalendarVM {
   return {
     month: MONTH_AND_YEAR.format(today),
-    weekdays: WEEKDAY_INITIALS,
+    weekdays: WEEKDAYS.map(weekdayInitial),
     firstWeekday: new Date(today.getFullYear(), today.getMonth(), 1).getDay(),
     cells: stats.calendar().map(({ day, level }) => ({
       day,
@@ -76,7 +78,7 @@ export function completion(stats: TrainingStats): ProgressVM["completion"] {
   return {
     weekPct: `${stats.completionThisWeek()}%`,
     days: days.map(({ date, pct }, index) => ({
-      label: WEEKDAY_INITIALS[date.getDay()] ?? "",
+      label: weekdayInitial(date.getDay()),
       heightPct: pct ?? 0,
       highlight: index === days.length - 1,
     })),

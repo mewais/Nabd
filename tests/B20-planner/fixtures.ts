@@ -221,3 +221,15 @@ export function dayOf(program: Program, dayId: string) {
   if (!day) throw new Error(`day ${dayId} not in program`);
   return day;
 }
+
+/** The set table of one exercise row or slot of a day. */
+export function blockOf(program: Program, dayId: string, id: string) {
+  for (const row of editorOf(program, dayId).rows) {
+    if (row.kind === "slot" && row.id === id) return row.slot.block;
+    const cards =
+      row.kind === "exercise" ? [row.exercise] : row.kind === "superset" ? row.members : [];
+    const found = cards.find((exercise) => exercise.id === id);
+    if (found) return found.block;
+  }
+  throw new Error(`no prescription ${id} in day ${dayId}`);
+}

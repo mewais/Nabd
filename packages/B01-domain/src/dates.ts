@@ -79,3 +79,31 @@ export function weekdayShort(weekday: number): string {
 export function weekdayInitial(weekday: number): string {
   return weekdayName(weekday).charAt(0);
 }
+
+/** Month names, indexed like `Date.getMonth()` (0 = January). */
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+/** "November" for month 10 (0 = January … 11 = December). */
+export function monthName(month: number): string {
+  const name = MONTH_NAMES[month];
+  if (name === undefined) throw new RangeError(`month ${month} is not 0–11`);
+  return name;
+}
+
+/** "Nov" for month 10. */
+export function monthShort(month: number): string {
+  return monthName(month).slice(0, 3);
+}
