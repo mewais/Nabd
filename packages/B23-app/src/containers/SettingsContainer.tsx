@@ -17,6 +17,7 @@ export function SettingsContainer(): JSX.Element | null {
   const open = useNabd((s) => s.settingsOpen);
   const settings = useNabd((s) => s.settings);
   const notice = useNabd((s) => s.notice);
+  const glassAvailable = useNabd((s) => s.capabilities.glass);
   if (!open) return null;
 
   return (
@@ -27,6 +28,9 @@ export function SettingsContainer(): JSX.Element | null {
       onExport={() => void actions.exportData()}
       onImport={() => pickJsonFile((text) => void actions.importData(text))}
       onClose={() => actions.setSettingsOpen(false)}
+      glassAvailable={glassAvailable}
+      onTestNotification={actions.sendTestNotification}
+      onQuit={actions.quit}
     />
   );
 }

@@ -5,7 +5,7 @@
 
 // React must be in scope: the tests are compiled with the classic JSX transform.
 import React from "react";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { DEFAULT_SETTINGS } from "@nabd/domain";
 import type { Settings } from "@nabd/domain";
 import { SettingsModal } from "@nabd/modals";
@@ -19,6 +19,9 @@ function setup(settings: Partial<Settings> = {}, over: Partial<SettingsModalProp
     onExport: vi.fn(),
     onImport: vi.fn(),
     onClose: vi.fn(),
+    glassAvailable: true,
+    onTestNotification: vi.fn(),
+    onQuit: vi.fn(),
     ...over,
   };
   const view = render(<SettingsModal {...props} />);
@@ -85,12 +88,12 @@ describe("SettingsModal", () => {
     expect(lb.setting("Weight increment").getByText("5 lb")).toBeInTheDocument();
   });
 
-  it("steps the weight increment by a half, without floating-point dust", () => {
+  it("steps the weight increment by a quarter, without floating-point dust", () => {
     const { props, step } = setup({ weightIncrement: 2.5 });
     step("Weight increment", "increase");
-    expect(props.onChange).toHaveBeenLastCalledWith({ weightIncrement: 3 });
+    expect(props.onChange).toHaveBeenLastCalledWith({ weightIncrement: 2.75 });
     step("Weight increment", "decrease");
-    expect(props.onChange).toHaveBeenLastCalledWith({ weightIncrement: 2 });
+    expect(props.onChange).toHaveBeenLastCalledWith({ weightIncrement: 2.25 });
   });
 
   it("marks owned equipment and removes a piece when its chip is clicked", () => {
@@ -187,25 +190,15 @@ describe("SettingsModal", () => {
     expect(container.querySelector('[data-setting="Theme"]')).not.toBeNull();
   });
 
-  it("sends a test notification on request, and only offers it when it can", () => {
-    const onTestNotification = vi.fn();
-    setup({}, { onTestNotification });
+  it("sends a test notification on request", () => {
+    const { props } = setup();
     fireEvent.click(screen.getByRole("button", { name: "Send test notification" }));
-    expect(onTestNotification).toHaveBeenCalledTimes(1);
-
-    cleanup();
-    setup();
-    expect(screen.queryByRole("button", { name: "Send test notification" })).toBeNull();
+    expect(props.onTestNotification).toHaveBeenCalledTimes(1);
   });
 
-  it("quits from the bottom of the dialog, and only offers it when it can", () => {
-    const onQuit = vi.fn();
-    setup({}, { onQuit });
+  it("quits from the bottom of the dialog", () => {
+    const { props } = setup();
     fireEvent.click(screen.getByRole("button", { name: "Quit Nabd" }));
-    expect(onQuit).toHaveBeenCalledTimes(1);
-
-    cleanup();
-    setup();
-    expect(screen.queryByRole("button", { name: "Quit Nabd" })).toBeNull();
+    expect(props.onQuit).toHaveBeenCalledTimes(1);
   });
 });

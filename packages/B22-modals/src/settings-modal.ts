@@ -14,12 +14,12 @@ export interface SettingsModalProps {
   onExport: () => void;
   onImport: () => void;
   onClose: () => void;
-  /** Whether this platform can make the window translucent (default yes); if not, its rows are hidden. */
-  glassAvailable?: boolean;
-  /** Raise a sample OS notification; the row is only shown when given. */
-  onTestNotification?: () => void;
-  /** Exit the app; the button is only shown when given. */
-  onQuit?: () => void;
+  /** Whether this platform can make the window translucent; if not, its rows are hidden. */
+  glassAvailable: boolean;
+  /** Raise a sample OS notification. */
+  onTestNotification: () => void;
+  /** Exit the app (closing the window only hides it while there is a tray). */
+  onQuit: () => void;
 }
 
 const THEME_OPTIONS = [
@@ -85,7 +85,7 @@ function Row(p: { title: string; hint: string; children?: ReactNode }): JSX.Elem
 }
 
 export function SettingsModal(p: SettingsModalProps): JSX.Element {
-  const { settings, onChange, glassAvailable = true } = p;
+  const { settings, onChange, glassAvailable } = p;
 
   /** A +/- control over one numeric setting. */
   const stepper = (key: NumericSetting, step: number, show: (value: number) => string) =>
@@ -172,20 +172,18 @@ export function SettingsModal(p: SettingsModalProps): JSX.Element {
           },
           stepper("idleNudge", 5, (v) => `${v} sec`),
         ),
-        p.onTestNotification
-          ? React.createElement(
-              Row,
-              {
-                title: "Notifications",
-                hint: "A set due while Nabd is in the background is announced by your desktop.",
-              },
-              React.createElement(
-                Button,
-                { variant: "ghost", onClick: p.onTestNotification },
-                "Send test notification",
-              ),
-            )
-          : null,
+        React.createElement(
+          Row,
+          {
+            title: "Notifications",
+            hint: "A set due while Nabd is in the background is announced by your desktop.",
+          },
+          React.createElement(
+            Button,
+            { variant: "ghost", onClick: p.onTestNotification },
+            "Send test notification",
+          ),
+        ),
       ),
 
       React.createElement(
@@ -206,7 +204,7 @@ export function SettingsModal(p: SettingsModalProps): JSX.Element {
             title: "Weight increment",
             hint: "The smallest jump you can load; suggestions use it.",
           },
-          stepper("weightIncrement", 0.5, (v) => `${v} ${settings.weightUnit}`),
+          stepper("weightIncrement", 0.25, (v) => `${v} ${settings.weightUnit}`),
         ),
         React.createElement(
           "div",
@@ -318,13 +316,11 @@ export function SettingsModal(p: SettingsModalProps): JSX.Element {
           : null,
       ),
 
-      p.onQuit
-        ? React.createElement(
-            Button,
-            { variant: "ghost", onClick: p.onQuit, style: DATA_BUTTON },
-            "Quit Nabd",
-          )
-        : null,
+      React.createElement(
+        Button,
+        { variant: "ghost", onClick: p.onQuit, style: DATA_BUTTON },
+        "Quit Nabd",
+      ),
     ),
   );
 }

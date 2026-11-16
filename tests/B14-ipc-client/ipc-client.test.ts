@@ -56,10 +56,20 @@ describe("ipc client", () => {
     ]);
   });
 
-  it("the deprecated setVibrancy turns glass on", async () => {
+  it("sends several singletons as key/JSON pairs in one call", async () => {
     const { client, invoke } = setup();
-    await client.setVibrancy(0.7);
-    expect(invoke.mock.calls).toEqual([["set_glass", { enabled: true }]]);
+    await client.saveMany({ rotationState: { s1: 1 }, dayLog: [] });
+    expect(invoke.mock.calls).toEqual([
+      [
+        "save_singletons",
+        {
+          entries: [
+            ["rotationState", JSON.stringify({ s1: 1 })],
+            ["dayLog", "[]"],
+          ],
+        },
+      ],
+    ]);
   });
 
   it("sends the tray only whole, non-negative set counts", async () => {

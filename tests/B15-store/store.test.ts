@@ -48,6 +48,9 @@ function fakeBackend(initial: Partial<BootSnapshot> = {}) {
     save: vi.fn(async (key: keyof Singletons, value: unknown) => {
       data[key] = structuredClone(value);
     }),
+    saveMany: vi.fn(async (values: Partial<Singletons>) => {
+      Object.assign(data, structuredClone(values));
+    }),
     appendSet: vi.fn(async (set) => {
       data.history.push(set);
     }),
@@ -62,7 +65,6 @@ function fakeBackend(initial: Partial<BootSnapshot> = {}) {
     platformCapabilities: async () => ({ tray: true, glass: true, idle: true }),
     sendTestNotification: vi.fn(async () => {}),
     setGlass: vi.fn(async () => {}),
-    setVibrancy: vi.fn(async () => {}),
     setAutostart: vi.fn(async () => {}),
     updateTray: vi.fn(async () => {}),
     quit: vi.fn(async () => {}),
@@ -129,8 +131,20 @@ describe("booting", () => {
 
   it("brings the OS in line with the stored autostart and translucency settings", async () => {
     const app = await boot({ settings: { ...DEFAULT_SETTINGS, glass: true, opacity: 0.5 } });
-    expect(app.client.setVibrancy).toHaveBeenCalledWith(0.5);
+    expect(app.client.setGlass).toHaveBeenCalledWith(true);
     expect(app.client.setAutostart).toHaveBeenCalledWith(true);
+  });
+
+  it("clears a translucent window at boot when the setting is off", async () => {
+    const app = await boot({ settings: { ...DEFAULT_SETTINGS, glass: false } });
+    expect(app.client.setGlass).toHaveBeenCalledWith(false);
+  });
+
+  it("learns what the computer supports", async () => {
+    const app = await boot();
+    await vi.waitFor(() =>
+      expect(app.get().capabilities).toEqual({ tray: true, glass: true, idle: true }),
+    );
   });
 });
 
@@ -650,12 +664,16 @@ describe("across restarts and days", () => {
     expect(selectStats(app.get()).completionThisWeek()).toBe(50);
   });
 
-  it("rollover saves the day log, then the day state, then the rotation", async () => {
+  it("rollover saves the day log, the day state and the rotation as one write", async () => {
     const app = await boot();
     await app.log(benchRow.id, 1);
     vi.mocked(app.client.save).mockClear();
     app.advanceTo(nov(17, 9, 30));
-    expect(app.savedKeys()).toEqual(["dayLog", "dayState", "rotationState"]);
+    expect(app.savedKeys()).toEqual([]);
+    expect(app.client.saveMany).toHaveBeenCalledTimes(1);
+    const [written] = vi.mocked(app.client.saveMany).mock.calls[0]!;
+    expect(Object.keys(written).sort()).toEqual(["dayLog", "dayState", "rotationState"]);
+    expect(written.dayState?.date).toBe("2026-11-17");
   });
 
   it("the day rolls over on boot too, if the app was closed overnight", async () => {
@@ -853,9 +871,32 @@ describe("settings and data", () => {
     expect(app.client.setAutostart).not.toHaveBeenCalled();
     app.get().updateSettings({ openAtStartup: false });
     expect(app.client.setAutostart).toHaveBeenCalledWith(false);
+    vi.mocked(app.client.setGlass).mockClear();
     app.get().updateSettings({ glass: true });
     app.get().updateSettings({ opacity: 0.4 });
-    expect(vi.mocked(app.client.setVibrancy).mock.calls).toEqual([[0.7], [0.4]]);
+    app.get().updateSettings({ glass: false });
+    // Opacity is the frontend's own paint: only the switch reaches the OS.
+    expect(vi.mocked(app.client.setGlass).mock.calls).toEqual([[true], [false]]);
+  });
+
+  it("quits and sends a test notification through the backend", async () => {
+    const app = await boot();
+    app.get().sendTestNotification();
+    app.get().quit();
+    expect(app.client.sendTestNotification).toHaveBeenCalledTimes(1);
+    expect(app.client.quit).toHaveBeenCalledTimes(1);
+  });
+
+  it("a notification that cannot be sent becomes the app notice", async () => {
+    const app = await boot();
+    vi.mocked(app.client.sendTestNotification).mockRejectedValueOnce(new Error("no daemon"));
+    app.get().sendTestNotification();
+    await vi.waitFor(() =>
+      expect(app.get().appNotice).toEqual({
+        kind: "error",
+        text: "Could not send a notification: no daemon",
+      }),
+    );
   });
 
   it("export reports where the file went, or why it failed", async () => {

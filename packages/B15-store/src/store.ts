@@ -88,6 +88,11 @@ export interface NabdActions {
   setChartExercise: (exId: string | null) => void;
   /** Dismiss the app-level notice. */
   dismissNotice: () => void;
+
+  // the desktop
+  sendTestNotification: () => void;
+  /** Exit the app (closing the window only hides it while there is a tray). */
+  quit: () => void;
 }
 
 export type NabdStore = NabdState & NabdActions;
@@ -118,11 +123,22 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
       }
     }
 
-    /** Write a singleton to the backend — unless its stored copy could not be read (see LoadProblem). */
-    function persist<K extends keyof Singletons>(key: K, value: Singletons[K]): void {
+    /** Whether a singleton may be written: not if its stored copy could not be read (see LoadProblem). */
+    function writable(key: string): boolean {
       const unreadable = (p: LoadProblem): boolean => p.source === key || p.source === "everything";
-      if (get().loadProblems.some(unreadable)) return;
-      void attempt(`save ${STORED_NAMES[key]}`, () => client.save(key, value));
+      return !get().loadProblems.some(unreadable);
+    }
+
+    /** Write a singleton to the backend, if it may be written. */
+    function persist<K extends keyof Singletons>(key: K, value: Singletons[K]): void {
+      if (writable(key)) void attempt(`save ${STORED_NAMES[key]}`, () => client.save(key, value));
+    }
+
+    /** Write several singletons as one transaction (those that may be written). */
+    function persistTogether(what: string, values: Partial<Singletons>): void {
+      const entries = Object.entries(values).filter(([key]) => writable(key));
+      if (entries.length === 0) return;
+      void attempt(`save ${what}`, () => client.saveMany(Object.fromEntries(entries)));
     }
 
     /** Update one persisted singleton in state and in the backend. */
@@ -133,8 +149,8 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
 
     const applyAutostart = (enabled: boolean): void =>
       void attempt("change start at login", () => client.setAutostart(enabled));
-    const applyVibrancy = (opacity: number): void =>
-      void attempt("apply the translucent window", () => client.setVibrancy(opacity));
+    const applyGlass = (enabled: boolean): void =>
+      void attempt("change the translucent window", () => client.setGlass(enabled));
 
     /** Apply a change to the open session, if there is one. */
     function editSession(change: (session: LogSession) => LogSession): void {
@@ -180,15 +196,9 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
         activeSince: null,
         pendingNudge: null,
       });
-      // The backend takes these as three writes, so a crash can fall between
-      // them. The order makes that harmless: the day log first (a repeated
-      // rollover replaces its records by date), then the day state, which is
-      // what marks the rollover as done, and the rotation last — losing it only
-      // repeats a pool's exercise once, whereas writing it before the day state
-      // would advance every pool twice when the rollover is redone.
-      persist("dayLog", dayLog);
-      persist("dayState", dayState);
-      persist("rotationState", rotation);
+      // One transaction: a rollover that is only partly on disk would be redone
+      // at the next launch from a mix of old and new state (pools advanced twice).
+      persistTogether("the new day", { dayLog, dayState, rotationState: rotation });
       return true;
     }
 
@@ -278,7 +288,10 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
         watchNudge();
         // Bring the OS in line with the stored settings.
         applyAutostart(state.settings.openAtStartup);
-        if (state.settings.glass) applyVibrancy(state.settings.opacity);
+        applyGlass(state.settings.glass);
+        void attempt("ask what this computer supports", async () =>
+          set({ capabilities: await client.platformCapabilities() }),
+        );
       },
 
       tick: (idleSeconds) => {
@@ -483,9 +496,7 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
         if (settings.openAtStartup !== before.openAtStartup) {
           applyAutostart(settings.openAtStartup);
         }
-        if (settings.glass && (!before.glass || settings.opacity !== before.opacity)) {
-          applyVibrancy(settings.opacity);
-        }
+        if (settings.glass !== before.glass) applyGlass(settings.glass);
       },
 
       exportData: async () => {
@@ -525,6 +536,12 @@ export function createNabdStore({ client, now, newId }: StoreDeps): StoreApi<Nab
       setProgressTab: (progressTab) => set({ progressTab }),
       setChartExercise: (chartExercise) => set({ chartExercise }),
       dismissNotice: () => set({ appNotice: null }),
+
+      // ----- the desktop -----
+
+      sendTestNotification: () =>
+        void attempt("send a notification", () => client.sendTestNotification()),
+      quit: () => void attempt("quit", () => client.quit()),
     };
   });
 }

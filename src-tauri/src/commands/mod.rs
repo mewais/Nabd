@@ -15,6 +15,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
     tauri::generate_handler![
         data::load_all,
         data::save_singleton,
+        data::save_singletons,
         data::append_set,
         data::delete_set,
         data::export_data,

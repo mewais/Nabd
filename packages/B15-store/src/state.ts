@@ -12,7 +12,7 @@ import type {
   TrackingType,
 } from "@nabd/domain";
 import { DEFAULT_SETTINGS, EMPTY_PROGRAM, freshDayState } from "@nabd/domain";
-import type { Singletons } from "@nabd/ipc-client";
+import type { PlatformCapabilities, Singletons } from "@nabd/ipc-client";
 import type { PendingNudge } from "@nabd/nudge";
 import type { LogSession } from "@nabd/session";
 
@@ -83,6 +83,8 @@ export interface NabdState {
   dayState: DayState;
   dayLog: DayRecord[];
   history: LoggedSet[];
+  /** What this computer can do; nothing platform-dependent is offered until the backend has said. */
+  capabilities: PlatformCapabilities;
   /** What could not be read at boot; saving is blocked for each of these (see LoadProblem). */
   loadProblems: LoadProblem[];
   // clock + nudging
@@ -123,6 +125,7 @@ export function initialState(now: Date): NabdState {
     dayState: freshDayState(now),
     dayLog: [],
     history: [],
+    capabilities: { tray: false, glass: false, idle: false },
     loadProblems: [],
     now,
     idleSeconds: 0,

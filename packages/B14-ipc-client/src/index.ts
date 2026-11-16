@@ -59,6 +59,8 @@ export interface Tick {
 export interface IpcClient {
   loadAll(): Promise<BootSnapshot>;
   save<K extends keyof Singletons>(key: K, value: Singletons[K]): Promise<void>;
+  /** Save several singletons in one transaction: all of them or none. */
+  saveMany(values: Partial<Singletons>): Promise<void>;
   appendSet(set: LoggedSet): Promise<void>;
   deleteSet(id: string): Promise<void>;
   /** Write the export file; resolves to where it was saved. */
@@ -68,10 +70,12 @@ export interface IpcClient {
   /** Raise the OS notification for a due set (and un-hide a window hidden in the tray). */
   notify(reason: NudgeReason, exercise: string): Promise<void>;
   sendTestNotification(): Promise<void>;
-  /** Put the native backdrop effect behind the window, or take it off again. */
+  /**
+   * Put the native backdrop effect behind the window, or take it off again.
+   * The tint and its opacity are the frontend's own paint, so there is nothing
+   * else to tell the backend.
+   */
   setGlass(enabled: boolean): Promise<void>;
-  /** @deprecated Only until the store calls `setGlass`; then delete. */
-  setVibrancy(opacity: number): Promise<void>;
   /** Create or remove the login entry; safe to repeat at every boot. */
   setAutostart(enabled: boolean): Promise<void>;
   updateTray(state: TrayState): Promise<void>;
@@ -91,12 +95,15 @@ const setCount = (n: number): number => (Number.isFinite(n) ? Math.max(0, Math.r
 
 /** Build a client over the given transport. */
 export function createIpcClient(invoke: Invoke, listen: Listen): IpcClient {
-  const setGlass = (enabled: boolean): Promise<void> => invoke("set_glass", { enabled });
   return {
     async loadAll() {
       return JSON.parse(await invoke<string>("load_all")) as BootSnapshot;
     },
     save: (key, value) => invoke("save_singleton", { key, value: JSON.stringify(value) }),
+    saveMany: (values) =>
+      invoke("save_singletons", {
+        entries: Object.entries(values).map(([key, value]) => [key, JSON.stringify(value)]),
+      }),
     appendSet: (set) => invoke("append_set", { rowJson: JSON.stringify(set) }),
     deleteSet: (id) => invoke("delete_set", { id }),
     exportData: () => invoke("export_data"),
@@ -104,8 +111,7 @@ export function createIpcClient(invoke: Invoke, listen: Listen): IpcClient {
     platformCapabilities: () => invoke("platform_capabilities"),
     notify: (reason, exercise) => invoke("notify", { reason, exercise }),
     sendTestNotification: () => invoke("send_test_notification"),
-    setGlass,
-    setVibrancy: () => setGlass(true),
+    setGlass: (enabled) => invoke("set_glass", { enabled }),
     setAutostart: (enabled) => invoke("set_autostart", { enabled }),
     updateTray: (state) =>
       invoke("update_tray", {

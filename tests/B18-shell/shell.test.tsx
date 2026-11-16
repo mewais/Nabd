@@ -5,7 +5,7 @@
 // React must be in scope: the tests are compiled with the classic JSX transform.
 import React from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { AppLayout, Sidebar, TopBar, formatDate, greeting } from "@nabd/shell";
+import { AppLayout, NoticeBanner, Sidebar, TopBar, formatDate, greeting } from "@nabd/shell";
 import type { SidebarProps, TopBarProps } from "@nabd/shell";
 
 describe("greeting", () => {
@@ -181,6 +181,24 @@ describe("TopBar", () => {
     expect(p.onTogglePause).not.toHaveBeenCalled();
     expect(p.onToggleGlass).not.toHaveBeenCalled();
     expect(p.onTheme).not.toHaveBeenCalled();
+  });
+});
+
+describe("NoticeBanner", () => {
+  it("announces an error and can be dismissed", () => {
+    const onDismiss = vi.fn();
+    render(
+      <NoticeBanner notice={{ kind: "error", text: "Could not save" }} onDismiss={onDismiss} />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Could not save");
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows plain information as a status, not an alert", () => {
+    render(<NoticeBanner notice={{ kind: "info", text: "Imported" }} onDismiss={vi.fn()} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Imported");
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 

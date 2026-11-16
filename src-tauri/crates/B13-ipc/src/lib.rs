@@ -42,11 +42,29 @@ pub fn load_all(c: &Connection) -> IpcResult<String> {
 
 /// Persist one singleton JSON blob. `key` must be one of `db::KV_KEYS`.
 pub fn save_singleton(c: &Connection, key: &str, value: &str) -> IpcResult<()> {
-    if !db::KV_KEYS.contains(&key) {
-        return Err(IpcError::BadKey(key.to_string()));
-    }
+    save_singletons(c, &[(key, value)])
+}
+
+/// Persist several singleton JSON blobs in one transaction: all of them or,
+/// if any key or value is bad or the write fails, none.
+pub fn save_singletons(c: &Connection, entries: &[(&str, &str)]) -> IpcResult<()> {
+    let singletons = entries
+        .iter()
+        .map(|(key, value)| Ok((known_key(key)?, valid_json(value)?)))
+        .collect::<IpcResult<Vec<_>>>()?;
+    Ok(db::replace_all(c, &singletons, None)?)
+}
+
+fn known_key(key: &str) -> IpcResult<&'static str> {
+    db::KV_KEYS
+        .into_iter()
+        .find(|known| *known == key)
+        .ok_or_else(|| IpcError::BadKey(key.to_string()))
+}
+
+fn valid_json(value: &str) -> IpcResult<String> {
     serde_json::from_str::<Value>(value)?;
-    Ok(db::set_kv(c, key, value)?)
+    Ok(value.to_string())
 }
 
 /// Append one logged set (`row_json` is a `LoggedSetRow`).

@@ -230,6 +230,9 @@ export function createDemoClient(): IpcClient {
     save: async (key, value) => {
       data[key] = value;
     },
+    saveMany: async (values) => {
+      Object.assign(data, values);
+    },
     appendSet: async (set) => {
       data.history.push(set);
     },
@@ -245,7 +248,6 @@ export function createDemoClient(): IpcClient {
     notify: async () => {},
     sendTestNotification: async () => {},
     setGlass: async () => {},
-    setVibrancy: async () => {},
     setAutostart: async () => {},
     updateTray: async () => {},
     quit: async () => {},

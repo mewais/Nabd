@@ -16,6 +16,16 @@ pub fn save_singleton(key: String, value: String, db: State<'_, Database>) -> Ap
     db.with(|c| nabd_ipc::save_singleton(c, &key, &value))
 }
 
+/// Several singletons at once, all or nothing (`entries` are key/JSON pairs).
+#[tauri::command]
+pub fn save_singletons(entries: Vec<(String, String)>, db: State<'_, Database>) -> AppResult<()> {
+    let entries: Vec<(&str, &str)> = entries
+        .iter()
+        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .collect();
+    db.with(|c| nabd_ipc::save_singletons(c, &entries))
+}
+
 #[tauri::command]
 pub fn append_set(row_json: String, db: State<'_, Database>) -> AppResult<()> {
     db.with(|c| nabd_ipc::append_set(c, &row_json))

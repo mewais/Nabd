@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
 import type { StoreApi } from "zustand";
 import { formatClock } from "@nabd/domain";
-import type { IpcClient, PlatformCapabilities } from "@nabd/ipc-client";
+import type { IpcClient } from "@nabd/ipc-client";
 import { describeNudge } from "@nabd/nudge";
-import { AppLayout, Sidebar, TopBar, formatDate, greeting } from "@nabd/shell";
+import { AppLayout, NoticeBanner, Sidebar, TopBar, formatDate, greeting } from "@nabd/shell";
 import type { NabdStore } from "@nabd/store";
 import { selectNudgeStatus, selectTodayPlan } from "@nabd/store";
 import { LibraryContainer } from "./containers/LibraryContainer";
@@ -21,27 +20,10 @@ const SCREENS = {
   progress: ProgressContainer,
 };
 
-/** Until the backend has answered, nothing platform-dependent is offered. */
-const UNKNOWN_CAPABILITIES: PlatformCapabilities = { tray: false, glass: false, idle: false };
-
-/** What this machine can do (asked once; it does not change while the app runs). */
-function useCapabilities(client: IpcClient): PlatformCapabilities {
-  const [capabilities, setCapabilities] = useState(UNKNOWN_CAPABILITIES);
-  useEffect(() => {
-    let current = true;
-    void client.platformCapabilities().then((answer) => {
-      if (current) setCapabilities(answer);
-    });
-    return () => {
-      current = false;
-    };
-  }, [client]);
-  return capabilities;
-}
-
 function Shell({ store, client }: AppProps): JSX.Element {
   useAppLoop(store, client);
-  const capabilities = useCapabilities(client);
+  const capabilities = useNabd((s) => s.capabilities);
+  const appNotice = useNabd((s) => s.appNotice);
   const actions = useActions();
   const screen = useNabd((s) => s.screen);
   const settings = useNabd((s) => s.settings);
@@ -88,6 +70,7 @@ function Shell({ store, client }: AppProps): JSX.Element {
         />
       }
     >
+      {appNotice && <NoticeBanner notice={appNotice} onDismiss={actions.dismissNotice} />}
       <Screen />
       <SessionContainer />
       <SettingsContainer />

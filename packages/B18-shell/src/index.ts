@@ -547,6 +547,51 @@ export function TopBar(p: TopBarProps): JSX.Element {
   );
 }
 
+export interface NoticeBannerProps {
+  notice: { kind: "info" | "error"; text: string };
+  onDismiss: () => void;
+}
+
+/** Something the user must know wherever they are in the app, until they dismiss it. */
+export function NoticeBanner(p: NoticeBannerProps): JSX.Element {
+  const isError = p.notice.kind === "error";
+  return React.createElement(
+    "div",
+    {
+      role: isError ? "alert" : "status",
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 18,
+        padding: "11px 14px",
+        background: "var(--surface2)",
+        border: `1px solid ${isError ? "var(--accent)" : "var(--line)"}`,
+        borderRadius: 11,
+        fontSize: 13.5,
+        color: "var(--text)",
+      },
+    },
+    React.createElement("span", { style: { flex: 1, wordBreak: "break-word" } }, p.notice.text),
+    React.createElement(
+      "button",
+      {
+        onClick: p.onDismiss,
+        style: {
+          background: "transparent",
+          border: "none",
+          color: "var(--text2)",
+          fontFamily: "inherit",
+          fontSize: 12.5,
+          fontWeight: 600,
+          cursor: "pointer",
+        },
+      },
+      "Dismiss",
+    ),
+  );
+}
+
 export interface AppLayoutProps {
   theme: Theme;
   glass: boolean;

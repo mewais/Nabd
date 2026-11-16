@@ -3,7 +3,7 @@
 
 use nabd_ipc::{
     append_set, delete_set, export_data, import_data, init, load_all, save_singleton,
-    starts_minimized, IpcError,
+    save_singletons, starts_minimized, IpcError,
 };
 use rusqlite::Connection;
 use serde_json::{json, Value};
@@ -154,6 +154,47 @@ fn save_singleton_rejects_invalid_json_and_keeps_the_old_value() {
 
     assert!(matches!(err, IpcError::BadJson(_)), "got {err:?}");
     assert_eq!(snapshot(&c)["settings"], json!({"ok": true}));
+}
+
+// ── save_singletons ──────────────────────────────────────────────────────────
+
+#[test]
+fn save_singletons_writes_every_entry() {
+    let c = fresh_db();
+    save_singletons(
+        &c,
+        &[
+            ("dayState", r#"{"date":"2025-03-02"}"#),
+            ("rotationState", r#"{"s1":1}"#),
+        ],
+    )
+    .unwrap();
+
+    let snap = snapshot(&c);
+    assert_eq!(snap["dayState"], json!({"date": "2025-03-02"}));
+    assert_eq!(snap["rotationState"], json!({"s1": 1}));
+}
+
+#[test]
+fn save_singletons_writes_nothing_when_one_entry_is_bad() {
+    let c = fresh_db();
+    save_singleton(&c, "dayState", r#"{"date":"2025-03-01"}"#).unwrap();
+
+    let bad_key = save_singletons(
+        &c,
+        &[("dayState", r#"{"date":"2025-03-02"}"#), ("nope", "1")],
+    )
+    .unwrap_err();
+    let bad_json = save_singletons(
+        &c,
+        &[("dayState", r#"{"date":"2025-03-02"}"#), ("dayLog", "{")],
+    )
+    .unwrap_err();
+
+    assert!(matches!(bad_key, IpcError::BadKey(_)), "got {bad_key:?}");
+    assert!(matches!(bad_json, IpcError::BadJson(_)), "got {bad_json:?}");
+    assert_eq!(snapshot(&c)["dayState"], json!({"date": "2025-03-01"}));
+    assert_eq!(snapshot(&c)["dayLog"], Value::Null);
 }
 
 // ── append_set / delete_set ──────────────────────────────────────────────────
