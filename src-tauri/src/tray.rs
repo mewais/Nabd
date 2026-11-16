@@ -20,17 +20,22 @@ const TRAY_ACTION_EVENT: &str = "tray-action";
 /// waiting to be saved, then asks to exit — before the app exits regardless.
 const QUIT_GRACE: Duration = Duration::from_secs(3);
 
+/// macOS's convention: a menu-bar item opens its menu on a left click (the
+/// window comes back from the Dock or the menu's Open entry).
+const MENU_ON_LEFT_CLICK: bool = cfg!(target_os = "macos");
+
 /// Create the tray icon. On Windows a left click opens the window and the
-/// menu is on right click; Linux indicators only ever open their menu, and
-/// show no tooltip.
+/// menu is on right click; on macOS a click opens the menu; Linux indicators
+/// only ever open their menu, and show no tooltip.
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> AppResult<()> {
     let state = TrayState::default();
     let mut tray = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu(app, &state)?)
         .tooltip(state.tooltip())
-        .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| run_menu_entry(app, event.id().as_ref()))
-        .on_tray_icon_event(|tray, event| {
+        .show_menu_on_left_click(MENU_ON_LEFT_CLICK)
+        .on_menu_event(|app, event| run_menu_entry(app, event.id().as_ref()));
+    if !MENU_ON_LEFT_CLICK {
+        tray = tray.on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
                 button_state: MouseButtonState::Up,
@@ -40,11 +45,31 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> AppResult<()> {
                 window::reveal(tray.app_handle());
             }
         });
-    if let Some(icon) = app.default_window_icon() {
-        tray = tray.icon(icon.clone());
     }
-    tray.build(app)?;
+    with_icon(tray, app)?.build(app)?;
     Ok(())
+}
+
+/// The menu bar tints a monochrome "template" image for light and dark bars;
+/// the colourful app icon would show as a solid black blob there.
+#[cfg(target_os = "macos")]
+fn with_icon<R: Runtime>(
+    tray: TrayIconBuilder<R>,
+    _app: &AppHandle<R>,
+) -> AppResult<TrayIconBuilder<R>> {
+    let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template.png"))?;
+    Ok(tray.icon(icon).icon_as_template(true))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn with_icon<R: Runtime>(
+    tray: TrayIconBuilder<R>,
+    app: &AppHandle<R>,
+) -> AppResult<TrayIconBuilder<R>> {
+    Ok(match app.default_window_icon() {
+        Some(icon) => tray.icon(icon.clone()),
+        None => tray,
+    })
 }
 
 /// Make the menu and tooltip reflect `state`. Nothing to do without a tray.

@@ -12,6 +12,8 @@ use std::time::{Duration, Instant};
 mod dbus;
 #[cfg(target_os = "linux")]
 mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
 #[cfg(target_os = "linux")]
 mod wayland;
 #[cfg(windows)]
@@ -21,6 +23,8 @@ mod x11;
 
 #[cfg(target_os = "linux")]
 use linux as platform;
+#[cfg(target_os = "macos")]
+use macos as platform;
 #[cfg(windows)]
 use windows as platform;
 

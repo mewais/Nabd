@@ -6,6 +6,7 @@ const WINDOWS_10: Platform = Platform::Windows { build: 19_045 };
 const WINDOWS_11: Platform = Platform::Windows { build: 22_631 };
 const LINUX_WITH_TRAY: Platform = Platform::Linux { tray_host: true };
 const LINUX_WITHOUT_TRAY: Platform = Platform::Linux { tray_host: false };
+const MACOS: Platform = Platform::MacOs;
 
 // ── glass ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,11 @@ fn windows_10_gets_blur() {
 fn linux_has_no_glass() {
     assert_eq!(LINUX_WITH_TRAY.glass_effect(), None);
     assert_eq!(LINUX_WITHOUT_TRAY.glass_effect(), None);
+}
+
+#[test]
+fn macos_gets_vibrancy() {
+    assert_eq!(MACOS.glass_effect(), Some(GlassEffect::Vibrancy));
 }
 
 // ── tray host ────────────────────────────────────────────────────────────────
@@ -72,10 +78,23 @@ fn windows_always_has_a_tray_and_glass() {
 }
 
 #[test]
+fn macos_always_has_a_tray_and_glass() {
+    assert_eq!(
+        Capabilities::decide(MACOS, true),
+        Capabilities {
+            tray: true,
+            glass: true,
+            idle: true
+        }
+    );
+}
+
+#[test]
 fn idle_follows_whether_a_source_was_found() {
     assert!(Capabilities::decide(LINUX_WITH_TRAY, true).idle);
     assert!(!Capabilities::decide(LINUX_WITH_TRAY, false).idle);
     assert!(!Capabilities::decide(WINDOWS_11, false).idle);
+    assert!(!Capabilities::decide(MACOS, false).idle);
 }
 
 #[test]

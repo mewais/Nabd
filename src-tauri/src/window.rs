@@ -7,7 +7,7 @@
 use nabd_native::{Capabilities, CloseAction, Platform};
 use tauri::window::Color;
 use tauri::{
-    AppHandle, Manager, Runtime, WebviewUrl, WebviewWindow, WebviewWindowBuilder, Window,
+    AppHandle, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindow, WebviewWindowBuilder, Window,
     WindowEvent,
 };
 
@@ -106,6 +106,13 @@ fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
     }
 }
 
+/// Tao's `show()` orders the window to the front without activating the app
+/// (activating is what `set_focus()` adds), so the keyboard stays where it was.
+#[cfg(target_os = "macos")]
+fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
+    let _ = window.show();
+}
+
 /// Closing the window hides it while there is a tray to live in; otherwise the
 /// close goes through, and Tauri exits the app with its last window.
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
@@ -116,5 +123,20 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     if CloseAction::for_tray(tray) == CloseAction::HideToTray {
         api.prevent_close();
         let _ = window.hide();
+    }
+}
+
+/// Clicking the Dock icon (or launching the app again from Finder) while the
+/// window is hidden brings it back: macOS apps are expected to. Only macOS
+/// reports that event, so elsewhere nothing here applies.
+#[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
+pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
+    #[cfg(target_os = "macos")]
+    if let RunEvent::Reopen {
+        has_visible_windows: false,
+        ..
+    } = event
+    {
+        reveal(app);
     }
 }

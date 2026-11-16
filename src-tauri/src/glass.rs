@@ -25,5 +25,6 @@ fn native(effect: GlassEffect) -> Effect {
     match effect {
         GlassEffect::Mica => Effect::Mica,
         GlassEffect::Blur => Effect::Blur,
+        GlassEffect::Vibrancy => Effect::UnderWindowBackground,
     }
 }

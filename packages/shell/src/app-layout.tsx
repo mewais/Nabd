@@ -23,7 +23,7 @@ export function AppLayout({ sidebar, topBar, notice, children }: AppLayoutProps)
       <Stack grow>
         {topBar}
         {notice && (
-          <Stack surface edge="bottom" paddingX="xxl" paddingY="md">
+          <Stack paddingX="xxl" paddingTop="lg">
             {notice}
           </Stack>
         )}

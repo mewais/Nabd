@@ -15,6 +15,9 @@ pub enum Platform {
         /// Something draws tray icons in this session (see [`tray_host_present`]).
         tray_host: bool,
     },
+    /// Every supported macOS has the menu bar and vibrancy, so there is
+    /// nothing to detect.
+    MacOs,
 }
 
 /// The one backdrop effect used for the translucent ("Glass") window.
@@ -24,6 +27,9 @@ pub enum GlassEffect {
     Mica,
     /// Windows 10's blur-behind (acrylic there lags badly while resizing).
     Blur,
+    /// macOS's under-window vibrancy: a blur that follows the light or dark
+    /// appearance by itself, which suits a window whose tint the frontend paints.
+    Vibrancy,
 }
 
 impl Platform {
@@ -34,15 +40,16 @@ impl Platform {
         match self {
             Self::Windows { build } if build >= WINDOWS_11_BUILD => Some(GlassEffect::Mica),
             Self::Windows { .. } => Some(GlassEffect::Blur),
+            Self::MacOs => Some(GlassEffect::Vibrancy),
             Self::Linux { .. } => None,
         }
     }
 
-    /// Whether a tray icon will be shown: always on Windows; on Linux only
-    /// when a host draws it.
+    /// Whether a tray icon will be shown: always on Windows and macOS (the
+    /// menu bar); on Linux only when a host draws it.
     pub fn has_tray(self) -> bool {
         match self {
-            Self::Windows { .. } => true,
+            Self::Windows { .. } | Self::MacOs => true,
             Self::Linux { tray_host } => tray_host,
         }
     }

@@ -8,6 +8,8 @@
 use nabd_native::{Capabilities, DesktopNotification, Launch};
 use tauri::{App, AppHandle, Manager, Runtime};
 
+#[cfg(target_os = "macos")]
+mod app_menu;
 mod autostart;
 mod clock;
 mod commands;
@@ -25,16 +27,19 @@ use db::Database;
 use error::{AppError, AppResult};
 use idle::IdleMonitor;
 
-#[cfg(not(any(target_os = "linux", windows)))]
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 compile_error!(
-    "Nabd supports Windows and Linux only: the idle, tray-host and window code has no backend for this target."
+    "Nabd supports Windows, macOS and Linux only: the idle, tray and window code has no backend for this target."
 );
 
 /// Exit code of a launch that could not start.
 const STARTUP_FAILURE: i32 = 1;
 
 pub fn run() -> AppResult<()> {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(app_menu::build);
+    builder
         // First, so a second launch hands over before any other plugin or the
         // setup hook has touched the database, the tray or the login entry.
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
@@ -57,7 +62,8 @@ pub fn run() -> AppResult<()> {
         })
         .on_window_event(window::on_window_event)
         .invoke_handler(commands::handler())
-        .run(tauri::generate_context!())?;
+        .build(tauri::generate_context!())?
+        .run(window::on_run_event);
     Ok(())
 }
 

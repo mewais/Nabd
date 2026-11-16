@@ -30,6 +30,8 @@ export interface BoxProps {
   paddingX?: Space;
   /** Top and bottom padding; wins over `padding`. */
   paddingY?: Space;
+  /** Top padding alone, for a block that sits above something padded of its own; wins over `paddingY`. */
+  paddingTop?: Space;
   /** Take the free space of the Row or Stack around it, and shrink below the content's width. */
   grow?: boolean;
   /** A hairline on that side: the box is divided from what comes before or after. */
@@ -55,11 +57,11 @@ const DIMMED_OPACITY = 0.55;
 
 /** The style of the box itself; a primitive adds how it lays its children out. */
 export function boxStyle(props: BoxProps): CSSProperties {
-  const { padding = "none", paddingX = padding, paddingY = padding } = props;
+  const { padding = "none", paddingX = padding, paddingY = padding, paddingTop = paddingY } = props;
   return {
     ...(props.as === "ul" || props.as === "li" ? LIST_RESET : undefined),
     boxSizing: "border-box",
-    padding: `${SPACE[paddingY]}px ${SPACE[paddingX]}px`,
+    padding: `${SPACE[paddingTop]}px ${SPACE[paddingX]}px ${SPACE[paddingY]}px`,
     ...(props.grow ? { flex: 1, minWidth: 0, minHeight: 0 } : undefined),
     ...(props.edge ? { [EDGE_PROPERTY[props.edge]]: HAIRLINE } : undefined),
     ...(props.surface ? { background: COLOR.surface } : undefined),

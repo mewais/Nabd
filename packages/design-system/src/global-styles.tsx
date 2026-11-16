@@ -21,14 +21,13 @@ const KEYFRAMES = `
 `;
 
 /**
- * What inline styles cannot say: the one focus ring (keyboard focus only), a
- * button's hover, and a field's placeholder.
+ * What inline styles cannot say: the one focus ring (keyboard focus only) and
+ * a field's placeholder.
  */
 const STATES = `
 .${BUTTON_CLASS}:focus-visible, .${FIELD_CLASS}:focus-visible { outline: 2px solid ${COLOR.accent}; outline-offset: 2px; }
 .${FIELD_CLASS}:focus-visible { outline-offset: -1px; }
 [role="dialog"]:focus { outline: none; }
-.${BUTTON_CLASS}:not(:disabled):hover { filter: brightness(1.1); }
 .${FIELD_CLASS}::placeholder { color: ${COLOR.textFaint}; }
 `;
 

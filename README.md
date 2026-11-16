@@ -98,7 +98,7 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   on record, starts from half the last working load, rounded to your weight increment,
   for the reps the plan asks. An exercise's trend has one unit: an estimated 1RM once
   it has ever been loaded, reps or seconds until then.
-- **Closing the window hides it**; the app lives in the tray (Start next set, Pause
+- **Closing the window hides it**; the app lives in the tray, on a Mac the menu bar (Start next set, Pause
   nudges, Open, Quit). Where the desktop shows no tray icons (stock GNOME without the
   AppIndicator extension) the app is an ordinary window: closing it quits, and "Start
   minimized" is switched off in Settings, which says why. Settings → Quit Nabd always
@@ -124,23 +124,31 @@ provides it) and stable Rust (`rustup`), plus per platform:
   workload) and the WebView2 runtime — part of Windows 11, and installed by the Nabd
   installer on Windows 10 if it is missing.
 
+- **macOS 10.15 or later**: the Xcode command line tools (`xcode-select --install`).
+  The WebView is the system's WKWebView, so nothing else is needed at build or run time.
+
 ## Platform support
 
-|                 | Windows 10/11                          | Linux, X11                                                                 | Linux, Wayland                                                               |
-| --------------- | -------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Tray            | always                                 | needs a StatusNotifier host: KDE, or GNOME with the AppIndicator extension | the same                                                                     |
-| Without a tray  | —                                      | a plain window: closing it quits                                           | the same                                                                     |
-| Idle time       | system-wide                            | GNOME (Mutter), else the X screen-saver extension, else KDE's screen saver | GNOME (Mutter), else `ext-idle-notify-v1` (KDE, Sway, Hyprland…), else KDE's |
-| Glass           | Mica on Windows 11, blur on Windows 10 | not offered: no portable blur, so the window stays opaque                  | the same                                                                     |
-| Open at startup | registry `Run` entry                   | an entry in `~/.config/autostart/`                                         | the same                                                                     |
-| Notifications   | toast                                  | the desktop's notification service                                         | the same                                                                     |
+|                 | Windows 10/11                          | macOS 10.15+                                                                  | Linux, X11                                                                 | Linux, Wayland                                                               |
+| --------------- | -------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Tray            | always                                 | always: a menu-bar item (monochrome template icon); a click opens its menu    | needs a StatusNotifier host: KDE, or GNOME with the AppIndicator extension | the same                                                                     |
+| Without a tray  | —                                      | —                                                                             | a plain window: closing it quits                                           | the same                                                                     |
+| Window          | closing hides it                       | closing hides it; the Dock icon brings it back                                | closing hides it (with a tray)                                             | the same                                                                     |
+| Quit            | tray Quit, Settings                    | tray Quit, Settings and Cmd+Q (all save first); the Dock menu's Quit does not | tray Quit, Settings                                                        | the same                                                                     |
+| Idle time       | system-wide                            | system-wide (CoreGraphics event source)                                       | GNOME (Mutter), else the X screen-saver extension, else KDE's screen saver | GNOME (Mutter), else `ext-idle-notify-v1` (KDE, Sway, Hyprland…), else KDE's |
+| Glass           | Mica on Windows 11, blur on Windows 10 | vibrancy (under-window material, follows light/dark)                          | not offered: no portable blur, so the window stays opaque                  | the same                                                                     |
+| Open at startup | registry `Run` entry                   | a LaunchAgent in `~/Library/LaunchAgents/`                                    | an entry in `~/.config/autostart/`                                         | the same                                                                     |
+| Notifications   | toast                                  | Notification Center                                                           | the desktop's notification service                                         | the same                                                                     |
+| Verified        | in CI (build, tests)                   | in CI (build, tests, bundle) — **not yet run on a real Mac**                  | in CI, plus the smoke test of the real binary                              | the same                                                                     |
 
 Where the OS cannot report idle time, "idle" means no keyboard or mouse activity inside
 the Nabḍ window, and Settings says so (also when the desktop's idle service is lost, or
 comes back, while the app is running). A login launch always starts in the tray (if there
-is one); "Start minimized" does the same for launches by hand. Windows and Linux are the
-only targets: building for anything else (macOS included) stops with a compile error that
-says so.
+is one); "Start minimized" does the same for launches by hand. Windows, macOS and Linux
+are the only targets: building for anything else stops with a compile error that says so.
+
+macOS builds are unsigned and not notarized (CI makes the `.app` and `.dmg` without a
+signing identity), so Gatekeeper asks for a right-click → Open the first time.
 
 ## Quick start
 
@@ -222,7 +230,7 @@ logged in the real window landing in the `history` table and, like Pause, surviv
 restart. `NABD_SMOKE_BINARY=<path>` tests an existing binary instead of building one.
 
 Not covered anywhere: the tray icon and its menu, desktop notifications, system-wide
-idle time, autostart, and everything Windows-specific.
+idle time, autostart, and everything Windows- or macOS-specific.
 
 `pnpm visual` (`e2e/visual/`) photographs every screen, modal and overlay state in both
 themes, on the e2e fixture and its fake clock, into `e2e/visual/shots/` (`OUT=<dir>` for
@@ -283,7 +291,7 @@ src-tauri/
   crates/ipc           DataCommands: what the frontend can ask of the stored data
   src/                 the Tauri binary: commands/, db, error, tray, window, clock,
                        glass, autostart, notifications, export, platform/ (what differs
-                       between Linux and Windows) and idle/ (one backend per platform API)
+                       between the three desktops) and idle/ (one backend per platform API)
   build.rs             the version check and the window title (see Checks)
 tests/                 tests/<package>/, tests/rust/<crate>/, and the shared kits:
                        tests/support/ (builders, exercises, programs, world, dom) and

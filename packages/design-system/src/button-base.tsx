@@ -22,7 +22,7 @@ interface ButtonBaseProps extends ButtonSemantics {
   style: CSSProperties;
 }
 
-/** The class the focus ring and the hover state hang on (see global-styles.tsx). */
+/** The class the focus ring hangs on (see global-styles.tsx). */
 export const BUTTON_CLASS = "nb-button";
 
 const RESET: CSSProperties = {

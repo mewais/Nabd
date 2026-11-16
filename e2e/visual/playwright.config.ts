@@ -20,8 +20,10 @@ const URL_GIVEN = process.env.URL;
 export default defineConfig({
   testDir: ".",
   outputDir: "./test-results",
-  fullyParallel: true,
+  // One page at a time: screenshots of pages running side by side now and then fail to capture.
+  workers: 1,
   reporter: "line",
+  retries: 1,
   use: {
     ...devices["Desktop Chrome"],
     baseURL: URL_GIVEN ?? `http://localhost:${PORT}`,
