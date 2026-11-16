@@ -19,30 +19,15 @@
 //                                 driver takes the next one)
 
 import { execFile, execFileSync } from "node:child_process";
-import {
-  copyFileSync,
-  existsSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { copyFileSync, existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
-import { setTimeout as sleep } from "node:timers/promises";
-import {
-  APP_ID,
-  AppProcess,
-  PRODUCT_NAME,
-  builtBinary,
-  dataDir,
-  eventually,
-  loginEntry,
-  sandbox,
-} from "./app.mjs";
+import { APP_ID, PRODUCT_NAME, builtBinary, dataDir, loginEntry, sandbox } from "./app.mjs";
 import { DriverProcess } from "./driver.mjs";
 import { runEntry } from "./runner.mjs";
 
+/** The app's executable, as built and as the test's copy is named. */
+const EXE = "nabd.exe";
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 /** The WebView2 runtime's client id with Edge's updater, under which its version is kept. */
 const WEBVIEW2 = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
@@ -53,32 +38,6 @@ function forgetNabd() {
   rmSync(dataDir(), { recursive: true, force: true });
   rmSync(join(process.env.LOCALAPPDATA, APP_ID), { recursive: true, force: true });
   if (loginEntry() !== null) reg("delete", RUN_KEY, "/v", PRODUCT_NAME, "/f");
-}
-
-/**
- * End `app` without asking it, and wait until WebView2's processes for its
- * data folder have gone too: they outlive their app for a moment, and the
- * next launch would join them instead of starting its own — whose browser
- * then never takes the arguments a WebDriver session launches it with.
- */
-async function endWithItsWebView(app) {
-  await app.kill();
-  const stray = () =>
-    execFileSync(
-      "powershell",
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-Command",
-        "Get-CimInstance Win32_Process -Filter \"Name='msedgewebview2.exe'\" | " +
-          `Where-Object { $_.CommandLine -like '*${APP_ID}*' } | ` +
-          "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; $_.ProcessId }",
-      ],
-      { encoding: "utf8" },
-    ).trim();
-  await eventually("WebView2's processes of the ended app gone", () => stray() === "", {
-    found: stray,
-  });
 }
 
 /** The installed WebView2 runtime's version, per machine or per user; null when there is none. */
@@ -162,6 +121,44 @@ function hasTauriDriver() {
   }
 }
 
+/**
+ * WebView2's per-app policy for extra browser arguments: the value named after
+ * the app's executable, in either hive (machine-wide needs an administrator,
+ * which GitHub's runners are).
+ */
+const ARGUMENTS_POLICY = ["HKCU", "HKLM"].map(
+  (hive) => `${hive}\\Software\\Policies\\Microsoft\\Edge\\WebView2\\AdditionalBrowserArguments`,
+);
+
+/**
+ * Let msedgedriver reach the app's WebView2 over the DevTools port. It asks
+ * for the port in WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS, but WebView2 ignores
+ * that variable when the app passes arguments of its own (wry always does),
+ * and then never writes the DevToolsActivePort file msedgedriver waits for.
+ * The policy is applied all the same, into the data folder msedgedriver set.
+ */
+function allowDevTools() {
+  const allowed = ARGUMENTS_POLICY.filter((key) => {
+    try {
+      reg("add", key, "/v", EXE, "/t", "REG_SZ", "/d", "--remote-debugging-port=0", "/f");
+      return true;
+    } catch {
+      return false; // HKLM, without an administrator
+    }
+  });
+  if (allowed.length === 0) throw new Error(`could not write the policy ${ARGUMENTS_POLICY[0]}`);
+}
+
+function forgetDevTools() {
+  for (const key of ARGUMENTS_POLICY) {
+    try {
+      reg("delete", key, "/v", EXE, "/f");
+    } catch {
+      // Not written there.
+    }
+  }
+}
+
 /** tauri-driver in front of msedgedriver, when both can be had (or must be). */
 async function startWebDriver(dir, port) {
   const required = process.env.NABD_SMOKE_REQUIRE_WEBDRIVER === "1";
@@ -178,6 +175,7 @@ async function startWebDriver(dir, port) {
     console.log(`no WebDriver: ${error.message}`);
     return null;
   }
+  allowDevTools();
   return DriverProcess.start(port, native);
 }
 
@@ -199,8 +197,8 @@ if (leftover && !process.env.CI && process.env.NABD_SMOKE_RESET !== "1") {
 
 const dir = sandbox();
 // A private copy: a rebuild while the test runs cannot swap the binary under it.
-const binary = join(dir, "nabd.exe");
-copyFileSync(builtBinary("nabd.exe"), binary);
+const binary = join(dir, EXE);
+copyFileSync(builtBinary(EXE), binary);
 forgetNabd(); // a fresh account
 
 // TEMPORARY (WebDriver session diagnosis): the app's and WebView2's browser processes, sampled.
@@ -221,66 +219,11 @@ const sampler = setInterval(() => {
 }, 2000);
 const webviewData = join(process.env.LOCALAPPDATA, APP_ID, "EBWebView");
 
-// TEMPORARY (WebDriver session diagnosis): what msedgedriver launches the app
-// with, from its own verbose log; and whether the app's WebView2 takes
-// WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS when the app is started by hand.
-async function probeWebView2(native, probePort) {
-  const log = join(dir, "edgedriver.log");
-  const edge = new AppProcess(native, [`--port=${probePort}`, "--verbose", `--log-path=${log}`], {
-    TAURI_WEBVIEW_AUTOMATION: "true",
-  });
-  await eventually(
-    "probe msedgedriver up",
-    async () => (await fetch(`http://127.0.0.1:${probePort}/status`).catch(() => null))?.ok,
-  );
-  const answer = await fetch(`http://127.0.0.1:${probePort}/session`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      capabilities: {
-        alwaysMatch: {
-          browserName: "webview2",
-          "ms:edgeChromium": true,
-          "ms:edgeOptions": { binary, args: [] },
-        },
-      },
-    }),
-  }).then((r) => r.text());
-  console.log(`PROBE A answer: ${answer.slice(0, 400)}`);
-  console.log(`PROBE A processes:\n${processes}`);
-  await edge.kill();
-  try {
-    execFileSync("taskkill", ["/IM", "nabd.exe", "/T", "/F"], { stdio: "ignore" });
-  } catch {
-    // none left
-  }
-  const lines = existsSync(log) ? readFileSync(log, "utf8").split(/\r?\n/) : ["(no log)"];
-  console.log("PROBE A log:");
-  for (const line of lines
-    .filter((l) => /launch|WEBVIEW2|environment|command|remote|binary|DevTools|args/i.test(l))
-    .slice(0, 80))
-    console.log(`  ${line.slice(0, 600)}`);
-
-  const app = new AppProcess(binary, [], {
-    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=9333",
-    WEBVIEW2_USER_DATA_FOLDER: join(dir, "probe-webview"),
-  });
-  await sleep(10_000);
-  console.log(`PROBE B processes:\n${processes}`);
-  const version = await fetch("http://127.0.0.1:9333/json/version")
-    .then((r) => r.text())
-    .catch((error) => `unreachable: ${error.message}`);
-  console.log(`PROBE B devtools: ${version.slice(0, 400)}`);
-  await endWithItsWebView(app);
-  forgetNabd();
-}
-
 const port = Number(process.env.NABD_SMOKE_DRIVER_PORT ?? 4444);
 let driver = null;
 await runEntry({
   async setup() {
     driver = await startWebDriver(dir, port);
-    if (driver) await probeWebView2(driver.process.command.split(" ").at(-1), port + 10); // TEMPORARY
     return {
       binary,
       tray: true,
@@ -288,7 +231,7 @@ await runEntry({
       requireWebDriver: process.env.NABD_SMOKE_REQUIRE_WEBDRIVER === "1",
       // Nothing waits to be saved, and an app the test started has no window
       // that could be asked to quit.
-      end: endWithItsWebView,
+      end: (app) => app.kill(),
       diagnostics: [
         { title: "tauri-driver and msedgedriver", describe: () => driver?.describe() },
         { title: "the last processes sampled", describe: () => processes },
@@ -322,6 +265,7 @@ await runEntry({
   async cleanup() {
     clearInterval(sampler);
     await driver?.stop();
+    forgetDevTools();
     forgetNabd();
     rmSync(dir, { recursive: true, force: true });
   },

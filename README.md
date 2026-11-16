@@ -427,7 +427,10 @@ unless `NABD_SMOKE_RESET=1`, and removes what it created. It runs `first-launch`
 `restart`, `second-instance`, `close-to-tray` (closing is a `WM_CLOSE` to the window),
 `login-launch`, then through `tauri-driver` and an `msedgedriver` of the WebView2 runtime's
 major version (the runner's own, else downloaded from Microsoft; `NABD_SMOKE_EDGEDRIVER`
-names one) `logged-set`, `autostart-setting`, `quit-from-settings` and `system-idle`
+names one; it reaches the app's WebView2 over the DevTools port, which the test opens
+with WebView2's `AdditionalBrowserArguments` policy for `nabd.exe` and removes again, since
+WebView2 ignores the environment variable `msedgedriver` asks with once the app passes
+arguments of its own) `logged-set`, `autostart-setting`, `quit-from-settings` and `system-idle`
 (`GetLastInputInfo`, reset by keys sent with `SendInput`; where the session takes no
 synthetic input, that half is reported as skipped). An app the test launched itself has no
 window it can ask to quit, so it is ended without being asked (nothing waits to be saved).
