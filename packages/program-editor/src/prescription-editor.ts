@@ -1,10 +1,9 @@
 import type { Direction, Intensity, Measure, Prescription, RepMode, SetSpec } from "@nabd/domain";
-import { INTENSITY_SCALES, SECONDS_STEP, SET_TYPES, clamp, measureOfMode } from "@nabd/domain";
+import { INTENSITY_SCALES, SECONDS_STEP, measureOfMode } from "@nabd/domain";
 import { defaultRepMode, defaultSet } from "./defaults";
+import * as setSpec from "./set-spec";
 
 const REST_STEP_SEC = 15;
-/** How far apart a range starts when a fixed rep count becomes one: 8 → 8–10. */
-const RANGE_SPAN = 2;
 
 /** The two ways reps can be written. A duration has only one, so it is not among them. */
 export type RepStyle = Exclude<RepMode, "time">;
@@ -28,6 +27,14 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
     return draft;
   }
 
+  /** A copy with `fields` changed, and every set of it changed by `change`. */
+  private editSets(fields: Partial<Prescription>, change: (set: SetSpec, draft: T) => void): T {
+    return this.edit((draft) => {
+      Object.assign(draft, fields);
+      for (const set of draft.sets) change(set, draft);
+    });
+  }
+
   /** The set at `index` of a copy, changed by `change`; the original when there is none. */
   private editSet(index: number, change: (set: SetSpec, draft: T) => void): T {
     if (this.prescription.sets[index] === undefined) return this.prescription;
@@ -46,14 +53,9 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
   countIn(measure: Measure): T {
     if (this.measure === measure) return this.prescription;
     const fresh = defaultSet(measure);
-    return this.edit((draft) => {
-      draft.repMode = defaultRepMode(measure);
-      for (const set of draft.sets) {
-        set.amount = fresh.amount;
-        if (fresh.upTo === undefined) delete set.upTo;
-        else set.upTo = fresh.upTo;
-      }
-    });
+    return this.editSets({ repMode: defaultRepMode(measure) }, (set) =>
+      setSpec.takeAmounts(set, fresh),
+    );
   }
 
   /**
@@ -63,13 +65,7 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
    */
   setRepStyle(style: RepStyle): T {
     if (this.prescription.repMode === "time") return this.prescription;
-    return this.edit((draft) => {
-      draft.repMode = style;
-      for (const set of draft.sets) {
-        if (style === "range") set.upTo ??= set.amount + RANGE_SPAN;
-        else delete set.upTo;
-      }
-    });
+    return this.editSets({ repMode: style }, (set) => setSpec.writeReps(set, style === "range"));
   }
 
   /**
@@ -78,36 +74,30 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
    */
   setIntensity(mode: Intensity): T {
     if (this.prescription.intensity === mode) return this.prescription;
-    return this.edit((draft) => {
-      draft.intensity = mode;
-      for (const set of draft.sets) {
-        if (mode === "none") delete set.intensity;
-        else set.intensity = INTENSITY_SCALES[mode].initial;
-      }
-    });
+    return this.editSets({ intensity: mode }, (set) => setSpec.holdIntensity(set, mode));
   }
 
   /** Shorten or lengthen the rest by one step of 15 s. */
   stepRest(direction: Direction): T {
-    return this.edit((draft) => {
-      draft.rest = Math.max(0, draft.rest + direction * REST_STEP_SEC);
-    });
+    const rest = Math.max(0, this.prescription.rest + direction * REST_STEP_SEC);
+    return this.edit((draft) => Object.assign(draft, { rest }));
   }
 
   /** Append a working set copied from the last set. */
   addSet(): T {
-    return this.edit((draft) => {
-      const template = draft.sets.at(-1) ?? defaultSet(this.measure);
-      draft.sets.push({ ...template, type: "working" });
-    });
+    const set = { ...this.modelSet(-1), type: "working" } as const;
+    return this.edit((draft) => draft.sets.push(set));
   }
 
   /** Prepend a warm-up set modelled on the first set. */
   addWarmup(): T {
-    return this.edit((draft) => {
-      const template = draft.sets[0] ?? defaultSet(this.measure);
-      draft.sets.unshift({ ...template, type: "warmup" });
-    });
+    const set = { ...this.modelSet(0), type: "warmup" } as const;
+    return this.edit((draft) => draft.sets.unshift(set));
+  }
+
+  /** The set at `index` (from the end when negative), or a default one: what a new set copies. */
+  private modelSet(index: number): SetSpec {
+    return this.prescription.sets.at(index) ?? defaultSet(this.measure);
   }
 
   /** Remove a set (a prescription always keeps at least one). */
@@ -118,9 +108,9 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
 
   /** working → warm-up → drop → working. */
   cycleSetType(index: number): T {
-    return this.editSet(index, (set) => {
-      set.type = SET_TYPES[(SET_TYPES.indexOf(set.type) + 1) % SET_TYPES.length] ?? "working";
-    });
+    return this.editSet(index, (set) =>
+      Object.assign(set, { type: setSpec.nextSetType(set.type) }),
+    );
   }
 
   /** One step of a set's amount: a rep, or a few seconds. */
@@ -130,18 +120,13 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
 
   /** Step a set's reps or seconds (the bottom of its range); the top never falls below it. */
   stepAmount(index: number, direction: Direction): T {
-    return this.editSet(index, (set) => {
-      set.amount = Math.max(this.amountStep, set.amount + direction * this.amountStep);
-      if (set.upTo !== undefined) set.upTo = Math.max(set.upTo, set.amount);
-    });
+    return this.editSet(index, (set) => setSpec.stepAmount(set, direction, this.amountStep));
   }
 
   /** Step the top of a set's rep range, never below its bottom. */
   stepUpTo(index: number, direction: Direction): T {
     if (this.prescription.sets[index]?.upTo === undefined) return this.prescription;
-    return this.editSet(index, (set) => {
-      set.upTo = Math.max(set.amount, (set.upTo ?? set.amount) + direction * this.amountStep);
-    });
+    return this.editSet(index, (set) => setSpec.stepUpTo(set, direction, this.amountStep));
   }
 
   /**
@@ -151,37 +136,22 @@ export class PrescriptionEditor<T extends Prescription = Prescription> {
    * or imported is brought to it.
    */
   keepIntensitiesOnScale(): T {
-    return this.edit((draft) => {
-      const mode = draft.intensity;
-      for (const set of draft.sets) {
-        if (mode === "none") delete set.intensity;
-        else {
-          const scale = INTENSITY_SCALES[mode];
-          set.intensity = clamp(set.intensity ?? scale.initial, scale.min, scale.max);
-        }
-      }
-    });
+    return this.editSets({}, (set, draft) =>
+      setSpec.holdIntensity(set, draft.intensity, set.intensity),
+    );
   }
 
   /** Step a set's intensity (RPE or %1RM) within its bounds. */
   stepIntensity(index: number, direction: Direction): T {
     const mode = this.prescription.intensity;
-    if (this.prescription.sets[index]?.intensity === undefined || mode === "none") {
-      return this.prescription;
-    }
-    const scale = INTENSITY_SCALES[mode];
-    return this.editSet(index, (set) => {
-      set.intensity = clamp(
-        (set.intensity ?? scale.initial) + direction * scale.step,
-        scale.min,
-        scale.max,
-      );
-    });
+    const current = this.prescription.sets[index]?.intensity;
+    if (current === undefined || mode === "none") return this.prescription;
+    return this.editSet(index, (set) =>
+      setSpec.holdIntensity(set, mode, current + direction * INTENSITY_SCALES[mode].step),
+    );
   }
 
   setNotes(notes: string): T {
-    return this.edit((draft) => {
-      draft.notes = notes;
-    });
+    return this.edit((draft) => Object.assign(draft, { notes }));
   }
 }

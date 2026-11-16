@@ -2,7 +2,8 @@
 // immutably, and the rules a program obeys however it came about.
 
 export { ProgramEditor } from "./editor";
-export type { EditRef, ProgramEdit } from "./editor";
+export type { ProgramEdit } from "./editor";
+export type { EditRef } from "./draft";
 export { fitsWeekdaySchedule } from "./schedule";
 export type { PlanToday } from "./schedule";
 export { normalized } from "./normalize";

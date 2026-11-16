@@ -130,12 +130,19 @@ outside() {
   cp "$binary" "$SANDBOX/nabd"
   write_faketime_launcher "$faketime"
 
+  # The results are written to a file and followed here: xvfb-run and
+  # dbus-run-session need not pass any descriptor but the standard three on.
+  : >"$SANDBOX/results"
+  tail -n +1 -f "$SANDBOX/results" &
+  local follower=$!
   env -u WAYLAND_DISPLAY \
     HOME="$SANDBOX/home" XDG_DATA_HOME="$SANDBOX/data" \
     XDG_CONFIG_HOME="$SANDBOX/config" XDG_CACHE_HOME="$SANDBOX/cache" \
-    GDK_BACKEND=x11 SANDBOX="$SANDBOX" NABD_SMOKE_PYTHON="$python" \
+    GDK_BACKEND=x11 NO_AT_BRIDGE=1 SANDBOX="$SANDBOX" NABD_SMOKE_PYTHON="$python" \
     xvfb-run -a -s "-screen 0 1440x900x24" dbus-run-session -- "$SELF" --in-session \
-    3>&1 >"$SANDBOX/session.log" 2>&1 || status=$?
+    >"$SANDBOX/session.log" 2>&1 || status=$?
+  sleep 0.5
+  kill "$follower"
   if ((status != 0)); then
     echo "--- what the session printed (last lines)" >&2
     tail -n 40 "$SANDBOX/session.log" >&2

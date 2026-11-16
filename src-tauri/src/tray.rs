@@ -46,8 +46,21 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> AppResult<()> {
             }
         });
     }
+    #[cfg(target_os = "linux")]
+    let tray = tray.temp_dir_path(icon_dir(app)?);
     with_icon(tray, app)?.build(app)?;
     Ok(())
+}
+
+/// Linux indicators show the icon from a file, which the tray library writes
+/// to `$XDG_RUNTIME_DIR/tray-icon` or, without that variable, to a shared
+/// `/tmp/tray-icon` — where another user's folder of that name makes the
+/// write, and so the launch, fail. The app's own cache folder is private.
+#[cfg(target_os = "linux")]
+fn icon_dir<R: Runtime>(app: &AppHandle<R>) -> AppResult<std::path::PathBuf> {
+    use tauri::Manager;
+
+    Ok(app.path().app_cache_dir()?.join("tray-icon"))
 }
 
 /// The menu bar tints a monochrome "template" image for light and dark bars;

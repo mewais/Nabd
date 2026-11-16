@@ -1,47 +1,22 @@
-import type {
-  Direction,
-  MuscleKey,
-  Prescription,
-  Program,
-  ProgramType,
-  Schedule,
-  Weekday,
-} from "@nabd/domain";
+import type { Direction, MuscleKey, Program, ProgramType, Schedule, Weekday } from "@nabd/domain";
 import { isFloating, measureOf, poolMeasure } from "@nabd/domain";
 import { deriveSlots } from "./derive-slots";
 import { initialPrescription } from "./defaults";
 import { ProgramDraft } from "./draft";
-import { PrescriptionEditor } from "./prescription-editor";
-import type { PrescriptionEdit } from "./prescription-editor";
 import { removeAll, removeById, shiftById } from "./reorder";
-import type { Identified } from "./reorder";
-import { fitsWeekdaySchedule, reschedule } from "./schedule";
+import { fitsWeekdaySchedule, pinToWeekday, reschedule } from "./schedule";
 import { moveRow, toggleSupersetOf } from "./supersets";
-
-/** Points at the prescription being edited: a fixed exercise row or a cycled slot. */
-export interface EditRef {
-  kind: "exercise" | "slot";
-  id: string;
-}
 
 /** A change to the program, expressed against an editor (see {@link ProgramEditor}). */
 export type ProgramEdit = (editor: ProgramEditor) => Program;
 
 /**
- * Every way the planner can change a program. Each method returns a new
- * Program and leaves the original untouched (see {@link ProgramDraft});
- * whatever the change, the result obeys the program rules (see normalize.ts).
+ * Every way the planner can change a program (a prescription's changes are
+ * {@link ProgramDraft.editPrescription}'s). Each method returns a new Program
+ * and leaves the original untouched; whatever the change, the result obeys the
+ * program rules (see normalize.ts).
  */
 export class ProgramEditor extends ProgramDraft {
-  /** Change the prescription `ref` points at (see {@link PrescriptionEditor} for the changes). */
-  editPrescription(dayId: string, ref: EditRef, edit: PrescriptionEdit): Program {
-    return this.editDay(dayId, (day) => {
-      const list: (Prescription & Identified)[] = ref.kind === "slot" ? day.slots : day.exercises;
-      const prescription = list.find((p) => p.id === ref.id);
-      if (prescription) Object.assign(prescription, edit(new PrescriptionEditor(prescription)));
-    });
-  }
-
   // ----- Program -----
 
   rename(name: string): Program {
@@ -90,11 +65,7 @@ export class ProgramEditor extends ProgramDraft {
 
   /** Put a day on a weekday; a day already there swaps places with it. */
   setWeekday(dayId: string, weekday: Weekday): Program {
-    return this.editDay(dayId, (day, draft) => {
-      const occupant = draft.days.find((d) => d.weekday === weekday && d.id !== dayId);
-      if (occupant) occupant.weekday = day.weekday;
-      day.weekday = weekday;
-    });
+    return this.editDay(dayId, (day, draft) => pinToWeekday(draft, day, weekday));
   }
 
   /** Move a day earlier (-1) or later (+1) in the floating order. */

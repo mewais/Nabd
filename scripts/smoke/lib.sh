@@ -6,17 +6,22 @@
 # and the paths linux-smoke.sh derives from them: BINARY, DB, CLOCK,
 # NOTIFICATIONS.
 
-# Results go to descriptor 3, which linux-smoke.sh connects to the terminal.
+# Results go to $SANDBOX/results, which linux-smoke.sh shows as they come.
 # Stdout and stderr are the session's chatter (D-Bus, WebKit, the window
 # manager, the drivers): it is kept in a log and shown only when an expectation
-# fails.
+# fails. A failure is written to both, so the log shows where it happened.
+report() {
+  echo "$*" >>"$SANDBOX/results"
+}
+
 fail() {
-  echo "FAIL $*" >&3
+  report "FAIL $*"
+  echo "FAIL $*" >&2
   exit 1
 }
 
 ok() {
-  echo "ok   $*" >&3
+  report "ok   $*"
 }
 
 # wait_for SECONDS COMMAND...: poll until COMMAND succeeds; false if it never does.
@@ -58,8 +63,10 @@ plan() {
 }
 
 # start_day PLAN SETTINGS: today begins afresh, on PLAN, with SETTINGS (JSON,
-# missing fields at their defaults), nothing logged and nudges not paused.
+# missing fields at their defaults), nothing logged, nudges not paused, and no
+# notification shown yet.
 start_day() {
+  : >"$NOTIFICATIONS"
   sql "DELETE FROM history;
        INSERT OR REPLACE INTO kv (key, value) VALUES
          ('program', '$1'), ('settings', '$2'), ('dayLog', '[]'),

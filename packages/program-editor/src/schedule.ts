@@ -1,7 +1,7 @@
 // The schedule a program runs on: what fits a week, and how switching between
 // weekdays and floating keeps today on the day it is on.
 
-import type { Program, Schedule, Weekday } from "@nabd/domain";
+import type { Day, Program, Schedule, Weekday } from "@nabd/domain";
 import { DAYS_PER_WEEK, inWeekOrder, isWeekday } from "@nabd/domain";
 
 /** Where the plan stands today, for the edits that must not move today: switching schedule. */
@@ -18,6 +18,13 @@ export interface PlanToday {
  */
 export function fitsWeekdaySchedule(program: Pick<Program, "days">, added = 0): boolean {
   return program.days.length + added <= DAYS_PER_WEEK;
+}
+
+/** Put `day` of `draft` on `weekday`; a day already there swaps places with it. */
+export function pinToWeekday(draft: Program, day: Day, weekday: Weekday): void {
+  const occupant = draft.days.find((d) => d.weekday === weekday && d.id !== day.id);
+  if (occupant) occupant.weekday = day.weekday;
+  day.weekday = weekday;
 }
 
 /** The weekday `ahead` days after `weekday`. */
