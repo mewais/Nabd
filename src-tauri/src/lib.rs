@@ -42,10 +42,11 @@ pub fn run() -> tauri::Result<()> {
         .plugin(autostart::plugin())
         .setup(|app| {
             // Tauri panics on a setup error, so a failed start is reported
-            // and turned into a clean exit here instead.
+            // and turned into a plain failing exit here instead. Nothing is
+            // on screen yet, and the event loop would report success.
             if let Err(error) = start(app) {
                 report_startup_failure(app.handle(), &error);
-                app.handle().exit(STARTUP_FAILURE);
+                std::process::exit(STARTUP_FAILURE);
             }
             Ok(())
         })
