@@ -3,9 +3,9 @@
 // (app-session.mjs):
 //
 //   Linux    the X server, through x11.sh (xdotool): Nabd windows by class
-//   Windows  Win32, through PowerShell: a process's main window is its first
-//            visible top-level window without an owner, so it exists while
-//            the window is shown; closing posts WM_CLOSE to it
+//   Windows  Win32, through windows.ps1 (PowerShell): the visible, unowned
+//            top-level windows of the app's processes that are not tool
+//            windows; closing posts WM_CLOSE to them
 //   macOS    the window server's list (CGWindowList, macos-windows.swift: no
 //            permission needed to see whether a window is on screen); closing
 //            clicks the window's close button through System Events, which
@@ -97,20 +97,24 @@ function x11Screen() {
 
 function windowsScreen(binaryName) {
   const name = binaryName.replace(/\.exe$/i, "");
-  const powershell = (script) =>
-    run("powershell", ["-NoProfile", "-NonInteractive", "-Command", script]);
-  const withWindow = `Get-Process -Name '${name}' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }`;
-  const count = () => Number(powershell(`@(${withWindow}).Count`));
+  const windows = (command) =>
+    run("powershell", [
+      "-NoProfile",
+      "-NonInteractive",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      here("windows.ps1"),
+      name,
+      command,
+    ]);
+  const count = () => Number(windows("count"));
   return {
     shown: () => count() > 0,
     count,
     focused: () => null,
-    close: () => powershell(`${withWindow} | ForEach-Object { [void]$_.CloseMainWindow() }`),
-    describe: () =>
-      powershell(
-        `Get-Process -Name '${name}' -ErrorAction SilentlyContinue | ` +
-          "Format-Table Id, MainWindowHandle, MainWindowTitle, Responding -AutoSize | Out-String -Width 200",
-      ) || `no ${name} process`,
+    close: () => windows("close"),
+    describe: () => windows("describe"),
     /**
      * Keys (F15, which nothing acts on) sent through SendInput by one
      * PowerShell process, every 300 ms. The returned function stops it and

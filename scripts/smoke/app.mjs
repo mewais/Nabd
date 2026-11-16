@@ -286,7 +286,10 @@ export function loginEntry() {
     case "win32": {
       let output;
       try {
-        output = execFileSync("reg", ["query", RUN_KEY, "/v", PRODUCT_NAME], { encoding: "utf8" });
+        output = execFileSync("reg", ["query", RUN_KEY, "/v", PRODUCT_NAME], {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+        });
       } catch {
         return null; // reg exits 1 when the value is not there
       }
