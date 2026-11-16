@@ -435,7 +435,7 @@ describe("BodyMap", () => {
     const paths = Array.from(container.querySelectorAll("path"));
     const headPath = paths.find((p) => p.getAttribute("d") === firstHeadPath);
     expect(headPath).not.toBeUndefined();
-    expect((headPath as HTMLElement).style.fill).toBe("var(--map-muscle)");
+    expect(headPath!.style.fill).toBe("var(--map-muscle)");
   });
 
   it("back view: gluteal slug carries accent fill when glutes+abductors coverage > 0", () => {
