@@ -32,6 +32,7 @@ const BROWSE: BrowseVM = {
         addLabel: "Add Goblet Squat",
       },
     ],
+    scopeNote: null,
     emptyNote: null,
   },
 };
@@ -138,6 +139,11 @@ describe("LibraryModal · browsing", () => {
     browsing({ rows: [], emptyNote: "No exercises match." });
     expect(screen.getByText("No exercises match.")).toBeInTheDocument();
     expect(screen.queryByRole("listitem")).toBeNull();
+  });
+
+  it("says why some exercises are not offered, when the list is narrowed for a pool", () => {
+    browsing({ scopeNote: "This pool is timed, so only timed exercises are offered." });
+    expect(screen.getByText(/only timed exercises are offered/)).toBeInTheDocument();
   });
 
   it("the ✕ closes the library", () => {

@@ -26,7 +26,7 @@ export function createIpcClient(invoke: Invoke, listen: Listen): IpcClient {
       }),
     appendSet: (set) => invoke("append_set", { rowJson: JSON.stringify(set) }),
     deleteSet: (id) => invoke("delete_set", { id }),
-    exportData: () => invoke("export_data", { version: APPDATA_VERSION }),
+    exportData: (purpose) => invoke("export_data", { version: APPDATA_VERSION, purpose }),
     importData: (data) => invoke("import_data", { json: JSON.stringify(data) }),
     platformCapabilities: () => invoke("platform_capabilities"),
     notifyNudge: (notification) => invoke("notify_nudge", { notification }),

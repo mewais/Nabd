@@ -12,5 +12,6 @@ export interface LibraryActions {
   patchDraft: (patch: Partial<ExerciseDraft>) => void;
   cancelDraft: () => void;
   saveDraft: () => void;
+  /** Delete a custom exercise, once the user has confirmed. */
   deleteCustom: (exId: string) => void;
 }

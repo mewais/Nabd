@@ -109,17 +109,13 @@ describe("DayEditor — fixed day", () => {
     expect(planner.program()).toEqual(fixedProgram());
   });
 
-  it("Delete day removes the day; deleting the last one leaves just the header and board", () => {
+  it("Delete day asks the app to delete it — which confirms first — and removes nothing itself", () => {
     const planner = renderPlanner(fixedProgram());
 
     fireEvent.click(screen.getByRole("button", { name: "Delete day" }));
-    expect(planner.program().days.map((d) => d.id)).toEqual(["d-pull"]);
-    expect(screen.getByLabelText("Day name")).toHaveValue("Pull");
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete day" }));
-    expect(planner.program().days).toEqual([]);
-    expect(screen.queryByLabelText("Day name")).toBeNull();
-    expect(screen.getByLabelText("Program name")).toBeInTheDocument();
+    expect(planner.removeDay).toHaveBeenCalledWith("d-push");
+    expect(planner.program()).toEqual(fixedProgram());
+    expect(screen.getByLabelText("Day name")).toHaveValue("Push");
   });
 });
 

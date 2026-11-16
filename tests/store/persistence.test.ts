@@ -8,26 +8,69 @@ describe("stored data that cannot be read", () => {
 
   it("an unreadable value runs on a default, is reported, and is never saved over", async () => {
     const stored = { nonsense: true };
-    const app = await boot({ program: stored, settings: "??" });
+    const app = await boot({ program: stored, customExercises: "??" });
     expect(app.get().program.days).toEqual([]);
-    expect(app.get().settings).toEqual(DEFAULT_SETTINGS);
-    expect(app.get().loadProblems.map((p) => p.source)).toEqual(["settings", "program"]);
+    expect(app.get().customExercises).toEqual([]);
+    expect(app.get().loadProblems.map((p) => p.source)).toEqual(["customExercises", "program"]);
     expect(app.get().appNotice).toMatchObject({ kind: "error" });
     expect(app.get().appNotice!.text).toContain("your plan");
 
     app.get().editProgram((e) => e.addDay(1));
-    app.get().updateSettings({ interval: 30 });
+    app.get().startDraft();
+    app.get().patchDraft({ name: "Desk Dips", primary: ["triceps"] });
+    app.get().saveDraft();
     expect(app.get().program.days).toHaveLength(1);
+    expect(app.get().customExercises).toHaveLength(1);
     expect(app.data.program).toEqual(stored);
-    expect(app.data.settings).toBe("??");
-    expect(app.savedKeys()).not.toContain("program");
-    expect(app.savedKeys()).not.toContain("settings");
+    expect(app.data.customExercises).toBe("??");
+    expect(app.client.save).not.toHaveBeenCalledWith("customExercises", expect.anything());
+    expect(app.client.saveMany).not.toHaveBeenCalled();
   });
 
   it("what could be read keeps saving as usual", async () => {
-    const app = await boot({ program, settings: "??" });
+    const app = await boot({ program, customExercises: "??" });
     app.get().editProgram((e) => e.rename("Renamed"));
     expect((app.data.program as Program).name).toBe("Renamed");
+  });
+
+  describe("settings are salvaged field by field", () => {
+    const stored = { ...DEFAULT_SETTINGS, interval: 30, opacity: 7, equipment: ["sled"] };
+
+    it("one bad field falls back to its default; the others are kept", async () => {
+      const app = await boot({ program, settings: stored });
+      expect(app.get().settings).toEqual({ ...DEFAULT_SETTINGS, interval: 30 });
+      expect(app.get().loadProblems).toEqual([]);
+      expect(app.get().appNotice).toEqual({
+        kind: "info",
+        text: "These settings could not be read and are back at their defaults: opacity, equipment.",
+      });
+    });
+
+    it("what was repaired is written back, and settings go on being saved", async () => {
+      const app = await boot({ program, settings: stored });
+      expect(app.data.settings).toEqual({ ...DEFAULT_SETTINGS, interval: 30 });
+      app.get().updateSettings({ minGap: 10 });
+      expect(app.data.settings).toEqual({ ...DEFAULT_SETTINGS, interval: 30, minGap: 10 });
+    });
+
+    it("the old translucent theme is the dark theme over a glass window", async () => {
+      const app = await boot({ settings: { ...DEFAULT_SETTINGS, theme: "translucent" } });
+      expect(app.get().settings).toEqual({ ...DEFAULT_SETTINGS, theme: "dark", glass: true });
+      expect(app.get().appNotice).toBeNull();
+      expect(app.data.settings).toEqual(app.get().settings);
+      expect(app.client.setGlass).toHaveBeenCalledWith(true);
+    });
+
+    it("settings in order are not written again at boot", async () => {
+      const app = await boot({ program, settings: DEFAULT_SETTINGS });
+      expect(app.savedKeys()).not.toContain("settings");
+    });
+  });
+
+  it("counts the sets the backend itself could not read", async () => {
+    const app = await boot({ program, history: [goodSet("a"), { id: 1 }], unreadableSets: 2 });
+    expect(app.get().history.map((set) => set.id)).toEqual(["a"]);
+    expect(app.get().loadProblems).toEqual([{ source: "history", detail: "3 sets left out" }]);
   });
 
   it("one bad history row is left out without losing the others", async () => {
@@ -59,7 +102,7 @@ describe("stored data that cannot be read", () => {
 
   it("importing a backup replaces the unreadable data and lifts the block", async () => {
     const app = await boot({ program: { nonsense: true } });
-    await app.get().importData(JSON.stringify({ app: "Nabd", version: 2, program }));
+    await app.importFile(JSON.stringify({ app: "Nabd", version: 2, program }));
     expect(app.get().loadProblems).toEqual([]);
     expect(app.get().appNotice).toBeNull();
     app.get().editProgram((e) => e.rename("Recovered"));
@@ -77,7 +120,7 @@ describe("failed saves", () => {
   it("a singleton that cannot be saved is reported app-wide", async () => {
     const app = await boot();
     app.get().editProgram((e) => e.rename("Saved"));
-    vi.mocked(app.client.save).mockRejectedValueOnce(new Error("disk full"));
+    vi.mocked(app.client.saveMany).mockRejectedValueOnce(new Error("disk full"));
     app.get().editProgram((e) => e.rename("Unsaved"));
     await Promise.resolve();
     await Promise.resolve();

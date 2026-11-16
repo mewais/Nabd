@@ -6,9 +6,13 @@ import { useState } from "react";
 import { render, screen, within } from "@testing-library/react";
 import type { Program } from "@nabd/domain";
 import { ProgramEditor } from "@nabd/program-editor";
+import type { PlanToday } from "@nabd/program-editor";
 import { PlannerScreen } from "@nabd/planner";
 import type { PlannerActions } from "@nabd/planner";
 import { lookup, vmOf } from "./fixtures";
+
+/** The planner is used on a Monday, on which the plan is on its first day. */
+const TODAY: PlanToday = { weekday: 1, dayId: null };
 
 export function renderPlanner(initial: Program, editDayId: string | null = null) {
   let current = initial;
@@ -16,6 +20,7 @@ export function renderPlanner(initial: Program, editDayId: string | null = null)
   const newId = (): string => `new-${++nextId}`;
   const spies = {
     selectDay: vi.fn<PlannerActions["selectDay"]>(),
+    removeDay: vi.fn<PlannerActions["removeDay"]>(),
     addExercise: vi.fn<PlannerActions["addExercise"]>(),
     addPoolExercise: vi.fn<PlannerActions["addPoolExercise"]>(),
   };
@@ -26,7 +31,7 @@ export function renderPlanner(initial: Program, editDayId: string | null = null)
     const actions: PlannerActions = {
       ...spies,
       edit: (edit) => {
-        current = edit(new ProgramEditor(current, newId, lookup));
+        current = edit(new ProgramEditor(current, newId, lookup, TODAY));
         setProgram(current);
       },
       selectDay: (dayId) => {

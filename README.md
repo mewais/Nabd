@@ -15,11 +15,29 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   exercises, moving on to the next one each time the day comes round. Days are pinned
   to weekdays (at most one per weekday, so seven), or _floating_: Day 1, 2, 3 … in
   order, moving on once a day owes nothing more — completed, skipped, or empty. An
-  unfinished floating day comes back the next day, weekends included.
+  unfinished floating day comes back the next day, weekends included; a day it merely
+  waited on is not a missed day, so only days with a set (or that the plan moved on
+  from) count toward completion. A few rules hold whatever is edited, stored or
+  imported:
+  - whether a set is counted in reps or in seconds is the exercise's doing, not a
+    choice: a rep-counted exercise is prescribed as a range or a fixed number, a hold in
+    seconds. A cycled pool shares one prescription, so it holds one kind — the kind of
+    its first exercise — and the library only offers that kind for it;
+  - a pool is tracked by exercise, not by position, so editing it never skips or
+    repeats one;
+  - a superset stays together: an exercise moved past it steps over the whole group, a
+    member moves within it, and a member moved out past its edge is unlinked. The
+    supersets of a day are lettered A, B, C … (A1/A2, B1/B2);
+  - switching between weekdays and floating keeps today on the day it is on: going
+    floating starts on today's weekday's day (the first day, on a rest day); going
+    weekdays pins the current day to today and the days after it to the weekdays that
+    follow;
+  - deleting a day or a custom exercise, and importing over what is stored, ask first.
 - **Today** is derived, never stored: the plan for the day, plus the sets logged today.
   Edit the plan and Today changes immediately; restart the app and nothing is lost. A
   set whose exercise has since left the plan (or the library) is still listed and
-  counted.
+  counted, and a logger open on an exercise that leaves the queue moves on to the next
+  one (or closes) rather than linger.
 - **Nudges** follow four rules:
   1. never outside the workday (Settings → Workday), while paused, or with nothing left;
   2. the timer nudges _interval_ minutes after your last set (before the first one: after
@@ -32,23 +50,43 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   Pause — even if you touch the mouse in the meantime, and the sets you then log are
   recorded as prompted by it. It shows as a toast in the window and, when the window is
   not in front, as a desktop notification (a window hidden in the tray is also brought
-  back, unfocused). Opening the logger answers it; closing the logger without logging
-  keeps it quiet for the length of a snooze.
+  back, unfocused). Left unanswered, the notification is repeated once per _interval_
+  for as long as the window stays out of focus; the toast stays the one toast. Opening
+  the logger answers it; closing the logger without logging keeps it quiet for the
+  length of a snooze.
 
 - **A nudge is an invitation, not a limit.** The logger lists all of today's exercises;
   log one set or as many as you have time for, in any order. Supersets alternate, rest
   between back-to-back sets is counted down, any exercise can be skipped for the day
-  (and restored), and anything not in the plan can be logged as an extra.
+  (and restored), and anything not in the plan can be logged as an extra ("log
+  something else" on an exercise that is already in today's queue goes to that
+  exercise). A set beyond an exercise's prescription keeps the form on that exercise.
+  Reps and weight can be stepped (− / +, or ↑ / ↓ in the field: one rep, five seconds,
+  one weight increment) or typed — a field can be emptied and retyped, and goes back to
+  its last number if left empty — and Enter logs the set. Weights are shown to two
+  decimals, so quarter-kilo steps read exactly.
+- **Nothing logged is lost quietly.** A set the database would not take stays in the
+  list, marked "not saved yet", and is retried on every clock beat, after any save that
+  works, and before an export or Settings → Quit. Before an import replaces anything, a
+  backup export (`nabd-backup-before-import-…json`) is written next to your exports.
+  Stored settings are read field by field, so one bad value only resets itself.
 - **Suggestions** use double progression against the same set of your previous session:
   inside your rep range → one more rep (or, alternatively, the same reps with more
   load); at the top → more load, back at the bottom of the range; below it → hold the
   load; below it twice running → back off one step. "More load" is your own weight
-  increment (Settings → Training), so 8 × 25 lb suggests 9 × 25 lb or 8 × 27.5 lb.
-  Warm-ups are left out of progression, volume and trends.
+  increment (Settings → Training; 2.5 kg or 5 lb unless you choose your own, which a
+  change of unit leaves alone), so 8 × 25 lb suggests 9 × 25 lb or 8 × 27.5 lb.
+  A bodyweight exercise with nothing added is plain reps — "12 reps", then "8 + 2.5 kg
+  or 13 reps" at the top of the range — and only an exercise that needs a bar or a
+  dumbbell asks you to pick a starting weight. Warm-ups are left out of progression,
+  volume and trends; the form remembers your last warm-up separately, and starts each
+  kind of set (warm-up, working, drop) from its own numbers. An exercise's trend has one
+  unit: an estimated 1RM once it has ever been loaded, reps or seconds until then.
 - **Closing the window hides it**; the app lives in the tray (Start next set, Pause
   nudges, Open, Quit). Where the desktop shows no tray icons (stock GNOME without the
   AppIndicator extension) the app is an ordinary window: closing it quits, and "Start
-  minimized" is ignored. Settings → Quit Nabd always exits.
+  minimized" is switched off in Settings, which says why. Settings → Quit Nabd always
+  exits.
 
 ## Prerequisites
 
@@ -82,7 +120,8 @@ provides it) and stable Rust (`rustup`), plus per platform:
 | Notifications   | toast                                  | the desktop's notification service                                         | the same                                                                     |
 
 Where the OS cannot report idle time, "idle" means no keyboard or mouse activity inside
-the Nabḍ window, and Settings says so. A login launch always starts in the tray (if there
+the Nabḍ window, and Settings says so (also when the desktop's idle service is lost, or
+comes back, while the app is running). A login launch always starts in the tray (if there
 is one); "Start minimized" does the same for launches by hand. macOS is not a supported
 target yet.
 
@@ -102,7 +141,7 @@ pnpm test               # TypeScript suites (Vitest); one package: pnpm --filter
 pnpm test:rust          # Rust crates
 pnpm typecheck          # packages and tests, one strict tsconfig
 pnpm lint               # ESLint + Prettier
-pnpm lint:rust          # rustfmt + clippy
+pnpm lint:rust          # rustfmt + clippy, over the whole Cargo workspace
 pnpm check              # all of the above
 ```
 
@@ -130,7 +169,7 @@ the in-memory backend of `pnpm dev`. Two things make them deterministic:
 builders for plans and history; the browser runs in a non-UTC time zone so "today" is
 tested as the user's calendar day. A spec marked `test.fail` documents designed behaviour
 the app does not have yet: it starts failing the day the app is fixed, and the mark comes
-off.
+off. No spec is marked at present.
 
 ## Smoke test
 
@@ -178,17 +217,21 @@ packages/
   session         LogSession (the set being entered), Coach, wording
   nudge           NudgePolicy: when to say "time to move"
   analytics       TrainingStats: streaks, completion, time of day, triggers
-  program-editor  ProgramEditor: every planner mutation, immutably
-  serialization   validates + migrates an import file
+  program-editor  ProgramEditor: every planner mutation, immutably, and the rules a
+                  program obeys however it was edited, stored or imported
+  serialization   validates + migrates an import file; upgrades values stored by older
+                  versions
   ipc-client      the typed boundary to the Rust backend, and an in-memory stand-in
-  store           Zustand store, one file per slice: state, actions, memoized selectors
+  store           Zustand store, one file per slice: state, actions, memoized selectors,
+                  and what holds after every change (settle.ts)
   design-system   theme, tokens and every presentational primitive
   bodymap         the anatomical SVG map and its per-muscle meter
   shell           the app chrome: sidebar, top bar, notice banner
   today           the Today screen
   planner         the Plan screen
   progress        the Progress screen
-  modals          set logger, nudge toast, exercise library, settings, history chart
+  modals          set logger, nudge toast, exercise library, settings, history chart,
+                  and the confirmation asked before anything destructive
   app             React wiring (containers, app loop) + the browser demo backend
 src-tauri/
   crates/persistence   Store: SQLite, the singletons and the set history, migrations

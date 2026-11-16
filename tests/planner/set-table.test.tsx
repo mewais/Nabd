@@ -109,13 +109,26 @@ describe("SetTable", () => {
     expect(screen.getByText("3 exercises · 11 sets")).toBeInTheDocument();
   });
 
-  it("switching reps to Time drops the range tops", () => {
+  it("seconds or reps is the exercise's doing: only how reps are written can be chosen", () => {
+    renderPush();
+
+    const repModes = (name: string) =>
+      card(name)
+        .queryByRole("group", { name: "Rep mode" })
+        ?.textContent?.match(/Range|Fixed|Time/g);
+    expect(repModes(BENCH_CARD)).toEqual(["Range", "Fixed"]);
+    // A hold is written one way, so there is nothing to choose.
+    expect(repModes(PLANK_CARD)).toBeUndefined();
+  });
+
+  it("switching the load mode starts every set from the new scale", () => {
     const { bench } = renderPush();
+    expect(bench().sets.map((s) => s.val)).toEqual([6, 8, 8.5, 9]);
 
-    press(card(BENCH_CARD), "Time");
+    press(card(BENCH_CARD), "%1RM");
 
-    expect(bench().repMode).toBe("time");
-    expect(bench().sets.every((s) => s.b === undefined)).toBe(true);
+    // An RPE of 8.5 must not come back as 8.5% of a one-rep max.
+    expect(bench().sets.map((s) => s.val)).toEqual([70, 70, 70, 70]);
   });
 
   it("switching load to %1RM gives every set a percentage, None clears it", () => {

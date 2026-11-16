@@ -2,49 +2,72 @@
 // cycled slot). Each one edits the prescription it is given in place;
 // ProgramEditor applies them to a copy of the program.
 
-import type { Intensity, Prescription, RepMode, SetSpec, SetType } from "@nabd/domain";
-import { SECONDS_STEP, clamp } from "@nabd/domain";
+import type { Intensity, Measure, Prescription, RepMode, SetSpec, SetType } from "@nabd/domain";
+import { SECONDS_STEP, clamp, measureOfMode } from "@nabd/domain";
 
 const SET_TYPE_CYCLE: SetType[] = ["working", "warmup", "drop"];
 const REST_STEP_SEC = 15;
 const RPE = { min: 5, max: 10, step: 0.5, initial: 8 };
 const PCT = { min: 40, max: 100, step: 2.5, initial: 70 };
 
+/** The two ways reps can be written. A duration has only one, so it is not among them. */
+export type RepStyle = Exclude<RepMode, "time">;
+
 /** The set a new prescription starts from: a 45 s hold, or 8–12 reps. */
-const defaultSet = (timeBased: boolean): SetSpec =>
-  timeBased ? { type: "working", a: 45 } : { type: "working", a: 8, b: 12 };
+const defaultSet = (measure: Measure): SetSpec =>
+  measure === "time" ? { type: "working", a: 45 } : { type: "working", a: 8, b: 12 };
 
 /** What a newly added exercise or slot is prescribed: three default sets. */
-export function defaultPrescription(timeBased: boolean): Prescription {
-  const set = defaultSet(timeBased);
+export function defaultPrescription(measure: Measure): Prescription {
+  const set = defaultSet(measure);
   return {
-    repMode: timeBased ? "time" : "range",
+    repMode: measure === "time" ? "time" : "range",
     intensity: "none",
-    rest: timeBased ? 60 : 120,
+    rest: measure === "time" ? 60 : 120,
     sets: [{ ...set }, { ...set }, { ...set }],
   };
 }
 
 /**
- * Switch how sets are prescribed. Seconds and reps are different quantities,
- * so crossing between time and a rep mode starts every set from that mode's
- * default instead of reading 45 s as 45 reps.
+ * Count the prescription in `measure`, if it is not already. Seconds and reps
+ * are different quantities, so every set starts from the new measure's default
+ * instead of reading 45 s as 45 reps.
  */
-export function setRepMode(p: Prescription, mode: RepMode): void {
-  const fresh = (p.repMode === "time") !== (mode === "time") ? defaultSet(mode === "time") : null;
-  p.repMode = mode;
+export function setMeasure(p: Prescription, measure: Measure): void {
+  if (measureOfMode(p.repMode) === measure) return;
+  const fresh = defaultSet(measure);
+  p.repMode = measure === "time" ? "time" : "range";
   for (const set of p.sets) {
-    if (fresh) set.a = fresh.a;
-    if (fresh || mode !== "range") delete set.b;
-    if (mode === "range") set.b ??= fresh?.b ?? set.a + 2;
+    set.a = fresh.a;
+    if (fresh.b === undefined) delete set.b;
+    else set.b = fresh.b;
   }
 }
 
+/**
+ * Write reps as a range or as a fixed number. Whether a prescription counts
+ * reps or seconds is its exercise's doing ({@link setMeasure}), not a choice,
+ * so a timed prescription is left as it is.
+ */
+export function setRepStyle(p: Prescription, style: RepStyle): void {
+  if (p.repMode === "time") return;
+  p.repMode = style;
+  for (const set of p.sets) {
+    if (style === "range") set.b ??= set.a + 2;
+    else delete set.b;
+  }
+}
+
+/**
+ * Switch how load is prescribed. An RPE and a percentage are different scales,
+ * so every set starts from the new one's usual value.
+ */
 export function setIntensity(p: Prescription, mode: Intensity): void {
+  if (p.intensity === mode) return;
   p.intensity = mode;
   for (const set of p.sets) {
     if (mode === "none") delete set.val;
-    else set.val ??= mode === "rpe" ? RPE.initial : PCT.initial;
+    else set.val = mode === "rpe" ? RPE.initial : PCT.initial;
   }
 }
 
@@ -55,13 +78,13 @@ export function stepRest(p: Prescription, direction: number): void {
 
 /** Append a working set copied from the last set. */
 export function addSet(p: Prescription): void {
-  const template = p.sets.at(-1) ?? defaultSet(p.repMode === "time");
+  const template = p.sets.at(-1) ?? defaultSet(measureOfMode(p.repMode));
   p.sets.push({ ...template, type: "working" });
 }
 
 /** Prepend a warm-up set modelled on the first set. */
 export function addWarmup(p: Prescription): void {
-  const template = p.sets[0] ?? defaultSet(p.repMode === "time");
+  const template = p.sets[0] ?? defaultSet(measureOfMode(p.repMode));
   p.sets.unshift({ ...template, type: "warmup" });
 }
 

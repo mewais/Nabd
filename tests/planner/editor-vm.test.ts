@@ -75,7 +75,7 @@ describe("editor view-model", () => {
     ]);
   });
 
-  it("keeps two back-to-back supersets apart", () => {
+  it("keeps two back-to-back supersets apart, lettered A and B, each row with an id of its own", () => {
     const program = fixedProgram();
     const push = dayOf(program, "d-push");
     push.exercises[0]!.supersetId = "ss-a";
@@ -84,8 +84,10 @@ describe("editor view-model", () => {
 
     expect(rowNames(editorOf(program, "d-push").rows)).toEqual([
       ["A1 Barbell Bench Press", "A2 Barbell Overhead Press"],
-      ["A1 Pull-Up", "A2 Cable Lat Pulldown"],
+      ["B1 Pull-Up", "B2 Cable Lat Pulldown"],
     ]);
+    // A superset goes by its first member, so no two rows of a day share an id.
+    expect(editorOf(program, "d-push").rows.map((row) => row.id)).toEqual(["e-bench", "e-pullup"]);
   });
 
   it("falls back to the exercise id when the library no longer has it", () => {

@@ -1,14 +1,14 @@
 //! The set history.
 
-use nabd_persistence::LoggedSetRow;
+use nabd_persistence::{History, LoggedSetRow};
 
 use crate::common::fresh_store;
-use crate::support::{history_ids, set_row};
+use crate::support::{history_ids, set_row, TempDb};
 
 #[test]
 fn history_is_empty_on_a_fresh_store() {
     let c = fresh_store();
-    assert!(c.all_history().unwrap().is_empty());
+    assert_eq!(c.all_history().unwrap(), History::default());
 }
 
 #[test]
@@ -22,7 +22,7 @@ fn appended_row_round_trips_every_field() {
         ..set_row("a", "2025-03-01T10:00:00.000Z")
     };
     c.append_history(&row).unwrap();
-    assert_eq!(c.all_history().unwrap(), [row]);
+    assert_eq!(c.all_history().unwrap().sets, [row]);
 }
 
 #[test]
@@ -66,4 +66,30 @@ fn delete_history_of_an_unknown_id_is_a_no_op() {
         .unwrap();
     c.delete_history("nope").unwrap();
     assert_eq!(history_ids(&c), ["a"]);
+}
+
+#[test]
+fn a_row_that_cannot_be_read_is_skipped_and_counted_not_fatal() {
+    let db = TempDb::new();
+    let store = db.store().unwrap();
+    store
+        .append_history(&set_row("good", "2025-03-01T10:00:00.000Z"))
+        .unwrap();
+    store
+        .append_history(&set_row("bad-muscles", "2025-03-01T11:00:00.000Z"))
+        .unwrap();
+    store
+        .append_history(&set_row("bad-value", "2025-03-01T12:00:00.000Z"))
+        .unwrap();
+    db.damage_set("bad-muscles");
+    db.raw()
+        .execute(
+            "UPDATE history SET value = 'twelve' WHERE id = 'bad-value'",
+            [],
+        )
+        .unwrap();
+
+    let history = store.all_history().unwrap();
+    assert_eq!(history.unreadable, 2);
+    assert_eq!(history_ids(&store), ["good"]);
 }

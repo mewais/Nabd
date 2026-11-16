@@ -25,6 +25,7 @@ export const EXERCISE = {
   squat: { id: "goblet_squat__dumbbell", name: "Dumbbell Goblet Squat" },
   pullUp: { id: "pull_up__pullupbar", name: "Pull-Up" },
   pushUp: { id: "push_up__bodyweight", name: "Push-Up" },
+  plank: { id: "plank__bodyweight", name: "Plank" },
 } as const;
 
 /** `count` working sets of 8–12 reps. */
@@ -70,11 +71,13 @@ interface SetSeed {
   reps: number;
   kg: number | null;
   trigger?: Trigger;
+  /** A working set unless it says otherwise. */
+  type?: SetSpec["type"];
 }
 
 let seededSets = 0;
 
-/** A history row for a working set of a catalog exercise, logged against its `planned` row. */
+/** A history row for a set of a catalog exercise, logged against its `planned` row. */
 export function loggedSet(exId: string, seed: SetSeed): LoggedSet {
   const exercise = ExerciseLibrary.catalog.byId(exId);
   if (!exercise) throw new Error(`the catalog has no exercise ${exId}`);
@@ -90,6 +93,6 @@ export function loggedSet(exId: string, seed: SetSeed): LoggedSet {
     date: seed.day,
     trigger: seed.trigger ?? "manual",
     planItemId: exId,
-    setType: "working",
+    setType: seed.type ?? "working",
   };
 }

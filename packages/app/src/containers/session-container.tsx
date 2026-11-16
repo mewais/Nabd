@@ -12,10 +12,11 @@ export function SessionContainer(): JSX.Element | null {
   const coach = useNabd(selectCoach);
   const unit = useNabd((s) => s.settings.weightUnit);
   const now = useNabd((s) => s.now);
+  const unsaved = useNabd((s) => s.unsavedSets);
 
   const vm = useMemo(
-    () => session && buildSessionVM({ session, plan, coach, unit, now }),
-    [session, plan, coach, unit, now],
+    () => session && buildSessionVM({ session, plan, coach, unit, now, unsaved }),
+    [session, plan, coach, unit, now, unsaved],
   );
   const actions = useMemo(
     (): SessionActions => ({

@@ -21,7 +21,7 @@ export interface ExerciseCardVM {
   /** "BARBELL"; empty when the library no longer has the exercise. */
   equipment: string;
   block: SetBlockVM;
-  /** "A1"/"A2" within a superset, else null. */
+  /** "A1"/"A2" within the day's first superset, "B1"/"B2" within its second…; else null. */
   supersetTag: string | null;
 }
 
@@ -37,6 +37,7 @@ export interface SlotCardVM {
   block: SetBlockVM;
 }
 
+/** One row of the day. `id` is unique within it: a superset goes by its first member's. */
 export type EditorRowVM =
   | { kind: "exercise"; id: string; exercise: ExerciseCardVM }
   | { kind: "superset"; id: string; members: ExerciseCardVM[] }
@@ -93,7 +94,7 @@ function exerciseRows(day: Day, lookup: ExerciseLookup): EditorRowVM[] {
       open.members.push(card);
     } else {
       open = { supersetId: row.supersetId, members: [card] };
-      rows.push({ kind: "superset", id: row.supersetId, members: open.members });
+      rows.push({ kind: "superset", id: row.id, members: open.members });
     }
   });
   return rows;

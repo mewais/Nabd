@@ -191,15 +191,17 @@ describe("buildProgressVM — triggers", () => {
 
 describe("buildProgressVM — muscle coverage", () => {
   it("lists the trained muscles, most covered first, with what each needs", () => {
-    const coverage = { ...NO_COVERAGE, lats: 40, chest: 80, triceps: 25 };
+    const coverage = { ...NO_COVERAGE, lats: 40, chest: 80, triceps: 25, forearms: 10 };
 
-    const { heatmap } = progressVM({ coverage });
+    const { heatmap } = progressVM({ coverage, targets: ["chest", "lats", "triceps"] });
 
     expect(heatmap.coverage).toBe(coverage);
     expect(shown(heatmap.muscles)).toEqual([
       { muscle: "chest", pct: 80, recommendation: "rest" },
       { muscle: "lats", pct: 40, recommendation: "none" },
       { muscle: "triceps", pct: 25, recommendation: "push" },
+      // Trained a little in passing, but not something the plan sets out to train.
+      { muscle: "forearms", pct: 10, recommendation: "none" },
     ]);
   });
 });

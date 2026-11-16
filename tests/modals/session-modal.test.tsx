@@ -66,8 +66,8 @@ describe("SessionModal", () => {
     expect(screen.getByText("Pause at the chest")).toBeInTheDocument();
     expect(screen.getByText("Front Delts")).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toHaveTextContent("Last time: 7 × 60 kg");
-    expect(screen.getByLabelText("Reps")).toHaveValue(9);
-    expect(screen.getByLabelText("Weight (kg)")).toHaveValue(60);
+    expect(screen.getByLabelText("Reps")).toHaveValue("9");
+    expect(screen.getByLabelText("Weight (kg)")).toHaveValue("60");
   });
 
   it("lists today's exercises and marks the active, finished and skipped ones", () => {
@@ -118,10 +118,38 @@ describe("SessionModal", () => {
     expect(actions.setReps).toHaveBeenCalledTimes(1);
   });
 
+  it("Enter in either field logs the set; ↑ and ↓ step the field they are pressed in", () => {
+    const { actions } = setup();
+
+    fireEvent.keyDown(screen.getByLabelText("Weight (kg)"), { key: "ArrowUp" });
+    expect(actions.stepWeight).toHaveBeenLastCalledWith(1);
+    fireEvent.keyDown(screen.getByLabelText("Reps"), { key: "ArrowDown" });
+    expect(actions.stepReps).toHaveBeenLastCalledWith(-1);
+
+    fireEvent.keyDown(screen.getByLabelText("Reps"), { key: "Enter" });
+    fireEvent.keyDown(screen.getByLabelText("Weight (kg)"), { key: "Enter" });
+    expect(actions.logSet).toHaveBeenCalledTimes(2);
+  });
+
+  it("says which logged sets are not saved yet", () => {
+    setup(
+      sessionVM(
+        { program: pushDay(), history: [...lastWeek(), SETS.warmup, SETS.first] },
+        "p-bench",
+        { unsaved: [SETS.first.id] },
+      ),
+    );
+    const sets = within(screen.getByRole("region", { name: "Logged today" })).getAllByRole(
+      "listitem",
+    );
+    expect(sets[0]).not.toHaveTextContent(/not saved yet/i);
+    expect(sets[1]).toHaveTextContent(/not saved yet/i);
+  });
+
   it("an unweighted exercise has no weight field, and counts seconds when timed", () => {
     setup(sessionVM({ program: pushDay(), history: lastWeek() }, "p-plank"));
 
-    expect(screen.getByLabelText("Sec")).toHaveValue(30);
+    expect(screen.getByLabelText("Sec")).toHaveValue("30");
     expect(screen.queryByLabelText(/Weight/)).toBeNull();
     expect(screen.getAllByRole("spinbutton")).toHaveLength(1);
   });

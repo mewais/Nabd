@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { Stepper, TextInput, Toggle } from "@nabd/design-system";
 import { click } from "./render";
@@ -27,27 +28,106 @@ describe("Stepper", () => {
   });
 
   describe("with a typed value", () => {
-    const setup = (): ReturnType<typeof vi.fn> => {
-      const onSet = vi.fn();
-      render(<Stepper value={27.5} onDec={vi.fn()} onInc={vi.fn()} onSet={onSet} ariaLabel="lb" />);
-      return onSet;
-    };
+    /** A stepper over a number its owner keeps — and may refuse to change (above `max`). */
+    function Owned({ start, max = Infinity }: { start: number; max?: number }): JSX.Element {
+      const [value, setValue] = useState(start);
+      return (
+        <Stepper
+          value={value}
+          onDec={() => setValue(value - 2.5)}
+          onInc={() => setValue(value + 2.5)}
+          onSet={(typed) => {
+            if (typed <= max) setValue(typed);
+          }}
+          onEnter={() => onEnter(value)}
+          ariaLabel="kg"
+        />
+      );
+    }
+    const onEnter = vi.fn();
+    const field = (): HTMLElement => screen.getByRole("spinbutton", { name: "kg" });
+    const type = (text: string): boolean => fireEvent.change(field(), { target: { value: text } });
+    const press = (key: string): boolean => fireEvent.keyDown(field(), { key });
 
-    it("shows the value in an input named after what it steps", () => {
-      setup();
-      expect(screen.getByLabelText("lb")).toHaveValue(27.5);
+    beforeEach(() => onEnter.mockClear());
+
+    it("shows the value in a field named after what it steps", () => {
+      render(<Owned start={27.5} />);
+      expect(field()).toHaveValue("27.5");
+      expect(field()).toHaveAttribute("aria-valuenow", "27.5");
     });
 
-    it("reports a typed number", () => {
-      const onSet = setup();
-      fireEvent.change(screen.getByLabelText("lb"), { target: { value: "30" } });
-      expect(onSet).toHaveBeenCalledWith(30);
+    it("can be emptied and typed afresh, digit by digit", () => {
+      render(<Owned start={100} />);
+      type("10");
+      type("1");
+      type("");
+      expect(field()).toHaveValue("");
+      type("6");
+      type("60");
+      expect(field()).toHaveValue("60");
+      press("Enter");
+      expect(onEnter).toHaveBeenCalledWith(60);
     });
 
-    it("ignores input that is not a number", () => {
-      const onSet = setup();
-      fireEvent.change(screen.getByLabelText("lb"), { target: { value: "" } });
-      expect(onSet).not.toHaveBeenCalled();
+    it("keeps what is typed exactly as typed, a trailing point or zero included", () => {
+      render(<Owned start={20} />);
+      for (const text of ["2", "21", "21.", "21.2", "21.25"]) {
+        type(text);
+        expect(field()).toHaveValue(text);
+      }
+      type("21.50");
+      expect(field()).toHaveValue("21.50");
+      fireEvent.blur(field());
+      expect(field()).toHaveValue("21.5");
+    });
+
+    it("reads a comma as the decimal point", () => {
+      render(<Owned start={20} />);
+      type("22,5");
+      fireEvent.blur(field());
+      expect(field()).toHaveValue("22.5");
+    });
+
+    it("left empty or with something that is no number, goes back to the last number on blur", () => {
+      render(<Owned start={40} />);
+      type("42");
+      type("");
+      fireEvent.blur(field());
+      expect(field()).toHaveValue("42");
+      type("4x");
+      expect(field()).toHaveValue("4x");
+      fireEvent.blur(field());
+      expect(field()).toHaveValue("42");
+    });
+
+    it("shows what the owner kept when it would not take the number typed", () => {
+      render(<Owned start={40} max={500} />);
+      type("99999");
+      expect(field()).toHaveValue("99999");
+      fireEvent.blur(field());
+      expect(field()).toHaveValue("40");
+    });
+
+    it("Enter does nothing while the field holds no number", () => {
+      render(<Owned start={40} />);
+      type("");
+      press("Enter");
+      expect(onEnter).not.toHaveBeenCalled();
+      expect(field()).toHaveValue("");
+    });
+
+    it("↑ and ↓ step by the control's own step, like its buttons", () => {
+      render(<Owned start={40} />);
+      press("ArrowUp");
+      expect(field()).toHaveValue("42.5");
+      press("ArrowDown");
+      press("ArrowDown");
+      expect(field()).toHaveValue("37.5");
+      // Stepping lets go of whatever was half typed.
+      type("3");
+      click("increase");
+      expect(field()).toHaveValue("5.5");
     });
 
     it("only allows onSet together with a numeric value", () => {
@@ -72,6 +152,14 @@ describe("Toggle", () => {
     render(<Toggle on={on} onChange={onChange} />);
     fireEvent.click(screen.getByRole("switch"));
     expect(onChange).toHaveBeenCalledWith(next);
+  });
+
+  it("disabled, it shows its state but cannot be flipped", () => {
+    const onChange = vi.fn();
+    render(<Toggle on={false} onChange={onChange} disabled />);
+    expect(screen.getByRole("switch")).toBeDisabled();
+    fireEvent.click(screen.getByRole("switch"));
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("can be reached and operated from the keyboard", () => {

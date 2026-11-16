@@ -1,4 +1,7 @@
-import { BENCH, FLY, ROW, boot } from "./harness";
+import { CATALOG } from "../support/catalog";
+import { BENCH, FLY, ROW, boot, flyRow } from "./harness";
+
+const { plank: PLANK } = CATALOG;
 
 describe("the exercise library", () => {
   it("custom exercises can be created from a draft, used, and deleted everywhere", async () => {
@@ -49,6 +52,49 @@ describe("the exercise library", () => {
     app.get().pickExercise(ROW);
     expect(app.get().program.days[0]!.slots[0]!.pool).toContain(ROW);
     expect(app.get().library.target).not.toBeNull();
+  });
+
+  it("opens with no search and no filter, whatever it was left with", async () => {
+    const app = await boot();
+    app.get().openLibrary({ kind: "extra" });
+    app.get().patchLibrary({ search: "press", group: "Chest" });
+    app.get().closeLibrary();
+    app.get().openLibrary({ kind: "exercise", dayId: "push" });
+    expect(app.get().library).toEqual({
+      target: { kind: "exercise", dayId: "push" },
+      search: "",
+      group: null,
+      draft: null,
+    });
+  });
+
+  it("a pool only takes exercises of its own kind: timed, or counted in reps", async () => {
+    const app = await boot();
+    app.get().editProgram((e) => e.setType("cycled"));
+    const slot = app.get().program.days[0]!.slots[0]!;
+    app.get().openLibrary({ kind: "pool", dayId: "push", slotId: slot.id, muscle: slot.muscle });
+    app.get().pickExercise(PLANK);
+    expect(app.get().program.days[0]!.slots[0]!.pool).toEqual([BENCH, FLY]);
+  });
+
+  it("logging something else that today already plans goes to the planned exercise", async () => {
+    const app = await boot();
+    app.get().toggleSkip(flyRow.id);
+    app.get().openLibrary({ kind: "extra" });
+    app.get().pickExercise(FLY);
+    expect(app.get().dayState.extras).toEqual([]);
+    expect(app.get().session!.itemId).toBe(flyRow.id);
+    // It was skipped: asking to log it brings it back.
+    expect(app.plan().item(flyRow.id)!.skipped).toBe(false);
+    await app.get().logSet();
+    expect(app.plan().item(flyRow.id)!.done).toBe(1);
+
+    // The same goes for an extra that is already there.
+    app.get().openLibrary({ kind: "extra" });
+    app.get().pickExercise(ROW);
+    app.get().openLibrary({ kind: "extra" });
+    app.get().pickExercise(ROW);
+    expect(app.get().dayState.extras).toHaveLength(1);
   });
 
   it("an exercise outside the plan can be logged today; untouched, it can be removed", async () => {

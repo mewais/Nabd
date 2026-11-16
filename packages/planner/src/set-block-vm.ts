@@ -1,7 +1,8 @@
 // The set table of one prescription (an exercise row or a cycled slot).
 
-import type { Intensity, Prescription, RepMode, SetSpec, SetType } from "@nabd/domain";
+import type { Intensity, Prescription, SetSpec, SetType } from "@nabd/domain";
 import { formatDuration } from "@nabd/domain";
+import type { RepStyle } from "@nabd/program-editor";
 
 export type SetBadgeKind = "warm" | "work" | "drop";
 
@@ -24,7 +25,12 @@ export interface SetRowVM {
 
 export interface SetBlockVM {
   rows: SetRowVM[];
-  repMode: RepMode;
+  /**
+   * How reps are written, which the user can choose. Null for a timed
+   * prescription: seconds or reps is the exercise's doing, and a duration is
+   * written one way.
+   */
+  repStyle: RepStyle | null;
   intensity: Intensity;
   /** "Reps" / "Time" */
   repHeader: string;
@@ -75,7 +81,7 @@ export function buildSetBlock(prescription: Prescription): SetBlockVM {
   });
   return {
     rows,
-    repMode,
+    repStyle: repMode === "time" ? null : repMode,
     intensity,
     repHeader: repMode === "time" ? "Time" : "Reps",
     intensityHeader: INTENSITY_HEADERS[intensity],

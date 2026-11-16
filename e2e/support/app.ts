@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import type { BootSnapshot } from "@nabd/ipc-client";
+import { Confirm } from "./pages/confirm";
 import { Library } from "./pages/library";
 import { Logger } from "./pages/logger";
 import { Planner } from "./pages/planner";
@@ -27,6 +28,7 @@ export class App {
   readonly library: Library;
   readonly settings: Settings;
   readonly progress: Progress;
+  readonly confirm: Confirm;
   private now = new Date(0);
 
   constructor(private readonly page: Page) {
@@ -37,6 +39,7 @@ export class App {
     this.library = new Library(page);
     this.settings = new Settings(page);
     this.progress = new Progress(page);
+    this.confirm = new Confirm(page);
   }
 
   /** Open the app at the moment `at`, with `stored` as everything its backend holds (nothing: a first run). */

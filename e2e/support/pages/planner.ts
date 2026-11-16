@@ -34,6 +34,16 @@ export class Planner {
     return this.screen.getByRole("region", { name, exact: true });
   }
 
+  /** A button of a card: "Move earlier", "Superset ↓", "Unlink", "Remove exercise", "%1RM". */
+  cardButton(card: string, name: string): Locator {
+    return this.card(card).getByRole("button", { name, exact: true });
+  }
+
+  /** The exercise (or slot) cards of the editor, top to bottom. */
+  cards(): Locator {
+    return this.screen.getByRole("region");
+  }
+
   /** A stepper of a card: "Set 1 reps", "Set 1 top of range", "Rest". */
   stepper(card: string, name: string): Locator {
     return this.card(card).getByRole("group", { name, exact: true });

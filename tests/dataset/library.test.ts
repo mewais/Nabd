@@ -82,6 +82,44 @@ describe("compose", () => {
   });
 });
 
+describe("one-sided variants", () => {
+  const curl: Movement = {
+    id: "curl",
+    name: "Curl",
+    primary: ["biceps"],
+    secondary: [],
+    equipment: ["barbell", "ezbar", "smith", "dumbbell", "cable"],
+    laterality: ["bilateral", "unilateral"],
+  };
+
+  it("are never offered for a bar that takes both hands", () => {
+    expect(compose([curl]).map((e) => e.id)).toEqual([
+      "curl__barbell",
+      "curl__ezbar",
+      "curl__smith",
+      "curl__dumbbell",
+      "curl__dumbbell__uni",
+      "curl__cable",
+      "curl__cable__uni",
+    ]);
+  });
+
+  it("are kept for the legs, which a bar on the back or in the hands still leaves free", () => {
+    const calfRaise: Movement = { ...curl, id: "calf_raise", primary: ["calves"] };
+    expect(compose([calfRaise]).map((e) => e.name)).toContain("Single-Leg Barbell Curl");
+  });
+
+  it("the catalog has no single-arm barbell, EZ-bar or Smith-machine exercise", () => {
+    const names = catalog
+      .find({ equipment: new Set(["barbell", "ezbar", "smith"] as const) })
+      .map((e) => e.name);
+    expect(names.filter((name) => name.startsWith("Single-Arm"))).toEqual([]);
+    expect(names).toContain("Single-Leg Barbell Calf Raise");
+    expect(catalog.byId("overhead_press__barbell__uni")).toBeUndefined();
+    expect(catalog.byId("overhead_press__dumbbell__uni")).toBeDefined();
+  });
+});
+
 describe("ExerciseLibrary", () => {
   const custom = exercise({
     name: "My Odd Lift",
@@ -115,6 +153,13 @@ describe("ExerciseLibrary", () => {
     expect(doable.every((e) => owned.has(e.equipment as "dumbbell"))).toBe(true);
     expect(library.find({ equipment: new Set(EQUIPMENT_KEYS) })).toEqual(library.find({}));
     expect(library.find({ text: "odd", equipment: owned })).toEqual([]);
+  });
+
+  it("finds only what is counted in reps, or only what is timed", () => {
+    const timed = library.find({ measure: "time" });
+    expect(timed).toContain(catalogLookup(CATALOG.plank));
+    expect(timed.every((e) => isTimeBased(e.tracking))).toBe(true);
+    expect(library.find({ measure: "reps" })).toHaveLength(library.find({}).length - timed.length);
   });
 });
 

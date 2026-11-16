@@ -12,7 +12,7 @@ mod platform;
 mod tray;
 
 pub use autostart::AutostartChange;
-pub use export::export_file_name;
+pub use export::{export_file_name, ExportPurpose};
 pub use idle::{millis_since, IdleBackend, SessionKind};
 pub use launch::{CloseAction, Launch, AUTOSTART_ARG};
 pub use notification::DesktopNotification;

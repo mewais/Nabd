@@ -31,11 +31,12 @@ export const Z = {
   modal: 70,
   modalOver: 80,
   modalTop: 90,
+  confirm: 100,
   popover: 200,
 } as const;
 
-/** The three modal layers of `Z`. */
-export type ModalLayer = "modal" | "modalOver" | "modalTop";
+/** The modal layers of `Z`; `confirm` is the confirmation asked over any of the others. */
+export type ModalLayer = "modal" | "modalOver" | "modalTop" | "confirm";
 
 /** Fixed colours that do not follow the theme. */
 export const COLOR = {

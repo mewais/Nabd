@@ -1,24 +1,32 @@
 import type { Program } from "@nabd/domain";
 import { EMPTY_PROGRAM } from "@nabd/domain";
-import { ProgramEditor, daySummary } from "@nabd/program-editor";
-import type { EditRef, ProgramEdit } from "@nabd/program-editor";
+import { ProgramEditor, daySummary, normalized } from "@nabd/program-editor";
+import type { EditRef, PlanToday, ProgramEdit } from "@nabd/program-editor";
 import { exercise, lookupIn } from "../support/domain-factories";
 
 const bench = exercise({ name: "Bench", group: "Chest" });
 const fly = exercise({ name: "Fly", group: "Chest" });
 const row = exercise({ name: "Row", group: "Back", primary: ["lats"] });
 const plank = exercise({ name: "Plank", group: "Abs", primary: ["abs"], tracking: "duration" });
-const lookup = lookupIn([bench, fly, row, plank]);
+const crunch = exercise({ name: "Crunch", group: "Abs", primary: ["abs"] });
+const hollow = exercise({ name: "Hollow", group: "Abs", primary: ["abs"], tracking: "duration" });
+const lookup = lookupIn([bench, fly, row, plank, crunch, hollow]);
 
 let counter = 0;
 
-/** Apply edits in order, generating ids n1, n2, … that never repeat. */
-function apply(program: Program, ...edits: ProgramEdit[]): Program {
+/** A Wednesday on which the plan is on no day in particular (so, on its first). */
+const WEDNESDAY: PlanToday = { weekday: 3, dayId: null };
+
+/** Apply edits in order on a day that stands as `today`, generating ids n1, n2, … that never repeat. */
+function applyOn(today: PlanToday, program: Program, ...edits: ProgramEdit[]): Program {
   return edits.reduce(
-    (current, edit) => edit(new ProgramEditor(current, () => `n${++counter}`, lookup)),
+    (current, edit) => edit(new ProgramEditor(current, () => `n${++counter}`, lookup, today)),
     program,
   );
 }
+
+const apply = (program: Program, ...edits: ProgramEdit[]): Program =>
+  applyOn(WEDNESDAY, program, ...edits);
 
 /** Types an edit where it cannot be inferred (spread into `apply`). */
 const edit = (change: ProgramEdit): ProgramEdit => change;
@@ -63,18 +71,36 @@ describe("ProgramEditor — program and days", () => {
     expect(apply(two, (e) => e.setWeekday(DAY, 5)).days.map((d) => d.weekday)).toEqual([5, 3]);
   });
 
-  it("switching to a weekday schedule places unplaced days on free weekdays", () => {
+  describe("switching schedule keeps today on its day", () => {
     const floating = apply(
       { ...EMPTY_PROGRAM, schedule: "floating" },
       (e) => e.addDay(null),
-      (e) => e.addDay(2),
+      (e) => e.addDay(null),
       (e) => e.addDay(null),
     );
-    const placed = apply(floating, (e) => e.setSchedule("weekday"));
-    expect(placed.days.map((d) => d.weekday)).toEqual([1, 2, 3]);
-    expect(apply(placed, (e) => e.setSchedule("floating")).days.map((d) => d.weekday)).toEqual([
-      1, 2, 3,
-    ]);
+    const [d1, d2, d3] = floating.days.map((d) => d.id) as [string, string, string];
+    const weekdays = (p: Program) => Object.fromEntries(p.days.map((d) => [d.id, d.weekday]));
+
+    it("going weekday pins the day the plan is on to today, and the rest to the days after", () => {
+      // On Day 2 on a Wednesday: Day 2 is Wednesday's, Day 3 Thursday's, Day 1 Friday's.
+      const placed = applyOn({ weekday: 3, dayId: d2 }, floating, (e) => e.setSchedule("weekday"));
+      expect(weekdays(placed)).toEqual({ [d2]: 3, [d3]: 4, [d1]: 5 });
+      // The week wraps round: from a Saturday, the days after it are Sunday and Monday.
+      const late = applyOn({ weekday: 6, dayId: d1 }, floating, (e) => e.setSchedule("weekday"));
+      expect(weekdays(late)).toEqual({ [d1]: 6, [d2]: 0, [d3]: 1 });
+    });
+
+    it("going floating unpins the days, so an old placement cannot come back later", () => {
+      const placed = applyOn({ weekday: 3, dayId: d2 }, floating, (e) => e.setSchedule("weekday"));
+      const back = apply(placed, (e) => e.setSchedule("floating"));
+      expect(back.days.map((d) => d.weekday)).toEqual([null, null, null]);
+      const again = applyOn({ weekday: 1, dayId: d3 }, back, (e) => e.setSchedule("weekday"));
+      expect(weekdays(again)).toMatchObject({ [d3]: 1 });
+    });
+
+    it("choosing the schedule the plan already has changes nothing", () => {
+      expect(apply(floating, (e) => e.setSchedule("floating"))).toBe(floating);
+    });
   });
 
   it("a weekday schedule takes at most one day per weekday", () => {
@@ -96,8 +122,9 @@ describe("ProgramEditor — program and days", () => {
     );
     expect(apply(eight, (e) => e.setSchedule("weekday"))).toBe(eight);
     const seven = apply(eight, (e) => e.removeDay(eight.days[7]!.id));
+    // One day per weekday, from today (a Wednesday) on.
     expect(apply(seven, (e) => e.setSchedule("weekday")).days.map((d) => d.weekday)).toEqual([
-      1, 2, 3, 4, 5, 6, 0,
+      3, 4, 5, 6, 0, 1, 2,
     ]);
   });
 
@@ -108,8 +135,9 @@ describe("ProgramEditor — program and days", () => {
       (e) => e.addDay(5),
       (e) => e.addDay(1),
     );
+    const [sunday, friday, monday] = weekdays.days.map((d) => d.id);
     const floating = apply(weekdays, (e) => e.setSchedule("floating"));
-    expect(floating.days.map((d) => d.weekday)).toEqual([1, 5, 0]);
+    expect(floating.days.map((d) => d.id)).toEqual([monday, friday, sunday]);
   });
 
   it("moves a day within the order, ignoring moves off either end", () => {
@@ -161,6 +189,73 @@ describe("ProgramEditor — exercises", () => {
     expect(order(apply(three, (e) => e.moveExercise(DAY, a, 1)))).toEqual([b, a, c]);
     expect(order(apply(three, (e) => e.moveExercise(DAY, c, 1)))).toEqual([a, b, c]);
     expect(order(apply(three, (e) => e.removeExercise(DAY, b)))).toEqual([a, c]);
+  });
+
+  describe("a superset stays together when exercises move", () => {
+    // Row, then the superset Bench + Fly, then Plank.
+    const built = apply(
+      oneDay,
+      (e) => e.addExercise(DAY, row.id),
+      (e) => e.addExercise(DAY, bench.id),
+      (e) => e.addExercise(DAY, fly.id),
+      (e) => e.addExercise(DAY, plank.id),
+    );
+    const [r, b, f, p] = built.days[0]!.exercises.map((x) => x.id) as [
+      string,
+      string,
+      string,
+      string,
+    ];
+    const day = apply(built, (e) => e.toggleSuperset(DAY, b));
+    const layout = (program: Program) =>
+      program.days[0]!.exercises.map((x) => [x.id, x.supersetId !== undefined]);
+
+    it("an exercise on its own steps over the whole superset, never into it", () => {
+      expect(layout(apply(day, (e) => e.moveExercise(DAY, r, 1)))).toEqual([
+        [b, true],
+        [f, true],
+        [r, false],
+        [p, false],
+      ]);
+      expect(layout(apply(day, (e) => e.moveExercise(DAY, p, -1)))).toEqual([
+        [r, false],
+        [p, false],
+        [b, true],
+        [f, true],
+      ]);
+    });
+
+    it("a member trades places with the partner beside it", () => {
+      expect(layout(apply(day, (e) => e.moveExercise(DAY, b, 1)))).toEqual([
+        [r, false],
+        [f, true],
+        [b, true],
+        [p, false],
+      ]);
+    });
+
+    it("a member moved out past the edge leaves the superset, where it stands", () => {
+      // Of two members, the one left behind is no superset on its own.
+      expect(layout(apply(day, (e) => e.moveExercise(DAY, b, -1)))).toEqual([
+        [r, false],
+        [b, false],
+        [f, false],
+        [p, false],
+      ]);
+      // Of three, the other two stay linked.
+      const three = apply(day, (e) => e.toggleSuperset(DAY, r));
+      expect(layout(apply(three, (e) => e.moveExercise(DAY, f, 1)))).toEqual([
+        [r, true],
+        [b, true],
+        [f, false],
+        [p, false],
+      ]);
+    });
+
+    it("removing a member of a pair dissolves the superset", () => {
+      const left = apply(day, (e) => e.removeExercise(DAY, f));
+      expect(left.days[0]!.exercises.every((x) => x.supersetId === undefined)).toBe(true);
+    });
   });
 
   it("links an exercise with the next one as a superset, and unlinks the whole group", () => {
@@ -243,32 +338,46 @@ describe("ProgramEditor — prescriptions", () => {
     expect(sets(floor)[0]!.a).toBe(1);
   });
 
-  it("switching between rep modes adds or drops the top of the range", () => {
-    const fixed = apply(withBench, (e) => e.setRepMode(DAY, BENCH, "fixed"));
+  it("switching between a range and fixed reps adds or drops the top of the range", () => {
+    const fixed = apply(withBench, (e) => e.setRepStyle(DAY, BENCH, "fixed"));
     expect(sets(fixed)[0]).toEqual({ type: "working", a: 8 });
-    expect(sets(apply(fixed, (e) => e.setRepMode(DAY, BENCH, "range")))[0]).toMatchObject({
+    expect(sets(apply(fixed, (e) => e.setRepStyle(DAY, BENCH, "range")))[0]).toMatchObject({
       a: 8,
       b: 10,
     });
-    const unchanged = apply(withBench, (e) => e.setRepMode(DAY, BENCH, "range"));
+    const unchanged = apply(withBench, (e) => e.setRepStyle(DAY, BENCH, "range"));
     expect(sets(unchanged)[0]).toEqual({ type: "working", a: 8, b: 12 });
   });
 
-  it("switching between time and reps starts from that mode's defaults", () => {
-    const timed = apply(withBench, (e) => e.setRepMode(DAY, BENCH, "time"));
-    expect(sets(timed)).toEqual(Array(3).fill({ type: "working", a: 45 }));
-    expect(sets(apply(timed, (e) => e.stepRep(DAY, BENCH, 0, "a", 1)))[0]!.a).toBe(50);
+  it("a timed exercise is prescribed in seconds, whatever rep style is asked for", () => {
+    const timed = apply(oneDay, (e) => e.addExercise(DAY, plank.id));
+    const PLANK: EditRef = { kind: "exercise", id: timed.days[0]!.exercises[0]!.id };
+    expect(sets(apply(timed, (e) => e.stepRep(DAY, PLANK, 0, "a", 1)))[0]!.a).toBe(50);
+    for (const style of ["range", "fixed"] as const) {
+      const asked = apply(timed, (e) => e.setRepStyle(DAY, PLANK, style));
+      expect(asked.days[0]!.exercises[0]!.repMode).toBe("time");
+      expect(sets(asked)[0]).toEqual({ type: "working", a: 45 });
+    }
+  });
 
-    // 45 seconds must not come back as 45 reps.
-    expect(sets(apply(timed, (e) => e.setRepMode(DAY, BENCH, "range")))[0]).toEqual({
-      type: "working",
-      a: 8,
-      b: 12,
-    });
-    expect(sets(apply(timed, (e) => e.setRepMode(DAY, BENCH, "fixed")))[0]).toEqual({
-      type: "working",
-      a: 8,
-    });
+  it("switching the load mode starts every set from the new scale's usual value", () => {
+    const rpe = apply(
+      withBench,
+      (e) => e.setIntensity(DAY, BENCH, "rpe"),
+      (e) => e.stepIntensity(DAY, BENCH, 0, 1),
+      (e) => e.stepIntensity(DAY, BENCH, 0, 1),
+    );
+    expect(sets(rpe).map((s) => s.val)).toEqual([9, 8, 8]);
+    // An RPE of 9 must not come back as 9% of a one-rep max.
+    const pct = apply(rpe, (e) => e.setIntensity(DAY, BENCH, "pct"));
+    expect(sets(pct).map((s) => s.val)).toEqual([70, 70, 70]);
+    expect(sets(apply(pct, (e) => e.setIntensity(DAY, BENCH, "rpe"))).map((s) => s.val)).toEqual([
+      8, 8, 8,
+    ]);
+    // Asking for the mode it already has keeps what was set.
+    expect(sets(apply(rpe, (e) => e.setIntensity(DAY, BENCH, "rpe"))).map((s) => s.val)).toEqual([
+      9, 8, 8,
+    ]);
   });
 
   it("intensity gets a starting value, steps within its bounds, and clears", () => {
@@ -338,16 +447,148 @@ describe("ProgramEditor — cycled plans", () => {
     expect(abs).toMatchObject({ muscle: "abs", pool: [], repMode: "range" });
     const pooled = apply(
       p,
-      (e) => e.addPoolExercise(DAY, abs.id, plank.id),
-      (e) => e.addPoolExercise(DAY, abs.id, plank.id),
+      (e) => e.addPoolExercise(DAY, abs.id, crunch.id),
+      (e) => e.addPoolExercise(DAY, abs.id, crunch.id),
       (e) => e.moveSlot(DAY, abs.id, -1),
       (e) => e.addSet(DAY, { kind: "slot", id: abs.id }),
     );
     expect(pooled.days[0]!.slots.map((s) => s.muscle)).toEqual(["chest", "abs", "lats"]);
-    expect(pooled.days[0]!.slots[1]).toMatchObject({ pool: [plank.id] });
+    expect(pooled.days[0]!.slots[1]).toMatchObject({ pool: [crunch.id] });
     expect(pooled.days[0]!.slots[1]!.sets).toHaveLength(4);
-    const emptied = apply(pooled, (e) => e.removePoolExercise(DAY, abs.id, plank.id));
+    const emptied = apply(pooled, (e) => e.removePoolExercise(DAY, abs.id, crunch.id));
     expect(emptied.days[0]!.slots[1]!.pool).toEqual([]);
+  });
+
+  describe("a pool holds one kind of exercise: counted in reps, or timed", () => {
+    const p = apply(
+      oneDay,
+      (e) => e.setType("cycled"),
+      (e) => e.addSlot(DAY, "abs"),
+    );
+    const ABS = p.days[0]!.slots[0]!.id;
+    const slot = (program: Program) => program.days[0]!.slots[0]!;
+
+    it("the first exercise decides, and a timed one starts the prescription afresh in seconds", () => {
+      const timed = apply(p, (e) => e.addPoolExercise(DAY, ABS, plank.id));
+      expect(slot(timed)).toMatchObject({
+        pool: [plank.id],
+        repMode: "time",
+        sets: [{ a: 45 }, { a: 45 }, { a: 45 }],
+      });
+      expect(slot(timed).sets.every((set) => set.b === undefined)).toBe(true);
+    });
+
+    it("an exercise of the other kind is refused; one of the same kind joins", () => {
+      const timed = apply(p, (e) => e.addPoolExercise(DAY, ABS, plank.id));
+      expect(slot(apply(timed, (e) => e.addPoolExercise(DAY, ABS, crunch.id))).pool).toEqual([
+        plank.id,
+      ]);
+      expect(slot(apply(timed, (e) => e.addPoolExercise(DAY, ABS, hollow.id))).pool).toEqual([
+        plank.id,
+        hollow.id,
+      ]);
+      expect(apply(timed, (e) => e.addPoolExercise(DAY, ABS, "nope"))).toBe(timed);
+    });
+
+    it("emptied, the pool takes either kind again", () => {
+      const reps = apply(
+        p,
+        (e) => e.addPoolExercise(DAY, ABS, plank.id),
+        (e) => e.removePoolExercise(DAY, ABS, plank.id),
+        (e) => e.addPoolExercise(DAY, ABS, crunch.id),
+      );
+      expect(slot(reps)).toMatchObject({ pool: [crunch.id], repMode: "range" });
+      expect(slot(reps).sets[0]).toEqual({ type: "working", a: 8, b: 12 });
+    });
+
+    it("going cycled keeps a group's timed and rep-counted exercises in separate slots", () => {
+      const derived = apply(
+        oneDay,
+        (e) => e.addExercise(DAY, crunch.id),
+        (e) => e.addExercise(DAY, plank.id),
+        (e) => e.addExercise(DAY, hollow.id),
+        (e) => e.setType("cycled"),
+      );
+      expect(derived.days[0]!.slots.map((s) => [s.repMode, s.pool])).toEqual([
+        ["range", [crunch.id]],
+        ["time", [plank.id, hollow.id]],
+      ]);
+    });
+  });
+});
+
+describe("normalized — a program as it was stored", () => {
+  const stored = (day: Partial<Program["days"][number]>): Program => ({
+    ...oneDay,
+    days: [{ ...oneDay.days[0]!, ...day }],
+  });
+  const reps = { repMode: "range", intensity: "none", rest: 90 } as const;
+
+  it("is the very same program when it already obeys the rules", () => {
+    expect(normalized(withBench, lookup)).toBe(withBench);
+  });
+
+  it("prescribes each exercise in its own measure, without touching the original", () => {
+    const program = stored({
+      exercises: [
+        { id: "r1", exId: plank.id, ...reps, sets: [{ type: "working", a: 8, b: 12 }] },
+        { id: "r2", exId: bench.id, ...reps, repMode: "time", sets: [{ type: "working", a: 45 }] },
+        { id: "r3", exId: "gone", ...reps, repMode: "time", sets: [{ type: "working", a: 45 }] },
+      ],
+    });
+    const before = structuredClone(program);
+    expect(normalized(program, lookup).days[0]!.exercises).toMatchObject([
+      { repMode: "time", sets: [{ type: "working", a: 45 }] },
+      { repMode: "range", sets: [{ type: "working", a: 8, b: 12 }] },
+      // An exercise the library does not know is left as it was written.
+      { repMode: "time", sets: [{ type: "working", a: 45 }] },
+    ]);
+    expect(program).toEqual(before);
+  });
+
+  it("keeps a mixed pool to the kind of its first exercise", () => {
+    const program = stored({
+      slots: [
+        {
+          id: "s1",
+          muscle: "abs",
+          pool: [plank.id, crunch.id, hollow.id, "gone"],
+          ...reps,
+          sets: [{ type: "working", a: 8, b: 12 }],
+        },
+      ],
+    });
+    expect(normalized(program, lookup).days[0]!.slots[0]).toMatchObject({
+      pool: [plank.id, hollow.id, "gone"],
+      repMode: "time",
+      sets: [{ type: "working", a: 45 }],
+    });
+  });
+
+  it("brings the scattered members of a superset together, and drops a superset of one", () => {
+    const one = (id: string, exId: string, supersetId?: string) => ({
+      id,
+      exId,
+      ...reps,
+      sets: [{ type: "working" as const, a: 8, b: 12 }],
+      ...(supersetId === undefined ? {} : { supersetId }),
+    });
+    const program = stored({
+      exercises: [
+        one("r1", bench.id, "ss"),
+        one("r2", row.id),
+        one("r3", fly.id, "ss"),
+        one("r4", crunch.id, "alone"),
+      ],
+    });
+    expect(normalized(program, lookup).days[0]!.exercises.map((x) => [x.id, x.supersetId])).toEqual(
+      [
+        ["r1", "ss"],
+        ["r3", "ss"],
+        ["r2", undefined],
+        ["r4", undefined],
+      ],
+    );
   });
 });
 

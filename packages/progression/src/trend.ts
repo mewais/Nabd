@@ -1,6 +1,6 @@
 import type { LoggedSet, TrackingType, WeightUnit } from "@nabd/domain";
 import { displayWeight, isTimeBased } from "@nabd/domain";
-import { ExerciseHistory, assistedScore, strengthScore } from "./history";
+import { ExerciseHistory, assistedScore, estimatedMax } from "./history";
 import type { Performance } from "./history";
 
 /**
@@ -13,8 +13,9 @@ export type TrendUnit = `${WeightUnit} e1RM` | `${WeightUnit} vs bodyweight` | "
 export interface ExerciseTrend {
   exId: string;
   /**
-   * Best set of each session, oldest first: estimated 1RM if loaded, load
-   * relative to bodyweight if assisted, else reps/seconds.
+   * Best set of each session, oldest first, all in `unit`: estimated 1RM if the
+   * exercise has ever been loaded, load relative to bodyweight if assisted,
+   * else reps/seconds.
    */
   series: number[];
   unit: TrendUnit;
@@ -32,7 +33,12 @@ interface Scale {
   score: (set: Performance) => number;
 }
 
-/** `loaded`: the exercise has been logged with weight at least once. */
+/**
+ * One unit per exercise, never a mix. `loaded`: the exercise has been logged
+ * with weight at least once, so its trend is an estimated 1RM throughout (an
+ * unloaded set of it scores 0); an exercise never loaded is trended in reps or
+ * seconds.
+ */
 function scaleFor(tracking: TrackingType | undefined, loaded: boolean, unit: WeightUnit): Scale {
   if (tracking === "assisted_bodyweight") {
     return {
@@ -41,9 +47,9 @@ function scaleFor(tracking: TrackingType | undefined, loaded: boolean, unit: Wei
     };
   }
   if (loaded)
-    return { unit: `${unit} e1RM`, score: (set) => displayWeight(strengthScore(set), unit) };
+    return { unit: `${unit} e1RM`, score: (set) => displayWeight(estimatedMax(set), unit) };
   const timed = tracking !== undefined && isTimeBased(tracking);
-  return { unit: timed ? "s" : "reps", score: strengthScore };
+  return { unit: timed ? "s" : "reps", score: (set) => set.reps };
 }
 
 /**
@@ -60,8 +66,7 @@ export function exerciseTrends(
   return exIds.flatMap((exId) => {
     const sets = new ExerciseHistory(history, exId);
     if (sets.isEmpty) return [];
-    const loaded = history.some((s) => s.exId === exId && (s.weight ?? 0) > 0);
-    const scale = scaleFor(trackingOf(exId), loaded, unit);
+    const scale = scaleFor(trackingOf(exId), sets.hasLoad, unit);
     const series = sets.bestPerSession(scale.score);
     return [
       {

@@ -1,6 +1,13 @@
 import type { Equipment, Notice, Settings, Theme, WeightUnit } from "@nabd/domain";
 import { formatMinuteOfDay, roundTo } from "@nabd/domain";
 
+/** What the settings depend on of the computer they run on. */
+export interface PlatformFeatures {
+  tray: boolean;
+  glass: boolean;
+  idle: boolean;
+}
+
 /** A change to apply to the settings. */
 export type SettingsPatch = Partial<Settings>;
 
@@ -21,6 +28,8 @@ export interface ToggleRowVM {
   on: boolean;
   /** The patch that flips it. */
   flip: SettingsPatch;
+  /** The setting has no effect on this computer (the hint says why), so it cannot be flipped. */
+  disabled: boolean;
 }
 
 export interface SettingsVM {
@@ -36,8 +45,8 @@ export interface SettingsVM {
 
 export interface SettingsInput {
   settings: Settings;
-  /** What this computer can do: a translucent window, system-wide idle time. */
-  capabilities: { glass: boolean; idle: boolean };
+  /** What this computer can do: a tray icon, a translucent window, system-wide idle time. */
+  capabilities: PlatformFeatures;
   notice: Notice | null;
 }
 
@@ -52,6 +61,11 @@ type BooleanSetting = {
 const STEP_DECIMALS = 2;
 
 const minutes = (value: number): string => `${value} min`;
+
+const MINIMIZED_HINT = {
+  tray: "Sit quietly in the tray until a set is due.",
+  noTray: "This desktop shows no tray icons, so Nabd always opens as a window.",
+};
 
 const IDLE_HINT = {
   system: "Once the minimum gap has passed, this long without keyboard or mouse nudges early.",
@@ -78,8 +92,12 @@ class SettingsRows {
     };
   }
 
-  toggle(key: BooleanSetting, text: { title: string; hint: string }): ToggleRowVM {
-    return { ...text, on: this.settings[key], flip: { [key]: !this.settings[key] } };
+  toggle(
+    key: BooleanSetting,
+    text: { title: string; hint: string },
+    disabled = false,
+  ): ToggleRowVM {
+    return { ...text, on: this.settings[key], flip: { [key]: !this.settings[key] }, disabled };
   }
 }
 
@@ -112,7 +130,9 @@ export function buildSettingsVM({ settings, capabilities, notice }: SettingsInpu
       unit: settings.weightUnit,
       increment: rows.stepper("weightIncrement", 0.25, (v) => `${v} ${settings.weightUnit}`, {
         title: "Weight increment",
-        hint: "The smallest jump you can load; suggestions use it.",
+        hint:
+          "The smallest jump you can load; suggestions use it. Changing the unit moves the " +
+          "usual step along (2.5 kg ↔ 5 lb) and leaves a step of your own as it is.",
       }),
       equipment: settings.equipment,
     },
@@ -136,10 +156,14 @@ export function buildSettingsVM({ settings, capabilities, notice }: SettingsInpu
         title: "Open at startup",
         hint: "Launch Nabd when you log in.",
       }),
-      rows.toggle("minimizedByDefault", {
-        title: "Start minimized",
-        hint: "Sit quietly in the tray until a set is due.",
-      }),
+      rows.toggle(
+        "minimizedByDefault",
+        {
+          title: "Start minimized",
+          hint: capabilities.tray ? MINIMIZED_HINT.tray : MINIMIZED_HINT.noTray,
+        },
+        !capabilities.tray,
+      ),
     ],
     notice,
   };

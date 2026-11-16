@@ -1,14 +1,29 @@
 import { DEFAULT_SETTINGS } from "@nabd/domain";
-import { boot, program } from "./harness";
+import { benchRow, boot, program } from "./harness";
 
 describe("settings and data", () => {
   it("applies valid changes, saves them, and ignores out-of-range ones", async () => {
     const app = await boot();
-    app.get().updateSettings({ interval: 30, weightUnit: "lb" });
-    expect(app.data.settings).toMatchObject({ interval: 30, weightUnit: "lb" });
+    app.get().updateSettings({ interval: 30, minGap: 10 });
+    expect(app.data.settings).toMatchObject({ interval: 30, minGap: 10 });
     app.get().updateSettings({ interval: 0 });
     app.get().updateSettings({ workStart: 20 * 60 });
     expect(app.get().settings).toMatchObject({ interval: 30, workStart: 9 * 60 });
+  });
+
+  it("a change of unit takes the usual weight increment along, and leaves a chosen one alone", async () => {
+    const app = await boot();
+    app.get().updateSettings({ weightUnit: "lb" });
+    expect(app.get().settings).toMatchObject({ weightUnit: "lb", weightIncrement: 5 });
+    app.get().updateSettings({ weightUnit: "kg" });
+    expect(app.get().settings).toMatchObject({ weightUnit: "kg", weightIncrement: 2.5 });
+
+    app.get().updateSettings({ weightIncrement: 1.25 });
+    app.get().updateSettings({ weightUnit: "lb" });
+    expect(app.get().settings).toMatchObject({ weightUnit: "lb", weightIncrement: 1.25 });
+    // A unit and an increment given together are taken as given.
+    app.get().updateSettings({ weightUnit: "kg", weightIncrement: 5 });
+    expect(app.get().settings).toMatchObject({ weightUnit: "kg", weightIncrement: 5 });
   });
 
   it("tells the OS about autostart and translucency changes only", async () => {
@@ -41,21 +56,61 @@ describe("settings and data", () => {
 
   it("import validates first, then reloads everything", async () => {
     const app = await boot();
-    await app.get().importData("{not json");
+    await app.importFile("{not json");
     expect(app.get().notice?.kind).toBe("error");
     expect(app.client.importData).not.toHaveBeenCalled();
 
     const imported = { ...program, name: "Imported plan" };
-    await app.get().importData(JSON.stringify({ app: "Nabd", version: 2, program: imported }));
+    vi.mocked(app.client.exportData).mockResolvedValueOnce("/downloads/nabd-backup.json");
+    await app.importFile(JSON.stringify({ app: "Nabd", version: 2, program: imported }));
     expect(app.get().program.name).toBe("Imported plan");
-    expect(app.get().notice).toEqual({ kind: "info", text: "Import complete." });
+    expect(app.get().notice).toEqual({
+      kind: "info",
+      text: "Import complete. What it replaced was first saved to /downloads/nabd-backup.json",
+    });
+  });
+
+  it("an import first backs up what it is about to replace, and is called off if it cannot", async () => {
+    const app = await boot();
+    const file = JSON.stringify({ app: "Nabd", version: 2, program: { ...program, name: "New" } });
+    await app.importFile(file);
+    expect(app.client.exportData).toHaveBeenCalledWith("before_import");
+    const [backedUp] = vi.mocked(app.client.exportData).mock.invocationCallOrder;
+    const [imported] = vi.mocked(app.client.importData).mock.invocationCallOrder;
+    expect(backedUp).toBeLessThan(imported!);
+
+    const blocked = await boot();
+    vi.mocked(blocked.client.exportData).mockRejectedValueOnce(new Error("read-only"));
+    await blocked.importFile(file);
+    expect(blocked.client.importData).not.toHaveBeenCalled();
+    expect(blocked.get().program.name).toBe(program.name);
+    expect(blocked.get().notice).toEqual({ kind: "error", text: "Import failed: read-only" });
+  });
+
+  it("an import waits for the sets that are not saved yet, rather than lose them", async () => {
+    const app = await boot();
+    vi.mocked(app.client.appendSet).mockRejectedValue(new Error("disk full"));
+    await app.log(benchRow.id, 1);
+    await app.importFile(JSON.stringify({ app: "Nabd", version: 2, program }));
+    expect(app.client.importData).not.toHaveBeenCalled();
+    expect(app.get().history).toHaveLength(1);
+    expect(app.get().notice).toEqual({
+      kind: "error",
+      text: "Import failed: some logged sets are not saved yet. Try again shortly.",
+    });
+  });
+
+  it("an import reads an early build's translucent theme", async () => {
+    const app = await boot();
+    await app.importFile(JSON.stringify({ app: "Nabd", version: 1, theme: "translucent" }));
+    expect(app.get().settings).toMatchObject({ theme: "dark", glass: true });
   });
 
   it("an import only changes the settings its file contains", async () => {
     const app = await boot();
     app.get().updateSettings({ weightUnit: "lb", weightIncrement: 5 });
     const file = { app: "Nabd", version: 2, settings: { interval: 30 } };
-    await app.get().importData(JSON.stringify(file));
+    await app.importFile(JSON.stringify(file));
     expect(app.get().settings).toEqual({
       ...DEFAULT_SETTINGS,
       weightUnit: "lb",
@@ -67,7 +122,7 @@ describe("settings and data", () => {
 
   it("an import from a newer version of the app is refused", async () => {
     const app = await boot();
-    await app.get().importData(JSON.stringify({ app: "Nabd", version: 3, program }));
+    await app.importFile(JSON.stringify({ app: "Nabd", version: 3, program }));
     expect(app.get().notice).toMatchObject({ kind: "error" });
     expect(app.get().notice!.text).toContain("newer version");
     expect(app.client.importData).not.toHaveBeenCalled();

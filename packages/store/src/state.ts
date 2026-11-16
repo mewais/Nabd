@@ -1,4 +1,5 @@
 import type {
+  AppData,
   DayRecord,
   DayState,
   Exercise,
@@ -38,6 +39,13 @@ export interface LibraryState {
   draft: ExerciseDraft | null;
 }
 
+/** Something that cannot be undone, waiting for the user to say they mean it. */
+export type Confirmation =
+  /** Replace what is stored with the (already validated) contents of an import file. */
+  | { kind: "import"; data: AppData }
+  | { kind: "deleteDay"; dayId: string }
+  | { kind: "deleteExercise"; exId: string };
+
 /**
  * Something stored that could not be read at boot. The app runs on a default
  * in its place, but never saves over the stored copy: an unreadable value may
@@ -59,6 +67,8 @@ export interface NabdState {
   dayState: DayState;
   dayLog: DayRecord[];
   history: LoggedSet[];
+  /** Ids of logged sets the backend has not accepted yet; they are retried until it does. */
+  unsavedSets: string[];
   /** What this computer can do; nothing platform-dependent is offered until the backend has said. */
   capabilities: PlatformCapabilities;
   /** What could not be read at boot; saving is blocked for each of these (see LoadProblem). */
@@ -84,8 +94,11 @@ export interface NabdState {
   notice: Notice | null;
   /** Something the user must know wherever they are: unreadable data, a failed save. */
   appNotice: Notice | null;
+  /** The day open in the planner's editor; null until the planner is opened, or with no days. */
   planEditDay: string | null;
   library: LibraryState;
+  /** The destructive action being confirmed. */
+  confirmation: Confirmation | null;
   progressTab: ProgressTab;
   /** Exercise whose full-history chart is open. */
   chartExercise: string | null;
@@ -101,6 +114,7 @@ export function initialState(now: Date): NabdState {
     dayState: freshDayState(now),
     dayLog: [],
     history: [],
+    unsavedSets: [],
     capabilities: { tray: false, glass: false, idle: false },
     loadProblems: [],
     now,
@@ -118,6 +132,7 @@ export function initialState(now: Date): NabdState {
     appNotice: null,
     planEditDay: null,
     library: { target: null, search: "", group: null, draft: null },
+    confirmation: null,
     progressTab: "calendar",
     chartExercise: null,
   };

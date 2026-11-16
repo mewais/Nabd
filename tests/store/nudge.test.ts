@@ -34,8 +34,35 @@ describe("nudging", () => {
     expect(selectNudgeStatus(app.get()).state).toBe("nothing_left");
     app.get().editProgram((e) => e.addDay(1));
     app.get().editProgram((e) => e.addExercise(app.get().program.days[0]!.id, BENCH));
+    // At once, not from the next beat of the clock: nothing is ever due for the hours before.
+    expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 15, 50) });
     app.advanceTo(nov(16, 15, 1));
-    expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 15, 51) });
+    expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 15, 50) });
+  });
+
+  it("an import or a schedule switch that brings work starts the count there and then too", async () => {
+    const imported = await bootAt(9, 0, {});
+    imported.advanceTo(nov(16, 15));
+    await imported.importFile(JSON.stringify({ app: "Nabd", version: 2, program }));
+    expect(selectNudgeStatus(imported.get())).toMatchObject({
+      state: "waiting",
+      at: nov(16, 15, 50),
+    });
+
+    // A weekday plan whose only day is Tuesday: Monday is a rest day until the plan goes floating.
+    const tuesdayOnly = {
+      ...program,
+      schedule: "weekday",
+      days: [{ ...program.days[0]!, weekday: 2 }],
+    };
+    const switched = await bootAt(9, 0, { program: tuesdayOnly });
+    switched.advanceTo(nov(16, 15));
+    expect(selectNudgeStatus(switched.get()).state).toBe("nothing_left");
+    switched.get().editProgram((e) => e.setSchedule("floating"));
+    expect(selectNudgeStatus(switched.get())).toMatchObject({
+      state: "waiting",
+      at: nov(16, 15, 50),
+    });
   });
 
   it("an idle moment nudges early once the minimum gap has passed", async () => {
@@ -50,7 +77,7 @@ describe("nudging", () => {
     const app = await bootAt(9);
     app.advanceTo(nov(16, 9, 20), 45);
     const fired = selectPendingNudge(app.get());
-    expect(fired).toEqual({ reason: "idle", since: nov(16, 9, 20) });
+    expect(fired).toMatchObject({ reason: "idle", since: nov(16, 9, 20) });
 
     app.advanceTo(nov(16, 9, 21), 0);
     expect(selectNudgeStatus(app.get())).toEqual({ state: "due", reason: "idle" });
@@ -89,8 +116,21 @@ describe("nudging", () => {
     expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(16, 9, 56) });
     app.advanceTo(nov(16, 9, 56));
     const second = selectPendingNudge(app.get());
-    expect(second).toEqual({ reason: "timer", since: nov(16, 9, 56) });
+    expect(second).toMatchObject({ reason: "timer", since: nov(16, 9, 56) });
     expect(second).not.toBe(first);
+  });
+
+  it("a nudge left unanswered is renewed once per interval, and stays the one nudge", async () => {
+    const app = await bootAt(9);
+    app.advanceTo(nov(16, 9, 50));
+    const fired = selectPendingNudge(app.get())!;
+    app.advanceTo(nov(16, 10, 39));
+    expect(selectPendingNudge(app.get())).toBe(fired);
+    app.advanceTo(nov(16, 10, 40));
+    const reminded = selectPendingNudge(app.get())!;
+    expect(reminded).not.toBe(fired);
+    expect(reminded).toEqual({ ...fired, remindedAt: nov(16, 10, 40) });
+    expect(selectNudgeStatus(app.get())).toEqual({ state: "due", reason: "timer" });
   });
 
   it("closing the logger without logging does not bring the nudge straight back", async () => {
@@ -129,7 +169,7 @@ describe("nudging", () => {
     const overnight = await bootAt(9);
     overnight.advanceTo(nov(16, 9, 50));
     overnight.clock.now = nov(17, 0, 1);
-    overnight.get().tick(0);
+    overnight.get().tick(0, true);
     expect(selectPendingNudge(overnight.get())).toBeNull();
   });
 

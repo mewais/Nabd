@@ -2,18 +2,23 @@ import {
   AppDataSchema,
   DayStateSchema,
   DEFAULT_SETTINGS,
+  displayWeight,
+  EMPTY_DRAFT,
+  exerciseFromDraft,
   ExerciseSchema,
+  formatWeight,
   GROUP_PRIMARY_MUSCLE,
+  isCompleteDraft,
+  kgFromDisplay,
+  loadStepKg,
   LoggedSetSchema,
   MUSCLE_GROUPS,
   MUSCLE_NAMES,
   MUSCLE_PRIMARY_GROUP,
   MUSCLES,
+  salvageSettings,
   SettingsSchema,
-  displayWeight,
-  formatWeight,
-  kgFromDisplay,
-  loadStepKg,
+  withWeightUnit,
 } from "@nabd/domain";
 
 describe("muscle taxonomy", () => {
@@ -51,16 +56,85 @@ describe("settings", () => {
   });
 });
 
+describe("settings read back from storage, field by field", () => {
+  it("keeps every valid field, and names the invalid ones it put back to their defaults", () => {
+    const stored = { ...DEFAULT_SETTINGS, theme: "neon", interval: 30, opacity: 7, glass: true };
+    expect(salvageSettings(stored)).toEqual({
+      settings: { ...DEFAULT_SETTINGS, interval: 30, glass: true },
+      reset: ["theme", "opacity"],
+    });
+  });
+
+  it("fills the fields an older version never saved, without calling that a repair", () => {
+    expect(salvageSettings({ interval: 30 })).toEqual({
+      settings: { ...DEFAULT_SETTINGS, interval: 30 },
+      reset: [],
+    });
+    expect(salvageSettings(null)).toEqual({ settings: DEFAULT_SETTINGS, reset: [] });
+    expect(salvageSettings("garbage").settings).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it("puts back a workday that ends before it starts", () => {
+    const { settings, reset } = salvageSettings({ workStart: 1200, workEnd: 600, interval: 30 });
+    expect(settings).toEqual({ ...DEFAULT_SETTINGS, interval: 30 });
+    expect(reset).toEqual(["workStart", "workEnd"]);
+  });
+});
+
+describe("switching the weight unit", () => {
+  it("moves the conventional increment to the new unit's: 2.5 kg ↔ 5 lb", () => {
+    const pounds = withWeightUnit(DEFAULT_SETTINGS, "lb");
+    expect(pounds).toMatchObject({ weightUnit: "lb", weightIncrement: 5 });
+    expect(withWeightUnit(pounds, "kg")).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it("leaves an increment of the user's own as the number it is", () => {
+    const micro = { ...DEFAULT_SETTINGS, weightIncrement: 1.25 };
+    expect(withWeightUnit(micro, "lb")).toMatchObject({ weightUnit: "lb", weightIncrement: 1.25 });
+    // 2.5 is the usual step in kg, but in pounds it was a choice.
+    const fine = { ...DEFAULT_SETTINGS, weightUnit: "lb" as const, weightIncrement: 2.5 };
+    expect(withWeightUnit(fine, "kg")).toMatchObject({ weightUnit: "kg", weightIncrement: 2.5 });
+    expect(withWeightUnit(micro, "kg")).toEqual(micro);
+  });
+});
+
+describe("a custom-exercise draft", () => {
+  it("is complete with a name and a primary muscle, and only then becomes an exercise", () => {
+    const draft = { ...EMPTY_DRAFT, name: "Desk Dips", primary: ["triceps" as const] };
+    expect(isCompleteDraft(draft)).toBe(true);
+    expect(exerciseFromDraft(draft, "x1")).toMatchObject({ id: "x1", name: "Desk Dips" });
+    for (const incomplete of [
+      { ...draft, name: "   " },
+      { ...draft, primary: [] },
+    ]) {
+      expect(isCompleteDraft(incomplete)).toBe(false);
+      expect(exerciseFromDraft(incomplete, "x1")).toBeNull();
+    }
+  });
+});
+
 describe("weights", () => {
-  it("stores kg and shows the chosen unit, rounded to one decimal", () => {
+  it("stores kg and shows the chosen unit, to two decimals with no trailing zeros", () => {
     expect(displayWeight(60, "kg")).toBe(60);
-    expect(displayWeight(60, "lb")).toBe(132.3);
+    expect(displayWeight(60, "lb")).toBe(132.28);
+    expect(formatWeight(20, "kg")).toBe("20 kg");
     expect(formatWeight(12.5, "kg")).toBe("12.5 kg");
     expect(formatWeight(kgFromDisplay(27.5, "lb"), "lb")).toBe("27.5 lb");
   });
 
+  it("shows every step of the finest increments exactly", () => {
+    expect([20, 21.25, 22.5, 23.75].map((kg) => formatWeight(kg, "kg"))).toEqual([
+      "20 kg",
+      "21.25 kg",
+      "22.5 kg",
+      "23.75 kg",
+    ]);
+    expect([20.25, 20.5, 20.75].map((kg) => displayWeight(kg, "kg"))).toEqual([20.25, 20.5, 20.75]);
+    expect(formatWeight(kgFromDisplay(26.25, "lb"), "lb")).toBe("26.25 lb");
+  });
+
   it("round-trips typed pound values through kg without drift", () => {
-    for (const pounds of [2.5, 25, 27.5, 135, 225]) {
+    for (const pounds of [0.25, 2.5, 25, 26.25, 27.5, 135, 225]) {
       expect(displayWeight(kgFromDisplay(pounds, "lb"), "lb")).toBe(pounds);
     }
   });

@@ -26,7 +26,12 @@ export interface InsightRowVM {
   text: string;
 }
 
-export function buildCoverage(coverage: Coverage, view: MapView, mapStyle: MapStyle): CoverageVM {
+export function buildCoverage(
+  coverage: Coverage,
+  planned: MuscleVolume,
+  view: MapView,
+  mapStyle: MapStyle,
+): CoverageVM {
   return {
     coverage,
     view,
@@ -34,7 +39,7 @@ export function buildCoverage(coverage: Coverage, view: MapView, mapStyle: MapSt
     legend: MUSCLES_ANATOMICAL.map((muscle) => ({
       muscle,
       pct: coverage[muscle],
-      recommendation: recommendation(coverage[muscle]),
+      recommendation: recommendation(muscle, coverage, planned),
     })),
   };
 }

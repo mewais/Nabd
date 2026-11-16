@@ -1,6 +1,7 @@
 //! Commands over the user's data (the command core in `nabd-ipc`).
 
 use nabd_ipc::DataCommands;
+use nabd_native::ExportPurpose;
 use tauri::{AppHandle, Runtime, State};
 
 use crate::db::Database;
@@ -38,15 +39,16 @@ pub fn delete_set(id: String, db: State<'_, Database>) -> AppResult<()> {
 }
 
 /// Write the export document, stamped with the frontend's document `version`,
-/// to a new file; returns where, for display.
+/// to a new file named for `purpose`; returns where, for display.
 #[tauri::command]
 pub fn export_data<R: Runtime>(
     version: u32,
+    purpose: ExportPurpose,
     app: AppHandle<R>,
     db: State<'_, Database>,
 ) -> AppResult<String> {
     let json = db.with(|commands| commands.export_data(version))?;
-    Ok(export::write(&app, &json)?.display().to_string())
+    Ok(export::write(&app, &json, purpose)?.display().to_string())
 }
 
 #[tauri::command]

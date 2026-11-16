@@ -72,7 +72,12 @@ export async function boot(
     /** Move the clock and let the app notice. */
     advanceTo: (date: Date, idleSeconds = 0) => {
       clock.now = date;
-      get().tick(idleSeconds);
+      get().tick(idleSeconds, true);
+    },
+    /** Import a file the way the user does: choose it, then say yes to replacing what is stored. */
+    importFile: async (json: string) => {
+      get().importData(json);
+      await get().answer(true);
     },
     /** The keys written to the backend, in order. */
     savedKeys: () => vi.mocked(backend.client.save).mock.calls.map(([key]) => key),

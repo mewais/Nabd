@@ -59,9 +59,22 @@ export class PlanItem {
     return this.remaining === 0 && this.done > 0 ? "done" : "pending";
   }
 
-  /** The prescribed set that comes next, or null once the prescription is exhausted. */
+  /**
+   * The prescribed set that comes next, or null once the prescription is
+   * exhausted. Logged sets are matched to prescribed ones by type rather than
+   * by position, so the set still owed is the right one even after a set was
+   * undone or the plan changed mid-day: with only the warm-up missing, the
+   * warm-up is what comes next.
+   */
   get nextSet(): SetSpec | null {
-    return this.prescription?.sets[this.done] ?? null;
+    if (this.prescription === null || this.done >= this.planned) return null;
+    const unmatched = this.logged.map((set) => set.setType);
+    const owed = this.prescription.sets.find((spec) => {
+      const match = unmatched.indexOf(spec.type);
+      if (match !== -1) unmatched.splice(match, 1);
+      return match === -1;
+    });
+    return owed ?? null;
   }
 
   /** How many non-warm-up sets have been logged (the index progression compares on). */

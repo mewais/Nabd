@@ -29,8 +29,15 @@ describe("supersetTags", () => {
     expect(supersetTags(rows)).toEqual([null, "A1", "A2", null, "A3"]);
   });
 
-  it("numbers each superset on its own", () => {
-    const rows = [{ supersetId: "s1" }, { supersetId: "s2" }, { supersetId: "s1" }];
-    expect(supersetTags(rows)).toEqual(["A1", "A1", "A2"]);
+  it("letters the supersets of a day in order — A, B, C — each numbered on its own", () => {
+    const rows = [
+      { supersetId: "s1" },
+      { supersetId: "s1" },
+      {},
+      { supersetId: "s2" },
+      { supersetId: "s2" },
+      { supersetId: "s3" },
+    ];
+    expect(supersetTags(rows)).toEqual(["A1", "A2", null, "B1", "B2", "C1"]);
   });
 });

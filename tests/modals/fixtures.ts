@@ -23,7 +23,7 @@ export function openSession(input: WorldInput, itemId: string) {
 export function sessionVM(
   input: WorldInput,
   itemId: string,
-  options: { unit?: WeightUnit; now?: Date } = {},
+  options: { unit?: WeightUnit; now?: Date; unsaved?: string[] } = {},
 ): SessionVM {
   const { session, plan, coach } = openSession(input, itemId);
   const vm = buildSessionVM({
@@ -32,6 +32,7 @@ export function sessionVM(
     coach,
     unit: options.unit ?? "kg",
     now: options.now ?? input.now ?? NOW,
+    unsaved: options.unsaved ?? [],
   });
   if (vm === null) throw new Error("expected a session view-model");
   return vm;

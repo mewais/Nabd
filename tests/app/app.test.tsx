@@ -1,5 +1,9 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { DEFAULT_SETTINGS } from "@nabd/domain";
+import { createMemoryBackend } from "@nabd/ipc-client";
+import type { BootSnapshot } from "@nabd/ipc-client";
 import { createNabdStore } from "@nabd/store";
+import { nov } from "../support/domain-factories";
 import { App } from "../../packages/app/src/app";
 import { createDemoClient } from "../../packages/app/src/demo";
 import { DEMO_PROGRAM } from "../../packages/app/src/demo-data";
@@ -50,5 +54,103 @@ describe("App over the demo backend", () => {
     fireEvent.click(screen.getByRole("button", { name: "Glass" }));
     expect(await screen.findByRole("button", { name: "Glass", pressed: true })).toBeInTheDocument();
     expect(document.querySelector("[data-theme]")).toHaveAttribute("data-glass", "on");
+  });
+});
+
+describe("App before and after loading", () => {
+  it("shows no screen until what is stored has been read", async () => {
+    const { client } = createMemoryBackend({ program: DEMO_PROGRAM });
+    let finishLoading = (): void => {};
+    const loaded = new Promise<void>((resolve) => {
+      finishLoading = resolve;
+    });
+    const { loadAll } = client;
+    client.loadAll = async (): Promise<BootSnapshot> => {
+      await loaded;
+      return loadAll();
+    };
+    const store = createNabdStore({ client, now: () => new Date(), newId: () => "id" });
+    render(<App store={store} client={client} />);
+
+    // The shell is there; a Today drawn from the empty state would claim there is no plan.
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
+    expect(screen.queryByText("No plan yet")).toBeNull();
+    expect(screen.getByRole("main")).toBeEmptyDOMElement();
+
+    await act(async () => finishLoading());
+    expect(await screen.findByText(`of ${FIRST_DAY_SETS} sets`)).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveTextContent("Barbell Bench Press");
+  });
+});
+
+describe("App asks before deleting", () => {
+  it("a day is only deleted once the question is answered with yes", async () => {
+    const store = await renderApp();
+    fireEvent.click(navButton("Plan"));
+    const days = (): number => store.getState().program.days.length;
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete day" }));
+    const question = screen.getByRole("dialog", { name: "Delete Push?" });
+    expect(days()).toBe(DEMO_PROGRAM.days.length);
+    fireEvent.click(within(question).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(days()).toBe(DEMO_PROGRAM.days.length);
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete day" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "Delete Push?" })).getByRole("button", {
+        name: "Delete day",
+      }),
+    );
+    expect(days()).toBe(DEMO_PROGRAM.days.length - 1);
+    expect(screen.getByLabelText("Day name")).toHaveValue("Pull");
+  });
+});
+
+describe("App tells the desktop about a waiting nudge", () => {
+  /** The app on a Monday morning, on a clock the test moves, with the window out of focus or in it. */
+  async function renderAt(focused: boolean) {
+    const { client } = createMemoryBackend({ program: DEMO_PROGRAM, settings: DEFAULT_SETTINGS });
+    const notifyNudge = vi.spyOn(client, "notifyNudge");
+    vi.spyOn(document, "hasFocus").mockReturnValue(focused);
+    const clock = { now: nov(16, 9) };
+    const store = createNabdStore({ client, now: () => clock.now, newId: () => "id" });
+    render(<App store={store} client={client} />);
+    await screen.findByText(`of ${FIRST_DAY_SETS} sets`);
+    const advanceTo = (at: Date): void =>
+      act(() => {
+        clock.now = at;
+        store.getState().tick(0, true);
+      });
+    return { notifyNudge, advanceTo };
+  }
+
+  it("once when it fires, then once per interval for as long as it is ignored", async () => {
+    const { notifyNudge, advanceTo } = await renderAt(false);
+    advanceTo(nov(16, 9, 49));
+    expect(notifyNudge).not.toHaveBeenCalled();
+    advanceTo(nov(16, 9, 50));
+    expect(notifyNudge).toHaveBeenCalledTimes(1);
+    expect(notifyNudge).toHaveBeenLastCalledWith({
+      title: "Time to move",
+      body: "Barbell Bench Press — Interval's up",
+    });
+
+    advanceTo(nov(16, 10, 39));
+    expect(notifyNudge).toHaveBeenCalledTimes(1);
+    advanceTo(nov(16, 10, 40));
+    expect(notifyNudge).toHaveBeenCalledTimes(2);
+    advanceTo(nov(16, 11, 30));
+    expect(notifyNudge).toHaveBeenCalledTimes(3);
+    // In the window there is still the one toast.
+    expect(screen.getAllByText("Time to move")).toHaveLength(1);
+  });
+
+  it("never while the window, which shows the toast, has the focus", async () => {
+    const { notifyNudge, advanceTo } = await renderAt(true);
+    advanceTo(nov(16, 9, 50));
+    advanceTo(nov(16, 10, 40));
+    expect(screen.getByText("Time to move")).toBeInTheDocument();
+    expect(notifyNudge).not.toHaveBeenCalled();
   });
 });

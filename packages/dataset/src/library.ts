@@ -1,4 +1,5 @@
-import type { Equipment, Exercise, ExerciseLookup, MuscleGroup } from "@nabd/domain";
+import type { Equipment, Exercise, ExerciseLookup, Measure, MuscleGroup } from "@nabd/domain";
+import { measureOf } from "@nabd/domain";
 import { MOVEMENTS } from "./catalog";
 import { compose } from "./compose";
 
@@ -9,6 +10,8 @@ export interface LibraryQuery {
   group?: MuscleGroup;
   /** Keep only exercises doable with this equipment. */
   equipment?: ReadonlySet<Equipment>;
+  /** Keep only exercises counted in reps, or only those counted in seconds. */
+  measure?: Measure;
 }
 
 /** An immutable, id-indexed set of exercises. */
@@ -30,13 +33,14 @@ export class ExerciseLibrary {
   readonly lookup: ExerciseLookup = (id) => this.byId(id);
 
   /** The exercises matching every given filter, in library order (`{}` lists them all). */
-  find({ text, group, equipment }: LibraryQuery): Exercise[] {
+  find({ text, group, equipment, measure }: LibraryQuery): Exercise[] {
     const needle = text?.trim().toLowerCase() ?? "";
     return this.exercises.filter(
       (e) =>
         (needle === "" || e.name.toLowerCase().includes(needle)) &&
         (group === undefined || e.group === group) &&
-        (equipment === undefined || equipment.has(e.equipment)),
+        (equipment === undefined || equipment.has(e.equipment)) &&
+        (measure === undefined || measureOf(e.tracking) === measure),
     );
   }
 

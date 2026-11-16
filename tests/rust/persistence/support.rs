@@ -1,11 +1,8 @@
 //! Fixtures of the persistence suite: typed sets and database files.
 
-use std::path::PathBuf;
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use nabd_persistence::{LoggedSetRow, Store};
-use rusqlite::Connection;
 
+pub use crate::common::TempDb;
 use crate::common::{ids, set_json};
 
 /// A logged set with the given id and timestamp; everything else is fixed.
@@ -15,25 +12,10 @@ pub fn set_row(id: &str, ts: &str) -> LoggedSetRow {
 
 /// The ids in the store's history, oldest first.
 pub fn history_ids(store: &Store) -> Vec<String> {
-    ids(store.all_history().unwrap())
+    ids(store.all_history().unwrap().sets)
 }
 
-/// A database file of this test's own, removed when the test ends.
-pub struct TempDb(PathBuf);
-
 impl TempDb {
-    pub fn new() -> Self {
-        static NEXT: AtomicU32 = AtomicU32::new(0);
-        let name = format!(
-            "nabd-test-{}-{}.sqlite",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        );
-        let path = std::env::temp_dir().join(name);
-        let _ = std::fs::remove_file(&path);
-        Self(path)
-    }
-
     /// A database exactly as schema v1 left it: `history` without
     /// `plan_item_id` / `set_type`, version '1', and one logged set.
     pub fn v1() -> Self {
@@ -64,14 +46,9 @@ impl TempDb {
         db
     }
 
-    /// The file as plain SQLite, behind the store's back.
-    pub fn raw(&self) -> Connection {
-        Connection::open(&self.0).unwrap()
-    }
-
     /// The file as the app opens it.
     pub fn store(&self) -> nabd_persistence::Result<Store> {
-        Store::open(&self.0)
+        Store::open(self.path())
     }
 
     /// The schema version written in the file.
@@ -90,11 +67,5 @@ impl TempDb {
         self.raw()
             .execute("INSERT INTO kv (key, value) VALUES (?1, ?2)", [key, value])
             .unwrap();
-    }
-}
-
-impl Drop for TempDb {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
     }
 }

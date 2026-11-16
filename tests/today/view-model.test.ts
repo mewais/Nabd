@@ -64,9 +64,9 @@ describe("buildTodayVM · hero", () => {
     const hero = nextHero(todayVM({ program: pushDay(), history }, { unit: "lb" }).hero);
 
     expect(hero.advice).toMatchObject({
-      primary: "9 × 132.3 lb",
-      alternative: "8 × 137.8 lb",
-      basis: "Last time: 8 × 132.3 lb",
+      primary: "9 × 132.28 lb",
+      alternative: "8 × 137.79 lb",
+      basis: "Last time: 8 × 132.28 lb",
     });
   });
 
@@ -343,19 +343,20 @@ describe("buildTodayVM · stats", () => {
   const figures = (vm: TodayVM) =>
     Object.fromEntries(vm.stats.map((tile) => [tile.label, `${tile.value} ${tile.unit}`]));
 
-  it("reports the streak, this week's sets and the load moved today", () => {
+  it("reports the streak, this week's sets and the load moved today, warm-ups left out", () => {
     const vm = todayVM({ program: pushDay(), history: history() });
     // Sat + Sun + today; only today's two sets fall in the week that starts this Monday.
+    // Lifted: the working set's 9 × 60 kg, not the warm-up's 10 × 40 kg.
     expect(figures(vm)).toEqual({
       Streak: "3 days",
       "This week": "2 sets",
-      "Lifted today": "940 kg",
+      "Lifted today": "540 kg",
     });
   });
 
   it("converts today's volume to pounds for lb users, grouping the digits", () => {
     const vm = todayVM({ program: pushDay(), history: history() }, { unit: "lb" });
-    expect(figures(vm)).toMatchObject({ "Lifted today": "2,072 lb" });
+    expect(figures(vm)).toMatchObject({ "Lifted today": "1,190 lb" });
   });
 
   it("counts nothing lifted for bodyweight work", () => {
@@ -384,6 +385,21 @@ describe("buildTodayVM · coverage and insight", () => {
       recommendation: "rest",
     });
     expect(legend.at(-1)?.muscle).toBe("neck");
+  });
+
+  it("tags a muscle to push only if the plan trains it, like the insight beside the list", () => {
+    const { coverage, insight } = todayVM({ program: pushDay(), history: benchWeek() });
+    const due = (muscle: string) =>
+      coverage.legend.find((row) => row.muscle === muscle)?.recommendation;
+    // Rows train the lats; nothing in the plan trains calves or the neck.
+    expect([due("lats"), due("calves"), due("neck")]).toEqual(["push", "none", "none"]);
+    const pushed = coverage.legend.filter((row) => row.recommendation === "push");
+    expect(pushed.length).toBeGreaterThanOrEqual(insight[1]!.text.split(",").length);
+
+    // With no plan there is nothing to push, in the list as in the insight.
+    const noPlan = todayVM({ program: mondayProgram([]) });
+    expect(noPlan.coverage.legend.every((row) => row.recommendation === "none")).toBe(true);
+    expect(noPlan.insight).toEqual([]);
   });
 
   it("says which muscles to rest, and which of the muscles the plan trains to push", () => {

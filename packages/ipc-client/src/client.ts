@@ -20,7 +20,14 @@ export interface Singletons {
 }
 
 /** What the backend holds at boot: each singleton (null if never saved) + history. */
-export type BootSnapshot = { [K in keyof Singletons]: unknown } & { history: unknown[] };
+export type BootSnapshot = { [K in keyof Singletons]: unknown } & {
+  history: unknown[];
+  /** Stored sets the backend could not read at all, and so left out of `history`. */
+  unreadableSets?: number;
+};
+
+/** Why an export file is written: because the user asked, or to keep what an import replaces. */
+export type ExportPurpose = "manual" | "before_import";
 
 /** What the tray menu shows. */
 export interface TrayState {
@@ -62,8 +69,8 @@ export interface IpcClient {
   saveMany(values: Partial<Singletons>): Promise<void>;
   appendSet(set: LoggedSet): Promise<void>;
   deleteSet(id: string): Promise<void>;
-  /** Write the export file; resolves to where it was saved. */
-  exportData(): Promise<string>;
+  /** Write an export file, named for its `purpose`; resolves to where it was saved. */
+  exportData(purpose: ExportPurpose): Promise<string>;
   importData(data: AppData): Promise<void>;
   platformCapabilities(): Promise<PlatformCapabilities>;
   /** Tell the user a set is due: raise `notification` and un-hide a window hidden in the tray. */

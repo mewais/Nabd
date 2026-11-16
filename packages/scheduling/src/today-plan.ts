@@ -8,10 +8,12 @@ import type {
   Prescription,
   Program,
   RotationState,
+  Schedule,
 } from "@nabd/domain";
 import { MUSCLE_NAMES, dateKey, exerciseOfSet } from "@nabd/domain";
 import { floatingDay } from "./floating";
 import { PlanItem } from "./plan-item";
+import { upNext } from "./rotation";
 import { TodaysSets } from "./todays-sets";
 
 export interface TodayPlanInput {
@@ -30,15 +32,6 @@ function resolveDay(program: Program, date: Date, dayId: string | null): Day | n
     return program.days.find((d) => d.weekday === date.getDay()) ?? null;
   }
   return floatingDay(program, dayId);
-}
-
-/** The exercise a cycled pool is currently pointing at. */
-function rotatedExercise(
-  slotId: string,
-  pool: readonly string[],
-  rotation: RotationState,
-): string | null {
-  return pool[(rotation[slotId] ?? 0) % pool.length] ?? null;
 }
 
 /** Item-id prefix for sets that count toward nothing in the plan (see {@link TodayPlan.build}). */
@@ -78,7 +71,7 @@ function plannedEntries(
   for (const slot of day.slots) {
     const logged = sets.loggedAgainst(slot.id);
     // Once trained today a slot stays on that exercise, whatever happens to its pool.
-    const exId = logged[0]?.exId ?? rotatedExercise(slot.id, slot.pool, rotation);
+    const exId = logged[0]?.exId ?? upNext(slot, rotation);
     if (exId === null) emptySlots.push(slot.muscle);
     else {
       const label = MUSCLE_NAMES[slot.muscle];
@@ -95,13 +88,22 @@ function plannedEntries(
 export class TodayPlan {
   private constructor(
     readonly date: string,
-    readonly dayName: string | null,
+    /** The program day that applies today; null on a rest day or with no plan. */
+    private readonly day: Day | null,
+    /** Whether the plan follows the calendar (weekdays) or its own order (floating). */
+    private readonly schedule: Schedule,
     readonly items: readonly PlanItem[],
     /** Muscles of cycled slots that cannot be trained yet: their pool is empty. */
     readonly emptySlots: readonly MuscleKey[],
   ) {}
 
-  static readonly empty = new TodayPlan("", null, [], []);
+  get dayId(): string | null {
+    return this.day?.id ?? null;
+  }
+
+  get dayName(): string | null {
+    return this.day?.name ?? null;
+  }
 
   /**
    * Every set logged today counts somewhere, even after the plan changed under
@@ -140,7 +142,7 @@ export class TodayPlan {
       const skipped = dayState.skipped.includes(entry.id);
       return [new PlanItem({ ...entry, exercise, label: label ?? exercise.group, skipped })];
     });
-    return new TodayPlan(today, day?.name ?? null, items, emptySlots);
+    return new TodayPlan(today, day, program.schedule, items, emptySlots);
   }
 
   item(id: string): PlanItem | undefined {
@@ -181,10 +183,15 @@ export class TodayPlan {
    * nothing was planned. A skipped exercise still counts as planned, while
    * extras and sets beyond a prescription earn nothing: only planned work can
    * complete a plan.
+   *
+   * A floating plan has no calendar to fall behind: a day it sat idle is not a
+   * missed day, so it has no record either until a set is logged or — `closed`
+   * — the plan has moved on from it.
    */
-  get record(): DayRecord | null {
+  record(closed = false): DayRecord | null {
     const planned = sum(this.items, (i) => i.planned);
     if (planned === 0) return null;
+    if (this.schedule === "floating" && this.setsDone === 0 && !closed) return null;
     return {
       date: this.date,
       planned,
@@ -198,19 +205,21 @@ export class TodayPlan {
   }
 
   /**
-   * Where to go after logging a set of `itemId`: the superset partner that is
+   * Where to go after logging a set of `itemId`. A set beyond the exercise's
+   * prescription (an extra, or more of a finished exercise) was the user's own
+   * choice, so the form stays there. Otherwise: the superset partner that is
    * furthest behind, else the same exercise while it owes sets, else the next
    * exercise in the queue. Null when the day is finished.
    */
   focusAfter(itemId: string): PlanItem | null {
     const current = this.item(itemId);
+    if (current && current.done > current.planned) return current;
     if (current?.supersetId !== undefined) {
       const partner = this.items
         .filter((i) => i.supersetId === current.supersetId && i.id !== itemId && i.remaining > 0)
         .sort((a, b) => a.done - b.done)[0];
       if (partner && partner.done <= current.done) return partner;
     }
-    if (current && (current.remaining > 0 || current.isExtra)) return current;
-    return this.nextItem;
+    return current && current.remaining > 0 ? current : this.nextItem;
   }
 }

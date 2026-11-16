@@ -5,14 +5,21 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use chrono::Local;
+use nabd_native::{export_file_name, ExportPurpose};
 use tauri::{AppHandle, Manager, Runtime};
 
 use crate::error::{AppError, AppResult};
 
-/// Write `json` to a new timestamped file; returns where it went.
-pub fn write<R: Runtime>(app: &AppHandle<R>, json: &str) -> AppResult<PathBuf> {
+/// Write `json` to a new timestamped file named for `purpose`; returns where
+/// it went. Every purpose writes to the same folder, so the backup made before
+/// an import sits next to the user's own exports.
+pub fn write<R: Runtime>(
+    app: &AppHandle<R>,
+    json: &str,
+    purpose: ExportPurpose,
+) -> AppResult<PathBuf> {
     let dir = export_dir(app).ok_or(AppError::NoExportDir)?;
-    let path = dir.join(nabd_native::export_file_name(Local::now().naive_local()));
+    let path = dir.join(export_file_name(purpose, Local::now().naive_local()));
     write_new(&path, json).map_err(|source| AppError::ExportWrite {
         path: path.clone(),
         source,

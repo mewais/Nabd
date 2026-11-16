@@ -60,7 +60,7 @@ fn import_ignores_keys_that_are_not_singletons() {
 
     let snap = snapshot(&c);
     let obj = snap.as_object().unwrap();
-    assert_eq!(obj.len(), KV_KEYS.len() + 1);
+    assert!(!obj.contains_key("theme"));
     assert!(KV_KEYS.iter().all(|key| obj[*key].is_null()));
 }
 

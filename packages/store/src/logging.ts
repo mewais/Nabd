@@ -1,4 +1,5 @@
 import { kgFromDisplay, loadStepKg, toggled } from "@nabd/domain";
+import type { LoggedSet } from "@nabd/domain";
 import { NudgePolicy } from "@nabd/nudge";
 import type { PlanItem } from "@nabd/scheduling";
 import { LogSession } from "@nabd/session";
@@ -16,7 +17,7 @@ export function addExtra({ get, newId, save }: StoreContext, exId: string): Plan
 }
 
 export function loggingActions(ctx: StoreContext): LoggingActions {
-  const { get, set, client, now, newId, attempt, save } = ctx;
+  const { get, set, client, now, newId, attempt, save, saveSet } = ctx;
 
   /** Apply a change to the open session, if there is one. */
   function editSession(change: (session: LogSession) => LogSession): void {
@@ -47,18 +48,24 @@ export function loggingActions(ctx: StoreContext): LoggingActions {
     const target =
       plan.item(item.id) ?? plan.items.find((i) => i.exercise.id === exId) ?? addExtra(ctx, exId);
     if (!target) return null;
-    const moved = session.focus(target, { reps: session.reps, weight: session.weight });
+    const moved = session.focus(target, session);
     set({ session: moved });
     return { session: moved, item: target };
   }
 
-  /** After a set of `item`: rest, then on to whatever the plan says comes next. */
-  function sessionAfter(session: LogSession, item: PlanItem, at: Date): LogSession {
-    const rested = session.resting(at, item.prescription?.rest ?? 0);
+  /**
+   * After `logged`, a set of `item`: rest, then on to whatever the plan says
+   * comes next. The form keeps its numbers only while the next set is more of
+   * the same; another exercise, or another kind of set of this one (the
+   * warm-up is over, a drop set follows), starts from its own numbers.
+   */
+  function sessionAfter(session: LogSession, item: PlanItem, logged: LoggedSet): LogSession {
+    const rested = session.resting(new Date(logged.ts), item.prescription?.rest ?? 0);
     const next = selectTodayPlan(get()).focusAfter(item.id);
-    return next && next.id !== item.id
-      ? rested.focus(next, selectCoach(get()).startFor(next))
-      : rested;
+    if (next === null) return rested;
+    const moreOfTheSame =
+      next.id === item.id && (next.nextSet?.type ?? "working") === logged.setType;
+    return moreOfTheSame ? rested : rested.focus(next, selectCoach(get()).startFor(next));
   }
 
   return {
@@ -93,7 +100,10 @@ export function loggingActions(ctx: StoreContext): LoggingActions {
     stepWeight: (direction) =>
       editSession((s) => s.stepWeight(direction, loadStepKg(get().settings))),
 
-    setReps: (reps) => editSession((s) => s.withReps(reps)),
+    setReps: (reps) => {
+      const item = sessionItem();
+      if (item) editSession((s) => s.withReps(item, reps));
+    },
 
     setWeight: (displayValue) =>
       editSession((s) => s.withWeight(kgFromDisplay(displayValue, get().settings.weightUnit))),
@@ -101,7 +111,7 @@ export function loggingActions(ctx: StoreContext): LoggingActions {
     applyAdvice: (which) => {
       const item = sessionItem();
       const target = item && selectCoach(get()).adviceFor(item)?.[which];
-      if (target) editSession((s) => s.withReps(target.reps).withWeight(target.weight ?? 0));
+      if (target) editSession((s) => s.withReps(item, target.reps).withWeight(target.weight ?? 0));
     },
 
     logSet: async () => {
@@ -112,15 +122,16 @@ export function loggingActions(ctx: StoreContext): LoggingActions {
       const logged = session.toLoggedSet(item, newId(), at);
       // Show the set first; saving must never be able to stall the logger.
       set((s) => ({ history: [...s.history, logged], snoozedUntil: null, pendingNudge: null }));
-      set({ session: sessionAfter(session, item, at) });
-      await attempt("save that set", () => client.appendSet(logged));
+      set({ session: sessionAfter(session, item, logged) });
+      await saveSet(logged);
     },
 
-    // The backend goes first: a set that could not be deleted stays on screen.
     undoSet: async (setId) => {
-      if (await attempt("undo that set", () => client.deleteSet(setId))) {
-        set((s) => ({ history: s.history.filter((h) => h.id !== setId) }));
-      }
+      const forget = (): void => set((s) => ({ history: s.history.filter((h) => h.id !== setId) }));
+      // A set the backend never got has nothing to delete there.
+      if (get().unsavedSets.includes(setId)) forget();
+      // Otherwise the backend goes first: a set that could not be deleted stays on screen.
+      else if (await attempt("undo that set", () => client.deleteSet(setId))) forget();
     },
 
     toggleSkip: (itemId) => {

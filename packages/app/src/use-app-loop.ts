@@ -19,7 +19,9 @@ function bestEffort(what: string, call: Promise<unknown>): void {
 function useClock(store: StoreApi<NabdStore>, client: IpcClient): void {
   useEffect(() => {
     void store.getState().hydrate();
-    return startAppClock(client, (idleSeconds) => store.getState().tick(idleSeconds));
+    return startAppClock(client, (idleSeconds, systemIdle) =>
+      store.getState().tick(idleSeconds, systemIdle),
+    );
   }, [store, client]);
 }
 
@@ -48,9 +50,10 @@ function useTray(store: StoreApi<NabdStore>, client: IpcClient): void {
 }
 
 /**
- * A nudge fired while the user is somewhere else: tell them there, in the
- * toast's words. The store's pending nudge becomes a new object exactly once
- * per nudge, so this notifies once per nudge too.
+ * A nudge is waiting while the user is somewhere else: tell them there, in the
+ * toast's words. The store's pending nudge becomes a new object when it fires
+ * and each time it is due a reminder (once per interval), so this notifies
+ * exactly then — and never while the window, which shows the toast, has focus.
  */
 function useNudgeNotification(store: StoreApi<NabdStore>, client: IpcClient): void {
   const pending = useNabd(selectPendingNudge);

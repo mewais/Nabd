@@ -90,6 +90,6 @@ describe("Today · stats", () => {
 
     expect(tile("Streak")).toHaveTextContent("2days");
     expect(tile("This week")).toHaveTextContent("2sets");
-    expect(tile("Lifted today")).toHaveTextContent("2,072lb");
+    expect(tile("Lifted today")).toHaveTextContent("1,190lb");
   });
 });

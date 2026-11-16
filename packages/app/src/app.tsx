@@ -3,6 +3,7 @@ import type { Screen } from "@nabd/domain";
 import type { IpcClient } from "@nabd/ipc-client";
 import type { NabdStore } from "@nabd/store";
 import { ChartContainer } from "./containers/chart-container";
+import { ConfirmContainer } from "./containers/confirm-container";
 import { LibraryContainer } from "./containers/library-container";
 import { PlannerContainer } from "./containers/planner-container";
 import { ProgressContainer } from "./containers/progress-container";
@@ -30,17 +31,27 @@ interface AppProps {
   client: IpcClient;
 }
 
-/** The shell around the current screen, with whatever floats over it. */
+/**
+ * The shell around the current screen, with whatever floats over it. Until
+ * what is stored has been read there is only the shell: a screen drawn from
+ * the empty state would say "No plan yet" to someone who has one.
+ */
 function Main({ store, client }: AppProps): JSX.Element {
   useAppLoop(store, client);
+  const booted = useNabd((s) => s.booted);
   return (
     <ShellContainer>
-      <CurrentScreen />
-      <ToastContainer />
-      <SessionContainer />
-      <ChartContainer />
-      <SettingsContainer />
-      <LibraryContainer />
+      {booted && (
+        <>
+          <CurrentScreen />
+          <ToastContainer />
+          <SessionContainer />
+          <ChartContainer />
+          <SettingsContainer />
+          <LibraryContainer />
+          <ConfirmContainer />
+        </>
+      )}
     </ShellContainer>
   );
 }

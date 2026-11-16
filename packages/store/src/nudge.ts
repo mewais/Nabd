@@ -1,20 +1,19 @@
 import { NudgePolicy } from "@nabd/nudge";
 import type { NudgeActions } from "./actions";
 import type { StoreContext } from "./context";
-import { selectPolicyStatus, selectTodayPlan } from "./selectors";
+import { selectPolicyStatus } from "./selectors";
 
-/** Keep the nudge bookkeeping in step with the clock and the plan. */
+/** Start, keep, renew or withdraw the pending nudge, as the clock and the plan now stand. */
 export function watchNudge({ get, set }: Pick<StoreContext, "get" | "set">): void {
   const s = get();
-  const hasWork = selectTodayPlan(s).setsRemaining > 0;
-  const activeSince = hasWork ? (s.activeSince ?? s.now) : null;
-  const status = selectPolicyStatus({ ...s, activeSince });
   // An open logger is already the answer; nothing new fires over it.
-  const pendingNudge =
-    s.session === null ? NudgePolicy.latch(s.pendingNudge, status, s.now) : s.pendingNudge;
-  if (activeSince !== s.activeSince || pendingNudge !== s.pendingNudge) {
-    set({ activeSince, pendingNudge });
-  }
+  if (s.session !== null) return;
+  const pendingNudge = new NudgePolicy(s.settings).latch(
+    s.pendingNudge,
+    selectPolicyStatus(s),
+    s.now,
+  );
+  if (pendingNudge !== s.pendingNudge) set({ pendingNudge });
 }
 
 export function nudgeActions({ get, set, now, save }: StoreContext): NudgeActions {

@@ -2,7 +2,7 @@
 // screen renders out, every word already written.
 
 import type { CalendarCell, TrainingStats } from "@nabd/analytics";
-import type { Recommendation } from "@nabd/coverage";
+import type { MuscleVolume, Recommendation } from "@nabd/coverage";
 import { recommendation } from "@nabd/coverage";
 import type { BarDatum } from "@nabd/design-system";
 import type { Coverage, MuscleKey, ProgressTab, Trigger } from "@nabd/domain";
@@ -104,17 +104,19 @@ export interface ProgressInput {
   progress: ExerciseProgress;
   /** What was trained in the last 7 days. */
   coverage: Coverage;
+  /** What the program trains, to tell a lagging muscle from one never targeted. */
+  planned: MuscleVolume;
   /** Today's date key. */
   today: string;
   tab: ProgressTab;
 }
 
-function heatmap(coverage: Coverage): HeatmapVM {
+function heatmap(coverage: Coverage, planned: MuscleVolume): HeatmapVM {
   const trained = MUSCLES.filter((muscle) => coverage[muscle] > 0)
     .map((muscle) => ({
       muscle,
       pct: coverage[muscle],
-      recommendation: recommendation(coverage[muscle]),
+      recommendation: recommendation(muscle, coverage, planned),
     }))
     .sort((a, b) => b.pct - a.pct);
   return {
@@ -142,14 +144,14 @@ function progression(progress: ExerciseProgress): ProgressVM["progression"] {
 }
 
 export function buildProgressVM(input: ProgressInput): ProgressVM {
-  const { stats, progress, coverage, today, tab } = input;
+  const { stats, progress, coverage, planned, today, tab } = input;
   return {
     kpis: kpis(stats),
     consistency: { tab, calendar: calendar(stats, parseDateKey(today)), weekly: weekly(stats) },
     completion: completion(stats),
     timeOfDay: timeOfDay(stats),
     triggers: triggers(stats),
-    heatmap: heatmap(coverage),
+    heatmap: heatmap(coverage, planned),
     progression: progression(progress),
   };
 }

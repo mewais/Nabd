@@ -8,6 +8,7 @@ import { loadNotice, readSnapshot } from "./hydration";
 import { watchNudge } from "./nudge";
 import { errorText } from "./persistence";
 import { selectLibrary } from "./selectors";
+import { planDayToOpen } from "./view";
 import type { LoadProblem } from "./state";
 
 /** Completed days kept for the completion charts. */
@@ -20,14 +21,18 @@ function withRecords(dayLog: readonly DayRecord[], records: readonly DayRecord[]
 }
 
 /**
- * Close out a finished day and open today, if the calendar day has changed;
+ * Close out a finished day and open today, if the calendar day has moved on;
  * returns whether it had. Every action that reads or writes "today" starts
  * here, so none of them can act on a day that is already over.
+ *
+ * Days only ever move forward. A clock that jumps back (a corrected clock, a
+ * flight west over midnight) changes nothing: rolling over to an earlier day
+ * would file the day we are on as a finished day in the future.
  */
 export function beginDay({ get, set, now, persistTogether }: StoreContext): boolean {
   const s = get();
   const today = now();
-  if (s.dayState.date === dateKey(today)) return false;
+  if (dateKey(today) <= s.dayState.date) return false;
   const { dayState, rotation, records } = rollOver({
     program: s.program,
     dayState: s.dayState,
@@ -44,6 +49,7 @@ export function beginDay({ get, set, now, persistTogether }: StoreContext): bool
     session: null,
     paused: dayState.paused,
     snoozedUntil: null,
+    // Counting starts over with the new day (see settle.ts).
     activeSince: null,
     pendingNudge: null,
   });
@@ -54,7 +60,7 @@ export function beginDay({ get, set, now, persistTogether }: StoreContext): bool
 }
 
 export function dayActions(ctx: StoreContext): DayActions {
-  const { get, set, client, now, attempt, persist } = ctx;
+  const { get, set, client, now, attempt, persist, flushSets } = ctx;
 
   /** Bring the OS in line with the stored settings, and learn what it can do. */
   function syncDesktop(): void {
@@ -72,29 +78,41 @@ export function dayActions(ctx: StoreContext): DayActions {
       try {
         snapshot = await client.loadAll();
       } catch (e) {
-        const loadProblems: LoadProblem[] = [{ source: "everything", detail: errorText(e) }];
-        set({ loadProblems, appNotice: loadNotice(loadProblems), booted: true });
+        const problems: LoadProblem[] = [{ source: "everything", detail: errorText(e) }];
+        set({ loadProblems: problems, appNotice: loadNotice(problems), booted: true });
         return;
       }
-      const { state, problems } = readSnapshot(snapshot, now());
+      const loaded = readSnapshot(snapshot, now());
+      const { state } = loaded;
       set({
         ...state,
         paused: state.dayState.paused,
-        loadProblems: problems,
-        appNotice: loadNotice(problems),
+        // What is stored was just read afresh: nothing of it is waiting to be saved.
+        unsavedSets: [],
+        loadProblems: loaded.problems,
+        appNotice: loadNotice(loaded.problems, loaded.resetSettings),
         now: now(),
         booted: true,
       });
+      set((s) => ({ planEditDay: planDayToOpen(s) }));
+      for (const key of loaded.repaired) persist(key, state[key]);
       // Make sure the day we are on is on record, so the next launch can roll it over.
       if (!beginDay(ctx)) persist("dayState", get().dayState);
       watchNudge(ctx);
       syncDesktop();
     },
 
-    tick: (idleSeconds) => {
-      set({ now: now(), idleSeconds });
+    tick: (idleSeconds, systemIdle) => {
+      const { capabilities } = get();
+      set({
+        now: now(),
+        idleSeconds,
+        capabilities:
+          capabilities.idle === systemIdle ? capabilities : { ...capabilities, idle: systemIdle },
+      });
       beginDay(ctx);
       watchNudge(ctx);
+      if (get().unsavedSets.length > 0) void flushSets();
     },
   };
 }

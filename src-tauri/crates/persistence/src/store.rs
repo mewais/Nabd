@@ -17,6 +17,16 @@ pub const KV_KEYS: [&str; 6] = [
     "dayLog",
 ];
 
+/// The set history as it could be read.
+#[derive(Debug, Default, PartialEq)]
+pub struct History {
+    /// The readable sets, oldest first.
+    pub sets: Vec<LoggedSetRow>,
+    /// How many stored rows could not be read as a set (a value of the wrong
+    /// type, a muscle list that is not JSON). They are left where they are.
+    pub unreadable: usize,
+}
+
 /// The app's database: the singletons and the set history.
 pub struct Store {
     pub(crate) conn: Connection,
@@ -88,13 +98,18 @@ impl Store {
         Ok(())
     }
 
-    /// All history rows, oldest first.
-    pub fn all_history(&self) -> Result<Vec<LoggedSetRow>> {
+    /// The whole history, oldest first. One row that cannot be read must not
+    /// hide every other set, so it is skipped and counted; only a failure of
+    /// the query itself is an error.
+    pub fn all_history(&self) -> Result<History> {
         let mut statement = self.conn.prepare("SELECT * FROM history ORDER BY ts ASC")?;
         let mut rows = statement.query([])?;
-        let mut history = Vec::new();
+        let mut history = History::default();
         while let Some(row) = rows.next()? {
-            history.push(LoggedSetRow::from_row(row)?);
+            match LoggedSetRow::from_row(row) {
+                Ok(set) => history.sets.push(set),
+                Err(_) => history.unreadable += 1,
+            }
         }
         Ok(history)
     }

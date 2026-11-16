@@ -1,5 +1,5 @@
 // @nabd/modals — overlays: the set logger, the nudge toast, the exercise
-// library, settings and the full-history chart. Each renders a view-model
+// library, settings, the full-history chart and the confirmation. Each renders a view-model
 // built here and reports through a small actions interface.
 
 export { SessionModal } from "./session/session-modal";
@@ -17,7 +17,7 @@ export type { ToastActions } from "./toast/toast-actions";
 export { LibraryModal } from "./library/library-modal";
 export type { LibraryModalProps } from "./library/library-modal";
 export { buildLibraryVM } from "./library/library-vm";
-export type { LibraryVM } from "./library/library-vm";
+export type { LibraryPurpose, LibraryVM } from "./library/library-vm";
 export type { LibraryActions } from "./library/library-actions";
 
 export { SettingsModal } from "./settings/settings-modal";
@@ -25,6 +25,12 @@ export type { SettingsModalProps } from "./settings/settings-modal";
 export { buildSettingsVM } from "./settings/settings-vm";
 export type { SettingsVM } from "./settings/settings-vm";
 export type { SettingsActions } from "./settings/settings-actions";
+
+export { ConfirmModal } from "./confirm/confirm-modal";
+export type { ConfirmModalProps } from "./confirm/confirm-modal";
+export { buildConfirmVM } from "./confirm/confirm-vm";
+export type { ConfirmSubject, ConfirmVM } from "./confirm/confirm-vm";
+export type { ConfirmActions } from "./confirm/confirm-actions";
 
 export { ChartModal } from "./chart/chart-modal";
 export type { ChartModalProps } from "./chart/chart-modal";

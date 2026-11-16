@@ -4,7 +4,7 @@
 export { createNabdStore } from "./store";
 export type { StoreDeps } from "./context";
 export type { NabdActions, NabdStore } from "./actions";
-export type { NabdState, LibraryState, LibraryTarget, LoadProblem } from "./state";
+export type { Confirmation, LibraryState, LibraryTarget, LoadProblem, NabdState } from "./state";
 export {
   selectCoach,
   selectCoverage,

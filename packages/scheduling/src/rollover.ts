@@ -1,6 +1,7 @@
 import type { DayRecord, DayState, Program, RotationState } from "@nabd/domain";
 import { addDays, freshDayState, parseDateKey, startOfDay } from "@nabd/domain";
 import { dayAfter } from "./floating";
+import { following } from "./rotation";
 import { TodayPlan, type TodayPlanInput } from "./today-plan";
 
 export interface Rollover {
@@ -27,24 +28,38 @@ export function rollOver(input: TodayPlanInput): Rollover {
   const endedOn = parseDateKey(dayState.date);
   const ended = TodayPlan.build({ ...input, date: endedOn });
 
-  const nextRotation = { ...rotation };
-  if (program.type === "cycled") {
-    for (const item of ended.items) {
-      if (item.done > 0 && !item.isExtra) nextRotation[item.id] = (rotation[item.id] ?? 0) + 1;
-    }
-  }
-
+  const nextRotation = program.type === "cycled" ? rotated(program, ended, rotation) : rotation;
   const moveOn = program.schedule === "floating" && ended.setsRemaining === 0;
-  const missed = missedDays(program, endedOn, date).map(
-    (day) =>
-      TodayPlan.build({ ...input, rotation: nextRotation, date: day, dayState: freshDayState(day) })
-        .record,
+  const missed = missedDays(program, endedOn, date).map((day) =>
+    TodayPlan.build({
+      ...input,
+      rotation: nextRotation,
+      date: day,
+      dayState: freshDayState(day),
+    }).record(),
   );
   return {
     dayState: freshDayState(date, moveOn ? dayAfter(program, dayState.dayId) : dayState.dayId),
     rotation: nextRotation,
-    records: [ended.record, ...missed].filter((record) => record !== null),
+    records: [ended.record(moveOn), ...missed].filter((record) => record !== null),
   };
+}
+
+/**
+ * The rotation after the day `ended`: every pool trained that day now points
+ * at the exercise after the one it gave. A pool whose trained exercise has
+ * since been removed from it keeps pointing where it does.
+ */
+function rotated(program: Program, ended: TodayPlan, rotation: RotationState): RotationState {
+  const pools = new Map(
+    program.days.flatMap((day) => day.slots).map((slot) => [slot.id, slot.pool]),
+  );
+  const next = { ...rotation };
+  for (const item of ended.items) {
+    const upcoming = item.done > 0 ? following(pools.get(item.id) ?? [], item.exercise.id) : null;
+    if (upcoming !== null) next[item.id] = upcoming;
+  }
+  return next;
 }
 
 /**

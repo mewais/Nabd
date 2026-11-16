@@ -11,6 +11,8 @@ export class Shell {
   readonly ring: Locator;
   /** The words of the nudge toast: title, reason, exercise and set. */
   readonly toast: Locator;
+  /** The app-wide notice under the top bar: unreadable data, a failed save, settings put back. */
+  readonly notice: Locator;
   readonly letsGo: Locator;
   readonly snooze: Locator;
   /** The root element, which carries the theme. */
@@ -23,6 +25,10 @@ export class Shell {
     this.status = this.topBar.getByRole("status");
     this.ring = page.getByRole("img", { name: /done today$/ });
     this.toast = page.getByRole("status").filter({ hasText: "Time to move" });
+    this.notice = page
+      .getByRole("status")
+      .or(page.getByRole("alert"))
+      .filter({ has: page.getByRole("button", { name: "Dismiss" }) });
     this.letsGo = page.getByRole("button", { name: "Let's go" });
     this.snooze = page.getByRole("button", { name: "Snooze", exact: true });
     this.root = page.locator("[data-theme]");

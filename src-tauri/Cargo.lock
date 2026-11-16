@@ -2121,6 +2121,7 @@ name = "nabd-ipc"
 version = "0.1.0"
 dependencies = [
  "nabd-persistence",
+ "rusqlite",
  "serde_json",
  "thiserror 1.0.69",
 ]

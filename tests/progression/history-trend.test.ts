@@ -1,6 +1,6 @@
 import { dateKey } from "@nabd/domain";
 import type { ExerciseLookup, LoggedSet, WeightUnit } from "@nabd/domain";
-import { ExerciseHistory, ExerciseProgress, assistedScore, strengthScore } from "@nabd/progression";
+import { ExerciseHistory, ExerciseProgress, assistedScore, estimatedMax } from "@nabd/progression";
 import { exercise, logged, lookupIn, nov } from "../support/domain-factories";
 
 describe("ExerciseHistory", () => {
@@ -36,11 +36,29 @@ describe("ExerciseHistory", () => {
     expect(empty.on(dateKey(nov(9)))).toEqual([]);
   });
 
-  it("scores loaded sets by estimated 1RM and unloaded ones by reps", () => {
-    expect(strengthScore({ reps: 30, weight: 100 })).toBe(200);
-    expect(strengthScore({ reps: 12, weight: null })).toBe(12);
-    expect(strengthScore({ reps: 12, weight: 0 })).toBe(12);
-    expect(history.bestPerSession(strengthScore)).toEqual([50 * (1 + 9 / 30), 60 * (1 + 8 / 30)]);
+  it("estimates a one-rep max from loaded sets, and nothing from a set without load", () => {
+    expect(estimatedMax({ reps: 30, weight: 100 })).toBe(200);
+    // Reps are not kilograms: an unloaded set must never score its rep count.
+    expect(estimatedMax({ reps: 12, weight: null })).toBe(0);
+    expect(estimatedMax({ reps: 12, weight: 0 })).toBe(0);
+    expect(history.bestPerSession(estimatedMax)).toEqual([50 * (1 + 9 / 30), 60 * (1 + 8 / 30)]);
+  });
+
+  it("remembers warm-ups apart from the sessions: the last one, or the last one of a day", () => {
+    expect(history.latest("warmup")).toEqual({ reps: 10, weight: 20 });
+    expect(history.latest("warmup", dateKey(nov(9)))).toBeUndefined();
+    expect(history.latest("working", dateKey(nov(9)))).toEqual({ reps: 9, weight: 50 });
+    expect(history.latest("drop")).toBeUndefined();
+  });
+
+  it("knows whether the exercise was ever loaded, warm-ups aside", () => {
+    expect(history.hasLoad).toBe(true);
+    const pushUp = exercise();
+    const unloaded = [
+      logged(pushUp, nov(9), 12, 0),
+      logged(pushUp, nov(9, 9), 10, 5, { setType: "warmup" }),
+    ];
+    expect(new ExerciseHistory(unloaded, pushUp.id).hasLoad).toBe(false);
   });
 
   it("scores assisted sets higher the less assistance they took", () => {
@@ -83,6 +101,36 @@ describe("ExerciseProgress", () => {
     const [benchTrend] = trends(history, "lb", library);
     expect(benchTrend!.unit).toBe("lb e1RM");
     expect(benchTrend!.series[0]).toBeCloseTo(220.5, 1);
+  });
+
+  describe("one unit per exercise, never reps and kilograms in one series", () => {
+    const pullUp = exercise({ name: "Pull-Up", tracking: "weighted_bodyweight" });
+    const only = lookupIn([pullUp]);
+
+    it("an exercise that was never loaded is trended in reps, even when logged with 0 kg", () => {
+      const sessions = [logged(pullUp, nov(9), 8, 0), logged(pullUp, nov(12), 10, 0)];
+      expect(trends(sessions, "kg", only)).toMatchObject([
+        { series: [8, 10], unit: "reps", best: 10, gain: 2 },
+      ]);
+    });
+
+    it("once it has been loaded, every session is an estimated 1RM: unloaded ones score 0", () => {
+      const sessions = [
+        logged(pullUp, nov(9), 8, 0),
+        logged(pullUp, nov(12), 10, 0),
+        logged(pullUp, nov(16), 5, 5),
+      ];
+      const [trend] = trends(sessions, "kg", only);
+      expect(trend).toMatchObject({ unit: "kg e1RM", series: [0, 0, 5.83], best: 5.83 });
+      expect(trend!.gain).toBeCloseTo(5.83);
+    });
+
+    it("the same holds for a barbell lift whose first set was logged at the prefilled 0 kg", () => {
+      const sessions = [logged(bench, nov(9), 8, 0), logged(bench, nov(12), 30, 60)];
+      expect(trends(sessions, "kg", library)).toMatchObject([
+        { unit: "kg e1RM", series: [0, 120] },
+      ]);
+    });
   });
 
   it("measures unloaded timed exercises in seconds", () => {

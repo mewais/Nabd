@@ -58,7 +58,7 @@ describe("ProgramHeader", () => {
     expect(screen.getAllByRole("button", { name: "Remove exercise" })).toHaveLength(3);
   });
 
-  it("switching to Floating turns the week into a numbered list, and back places days on weekdays", () => {
+  it("switching to Floating turns the week into a numbered list, and back pins the days from today on", () => {
     const planner = renderPlanner(fixedProgram());
 
     fireEvent.click(screen.getByRole("button", { name: "Floating" }));
@@ -70,8 +70,9 @@ describe("ProgramHeader", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Weekdays" }));
 
-    expect(planner.program().days.map((d) => d.weekday)).toEqual([1, 3]);
-    expect(screen.getByText("Tue")).toBeInTheDocument();
+    // It is Monday and the plan is on its first day: Push is Monday's, Pull Tuesday's.
+    expect(planner.program().days.map((d) => d.weekday)).toEqual([1, 2]);
+    expect(screen.getByText("Wed")).toBeInTheDocument();
   });
 
   it("does not offer Weekdays to a floating plan with more days than a week", () => {

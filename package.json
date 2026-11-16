@@ -22,7 +22,7 @@
     "typecheck": "tsc -p .",
     "lint": "eslint . && prettier --check .",
     "lint:fix": "eslint . --fix && prettier --write .",
-    "lint:rust": "cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings",
+    "lint:rust": "cd src-tauri && cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings",
     "check": "pnpm lint && pnpm lint:rust && pnpm typecheck && pnpm test && pnpm test:rust"
   },
   "devDependencies": {

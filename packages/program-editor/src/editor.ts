@@ -1,22 +1,32 @@
 import type {
   Day,
   ExerciseLookup,
+  ExercisePrescription,
   Intensity,
   MuscleKey,
   Prescription,
   Program,
   ProgramType,
-  RepMode,
   Schedule,
 } from "@nabd/domain";
-import { WEEK_ORDER, isTimeBased } from "@nabd/domain";
+import { WEEK_ORDER, measureOf, poolMeasure } from "@nabd/domain";
 import { deriveSlots } from "./derive-slots";
+import { normalize } from "./normalize";
 import * as prescriptions from "./prescription-edits";
+import type { RepStyle } from "./prescription-edits";
 
 /** Points at the prescription being edited: a fixed exercise row or a cycled slot. */
 export interface EditRef {
   kind: "exercise" | "slot";
   id: string;
+}
+
+/** Where the plan stands today, for the edits that must not move today: switching schedule. */
+export interface PlanToday {
+  /** Today's weekday, 0 = Sunday. */
+  weekday: number;
+  /** The program day today is on; null on a rest day or in an empty plan. */
+  dayId: string | null;
 }
 
 /** A change to the program, expressed against an editor (see {@link ProgramEditor}). */
@@ -37,20 +47,37 @@ function shift<T>(list: T[], index: number, direction: number): void {
   [list[index], list[target]] = [list[target]!, list[index]!];
 }
 
+/** A day's rows as the blocks that move together: each superset, and each exercise on its own. */
+function movingBlocks(rows: readonly ExercisePrescription[]): ExercisePrescription[][] {
+  const blocks: ExercisePrescription[][] = [];
+  for (const row of rows) {
+    const last = blocks.at(-1);
+    if (last && row.supersetId !== undefined && last[0]?.supersetId === row.supersetId) {
+      last.push(row);
+    } else {
+      blocks.push([row]);
+    }
+  }
+  return blocks;
+}
+
 /**
  * Every way the planner can change a program. Each method returns a new
- * Program and leaves the original untouched.
+ * Program and leaves the original untouched; whatever the change, the result
+ * obeys the program rules (see normalize.ts).
  */
 export class ProgramEditor {
   constructor(
     private readonly program: Program,
     private readonly newId: () => string,
     private readonly lookup: ExerciseLookup,
+    private readonly today: PlanToday,
   ) {}
 
   private edit(change: (draft: Program) => void): Program {
     const draft = structuredClone(this.program);
     change(draft);
+    normalize(draft, this.lookup);
     return draft;
   }
 
@@ -94,11 +121,15 @@ export class ProgramEditor {
   }
 
   /**
-   * Switch schedule. Going weekday gives every unplaced day a free weekday, and
-   * is refused while the plan has more days than a week. Going floating puts
-   * the days in the order they ran through the week, Monday first.
+   * Switch schedule, keeping today on the day it is on.
+   *
+   * Going floating puts the days in the order they ran through the week,
+   * Monday first, and unpins them. Going weekday pins the day the plan is on
+   * today to today's weekday and the days after it, in plan order, to the
+   * weekdays that follow; it is refused while the plan has more days than a week.
    */
   setSchedule(schedule: Schedule): Program {
+    if (schedule === this.program.schedule) return this.program;
     if (schedule === "weekday" && !fitsWeekdaySchedule(this.program)) return this.program;
     return this.edit((draft) => {
       draft.schedule = schedule;
@@ -106,13 +137,17 @@ export class ProgramEditor {
         const weekPosition = (day: Day): number =>
           day.weekday === null ? WEEKDAY_SLOTS : WEEK_ORDER.indexOf(day.weekday);
         draft.days.sort((a, b) => weekPosition(a) - weekPosition(b));
+        for (const day of draft.days) day.weekday = null;
         return;
       }
-      const taken = new Set(draft.days.map((d) => d.weekday));
-      const free = WEEK_ORDER.filter((wd) => !taken.has(wd));
-      for (const day of draft.days) {
-        if (day.weekday === null) day.weekday = free.shift() ?? null;
-      }
+      const current = Math.max(
+        0,
+        draft.days.findIndex((d) => d.id === this.today.dayId),
+      );
+      const fromToday = [...draft.days.slice(current), ...draft.days.slice(0, current)];
+      fromToday.forEach((day, daysAhead) => {
+        day.weekday = (this.today.weekday + daysAhead) % WEEKDAY_SLOTS;
+      });
     });
   }
 
@@ -168,7 +203,7 @@ export class ProgramEditor {
       day.exercises.push({
         id: this.newId(),
         exId: exercise.id,
-        ...prescriptions.defaultPrescription(isTimeBased(exercise.tracking)),
+        ...prescriptions.defaultPrescription(measureOf(exercise.tracking)),
       });
     });
   }
@@ -179,14 +214,26 @@ export class ProgramEditor {
     });
   }
 
-  /** Move an exercise earlier (-1) or later (+1) in its day. */
+  /**
+   * Move an exercise earlier (-1) or later (+1) in its day. A superset always
+   * stays together:
+   *  - an exercise on its own steps over a whole superset, never into it;
+   *  - a superset member trades places with the partner beside it;
+   *  - a member moved out past the edge of its superset leaves it (is unlinked)
+   *    and stays where it is, now on its own.
+   */
   moveExercise(dayId: string, rowId: string, direction: number): Program {
     return this.editDay(dayId, (day) => {
-      shift(
-        day.exercises,
-        day.exercises.findIndex((e) => e.id === rowId),
-        direction,
-      );
+      const blocks = movingBlocks(day.exercises);
+      const at = blocks.findIndex((block) => block.some((row) => row.id === rowId));
+      const block = blocks[at];
+      if (!block) return;
+      const position = block.findIndex((row) => row.id === rowId);
+      const target = position + direction;
+      if (block.length === 1) shift(blocks, at, direction);
+      else if (target >= 0 && target < block.length) shift(block, position, direction);
+      else delete block[position]!.supersetId;
+      day.exercises = blocks.flat();
     });
   }
 
@@ -227,7 +274,7 @@ export class ProgramEditor {
         id: this.newId(),
         muscle,
         pool: [],
-        ...prescriptions.defaultPrescription(false),
+        ...prescriptions.defaultPrescription("reps"),
       });
     });
   }
@@ -249,10 +296,20 @@ export class ProgramEditor {
     });
   }
 
+  /**
+   * Add an exercise to a slot's pool. A pool holds one kind of exercise —
+   * counted in reps, or in seconds — so one of the other kind is refused; the
+   * first exercise of an empty pool decides, and the slot's prescription
+   * starts afresh in its measure.
+   */
   addPoolExercise(dayId: string, slotId: string, exId: string): Program {
+    const exercise = this.lookup(exId);
+    if (!exercise) return this.program;
     return this.editDay(dayId, (day) => {
       const slot = day.slots.find((s) => s.id === slotId);
-      if (slot && !slot.pool.includes(exId)) slot.pool.push(exId);
+      if (!slot || slot.pool.includes(exId)) return;
+      const kind = poolMeasure(slot.pool, this.lookup);
+      if (kind === null || kind === measureOf(exercise.tracking)) slot.pool.push(exId);
     });
   }
 
@@ -265,8 +322,8 @@ export class ProgramEditor {
 
   // ----- Prescriptions (an exercise row or a cycled slot; see prescription-edits.ts) -----
 
-  setRepMode(dayId: string, ref: EditRef, mode: RepMode): Program {
-    return this.editPrescription(dayId, ref, (p) => prescriptions.setRepMode(p, mode));
+  setRepStyle(dayId: string, ref: EditRef, style: RepStyle): Program {
+    return this.editPrescription(dayId, ref, (p) => prescriptions.setRepStyle(p, style));
   }
 
   setIntensity(dayId: string, ref: EditRef, mode: Intensity): Program {

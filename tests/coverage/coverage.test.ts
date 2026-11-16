@@ -121,11 +121,34 @@ describe("recent history", () => {
 });
 
 describe("recommendations", () => {
+  /** Chest at `pct` of full coverage, in a plan that targets chest (and nothing else). */
+  function chestAt(pct: number) {
+    const planned = new MuscleVolume();
+    planned.add("chest", 9);
+    const actual = new MuscleVolume();
+    actual.add("chest", (pct / 100) * FULL_COVERAGE_SETS);
+    actual.add("calves", (pct / 100) * FULL_COVERAGE_SETS);
+    return { actual: actual.toCoverage(), planned };
+  }
+
   it("rests well-covered muscles and pushes lagging ones", () => {
-    expect(recommendation(66)).toBe("rest");
-    expect(recommendation(65)).toBe("none");
-    expect(recommendation(39)).toBe("none");
-    expect(recommendation(38)).toBe("push");
+    const advice = (pct: number) => {
+      const { actual, planned } = chestAt(pct);
+      return recommendation("chest", actual, planned);
+    };
+    expect(advice(66)).toBe("rest");
+    expect(advice(65)).toBe("none");
+    expect(advice(39)).toBe("none");
+    expect(advice(38)).toBe("push");
+  });
+
+  it("never tells anyone to push a muscle their plan does not target", () => {
+    const lagging = chestAt(10);
+    expect(recommendation("calves", lagging.actual, lagging.planned)).toBe("none");
+    expect(recommendation("quads", lagging.actual, lagging.planned)).toBe("none");
+    // Resting needs no plan: a well-trained muscle is well trained either way.
+    const covered = chestAt(80);
+    expect(recommendation("calves", covered.actual, covered.planned)).toBe("rest");
   });
 
   it("only calls a muscle lagging if the plan targets it, and says nothing with nothing to say", () => {

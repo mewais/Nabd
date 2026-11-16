@@ -26,7 +26,8 @@ class PageActivity {
 
 /**
  * The app clock: calls `onTick` once a second with the seconds since the
- * user's last keyboard or mouse input. Returns a function that stops it.
+ * user's last keyboard or mouse input, and whether that is the OS's
+ * system-wide figure. Returns a function that stops it.
  *
  * The beat comes from the backend (`client.onTick`), not from a timer here: the
  * desktop app spends most of its life hidden in the tray, where a webview's
@@ -37,11 +38,11 @@ class PageActivity {
  */
 export function startAppClock(
   client: IpcClient,
-  onTick: (idleSeconds: number) => void,
+  onTick: (idleSeconds: number, systemIdle: boolean) => void,
 ): () => void {
   const page = new PageActivity();
   const subscription = client.onTick(({ idleSeconds }) =>
-    onTick(idleSeconds ?? page.idleSeconds()),
+    onTick(idleSeconds ?? page.idleSeconds(), idleSeconds !== null),
   );
   return () => {
     void subscription.then((unsubscribe) => unsubscribe());

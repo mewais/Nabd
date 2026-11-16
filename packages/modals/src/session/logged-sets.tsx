@@ -1,4 +1,4 @@
-import { Eyebrow, IconButton, RADIUS, SURFACE2_BOX, TEXT } from "@nabd/design-system";
+import { Chip, Eyebrow, IconButton, RADIUS, SURFACE2_BOX, TEXT } from "@nabd/design-system";
 import type { LoggedSetVM } from "./session-vm";
 
 interface LoggedSetsProps {
@@ -35,6 +35,11 @@ export function LoggedSets({ sets, onUndo }: LoggedSetsProps): JSX.Element {
             }}
           >
             <span style={{ color: "var(--text2)" }}>{set.label}</span>
+            {set.unsaved && (
+              <Chip variant="tag" tone="accent">
+                NOT SAVED YET
+              </Chip>
+            )}
             <span style={{ ...TEXT.monoValue, marginLeft: "auto" }}>{set.text}</span>
             <IconButton
               icon="close"

@@ -2,7 +2,8 @@ import { EMPTY_DRAFT, draftCopyOf, exerciseFromDraft } from "@nabd/domain";
 import type { LibraryActions } from "./actions";
 import type { StoreContext } from "./context";
 import { addExtra } from "./logging";
-import { selectLibrary } from "./selectors";
+import type { PlanItem } from "@nabd/scheduling";
+import { selectLibrary, selectTodayPlan } from "./selectors";
 import type { LibraryState } from "./state";
 
 export function libraryActions(ctx: StoreContext): LibraryActions {
@@ -11,8 +12,20 @@ export function libraryActions(ctx: StoreContext): LibraryActions {
   const patch = (change: Partial<LibraryState>): void =>
     set((s) => ({ library: { ...s.library, ...change } }));
 
+  /**
+   * Where "log something else" logs `exId`: the item today already has for
+   * that exercise (brought back if it was skipped), so its sets count toward
+   * the plan instead of beside it; a new extra only when today has none.
+   */
+  function itemToLog(exId: string): PlanItem | undefined {
+    const existing = selectTodayPlan(get()).items.find((item) => item.exercise.id === exId);
+    if (!existing) return addExtra(ctx, exId);
+    if (existing.skipped) get().toggleSkip(existing.id);
+    return existing;
+  }
+
   return {
-    openLibrary: (target) => patch({ target }),
+    openLibrary: (target) => patch({ target, search: "", group: null, draft: null }),
     closeLibrary: () => patch({ target: null, draft: null }),
     patchLibrary: patch,
 
@@ -47,17 +60,18 @@ export function libraryActions(ctx: StoreContext): LibraryActions {
       if (target.kind === "exercise") {
         get().editProgram((e) => e.addExercise(target.dayId, exId));
       } else {
-        get().openSession(addExtra(ctx, exId)?.id);
+        get().openSession(itemToLog(exId)?.id);
       }
       get().closeLibrary();
     },
 
+    // Out of the plan first: the plan must never name an exercise the library has lost.
     deleteCustomExercise: (exId) => {
+      get().editProgram((e) => e.purgeExercise(exId));
       save(
         "customExercises",
         get().customExercises.filter((e) => e.id !== exId),
       );
-      get().editProgram((e) => e.purgeExercise(exId));
     },
   };
 }

@@ -1,4 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useState } from "react";
+import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
 import { RADIUS, SURFACE2_BOX, TEXT } from "./tokens";
 
 export type StepperSize = "mini" | "large";
@@ -18,10 +19,13 @@ interface DisplayStepperProps extends StepperBaseProps {
   onSet?: undefined;
 }
 
-/** Shows `value` in an input the user can also type into. */
+/** Shows `value` in a field the user can also type into (see {@link TypedStepper}). */
 interface TypedStepperProps extends StepperBaseProps {
   value: number;
+  /** A number was typed. The owner decides whether to take it; `value` says what it kept. */
   onSet: (value: number) => void;
+  /** Enter was pressed on a number that had been taken. */
+  onEnter?: () => void;
 }
 
 export type StepperProps = DisplayStepperProps | TypedStepperProps;
@@ -76,42 +80,107 @@ const INPUT: CSSProperties = {
   borderRadius: RADIUS.chip,
   padding: "5px 4px",
   outline: "none",
-  MozAppearance: "textfield",
 };
 
-/** A "− value +" control. With `onSet` the value can also be typed. */
-export function Stepper(props: StepperProps): JSX.Element {
-  const { onDec, onInc, size = "large", ariaLabel } = props;
+/** The number `text` spells — digits with at most one decimal point or comma — or null. */
+function typedNumber(text: string): number | null {
+  const spelled = text.trim().replace(",", ".");
+  return /^(\d+\.?\d*|\.\d+)$/.test(spelled) ? Number(spelled) : null;
+}
+
+interface FrameProps {
+  onDec: () => void;
+  onInc: () => void;
+  size: StepperSize;
+  /** Names the group, when the value inside does not carry the name itself. */
+  groupLabel?: string | undefined;
+  /** The value between the two buttons. */
+  children: (spec: SizeSpec) => ReactNode;
+}
+
+/** The "− … +" around a stepper's value. */
+function Frame({ onDec, onInc, size, groupLabel, children }: FrameProps): JSX.Element {
   const spec = SIZES[size];
   const buttonStyle = { ...BUTTON, ...spec.button };
-  const typed = props.onSet !== undefined;
-
   return (
     <div
       role="group"
-      aria-label={typed ? undefined : ariaLabel}
+      aria-label={groupLabel}
       style={{ display: "flex", alignItems: "center", gap: spec.gap }}
     >
       <button type="button" aria-label="decrease" onClick={onDec} style={buttonStyle}>
         −
       </button>
-      {props.onSet !== undefined ? (
-        <input
-          type="number"
-          value={props.value}
-          aria-label={ariaLabel ?? "value"}
-          onChange={(event) => {
-            const typed = parseFloat(event.target.value);
-            if (!Number.isNaN(typed)) props.onSet(typed);
-          }}
-          style={INPUT}
-        />
-      ) : (
-        <span style={{ ...TEXT.monoValue, ...spec.value, textAlign: "center" }}>{props.value}</span>
-      )}
+      {children(spec)}
       <button type="button" aria-label="increase" onClick={onInc} style={buttonStyle}>
         +
       </button>
     </div>
+  );
+}
+
+/**
+ * A stepper whose value can be typed. While it is being typed in, the field
+ * shows the text exactly as typed — it can be emptied, and nothing typed is
+ * rounded or rewritten — and every time that text spells a number, the number
+ * is offered to the owner. Leaving the field, or stepping, returns it to the
+ * owner's value: the last number that was taken, if the text spelled none.
+ *
+ * ↑ and ↓ step like the + and − buttons, by the control's own step.
+ */
+function TypedStepper(props: TypedStepperProps): JSX.Element {
+  const { value, onSet, onEnter, ariaLabel, size = "large" } = props;
+  const [draft, setDraft] = useState<string | null>(null);
+
+  const stepping = (move: () => void) => (): void => {
+    setDraft(null);
+    move();
+  };
+  const onDec = stepping(props.onDec);
+  const onInc = stepping(props.onInc);
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      event.preventDefault();
+      (event.key === "ArrowUp" ? onInc : onDec)();
+    } else if (event.key === "Enter" && (draft === null || typedNumber(draft) !== null)) {
+      setDraft(null);
+      onEnter?.();
+    }
+  };
+
+  return (
+    <Frame onDec={onDec} onInc={onInc} size={size}>
+      {() => (
+        <input
+          type="text"
+          inputMode="decimal"
+          role="spinbutton"
+          aria-label={ariaLabel ?? "value"}
+          aria-valuenow={value}
+          value={draft ?? String(value)}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            const typed = typedNumber(event.target.value);
+            if (typed !== null) onSet(typed);
+          }}
+          onBlur={() => setDraft(null)}
+          onKeyDown={onKeyDown}
+          style={INPUT}
+        />
+      )}
+    </Frame>
+  );
+}
+
+/** A "− value +" control. With `onSet` the value can also be typed. */
+export function Stepper(props: StepperProps): JSX.Element {
+  if (props.onSet !== undefined) return <TypedStepper {...props} />;
+  const { value, onDec, onInc, size = "large", ariaLabel } = props;
+  return (
+    <Frame onDec={onDec} onInc={onInc} size={size} groupLabel={ariaLabel}>
+      {(spec) => (
+        <span style={{ ...TEXT.monoValue, ...spec.value, textAlign: "center" }}>{value}</span>
+      )}
+    </Frame>
   );
 }

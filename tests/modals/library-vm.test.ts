@@ -40,7 +40,9 @@ describe("buildLibraryVM", () => {
       buildLibraryVM(state({ target }), LIBRARY, EQUIPMENT_KEYS)?.title;
 
     expect(title({ kind: "exercise" })).toBe("Add Exercise");
-    expect(title({ kind: "pool", muscle: "rear_delts" })).toBe("Add to Pool — Rear Delts");
+    expect(title({ kind: "pool", muscle: "rear_delts", pool: [] })).toBe(
+      "Add to Pool — Rear Delts",
+    );
     expect(title({ kind: "extra" })).toBe("Log Something Else");
   });
 
@@ -80,6 +82,28 @@ describe("buildLibraryVM", () => {
     expect(names({}, ["bodyweight"])).toEqual(["Push-Up", "Plank", "Weighted Dip"]);
   });
 
+  describe("opened to add to a cycled pool", () => {
+    const pool = (members: string[]): Partial<LibraryState> => ({
+      target: { kind: "pool", muscle: "abs", pool: members },
+    });
+
+    it("offers everything while the pool is empty", () => {
+      expect(names(pool([]))).toEqual(names());
+      expect(browse(pool([])).scopeNote).toBeNull();
+    });
+
+    it("offers only timed exercises once the pool is timed, and says why", () => {
+      expect(names(pool(["plank"]))).toEqual(["Plank"]);
+      expect(browse(pool(["plank"])).scopeNote).toMatch(/only timed exercises are offered/);
+    });
+
+    it("offers no timed exercise once the pool is counted in reps", () => {
+      expect(names(pool(["bench"]))).not.toContain("Plank");
+      expect(names(pool(["bench"]))).toContain("Barbell Row");
+      expect(browse(pool(["bench"])).scopeNote).toMatch(/timed exercises are not offered/);
+    });
+  });
+
   it("explains an empty result instead of listing nothing", () => {
     expect(browse().emptyNote).toBeNull();
 
@@ -113,8 +137,10 @@ describe("buildLibraryVM", () => {
       });
     });
 
-    it("cannot create an exercise without a primary muscle", () => {
+    it("cannot create an exercise without a primary muscle, or without a name", () => {
       expect(form({ primary: [] }).form.canCreate).toBe(false);
+      expect(form({ name: "" }).form.canCreate).toBe(false);
+      expect(form({ name: "   " }).form.canCreate).toBe(false);
     });
   });
 });

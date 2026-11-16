@@ -14,6 +14,8 @@ test("a first run goes from no plan to a queue on Today, built in the planner", 
     await expect(today.startSet).toBeHidden();
     await expect(shell.status).toContainText("Nothing left today");
     await expect(shell.ring).toHaveAccessibleName("0 of 0 sets done today");
+    // With no plan there is no muscle to push: the coverage list tags none.
+    await expect(today.screen.getByText("Push", { exact: true })).toHaveCount(0);
   });
 
   await shell.goTo("Plan");
@@ -52,9 +54,9 @@ test("a first run goes from no plan to a queue on Today, built in the planner", 
 
   await test.step("add two more exercises and link them into a superset", async () => {
     await planner.addExercise.click();
-    // The library opens on the search and the filter it was last left with.
-    await expect(library.search).toHaveValue("press");
-    await library.group("All").click();
+    // The library opens afresh each time: nothing is left of the last search or filter.
+    await expect(library.search).toHaveValue("");
+    await expect(library.group("All")).toHaveAttribute("aria-pressed", "true");
     await library.add(raise.name);
     await planner.addExercise.click();
     await library.add(curl.name);
@@ -66,7 +68,8 @@ test("a first run goes from no plan to a queue on Today, built in the planner", 
 
   await test.step("add a second day", async () => {
     await planner.button("Add a day on Tuesday").click();
-    await planner.dayCard("New day").click();
+    // The new day is the one the editor now shows.
+    await expect(planner.dayCard("New day")).toHaveAttribute("aria-pressed", "true");
     await planner.dayName.fill("Pull");
     await planner.addExercise.click();
     await library.group("Back").click();
@@ -93,10 +96,6 @@ test("a first run goes from no plan to a queue on Today, built in the planner", 
 test("the plan getting its first work mid-morning does not count as an interval already up", async ({
   app,
 }) => {
-  test.fail(
-    true,
-    "until the next clock beat (up to 1 s) the nudge is computed as if the plan had work since the workday began: the toast flashes",
-  );
   const { shell, planner, library } = app;
   await app.launch(at("10:00"));
   await shell.goTo("Plan");

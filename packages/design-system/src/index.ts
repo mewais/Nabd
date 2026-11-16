@@ -80,6 +80,8 @@ export { FormRow } from "./form-row";
 export type { FormRowProps } from "./form-row";
 export { ModalShell } from "./modal-shell";
 export type { ModalShellProps } from "./modal-shell";
+export { ConfirmDialog } from "./confirm-dialog";
+export type { ConfirmDialogProps } from "./confirm-dialog";
 
 export { BarChart } from "./bar-chart";
 export type { BarChartProps, BarDatum, BarTone } from "./bar-chart";

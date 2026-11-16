@@ -1,4 +1,4 @@
-import { Button, ChipGroup, EmptyNote, TextInput } from "@nabd/design-system";
+import { Button, ChipGroup, EmptyNote, TEXT, TextInput } from "@nabd/design-system";
 import type { LibraryActions } from "./library-actions";
 import { LibraryRow } from "./library-row";
 import { GROUP_OPTIONS } from "./library-vm";
@@ -36,6 +36,7 @@ export function LibraryBrowser({ browser, actions }: LibraryBrowserProps): JSX.E
           selected={[browser.group]}
           onToggle={(group) => actions.filter({ group: group === "all" ? null : group })}
         />
+        {browser.scopeNote !== null && <div style={TEXT.hint}>{browser.scopeNote}</div>}
       </div>
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "12px 16px 16px" }}>
         {browser.emptyNote !== null && (

@@ -1,7 +1,7 @@
 // How sets, targets and advice are worded — shared by the Today screen and the logger.
 
 import type { Prescription, SetSpec, TrackingType, WeightUnit } from "@nabd/domain";
-import { formatWeight, isTimeBased, plural } from "@nabd/domain";
+import { formatWeight, isBodyweightLoaded, isTimeBased, needsLoad, plural } from "@nabd/domain";
 import type { Advice, AdviceKind, Performance } from "@nabd/progression";
 
 const SET_TYPE_NAMES: Record<SetSpec["type"], string> = {
@@ -10,14 +10,20 @@ const SET_TYPE_NAMES: Record<SetSpec["type"], string> = {
   drop: "Drop set",
 };
 
-/** "9 × 25 lb", "12 reps", "45 s", "45 s · 10 kg", "8 − 20 kg assist". */
+/**
+ * "9 × 25 lb", "12 reps", "45 s", "45 s · 10 kg", "8 + 5 kg", "8 − 20 kg assist".
+ * A bodyweight exercise with nothing added or taken off is the plain exercise:
+ * "12 reps", not "12 + 0 kg".
+ */
 export function formatPerformance(
   { reps, weight }: Performance,
   tracking: TrackingType,
   unit: WeightUnit,
 ): string {
   const amount = isTimeBased(tracking) ? `${reps} s` : `${reps}`;
-  if (weight === null) return isTimeBased(tracking) ? amount : plural(reps, "rep");
+  if (weight === null || (weight === 0 && isBodyweightLoaded(tracking))) {
+    return isTimeBased(tracking) ? amount : plural(reps, "rep");
+  }
   const load = formatWeight(weight, unit);
   if (tracking === "assisted_bodyweight") return `${amount} − ${load} assist`;
   if (tracking === "weighted_bodyweight") return `${amount} + ${load}`;
@@ -66,8 +72,9 @@ export function describeAdvice(
 ): AdviceWording | null {
   if (advice === null) return null;
   const say = (p: Performance): string => formatPerformance(p, tracking, unit);
-  // A first-time load of zero is "not known yet", not a target to aim for.
-  const loadUnknown = advice.kind === "start" && advice.primary.weight === 0;
+  // Where a load has to be picked, a first-time load of zero is "not known yet",
+  // not a target to aim for. (A bodyweight exercise simply starts unloaded.)
+  const loadUnknown = advice.kind === "start" && advice.primary.weight === 0 && needsLoad(tracking);
   return {
     primary: loadUnknown
       ? `${say({ ...advice.primary, weight: null })} — pick a starting weight`

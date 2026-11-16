@@ -103,21 +103,36 @@ describe("NudgePolicy", () => {
 describe("a pending nudge", () => {
   const idle = { state: "due", reason: "idle" } as const;
   const waiting = { state: "waiting", at: nov(16, 11), idleFrom: nov(16, 10, 30) } as const;
-  const pending = NudgePolicy.latch(null, idle, nov(16, 10, 40));
+  const pending = policy.latch(null, idle, nov(16, 10, 40));
 
   it("starts when a set becomes due", () => {
-    expect(pending).toEqual({ reason: "idle", since: nov(16, 10, 40) });
-    expect(NudgePolicy.latch(null, waiting, nov(16, 10, 40))).toBeNull();
+    expect(pending).toEqual({
+      reason: "idle",
+      since: nov(16, 10, 40),
+      remindedAt: nov(16, 10, 40),
+    });
+    expect(policy.latch(null, waiting, nov(16, 10, 40))).toBeNull();
   });
 
   it("survives the user touching the mouse to answer it", () => {
-    expect(NudgePolicy.latch(pending, waiting, nov(16, 10, 41))).toBe(pending);
+    expect(policy.latch(pending, waiting, nov(16, 10, 41))).toBe(pending);
   });
 
   it("keeps its first reason when the timer also comes due", () => {
-    expect(NudgePolicy.latch(pending, { state: "due", reason: "timer" }, nov(16, 11))).toBe(
-      pending,
-    );
+    expect(policy.latch(pending, { state: "due", reason: "timer" }, nov(16, 11))).toBe(pending);
+  });
+
+  it("is renewed once per interval for as long as it goes unanswered", () => {
+    // The interval is 50 minutes: nothing new at 11:29, a reminder at 11:30, the next at 12:20.
+    expect(policy.latch(pending, waiting, nov(16, 11, 29))).toBe(pending);
+    const reminded = policy.latch(pending, waiting, nov(16, 11, 30));
+    expect(reminded).not.toBe(pending);
+    expect(reminded).toEqual({ ...pending, remindedAt: nov(16, 11, 30) });
+    expect(policy.latch(reminded, waiting, nov(16, 12, 19))).toBe(reminded);
+    expect(policy.latch(reminded, waiting, nov(16, 12, 20))).toEqual({
+      ...pending,
+      remindedAt: nov(16, 12, 20),
+    });
   });
 
   it("is withdrawn when nudging is not allowed any more", () => {
@@ -126,7 +141,7 @@ describe("a pending nudge", () => {
       { state: "nothing_left" },
       { state: "off_hours", at: nov(17, 9) },
     ] as const) {
-      expect(NudgePolicy.latch(pending, status, nov(16, 18))).toBeNull();
+      expect(policy.latch(pending, status, nov(16, 18))).toBeNull();
     }
   });
 });

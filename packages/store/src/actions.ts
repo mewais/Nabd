@@ -3,6 +3,7 @@
 
 import type {
   AdviceChoice,
+  AppData,
   ExerciseDraft,
   MapStyle,
   MapView,
@@ -11,13 +12,17 @@ import type {
   Settings,
 } from "@nabd/domain";
 import type { ProgramEdit } from "@nabd/program-editor";
-import type { LibraryState, LibraryTarget, NabdState } from "./state";
+import type { Confirmation, LibraryState, LibraryTarget, NabdState } from "./state";
 
 export interface DayActions {
   /** Load persisted state from the backend and open today. Never rejects (see `loadProblems`). */
   hydrate: () => Promise<void>;
-  /** Advance the clock: new time, latest idle reading, day rollover, nudge latch. */
-  tick: (idleSeconds: number) => void;
+  /**
+   * Advance the clock: new time, latest idle reading, day rollover, nudge latch.
+   * `systemIdle` says whether the reading is the OS's system-wide one (it can
+   * come and go while the app runs) or only what the window itself saw.
+   */
+  tick: (idleSeconds: number, systemIdle: boolean) => void;
 }
 
 export interface NudgeActions {
@@ -36,8 +41,9 @@ export interface LoggingActions {
   stepReps: (direction: number) => void;
   /** Step the load by one weight increment. */
   stepWeight: (direction: number) => void;
+  /** Set the reps (or seconds) from a typed value; one a set cannot have is ignored. */
   setReps: (reps: number) => void;
-  /** Set the load from a value typed in the display unit. */
+  /** Set the load from a value typed in the display unit; one a set cannot have is ignored. */
   setWeight: (displayValue: number) => void;
   /** Fill the form with the coach's primary or alternative suggestion. */
   applyAdvice: (which: AdviceChoice) => void;
@@ -48,11 +54,13 @@ export interface LoggingActions {
 }
 
 export interface PlanActions {
+  /** Change the program; today, the planner's open day and the rotation follow the change. */
   editProgram: (edit: ProgramEdit) => void;
   selectPlanDay: (dayId: string) => void;
 }
 
 export interface LibraryActions {
+  /** Open the library for `target`, with no search and no filter. */
   openLibrary: (target: LibraryTarget) => void;
   closeLibrary: () => void;
   patchLibrary: (patch: Partial<Pick<LibraryState, "search" | "group">>) => void;
@@ -68,10 +76,25 @@ export interface LibraryActions {
 export interface SettingsDataActions {
   updateSettings: (patch: Partial<Settings>) => void;
   exportData: () => Promise<void>;
-  importData: (json: string) => Promise<void>;
+  /**
+   * Read an import file. A file that is not a valid export is reported; a
+   * valid one is not applied yet: it replaces what is stored, so the user is
+   * asked to confirm first (see ConfirmActions).
+   */
+  importData: (json: string) => void;
+  /** Replace what is stored with `data`, after backing it up. */
+  replaceData: (data: AppData) => Promise<void>;
+}
+
+export interface ConfirmActions {
+  /** Ask the user to confirm something that cannot be undone, instead of doing it. */
+  ask: (confirmation: Confirmation) => void;
+  /** The user's answer: go ahead with what was asked, or drop it. Resolves once it is done. */
+  answer: (goAhead: boolean) => Promise<void>;
 }
 
 export interface ViewActions {
+  /** Show a screen. The planner opens on today's day (the first day on a rest day). */
   setScreen: (screen: Screen) => void;
   setMapView: (view: MapView) => void;
   setMapStyle: (style: MapStyle) => void;
@@ -84,7 +107,7 @@ export interface ViewActions {
 
 export interface DesktopActions {
   sendTestNotification: () => void;
-  /** Exit the app (closing the window only hides it while there is a tray). */
+  /** Exit the app (closing the window only hides it while there is a tray), saving what waits first. */
   quit: () => void;
 }
 
@@ -96,6 +119,7 @@ export interface NabdActions
     PlanActions,
     LibraryActions,
     SettingsDataActions,
+    ConfirmActions,
     ViewActions,
     DesktopActions {}
 

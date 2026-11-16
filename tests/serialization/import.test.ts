@@ -1,5 +1,10 @@
 import { APPDATA_VERSION, DEFAULT_SETTINGS } from "@nabd/domain";
-import { parseImport, upgradeDayState } from "@nabd/serialization";
+import {
+  parseImport,
+  upgradeDayState,
+  upgradeRotation,
+  upgradeSettings,
+} from "@nabd/serialization";
 
 const doc = (fields: object): string => JSON.stringify({ app: "Nabd", version: 2, ...fields });
 
@@ -42,6 +47,39 @@ describe("parseImport", () => {
       ok: true,
       data: { settings: { theme: "dark" } },
     });
+  });
+
+  it('reads the old "translucent" theme as the dark theme over a glass window', () => {
+    const v1 = JSON.stringify({ app: "Nabd", version: 1, theme: "translucent" });
+    expect(parseImport(v1)).toMatchObject({
+      ok: true,
+      data: { settings: { theme: "dark", glass: true } },
+    });
+    expect(parseImport(doc({ settings: { theme: "translucent", interval: 30 } }))).toMatchObject({
+      ok: true,
+      data: { settings: { theme: "dark", glass: true, interval: 30 } },
+    });
+
+    const current = { theme: "light", glass: false };
+    expect(upgradeSettings(current)).toBe(current);
+    expect(upgradeSettings(null)).toBeNull();
+  });
+
+  it("turns an old pool position into the id of the exercise it pointed at", () => {
+    const slot = (id: string, pool: string[]) => ({ id, muscle: "chest", pool });
+    const day = { id: "a", slots: [slot("chest", ["bench", "fly"]), slot("empty", [])] };
+    const program = { name: "P", type: "cycled", schedule: "floating", days: [day] };
+    expect(upgradeRotation({ chest: 3, empty: 2, gone: 1 }, program)).toEqual({ chest: "fly" });
+
+    const current = { chest: "fly" };
+    expect(upgradeRotation(current, program)).toBe(current);
+    expect(upgradeRotation("garbage", program)).toBe("garbage");
+
+    const fullDay = { ...day, name: "A", weekday: null, exercises: [], slots: [] };
+    const result = parseImport(
+      doc({ program: { ...program, days: [fullDay] }, rotationState: { chest: 1 } }),
+    );
+    expect(result).toMatchObject({ ok: true, data: { rotationState: {} } });
   });
 
   it("refuses a file from a newer version instead of dropping what it cannot read", () => {

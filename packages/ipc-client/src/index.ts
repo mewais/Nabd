@@ -5,6 +5,7 @@
 export type {
   BootSnapshot,
   DesktopNotification,
+  ExportPurpose,
   IpcClient,
   PlatformCapabilities,
   Singletons,

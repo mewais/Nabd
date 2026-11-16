@@ -1,6 +1,6 @@
 import type { LoggedSet, Program } from "@nabd/domain";
 import { dateKey, freshDayState } from "@nabd/domain";
-import { ProgressionAdvisor } from "@nabd/progression";
+import { ExerciseHistory, ProgressionAdvisor } from "@nabd/progression";
 import { TodayPlan } from "@nabd/scheduling";
 import type { PlanItem } from "@nabd/scheduling";
 import { Coach, LogSession, describeAdvice, formatPerformance, formatTarget } from "@nabd/session";
@@ -78,9 +78,64 @@ describe("Coach", () => {
     expect(coach.startFor(item)).toEqual(coach.adviceFor(item)!.basis);
   });
 
-  it("pre-fills with the previous set once the exercise has one today", () => {
-    const today = [...lastWeek, logged(curl, nov(16, 10), 10, 27.5, { planItemId: curlRow.id })];
+  it("pre-fills with the previous set once the exercise has one of that kind today", () => {
+    const today = [
+      ...lastWeek,
+      logged(curl, nov(16, 9), 15, 10, { planItemId: curlRow.id, setType: "warmup" }),
+      logged(curl, nov(16, 10), 10, 27.5, { planItemId: curlRow.id }),
+    ];
     expect(coachFor(today).startFor(itemsFor(today).curlItem)).toEqual({ reps: 10, weight: 27.5 });
+  });
+
+  describe("a warm-up has a memory of its own", () => {
+    const lastWarmup = logged(curl, nov(9, 9), 15, 10, { setType: "warmup" });
+
+    it("starts from the last warm-up logged, not from last session's working set", () => {
+      const history = [lastWarmup, ...lastWeek];
+      expect(coachFor(history).startFor(itemsFor(history).curlItem)).toEqual({
+        reps: 15,
+        weight: 10,
+      });
+    });
+
+    it("the working set after it starts from the working set, not from the warm-up", () => {
+      const history = [
+        lastWarmup,
+        ...lastWeek,
+        logged(curl, nov(16, 9), 12, 12.5, { planItemId: curlRow.id, setType: "warmup" }),
+      ];
+      expect(coachFor(history).startFor(itemsFor(history).curlItem)).toEqual({
+        reps: 8,
+        weight: 25,
+      });
+    });
+
+    it("with no warm-up on record, starts from what the warm-up asks for", () => {
+      expect(coachFor(lastWeek).startFor(itemsFor(lastWeek).curlItem)).toEqual({
+        reps: 15,
+        weight: 0,
+      });
+    });
+  });
+
+  it("a drop set starts from last session's same set, not from the working set just done", () => {
+    const squat = exercise({ name: "Squat" });
+    const squatRow = row(squat.id, [working(8, 12), { type: "drop", a: 12 }]);
+    const history = [
+      logged(squat, nov(9, 10), 8, 60),
+      logged(squat, nov(9, 11), 12, 40, { setType: "drop" }),
+      logged(squat, nov(16, 10), 9, 60, { planItemId: squatRow.id }),
+    ];
+    const item = TodayPlan.build({
+      program: { ...program, days: [{ ...program.days[0]!, exercises: [squatRow] }] },
+      date: TODAY,
+      dayState: freshDayState(TODAY),
+      rotation: {},
+      history,
+      lookup: lookupIn([squat]),
+    }).item(squatRow.id)!;
+    expect(item.nextSet?.type).toBe("drop");
+    expect(coachFor(history).startFor(item)).toEqual({ reps: 12, weight: 40 });
   });
 
   it("with no history, starts from the prescription", () => {
@@ -101,7 +156,7 @@ describe("LogSession", () => {
 
   it("steps reps by one, seconds by five, and never below one", () => {
     expect(session.stepReps(curlItem, 1).reps).toBe(9);
-    expect(session.withReps(1).stepReps(curlItem, -1).reps).toBe(1);
+    expect(session.withReps(curlItem, 1).stepReps(curlItem, -1).reps).toBe(1);
     const hold = session.focus(plankItem, { reps: 45, weight: null });
     expect(hold.stepReps(plankItem, 1).reps).toBe(50);
     expect(hold.performance(plankItem)).toEqual({ reps: 50 - 5, weight: null });
@@ -112,8 +167,23 @@ describe("LogSession", () => {
     expect(session.stepWeight(-20, 2.5).weight).toBe(0);
     expect(session.withWeight(12.3456).weight).toBe(12.346);
     expect(session.withWeight(Number.NaN).weight).toBe(25);
-    expect(session.withReps(Number.NaN).reps).toBe(8);
-    expect(session.withReps(9.9).reps).toBe(9);
+    expect(session.withReps(curlItem, Number.NaN).reps).toBe(8);
+    expect(session.withReps(curlItem, 9.9).reps).toBe(9);
+  });
+
+  it("ignores a number no set could have, and stops stepping at the same bounds", () => {
+    expect(session.withReps(curlItem, 0).reps).toBe(8);
+    expect(session.withReps(curlItem, 999).reps).toBe(999);
+    expect(session.withReps(curlItem, 1000).reps).toBe(8);
+    expect(session.withReps(curlItem, 999).stepReps(curlItem, 1).reps).toBe(999);
+    expect(session.withWeight(-1).weight).toBe(25);
+    expect(session.withWeight(1000).weight).toBe(1000);
+    expect(session.withWeight(99999).weight).toBe(25);
+    expect(session.withWeight(1000).stepWeight(1, 2.5).weight).toBe(1000);
+    // A hold is counted in seconds, of which a set can have many more.
+    const hold = session.focus(plankItem, { reps: 45, weight: null });
+    expect(hold.withReps(plankItem, 3600).reps).toBe(3600);
+    expect(hold.withReps(plankItem, 6 * 60 * 60 + 1).reps).toBe(45);
   });
 
   it("keeps the trigger and the running rest when moving to another exercise", () => {
@@ -125,7 +195,7 @@ describe("LogSession", () => {
 
   it("becomes a history row for its exercise, stamped with the plan item and the moment", () => {
     const at = nov(16, 10, 5);
-    expect(session.withReps(9).toLoggedSet(curlItem, "set-1", at)).toEqual({
+    expect(session.withReps(curlItem, 9).toLoggedSet(curlItem, "set-1", at)).toEqual({
       id: "set-1",
       exId: curl.id,
       exercise: "Curl",
@@ -165,9 +235,40 @@ describe("wording", () => {
       "8 − 20 kg assist",
     );
     expect(formatPerformance({ reps: 45, weight: null }, "duration", "kg")).toBe("45 s");
+    expect(formatPerformance({ reps: 8, weight: 21.25 }, "weight_reps", "kg")).toBe("8 × 21.25 kg");
     expect(formatPerformance({ reps: 40, weight: 20 }, "weight_duration", "kg")).toBe(
       "40 s · 20 kg",
     );
+  });
+
+  it("a bodyweight exercise with nothing added or taken off is worded as plain reps", () => {
+    expect(formatPerformance({ reps: 12, weight: 0 }, "weighted_bodyweight", "kg")).toBe("12 reps");
+    expect(formatPerformance({ reps: 8, weight: 0 }, "assisted_bodyweight", "kg")).toBe("8 reps");
+    // A bar with nothing on it is still a load to state.
+    expect(formatPerformance({ reps: 8, weight: 0 }, "weight_reps", "kg")).toBe("8 × 0 kg");
+  });
+
+  it("advises an unloaded bodyweight exercise in reps first, then in added weight", () => {
+    const advisor = new ProgressionAdvisor(2.5);
+    const pullUp = exercise({ name: "Pull-Up", tracking: "weighted_bodyweight" });
+    const advice = (reps: number) =>
+      describeAdvice(
+        advisor.advise({
+          tracking: pullUp.tracking,
+          prescription: prescription([working(8, 12)]),
+          setIndex: 0,
+          history: new ExerciseHistory([logged(pullUp, nov(9), reps, 0)], pullUp.id),
+          date: dateKey(TODAY),
+        }),
+        pullUp.tracking,
+        "kg",
+      );
+    expect(advice(10)).toMatchObject({ primary: "11 reps", basis: "Last time: 10 reps" });
+    expect(advice(12)).toMatchObject({
+      primary: "8 + 2.5 kg",
+      alternative: "13 reps",
+      basis: "Last time: 12 reps",
+    });
   });
 
   it("describes what a prescribed set asks for", () => {
@@ -216,5 +317,10 @@ describe("wording", () => {
     // An unweighted first time has nothing to pick.
     const reps = new ProgressionAdvisor(2.5).startingPoint("bodyweight_reps", working(8, 12));
     expect(describeAdvice(reps, "bodyweight_reps", "kg")!.primary).toBe("8 reps");
+    // Nor does a bodyweight exercise that can take weight: it starts without any.
+    for (const tracking of ["weighted_bodyweight", "assisted_bodyweight"] as const) {
+      const start = new ProgressionAdvisor(2.5).startingPoint(tracking, working(8, 12));
+      expect(describeAdvice(start, tracking, "kg")!.primary).toBe("8 reps");
+    }
   });
 });

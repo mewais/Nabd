@@ -42,7 +42,8 @@ describe("ipc client", () => {
     await client.setGlass(false);
     await client.setAutostart(true);
     await client.updateTray(tray);
-    await client.exportData();
+    await client.exportData("manual");
+    await client.exportData("before_import");
     await client.quit();
     expect(invoke.mock.calls).toEqual([
       ["platform_capabilities"],
@@ -51,20 +52,21 @@ describe("ipc client", () => {
       ["set_glass", { enabled: false }],
       ["set_autostart", { enabled: true }],
       ["update_tray", { state: tray }],
-      ["export_data", { version: APPDATA_VERSION }],
+      ["export_data", { version: APPDATA_VERSION, purpose: "manual" }],
+      ["export_data", { version: APPDATA_VERSION, purpose: "before_import" }],
       ["quit"],
     ]);
   });
 
   it("sends several singletons as key/JSON pairs in one call", async () => {
     const { client, invoke } = setup();
-    await client.saveMany({ rotationState: { s1: 1 }, dayLog: [] });
+    await client.saveMany({ rotationState: { s1: "bench" }, dayLog: [] });
     expect(invoke.mock.calls).toEqual([
       [
         "save_singletons",
         {
           entries: [
-            ["rotationState", JSON.stringify({ s1: 1 })],
+            ["rotationState", JSON.stringify({ s1: "bench" })],
             ["dayLog", "[]"],
           ],
         },

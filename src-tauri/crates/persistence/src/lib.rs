@@ -13,4 +13,4 @@ mod store;
 pub use error::{Error, Result};
 pub use logged_set::LoggedSetRow;
 pub use schema::SCHEMA_VERSION;
-pub use store::{Store, KV_KEYS};
+pub use store::{History, Store, KV_KEYS};

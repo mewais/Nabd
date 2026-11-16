@@ -75,8 +75,13 @@ export const isWarmup = (set: Pick<LoggedSet, "setType">): boolean => set.setTyp
 /** Per-muscle 0–100 coverage. */
 export type Coverage = Record<MuscleKey, number>;
 
-/** Cycled rotation pointers, keyed by cycled-slot id. */
-export const RotationStateSchema = z.record(z.string(), z.number().int().nonnegative());
+/**
+ * Where each cycled pool stands: the id of the exercise that is up next, keyed
+ * by cycled-slot id. An exercise id rather than a position in the pool, so
+ * editing the pool never skips or repeats an exercise; a slot without an entry
+ * (or whose entry has left the pool) starts from the pool's first exercise.
+ */
+export const RotationStateSchema = z.record(z.string(), z.string());
 export type RotationState = z.infer<typeof RotationStateSchema>;
 
 /** An unplanned exercise the user added to a single day. */

@@ -50,7 +50,11 @@ export interface PlannerVM {
 
 export interface PlannerInput {
   program: Program;
-  /** The day picked on the board; the first day when null or gone. */
+  /**
+   * The day open in the editor, which the app chooses explicitly (today's day
+   * when the planner opens, a day just added, the neighbour of one deleted).
+   * The first day stands in while it names none.
+   */
   editDayId: string | null;
   lookup: ExerciseLookup;
   /** What one pass through the program trains. */

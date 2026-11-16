@@ -29,7 +29,7 @@ export function SettingsContainer(): JSX.Element | null {
     (): SettingsActions => ({
       change: store.updateSettings,
       exportData: () => void store.exportData(),
-      importData: () => pickJsonFile((text) => void store.importData(text)),
+      importData: () => pickJsonFile(store.importData),
       sendTestNotification: store.sendTestNotification,
       quit: store.quit,
       close: () => store.setSettingsOpen(false),

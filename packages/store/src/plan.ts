@@ -1,18 +1,38 @@
+import { parseDateKey } from "@nabd/domain";
 import { ProgramEditor } from "@nabd/program-editor";
-import { dayIdAfterEdit } from "@nabd/scheduling";
+import { dayIdAfterEdit, rotationAfterEdit, selectedDayAfterEdit } from "@nabd/scheduling";
 import type { PlanActions } from "./actions";
 import type { StoreContext } from "./context";
-import { selectLibrary } from "./selectors";
+import { selectLibrary, selectTodayPlan } from "./selectors";
 
-export function planActions({ get, set, newId, save }: StoreContext): PlanActions {
+export function planActions({ get, set, newId, persistTogether }: StoreContext): PlanActions {
   return {
     editProgram: (edit) => {
-      const { program, dayState } = get();
-      const edited = edit(new ProgramEditor(program, newId, selectLibrary(get()).lookup));
-      // A floating plan stays on the day it is on, however the days around it change.
-      const dayId = dayIdAfterEdit(program, edited, dayState.dayId);
-      if (dayId !== dayState.dayId) save("dayState", { ...dayState, dayId });
-      save("program", edited);
+      const s = get();
+      const { program } = s;
+      const today = parseDateKey(s.dayState.date);
+      const editor = new ProgramEditor(program, newId, selectLibrary(s).lookup, {
+        weekday: today.getDay(),
+        dayId: selectTodayPlan(s).dayId,
+      });
+      const edited = edit(editor);
+      if (edited === program) return;
+      // Today stays on the day it is on, and each pool on the exercise it was about to give.
+      const dayId = dayIdAfterEdit(program, edited, s.dayState.dayId, today);
+      const dayState = dayId === s.dayState.dayId ? s.dayState : { ...s.dayState, dayId };
+      const rotationState = rotationAfterEdit(program, edited, s.rotationState);
+      // One change of state, so nothing ever sees the new plan with the old day.
+      set({
+        program: edited,
+        dayState,
+        rotationState,
+        planEditDay: selectedDayAfterEdit(program, edited, s.planEditDay),
+      });
+      persistTogether("your plan", {
+        program: edited,
+        ...(dayState === s.dayState ? {} : { dayState }),
+        ...(rotationState === s.rotationState ? {} : { rotationState }),
+      });
     },
 
     selectPlanDay: (dayId) => set({ planEditDay: dayId }),

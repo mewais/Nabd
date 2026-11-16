@@ -1,7 +1,7 @@
 // Pure builders: domain objects in, exactly what the Today screen renders out.
 
 import type { Coverage, WeightUnit } from "@nabd/domain";
-import { MUSCLE_NAMES, displayWeight, plural } from "@nabd/domain";
+import { MUSCLE_NAMES, inUnit, isWarmup, plural } from "@nabd/domain";
 import type { MuscleVolume } from "@nabd/coverage";
 import type { TodayPlan } from "@nabd/scheduling";
 import type { Coach } from "@nabd/session";
@@ -56,12 +56,13 @@ function emptySlotsNote(plan: TodayPlan): string | null {
   return `${count} ${muscles.length === 1 ? "has" : "have"} no exercises yet: ${muscles.join(", ")}`;
 }
 
-/** Total load moved today (reps × weight), in the display unit. */
+/** Total load moved today (reps × weight, warm-ups left out), in the display unit. */
 function volumeToday(plan: TodayPlan, unit: WeightUnit): number {
   const kg = plan.items
     .flatMap((item) => item.logged)
+    .filter((set) => !isWarmup(set))
     .reduce((sum, set) => sum + set.value * (set.weight ?? 0), 0);
-  return Math.round(displayWeight(kg, unit));
+  return Math.round(inUnit(kg, unit));
 }
 
 function buildStats(plan: TodayPlan, stats: TrainingStats, unit: WeightUnit): StatTileVM[] {
@@ -84,7 +85,7 @@ export function buildTodayVM(input: TodayInput): TodayVM {
     dayName: plan.dayName,
     queue: buildQueue(plan),
     emptySlotsNote: emptySlotsNote(plan),
-    coverage: buildCoverage(coverage, input.mapView, input.mapStyle),
+    coverage: buildCoverage(coverage, input.planned, input.mapView, input.mapStyle),
     insight: buildInsight(coverage, input.planned),
     stats: buildStats(plan, stats, unit),
   };

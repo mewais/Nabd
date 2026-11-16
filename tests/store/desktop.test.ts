@@ -6,7 +6,7 @@ describe("the desktop", () => {
     app.get().sendTestNotification();
     app.get().quit();
     expect(app.client.sendTestNotification).toHaveBeenCalledTimes(1);
-    expect(app.client.quit).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(app.client.quit).toHaveBeenCalledTimes(1));
   });
 
   it("a notification that cannot be sent becomes the app notice", async () => {

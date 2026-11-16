@@ -22,7 +22,7 @@ fn migration_keeps_old_history_rows_readable_with_defaults() {
     let db = TempDb::v1();
     let c = db.store().unwrap();
 
-    let rows = c.all_history().unwrap();
+    let rows = c.all_history().unwrap().sets;
     assert_eq!(rows.len(), 1);
     let row = &rows[0];
     assert_eq!(row.id, "old-1");
@@ -109,7 +109,7 @@ fn migrated_db_accepts_new_style_rows_and_survives_a_second_init() {
 
     assert_eq!(c.schema_version().unwrap(), 2);
     assert_eq!(history_ids(&c), ["old-1", "new-1"]);
-    assert_eq!(c.all_history().unwrap()[1], new_row);
+    assert_eq!(c.all_history().unwrap().sets[1], new_row);
     // A v2 dayState must not be deleted by re-running init.
     assert_eq!(
         c.get_kv("dayState").unwrap().as_deref(),

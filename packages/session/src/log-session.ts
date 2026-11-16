@@ -1,5 +1,14 @@
 import type { LoggedSet, Trigger } from "@nabd/domain";
-import { SECONDS_STEP, isTimeBased, isWeighted, loggedSet, roundKg } from "@nabd/domain";
+import {
+  MAX_AMOUNT,
+  MAX_LOAD_KG,
+  SECONDS_STEP,
+  clamp,
+  isWeighted,
+  loggedSet,
+  measureOf,
+  roundKg,
+} from "@nabd/domain";
 import type { PlanItem } from "@nabd/scheduling";
 import type { Performance } from "@nabd/progression";
 
@@ -50,22 +59,31 @@ export class LogSession {
     return this.with({ itemId: item.id, reps: start.reps, weight: start.weight ?? 0 });
   }
 
-  withReps(reps: number): LogSession {
-    return Number.isFinite(reps) ? this.with({ reps: Math.max(1, Math.floor(reps)) }) : this;
+  /**
+   * Reps (or seconds) of `item` as typed: whole, at least 1 and no more than a
+   * set can record. Anything else is a slip of the keyboard and leaves the
+   * draft as it was.
+   */
+  withReps(item: PlanItem, reps: number): LogSession {
+    const whole = Math.floor(reps);
+    const most = MAX_AMOUNT[measureOf(item.exercise.tracking)];
+    return whole >= 1 && whole <= most ? this.with({ reps: whole }) : this;
   }
 
+  /** A load as typed, from nothing up to the most a set can record; anything else is ignored. */
   withWeight(kg: number): LogSession {
-    return Number.isFinite(kg) ? this.with({ weight: Math.max(0, roundKg(kg)) }) : this;
+    return kg >= 0 && kg <= MAX_LOAD_KG ? this.with({ weight: roundKg(kg) }) : this;
   }
 
   /** Nudge reps by `direction` (±1); time-based exercises move in steps of seconds. */
   stepReps(item: PlanItem, direction: number): LogSession {
-    const step = isTimeBased(item.exercise.tracking) ? SECONDS_STEP : 1;
-    return this.withReps(this.reps + direction * step);
+    const measure = measureOf(item.exercise.tracking);
+    const step = measure === "time" ? SECONDS_STEP : 1;
+    return this.withReps(item, clamp(this.reps + direction * step, 1, MAX_AMOUNT[measure]));
   }
 
   stepWeight(direction: number, stepKg: number): LogSession {
-    return this.withWeight(this.weight + direction * stepKg);
+    return this.withWeight(clamp(this.weight + direction * stepKg, 0, MAX_LOAD_KG));
   }
 
   /** Start resting for `seconds` from `now`. */

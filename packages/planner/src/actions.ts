@@ -1,13 +1,15 @@
 // What the planner asks of the app, and the same asks bound to the thing a
 // component edits, so no view handles a ProgramEditor or passes ids around.
 
-import type { Intensity, MuscleKey, ProgramType, RepMode, Schedule } from "@nabd/domain";
-import type { EditRef, ProgramEdit } from "@nabd/program-editor";
+import type { Intensity, MuscleKey, ProgramType, Schedule } from "@nabd/domain";
+import type { EditRef, ProgramEdit, RepStyle } from "@nabd/program-editor";
 
 /** What the Plan screen asks of the app. Every program change goes through `edit`. */
 export interface PlannerActions {
   edit: (edit: ProgramEdit) => void;
   selectDay: (dayId: string) => void;
+  /** Delete a day, once the user has confirmed. */
+  removeDay: (dayId: string) => void;
   /** Open the library to add an exercise to a fixed day. */
   addExercise: (dayId: string) => void;
   /** Open the library to add an exercise to the pool of a cycled slot. */
@@ -51,13 +53,14 @@ export function dayActions(actions: PlannerActions, dayId: string): DayActions {
     rename: (name) => edit((e) => e.renameDay(dayId, name)),
     setWeekday: (weekday) => edit((e) => e.setWeekday(dayId, weekday)),
     move: (direction) => edit((e) => e.moveDay(dayId, direction)),
-    remove: () => edit((e) => e.removeDay(dayId)),
+    remove: () => actions.removeDay(dayId),
     addSlot: (muscle) => edit((e) => e.addSlot(dayId, muscle)),
     addExercise: () => actions.addExercise(dayId),
   };
 }
 
 export interface ExerciseActions {
+  /** Earlier (-1) or later (+1) in the day; a superset stays together (see ProgramEditor.moveExercise). */
   move: (direction: number) => void;
   remove: () => void;
   /** Link with the exercise below, or dissolve the superset it is in. */
@@ -101,7 +104,8 @@ export function slotActions(
 
 /** Edits to one prescription: an exercise row's or a cycled slot's set table. */
 export interface PrescriptionActions {
-  setRepMode: (mode: RepMode) => void;
+  /** Write reps as a range or as a fixed number. */
+  setRepStyle: (style: RepStyle) => void;
   setIntensity: (mode: Intensity) => void;
   stepRest: (direction: number) => void;
   addSet: () => void;
@@ -121,7 +125,7 @@ export function prescriptionActions(
 ): PrescriptionActions {
   const { edit } = actions;
   return {
-    setRepMode: (mode) => edit((e) => e.setRepMode(dayId, ref, mode)),
+    setRepStyle: (style) => edit((e) => e.setRepStyle(dayId, ref, style)),
     setIntensity: (mode) => edit((e) => e.setIntensity(dayId, ref, mode)),
     stepRest: (direction) => edit((e) => e.stepRest(dayId, ref, direction)),
     addSet: () => edit((e) => e.addSet(dayId, ref)),

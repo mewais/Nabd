@@ -172,10 +172,12 @@ first_launch() {
   ok "without a tray host, closing the window quits the app"
 }
 
+# Yesterday was skipped outright, with nudges paused: a floating plan moves on
+# from such a day and puts it on record (a day it merely sat idle is not recorded).
 restart_keeps_data() {
   sql "INSERT OR REPLACE INTO kv (key, value) VALUES
          ('program', '$PLAN'),
-         ('dayState', '{\"date\":\"$YESTERDAY\",\"dayId\":null,\"skipped\":[],\"extras\":[],\"paused\":true}')"
+         ('dayState', '{\"date\":\"$YESTERDAY\",\"dayId\":null,\"skipped\":[\"row\"],\"extras\":[],\"paused\":true}')"
   launch
   wait_for 30 day_is "$TODAY" || fail "yesterday's day was not rolled over at launch"
   expect "stored plan after a restart" "$(sql "SELECT value FROM kv WHERE key = 'program'")" "$PLAN"

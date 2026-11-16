@@ -10,7 +10,12 @@ interface ToggleRowProps {
 export function ToggleRow({ row, onChange }: ToggleRowProps): JSX.Element {
   return (
     <FormRow title={row.title} hint={row.hint}>
-      <Toggle on={row.on} onChange={() => onChange(row.flip)} ariaLabel={row.title} />
+      <Toggle
+        on={row.on}
+        onChange={() => onChange(row.flip)}
+        ariaLabel={row.title}
+        disabled={row.disabled}
+      />
     </FormRow>
   );
 }

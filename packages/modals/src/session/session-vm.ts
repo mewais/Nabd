@@ -31,6 +31,8 @@ export interface LoggedSetVM {
   text: string;
   /** Accessible name of its delete button. */
   deleteLabel: string;
+  /** The backend has not accepted it yet; it is being retried. */
+  unsaved: boolean;
 }
 
 /** The set being logged. */
@@ -84,12 +86,13 @@ function weightLabel(item: PlanItem, unit: WeightUnit): string {
   return `Weight (${unit})`;
 }
 
-function loggedSets(item: PlanItem, unit: WeightUnit): LoggedSetVM[] {
+function loggedSets(item: PlanItem, { unit, unsaved }: SessionInput): LoggedSetVM[] {
   return item.logged.map((set, index) => ({
     id: set.id,
     label: `Set ${index + 1}`,
     text: formatPerformance({ reps: set.value, weight: set.weight }, item.exercise.tracking, unit),
     deleteLabel: `Delete set ${index + 1}`,
+    unsaved: unsaved.includes(set.id),
   }));
 }
 
@@ -109,7 +112,7 @@ function setForm(item: PlanItem, input: SessionInput): SetFormVM {
     weight: isWeighted(tracking) ? displayWeight(session.weight, unit) : null,
     weightLabel: weightLabel(item, unit),
     restLabel: rest > 0 ? `Rest ${formatDuration(rest)}` : null,
-    logged: loggedSets(item, unit),
+    logged: loggedSets(item, input),
   };
 }
 
@@ -119,6 +122,8 @@ export interface SessionInput {
   coach: Coach;
   unit: WeightUnit;
   now: Date;
+  /** Ids of the logged sets that are not saved yet. */
+  unsaved: readonly string[];
 }
 
 /** Null when the session's exercise is no longer in today's plan. */

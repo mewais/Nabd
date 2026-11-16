@@ -48,6 +48,12 @@ export type NudgeStatus =
 export interface PendingNudge {
   reason: NudgeReason;
   since: Date;
+  /**
+   * When the user was last told about it. A nudge that goes unanswered is
+   * renewed — a new object, with this moved on — once per `interval`, so
+   * whoever shows it elsewhere (the desktop notification) can say it again.
+   */
+  remindedAt: Date;
 }
 
 type NudgeSettings = Pick<Settings, "interval" | "minGap" | "idleNudge" | "workStart" | "workEnd">;
@@ -63,7 +69,9 @@ const plusMinutes = (d: Date, minutes: number): Date =>
  *  - the timer nudges `interval` minutes after the last set — or, before the first
  *    one, after the workday started or there first was work to do, whichever is later;
  *  - an idle moment nudges earlier, but never sooner than `minGap` minutes after it;
- *  - a snooze silences both until it expires.
+ *  - a snooze silences both until it expires;
+ *  - a nudge that fired stays pending until it is answered, and is repeated once
+ *    per `interval` while it waits.
  */
 export class NudgePolicy {
   constructor(private readonly settings: NudgeSettings) {}
@@ -91,11 +99,16 @@ export class NudgePolicy {
   /**
    * The pending nudge after the policy said `status` at `now`: a due set starts
    * one (the first reason sticks), counting down keeps it, and anything that
-   * forbids nudging — off hours, pause, nothing left — withdraws it.
+   * forbids nudging — off hours, pause, nothing left — withdraws it. One that
+   * has waited a whole `interval` since the user was last told is renewed.
    */
-  static latch(pending: PendingNudge | null, status: NudgeStatus, now: Date): PendingNudge | null {
-    if (status.state === "due") return pending ?? { reason: status.reason, since: now };
-    return status.state === "waiting" ? pending : null;
+  latch(pending: PendingNudge | null, status: NudgeStatus, now: Date): PendingNudge | null {
+    if (status.state !== "due" && status.state !== "waiting") return null;
+    if (pending === null) {
+      return status.state === "due" ? { reason: status.reason, since: now, remindedAt: now } : null;
+    }
+    const remindAt = plusMinutes(pending.remindedAt, this.settings.interval);
+    return now >= remindAt ? { ...pending, remindedAt: now } : pending;
   }
 
   /** When a snooze started at `now` expires. */

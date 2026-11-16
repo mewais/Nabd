@@ -19,6 +19,7 @@ export function PlannerContainer(): JSX.Element {
     (): PlannerActions => ({
       edit: store.editProgram,
       selectDay: store.selectPlanDay,
+      removeDay: (dayId) => store.ask({ kind: "deleteDay", dayId }),
       addExercise: (dayId) => store.openLibrary({ kind: "exercise", dayId }),
       addPoolExercise: (dayId, slotId, muscle) =>
         store.openLibrary({ kind: "pool", dayId, slotId, muscle }),

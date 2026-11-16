@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { EQUIPMENT_KEYS, EquipmentSchema } from "./equipment";
+import { isRecord } from "./json";
 import { WeightUnitSchema, kgFromDisplay } from "./weight";
+import type { WeightUnit } from "./weight";
 
 /** The two real themes (translucency is a separate modifier, not a theme). */
 const ThemeSchema = z.enum(["light", "dark"]);
@@ -32,6 +34,9 @@ export const SettingsSchema = z.object({
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 
+/** The conventional plate jump in each unit: what a fresh install steps by. */
+export const DEFAULT_INCREMENT: Record<WeightUnit, number> = { kg: 2.5, lb: 5 };
+
 export const DEFAULT_SETTINGS: Settings = {
   theme: "dark",
   glass: false,
@@ -44,9 +49,51 @@ export const DEFAULT_SETTINGS: Settings = {
   workStart: 9 * 60,
   workEnd: 18 * 60,
   weightUnit: "kg",
-  weightIncrement: 2.5,
+  weightIncrement: DEFAULT_INCREMENT.kg,
   equipment: [...EQUIPMENT_KEYS],
 };
+
+/**
+ * `settings` with weights shown and entered in `unit`. A weight increment still
+ * at its unit's conventional step moves to the new unit's (2.5 kg ↔ 5 lb); one
+ * the user chose themselves keeps its number.
+ */
+export function withWeightUnit(settings: Settings, unit: WeightUnit): Settings {
+  const conventional = settings.weightIncrement === DEFAULT_INCREMENT[settings.weightUnit];
+  return {
+    ...settings,
+    weightUnit: unit,
+    weightIncrement: conventional ? DEFAULT_INCREMENT[unit] : settings.weightIncrement,
+  };
+}
+
+/** Whether the workday has a start before its end. */
+export const hasWorkday = (settings: Pick<Settings, "workStart" | "workEnd">): boolean =>
+  settings.workStart < settings.workEnd;
+
+/**
+ * Settings read from storage field by field: every valid field is kept, and a
+ * field that is missing (saved by an older version) or invalid takes its
+ * default. `reset` names the fields that were there but could not be kept.
+ */
+export function salvageSettings(stored: unknown): { settings: Settings; reset: string[] } {
+  const fields = isRecord(stored) ? stored : {};
+  const kept: Record<string, unknown> = {};
+  const reset: string[] = [];
+  for (const [key, schema] of Object.entries(SettingsSchema.shape)) {
+    if (fields[key] === undefined) continue;
+    const parsed = schema.safeParse(fields[key]);
+    if (parsed.success) kept[key] = parsed.data;
+    else reset.push(key);
+  }
+  const settings = SettingsSchema.parse({ ...DEFAULT_SETTINGS, ...kept });
+  if (hasWorkday(settings)) return { settings, reset };
+  const { workStart, workEnd } = DEFAULT_SETTINGS;
+  return {
+    settings: { ...settings, workStart, workEnd },
+    reset: [...reset, "workStart", "workEnd"],
+  };
+}
 
 /** The smallest load change the user can make, in kg. */
 export function loadStepKg(settings: Pick<Settings, "weightIncrement" | "weightUnit">): number {

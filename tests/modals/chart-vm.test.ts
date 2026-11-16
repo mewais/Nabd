@@ -27,7 +27,7 @@ describe("buildChartVM", () => {
   it("charts the best set of each session, oldest first, between the first date and now", () => {
     const vm = buildChartVM("Bench Press", trendOf(benchHistory(), "bench"));
 
-    expect(vm.series).toEqual([76, 78, 79.2]);
+    expect(vm.series).toEqual([76, 78, 79.17]);
     expect(vm.chartLabel).toBe("Bench Press, kg e1RM per session");
     expect(vm.startLabel).toBe(dateKey(nov(2)));
     expect(vm.endLabel).toBe("Now");
@@ -56,7 +56,7 @@ describe("buildChartVM", () => {
 
   it("reports loaded trends in pounds for lb users", () => {
     const vm = buildChartVM("Bench Press", trendOf(benchHistory(), "bench", "lb"));
-    expect(values(vm)).toEqual(["174.5 lb e1RM", "174.5 lb e1RM", "+6.9 lb e1RM"]);
+    expect(values(vm)).toEqual(["174.5 lb e1RM", "174.5 lb e1RM", "+7 lb e1RM"]);
   });
 
   it("counts a single session as one, with no gain", () => {

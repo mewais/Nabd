@@ -13,7 +13,7 @@ type Input = Parameters<typeof buildSettingsVM>[0];
 function build(settings: Partial<Settings> = {}, over: Partial<Omit<Input, "settings">> = {}) {
   return buildSettingsVM({
     settings: { ...DEFAULT_SETTINGS, ...settings },
-    capabilities: { glass: true, idle: true },
+    capabilities: { tray: true, glass: true, idle: true },
     notice: null,
     ...over,
   });
@@ -90,7 +90,10 @@ describe("buildSettingsVM", () => {
   });
 
   it("offers no translucency where the window cannot be translucent", () => {
-    const { appearance } = build({ glass: true }, { capabilities: { glass: false, idle: true } });
+    const { appearance } = build(
+      { glass: true },
+      { capabilities: { tray: true, glass: false, idle: true } },
+    );
     expect(appearance.glass).toBeNull();
     expect(appearance.opacity).toBeNull();
   });
@@ -103,9 +106,28 @@ describe("buildSettingsVM", () => {
     ]);
   });
 
+  it("without a tray, Start minimized cannot be switched and says why", () => {
+    const minimized = (tray: boolean) =>
+      build({}, { capabilities: { tray, glass: true, idle: true } }).startup[1]!;
+    expect(minimized(true)).toMatchObject({
+      disabled: false,
+      hint: "Sit quietly in the tray until a set is due.",
+    });
+    expect(minimized(false)).toMatchObject({
+      disabled: true,
+      hint: "This desktop shows no tray icons, so Nabd always opens as a window.",
+    });
+    expect(build().startup[0]!.disabled).toBe(false);
+  });
+
+  it("says what a change of unit does to the weight increment", () => {
+    expect(build().training.increment.hint).toMatch(/2\.5 kg ↔ 5 lb/);
+    expect(build().training.increment.hint).toMatch(/a step of your own as it is/);
+  });
+
   it("says what an idle moment means where the system cannot report idle time", () => {
     const hint = (idle: boolean): string =>
-      stepper(build({}, { capabilities: { glass: true, idle } }), "Idle moment").hint;
+      stepper(build({}, { capabilities: { tray: true, glass: true, idle } }), "Idle moment").hint;
 
     expect(hint(true)).toBe(
       "Once the minimum gap has passed, this long without keyboard or mouse nudges early.",

@@ -27,22 +27,25 @@ impl DataCommands {
         Self { store }
     }
 
-    /// Every singleton (stored JSON value, or null) plus the `history` array.
-    fn snapshot(&self) -> IpcResult<Map<String, Value>> {
+    /// Every singleton (stored JSON value, or null) plus the `history` array
+    /// of the sets that could be read; and how many could not.
+    fn snapshot(&self) -> IpcResult<(Map<String, Value>, usize)> {
         let mut obj = Map::new();
         for key in KV_KEYS {
             obj.insert(key.to_string(), self.store.get_json(key)?);
         }
-        obj.insert(
-            "history".to_string(),
-            serde_json::to_value(self.store.all_history()?)?,
-        );
-        Ok(obj)
+        let history = self.store.all_history()?;
+        obj.insert("history".to_string(), serde_json::to_value(history.sets)?);
+        Ok((obj, history.unreadable))
     }
 
     /// The boot snapshot the frontend hydrates from, as a JSON object string.
+    /// `unreadableSets` counts the stored sets left out of `history` because
+    /// they could not be read, so the frontend can say so.
     pub fn load_all(&self) -> IpcResult<String> {
-        Ok(Value::Object(self.snapshot()?).to_string())
+        let (mut obj, unreadable) = self.snapshot()?;
+        obj.insert("unreadableSets".to_string(), json!(unreadable));
+        Ok(Value::Object(obj).to_string())
     }
 
     /// Persist one singleton JSON blob. `key` must be one of `KV_KEYS`.
@@ -74,7 +77,7 @@ impl DataCommands {
     /// The export document: the snapshot without nulls, stamped with the app
     /// name and the document `version` (which the frontend owns).
     pub fn export_data(&self, version: u32) -> IpcResult<String> {
-        let mut obj = self.snapshot()?;
+        let (mut obj, _unreadable) = self.snapshot()?;
         obj.retain(|_, value| !value.is_null());
         obj.insert("app".to_string(), json!("Nabd"));
         obj.insert("version".to_string(), json!(version));

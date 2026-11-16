@@ -107,25 +107,28 @@ export class MuscleVolume {
   }
 }
 
-/** rest when well covered, push when lagging. */
-export function recommendation(pct: number): Recommendation {
-  if (pct >= REST_AT_PCT) return "rest";
-  if (pct <= PUSH_AT_PCT) return "push";
-  return "none";
+/**
+ * What to do about `muscle`: rest when it is well covered, push when it is
+ * lagging. Only a muscle the plan actually targets can be lagging — nobody
+ * needs to be told to push a muscle they never meant to train.
+ */
+export function recommendation(
+  muscle: MuscleKey,
+  actual: Coverage,
+  planned: MuscleVolume,
+): Recommendation {
+  if (actual[muscle] >= REST_AT_PCT) return "rest";
+  return actual[muscle] <= PUSH_AT_PCT && planned.of(muscle) > 0 ? "push" : "none";
 }
 
-/**
- * The most over- and under-trained muscles. Only muscles the plan actually
- * targets can be "lagging" — nobody needs to be told to push a muscle they
- * never meant to train.
- */
+/** The most over- and under-trained muscles ({@link recommendation}). */
 export function insight(actual: Coverage, planned: MuscleVolume): VolumeInsight {
   const most = [...MUSCLES].sort((a, b) => actual[b] - actual[a]);
   const least = [...MUSCLES].sort((a, b) => actual[a] - actual[b]);
+  const advised = (advice: Recommendation) => (muscle: MuscleKey) =>
+    recommendation(muscle, actual, planned) === advice;
   return {
-    rest: most.filter((m) => recommendation(actual[m]) === "rest").slice(0, INSIGHT_MUSCLES),
-    push: least
-      .filter((m) => planned.of(m) > 0 && recommendation(actual[m]) === "push")
-      .slice(0, INSIGHT_MUSCLES),
+    rest: most.filter(advised("rest")).slice(0, INSIGHT_MUSCLES),
+    push: least.filter(advised("push")).slice(0, INSIGHT_MUSCLES),
   };
 }

@@ -38,6 +38,7 @@ export function SetForm({ form, actions }: SetFormProps): JSX.Element {
           value={form.reps}
           onStep={actions.stepReps}
           onSet={actions.setReps}
+          onEnter={actions.logSet}
         />
         {form.weight !== null && (
           <StepperCard
@@ -45,6 +46,7 @@ export function SetForm({ form, actions }: SetFormProps): JSX.Element {
             value={form.weight}
             onStep={actions.stepWeight}
             onSet={actions.setWeight}
+            onEnter={actions.logSet}
           />
         )}
       </div>

@@ -129,7 +129,10 @@ export const selectExerciseProgress = memoize(
 /** Today's completion so far, in the same shape as the finished days in the log. */
 const selectTodayRecord = memoize(
   (s) => [selectTodayPlan(s)] as const,
-  (plan): DayRecord[] => (plan.record === null ? [] : [plan.record]),
+  (plan): DayRecord[] => {
+    const record = plan.record();
+    return record === null ? [] : [record];
+  },
 );
 
 export const selectStats = memoize(

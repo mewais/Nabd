@@ -1,5 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { Dropdown, FormRow, FormSection, ModalShell, Toggle } from "@nabd/design-system";
+import {
+  ConfirmDialog,
+  Dropdown,
+  FormRow,
+  FormSection,
+  ModalShell,
+  Toggle,
+  Z,
+} from "@nabd/design-system";
 import { click, press } from "./render";
 
 describe("FormSection", () => {
@@ -130,5 +138,51 @@ describe("ModalShell", () => {
 
     press("Escape");
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ConfirmDialog", () => {
+  const setup = () => {
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
+    render(
+      <ConfirmDialog
+        title="Delete Push?"
+        confirmLabel="Delete day"
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      >
+        The day leaves your plan.
+      </ConfirmDialog>,
+    );
+    return { onConfirm, onCancel };
+  };
+
+  it("asks its question in a dialog, saying what a yes will do", () => {
+    setup();
+    const dialog = screen.getByRole("dialog", { name: "Delete Push?" });
+    expect(dialog).toHaveTextContent("The day leaves your plan.");
+  });
+
+  it("goes ahead only from its confirm button", () => {
+    const { onConfirm, onCancel } = setup();
+    click("Delete day");
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("Cancel, the close button and Escape all cancel", () => {
+    const { onConfirm, onCancel } = setup();
+    click("Cancel");
+    click("Close");
+    press("Escape");
+    expect(onCancel).toHaveBeenCalledTimes(3);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("opens over every other dialog", () => {
+    setup();
+    const backdrop = document.querySelector("[data-modal-backdrop]") as HTMLElement;
+    expect(Number(backdrop.style.zIndex)).toBeGreaterThan(Z.modalTop);
   });
 });

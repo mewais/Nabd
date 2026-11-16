@@ -20,11 +20,11 @@ describe("the in-memory backend", () => {
   it("keeps what is saved, one value or several at once", async () => {
     const { client, data } = createMemoryBackend();
     await client.save("settings", DEFAULT_SETTINGS);
-    await client.saveMany({ dayLog: [], rotationState: { slot: 1 } });
+    await client.saveMany({ dayLog: [], rotationState: { slot: "bench" } });
     expect(data).toMatchObject({
       settings: DEFAULT_SETTINGS,
       dayLog: [],
-      rotationState: { slot: 1 },
+      rotationState: { slot: "bench" },
     });
     expect((await client.loadAll()).settings).toEqual(DEFAULT_SETTINGS);
   });

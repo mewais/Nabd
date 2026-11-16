@@ -13,10 +13,11 @@ export function applyGlass({ attempt, client }: StoreContext, enabled: boolean):
   void attempt("change the translucent window", () => client.setGlass(enabled));
 }
 
-export function desktopActions({ attempt, client }: StoreContext): DesktopActions {
+export function desktopActions({ attempt, client, flushSets }: StoreContext): DesktopActions {
   return {
     sendTestNotification: () =>
       void attempt("send a notification", () => client.sendTestNotification()),
-    quit: () => void attempt("quit", () => client.quit()),
+    // Whatever is still waiting to be saved gets one last try; quitting does not wait on its luck.
+    quit: () => void flushSets().then(() => attempt("quit", () => client.quit())),
   };
 }

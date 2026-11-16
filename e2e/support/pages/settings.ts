@@ -25,7 +25,7 @@ export class Settings {
     await this.dialog.getByRole("button", { name: "Export data" }).click();
   }
 
-  /** Import a file holding `text`. */
+  /** Choose a file holding `text` to import; a valid one then has to be confirmed. */
   async importData(text: string): Promise<void> {
     const chooser = this.page.waitForEvent("filechooser");
     await this.dialog.getByRole("button", { name: "Import data" }).click();

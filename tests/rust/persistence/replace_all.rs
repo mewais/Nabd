@@ -57,7 +57,7 @@ fn replace_all_with_empty_history_clears_history() {
 
     c.replace_all(&[], Some(&[])).unwrap();
 
-    assert!(c.all_history().unwrap().is_empty());
+    assert!(c.all_history().unwrap().sets.is_empty());
 }
 
 #[test]

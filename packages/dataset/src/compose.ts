@@ -29,6 +29,18 @@ const LEG_MUSCLES: ReadonlySet<MuscleKey> = new Set<MuscleKey>([
   "hip_flexors",
 ]);
 
+/** Equipment gripped with both hands, whatever the movement. */
+const TWO_HANDED: ReadonlySet<Equipment> = new Set<Equipment>(["barbell", "ezbar", "smith"]);
+
+/**
+ * Whether the movement has this variant. A bar held in both hands cannot be
+ * pressed, curled or carried with one arm, so two-handed equipment never gets
+ * a single-arm variant; a single-leg one (the bar still in both hands) is fine.
+ */
+function isRealVariant(movement: Movement, equipment: Equipment, unilateral: boolean): boolean {
+  return !unilateral || !TWO_HANDED.has(equipment) || LEG_MUSCLES.has(movement.primary[0]);
+}
+
 function trackingOf(movement: Movement, equipment: Equipment): TrackingType {
   if (movement.tracking) return movement.tracking;
   const ownBody = equipment === "bodyweight" || equipment === "pullupbar";
@@ -45,12 +57,13 @@ function nameOf(movement: Movement, equipment: Equipment, unilateral: boolean): 
   return `${LEG_MUSCLES.has(movement.primary[0]) ? "Single-Leg" : "Single-Arm"} ${name}`;
 }
 
-/** One exercise per equipment × laterality the movement can be done with. */
+/** One exercise per equipment × laterality the movement can really be done with. */
 function variantsOf(movement: Movement): Exercise[] {
   return movement.equipment.flatMap((equipment) =>
-    movement.laterality.map((laterality): Exercise => {
+    movement.laterality.flatMap((laterality): Exercise[] => {
       const unilateral = laterality === "unilateral";
-      return {
+      if (!isRealVariant(movement, equipment, unilateral)) return [];
+      const exercise: Exercise = {
         id: `${movement.id}__${equipment}${unilateral ? "__uni" : ""}`,
         name: nameOf(movement, equipment, unilateral),
         group: MUSCLE_PRIMARY_GROUP[movement.primary[0]],
@@ -60,6 +73,7 @@ function variantsOf(movement: Movement): Exercise[] {
         tracking: trackingOf(movement, equipment),
         custom: false,
       };
+      return [exercise];
     }),
   );
 }
