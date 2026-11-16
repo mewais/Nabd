@@ -1,0 +1,39 @@
+import type { Locator, Page } from "@playwright/test";
+
+export type Screen = "Today" | "Plan" | "Progress";
+
+/** The app chrome: sidebar, top bar, and the nudge toast that floats over every screen. */
+export class Shell {
+  readonly topBar: Locator;
+  /** The clock and where nudging stands: "09:00 Next nudge at 09:50, sooner if you go idle". */
+  readonly status: Locator;
+  /** The sidebar ring; its name reads "2 of 7 sets done today". */
+  readonly ring: Locator;
+  /** The words of the nudge toast: title, reason, exercise and set. */
+  readonly toast: Locator;
+  readonly letsGo: Locator;
+  readonly snooze: Locator;
+  /** The root element, which carries the theme. */
+  readonly root: Locator;
+
+  constructor(private readonly page: Page) {
+    this.topBar = page
+      .getByRole("banner")
+      .filter({ has: page.getByRole("group", { name: "Theme" }) });
+    this.status = this.topBar.getByRole("status");
+    this.ring = page.getByRole("img", { name: /done today$/ });
+    this.toast = page.getByRole("status").filter({ hasText: "Time to move" });
+    this.letsGo = page.getByRole("button", { name: "Let's go" });
+    this.snooze = page.getByRole("button", { name: "Snooze", exact: true });
+    this.root = page.locator("[data-theme]");
+  }
+
+  async goTo(screen: Screen): Promise<void> {
+    await this.page.getByRole("navigation").getByRole("button", { name: screen }).click();
+  }
+
+  /** A top-bar button: "Pause", "Resume", "Light", "Dark", "Settings". */
+  button(name: string): Locator {
+    return this.topBar.getByRole("button", { name, exact: true });
+  }
+}

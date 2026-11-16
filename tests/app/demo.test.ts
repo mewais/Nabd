@@ -27,6 +27,18 @@ describe("the browser demo", () => {
     expect(selectStats(state).activeDays()).toBe(7);
   });
 
+  it("starts from the data an end-to-end test supplies instead of the sample plan", async () => {
+    window.__NABD_E2E_SNAPSHOT__ = { settings: { weightUnit: "lb" } };
+    try {
+      const snapshot = await createDemoClient().loadAll();
+      expect(snapshot.settings).toEqual({ weightUnit: "lb" });
+      expect(snapshot.program).toBeNull();
+      expect(snapshot.history).toEqual([]);
+    } finally {
+      delete window.__NABD_E2E_SNAPSHOT__;
+    }
+  });
+
   it("ticks once a second until told to stop", async () => {
     vi.useFakeTimers();
     const onTick = vi.fn();
