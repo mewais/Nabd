@@ -58,6 +58,34 @@ export class Session {
   async waitForText(text) {
     await this.waitFor(`//*[text()[contains(., ${literal(text)})]]`);
   }
+
+  /** The value of attribute `name` of element `element`. */
+  attribute(element, name) {
+    return request("GET", `${this.url}/element/${element}/attribute/${name}`);
+  }
+
+  /** Press the button or switch that `label` names: its text, or its aria-label. */
+  async pressNamed(label) {
+    const named = `[normalize-space()=${literal(label)} or @aria-label=${literal(label)}]`;
+    const control = await this.waitFor(`//*[self::button or @role='switch']${named}`);
+    await request("POST", `${this.url}/element/${control}/click`, {});
+  }
+
+  /** Press the switch in the group `title` names (a settings row). */
+  async toggle(title) {
+    const control = await this.waitFor(
+      `//*[@role='group'][@aria-label=${literal(title)}]//*[@role='switch']`,
+    );
+    await request("POST", `${this.url}/element/${control}/click`, {});
+  }
+
+  /**
+   * Run `script` (the body of a function) in the page; it calls its last
+   * argument with its result, which this returns.
+   */
+  run(script, ...args) {
+    return request("POST", `${this.url}/execute/async`, { script, args });
+  }
 }
 
 async function request(method, url, body) {

@@ -16,6 +16,11 @@ pub enum AppError {
     Notification(#[from] tauri_plugin_notification::Error),
     #[error("could not change the login entry: {0}")]
     Autostart(#[from] tauri_plugin_autostart::Error),
+    #[error("could not create the folder of the login entry {}: {source}", path.display())]
+    AutostartDir {
+        path: PathBuf,
+        source: std::io::Error,
+    },
     #[error("could not open the database at {}: {source}", path.display())]
     Database {
         path: PathBuf,
