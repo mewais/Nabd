@@ -8,11 +8,12 @@ import type {
   RotationState,
   Settings,
 } from "@nabd/domain";
-import { NO_SETS, dateKey, exerciseOfSet, isFloating, isWorkday, sum } from "@nabd/domain";
+import { dateKey, isFloating, isWorkday, sum } from "@nabd/domain";
 import { DayLedger } from "./day-ledger";
 import type { LedgerCalendar } from "./day-ledger";
 import { queueEntries, resolveDay } from "./queue-entries";
-import { PlanItem } from "./plan-item";
+import type { PlanItem } from "./plan-item";
+import { planItems } from "./plan-items";
 import { TodaysSets } from "./todays-sets";
 
 export interface TodayPlanInput {
@@ -73,26 +74,14 @@ export class TodayPlan {
   static build(input: TodayPlanInput): TodayPlan {
     const { program, date, dayState, rotation, history, lookup, workDays } = input;
     const today = dateKey(date);
-    const logged = history.filter((set) => set.date === today);
-    const sets = new TodaysSets(logged);
+    const sets = new TodaysSets(history.filter((set) => set.date === today));
     const day = resolveDay(program, date, dayState.dayId);
     const floating = isFloating(program);
     // What earlier days did counts on a floating plan only: weekdays have no such memory.
     const visit = floating ? dayState.carried : null;
 
     const { entries, emptySlots } = queueEntries(program, day, rotation, dayState.extras, sets);
-
-    const items = entries.flatMap(({ exId, label, ...entry }) => {
-      const firstSet = entry.logged[0];
-      const exercise = lookup(exId) ?? (firstSet ? exerciseOfSet(firstSet) : null);
-      if (!exercise) return [];
-      const skipped = dayState.skipped.includes(entry.id);
-      // What was done counts for the exercise it was done on, not for whatever the slot gives now.
-      const earlier = visit?.items[entry.id];
-      const carried = earlier?.exId === exercise.id ? earlier.sets : NO_SETS;
-      const init = { ...entry, exercise, label: label ?? exercise.group, carried, skipped };
-      return [new PlanItem(init)];
-    });
+    const items = planItems(entries, dayState, visit, lookup);
     const continuesFrom = visit?.startedOn ?? null;
     // A set logged while a floating visit continues belongs to the session it began in; any
     // other — on a weekday plan, or on a floating day begun today — to today's own.
@@ -153,24 +142,5 @@ export class TodayPlan {
   /** The first exercise that still owes a set. */
   get nextItem(): PlanItem | null {
     return this.items.find((i) => i.remaining > 0) ?? null;
-  }
-
-  /**
-   * Where to go after logging a set of `itemId`. A set beyond the exercise's
-   * prescription (an extra, or more of a finished exercise) was the user's own
-   * choice, so the form stays there. Otherwise: the superset partner that is
-   * furthest behind, else the same exercise while it owes sets, else the next
-   * exercise in the queue. Null when the day is finished.
-   */
-  focusAfter(itemId: string): PlanItem | null {
-    const current = this.item(itemId);
-    if (current && current.done > current.planned) return current;
-    if (current?.supersetId !== undefined) {
-      const partner = this.items
-        .filter((i) => i.supersetId === current.supersetId && i.id !== itemId && i.remaining > 0)
-        .sort((a, b) => a.done - b.done)[0];
-      if (partner && partner.done <= current.done) return partner;
-    }
-    return current && current.remaining > 0 ? current : this.nextItem;
   }
 }

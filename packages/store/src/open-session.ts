@@ -3,6 +3,7 @@
 
 import type { LoggedSet } from "@nabd/domain";
 import type { PlanItem } from "@nabd/scheduling";
+import { focusAfter } from "@nabd/scheduling";
 import type { LogSession } from "@nabd/session";
 import type { StoreContext } from "./context";
 import { beginDay } from "./rollover";
@@ -71,7 +72,7 @@ export function sessionAfter(
   logged: LoggedSet,
 ): LogSession {
   const rested = session.resting(new Date(logged.ts), item.prescription?.rest ?? 0);
-  const next = selectTodayPlan(get()).focusAfter(item.id);
+  const next = focusAfter(selectTodayPlan(get()), item.id);
   if (next === null) return rested;
   const moreOfTheSame = next.id === item.id && (next.nextSet?.type ?? "working") === logged.setType;
   return moreOfTheSame ? rested : rested.focus(next, selectCoach(get()).startFor(next));

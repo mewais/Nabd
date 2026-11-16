@@ -1,6 +1,6 @@
 import type { LoggedSet, Program } from "@nabd/domain";
 import { dateKey } from "@nabd/domain";
-import { TodayPlan } from "@nabd/scheduling";
+import { TodayPlan, focusAfter } from "@nabd/scheduling";
 import { logged, nov, row, workingSets, warmup, working } from "../support/builders";
 import { EX } from "../support/exercises";
 import { benchRow, floatingPushPull, flyRow, pushPull, raiseRow } from "../support/programs";
@@ -144,24 +144,24 @@ describe("where the logger goes after a set", () => {
     logged(EX.raise, nov(16, hour), 12, 5, { planItemId: raiseRow.id });
 
   it("stays on the exercise while it owes sets", () => {
-    expect(build([benchSet(10)]).focusAfter(benchRow.id)?.id).toBe(benchRow.id);
+    expect(focusAfter(build([benchSet(10)]), benchRow.id)?.id).toBe(benchRow.id);
   });
 
   it("moves to the next exercise once it is finished", () => {
     const plan = build([10, 11, 12, 13].map((h) => benchSet(h)));
-    expect(plan.focusAfter(benchRow.id)?.id).toBe(flyRow.id);
+    expect(focusAfter(plan, benchRow.id)?.id).toBe(flyRow.id);
   });
 
   it("alternates between superset partners", () => {
-    expect(build([flySet(10)]).focusAfter(flyRow.id)?.id).toBe(raiseRow.id);
-    expect(build([flySet(10), raiseSet(11)]).focusAfter(raiseRow.id)?.id).toBe(flyRow.id);
+    expect(focusAfter(build([flySet(10)]), flyRow.id)?.id).toBe(raiseRow.id);
+    expect(focusAfter(build([flySet(10), raiseSet(11)]), raiseRow.id)?.id).toBe(flyRow.id);
   });
 
   it("stays on a finished exercise the user chose to do more of, superset or not", () => {
     const more = build([9, 10, 11, 12, 13].map((h) => benchSet(h)));
-    expect(more.focusAfter(benchRow.id)?.id).toBe(benchRow.id);
+    expect(focusAfter(more, benchRow.id)?.id).toBe(benchRow.id);
     const moreFly = build([9, 10, 11, 12].map(flySet));
-    expect(moreFly.focusAfter(flyRow.id)?.id).toBe(flyRow.id);
+    expect(focusAfter(moreFly, flyRow.id)?.id).toBe(flyRow.id);
   });
 
   it("stays on an extra, and returns nothing when the day is finished", () => {
@@ -169,13 +169,13 @@ describe("where the logger goes after a set", () => {
       [logged(EX.dip, nov(16, 15), 12, null, { planItemId: "x1" })],
       dayState(MONDAY, { extras: [{ id: "x1", exId: EX.dip.id }] }),
     );
-    expect(withExtra.focusAfter("x1")?.id).toBe("x1");
+    expect(focusAfter(withExtra, "x1")?.id).toBe("x1");
     const state = dayState(MONDAY, { skipped: [flyRow.id, raiseRow.id] });
     const finished = build(
       [10, 11, 12, 13].map((h) => benchSet(h)),
       state,
     );
-    expect(finished.focusAfter(benchRow.id)).toBeNull();
+    expect(focusAfter(finished, benchRow.id)).toBeNull();
   });
 });
 

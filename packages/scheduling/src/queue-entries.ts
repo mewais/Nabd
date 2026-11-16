@@ -25,7 +25,7 @@ export function resolveDay(program: Program, date: Date, dayId: string | null): 
 const UNPLANNED = "unplanned:";
 
 /** One line of the queue before its exercise is looked up. */
-interface Entry {
+export interface Entry {
   id: string;
   exId: string;
   /** Replaces the exercise's group as the heading (a cycled slot's target muscle). */
