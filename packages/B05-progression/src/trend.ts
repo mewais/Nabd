@@ -72,16 +72,6 @@ export function exerciseTrends(
   });
 }
 
-/** A value with at most one decimal and its unit: "71.1 kg e1RM", "12 reps". */
-export function formatAmount(value: number, unit: string): string {
-  return `${Math.round(value * 10) / 10} ${unit}`;
-}
-
-/** A signed change: "+2.5 kg e1RM", "-1 reps", "0 reps". */
-export function formatGain(value: number, unit: string): string {
-  return `${value > 0 ? "+" : ""}${formatAmount(value, unit)}`;
-}
-
 /** SVG polyline points for a series drawn inside a `w`×`h` box with `pad` padding. */
 export function trendPoints(series: number[], w: number, h: number, pad: number): string {
   const min = Math.min(...series);

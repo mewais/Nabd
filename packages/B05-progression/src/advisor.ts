@@ -1,9 +1,9 @@
 import type { Prescription, SetSpec, TrackingType } from "@nabd/domain";
-import { isTimeBased, isWeighted } from "@nabd/domain";
+import { SECONDS_STEP, isTimeBased, isWeighted, roundKg, workingSets } from "@nabd/domain";
 import type { ExerciseHistory, Performance } from "./history";
 
 /** The rep (or seconds) window a set should land in. */
-export interface RepGoal {
+interface RepGoal {
   lo: number;
   hi: number;
 }
@@ -34,12 +34,23 @@ export interface Advice {
 
 const DEFAULT_REP_GOAL: RepGoal = { lo: 8, hi: 12 };
 const DEFAULT_TIME_GOAL: RepGoal = { lo: 30, hi: 30 };
-const SECONDS_STEP = 5;
 /** Sessions that must miss the range in a row before backing the load off. */
 const STALL_SESSIONS = 2;
 
+/** What the advisor is asked about: one set of one exercise in a session. */
+export interface AdviceRequest {
+  tracking: TrackingType;
+  /** Null for an exercise done outside the plan. */
+  prescription: Prescription | null;
+  /** Which set of the session, 0-based, warm-ups excluded. */
+  setIndex: number;
+  history: ExerciseHistory;
+  /** The session's local date key; only earlier sessions are compared against. */
+  date: string;
+}
+
 /** The goal a prescribed set asks for; a default window when nothing is prescribed. */
-export function repGoal(spec: SetSpec | null, tracking: TrackingType): RepGoal {
+function repGoal(spec: SetSpec | null, tracking: TrackingType): RepGoal {
   if (spec === null) return isTimeBased(tracking) ? DEFAULT_TIME_GOAL : DEFAULT_REP_GOAL;
   return { lo: spec.a, hi: spec.b ?? spec.a };
 }
@@ -55,26 +66,21 @@ export class ProgressionAdvisor {
   /** @param loadStepKg the smallest load change the user can make. */
   constructor(private readonly loadStepKg: number) {}
 
-  /**
-   * Advice for set number `setIndex` (0-based, warm-ups excluded) of a session
-   * on `date`, compared against the same set of the previous session.
-   */
-  advise(
-    tracking: TrackingType,
-    prescription: Prescription | null,
-    setIndex: number,
-    history: ExerciseHistory,
-    date: string,
-  ): Advice {
-    const workingSets = prescription?.sets.filter((s) => s.type !== "warmup") ?? [];
-    const goal = repGoal(workingSets[setIndex] ?? workingSets.at(-1) ?? null, tracking);
+  /** Advice for one set, compared against the same set of the previous session. */
+  advise({ tracking, prescription, setIndex, history, date }: AdviceRequest): Advice {
+    const planned = prescription ? workingSets(prescription) : [];
+    const goal = repGoal(planned[setIndex] ?? planned.at(-1) ?? null, tracking);
+    /** The set of a session this one is compared against: the same one, else its last. */
+    const counterpart = (session: Performance[]): Performance | undefined =>
+      session[setIndex] ?? session.at(-1);
+
     const recent = history.sessionsBefore(date, STALL_SESSIONS);
-    const basis = recent[0]?.[setIndex] ?? recent[0]?.at(-1) ?? null;
-    if (basis === null) return this.startingPoint(tracking, workingSets[setIndex] ?? null);
+    const basis = recent[0] && counterpart(recent[0]);
+    if (basis === undefined) return this.startingPoint(tracking, planned[setIndex] ?? null);
 
     const stalled =
       recent.length === STALL_SESSIONS &&
-      recent.every((session) => (session[setIndex] ?? session.at(-1)!).reps < goal.lo);
+      recent.every((session) => (counterpart(session)?.reps ?? goal.lo) < goal.lo);
     return this.progressFrom(tracking, goal, basis, stalled);
   }
 
@@ -126,5 +132,3 @@ export class ProgressionAdvisor {
     return weight > 0 ? roundKg(Math.max(0, weight - this.loadStepKg)) : null;
   }
 }
-
-const roundKg = (kg: number): number => Math.round(kg * 1000) / 1000;

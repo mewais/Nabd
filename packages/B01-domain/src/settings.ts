@@ -1,32 +1,10 @@
 import { z } from "zod";
 import { EQUIPMENT_KEYS, EquipmentSchema } from "./equipment";
+import { WeightUnitSchema, kgFromDisplay } from "./weight";
 
 /** The two real themes (translucency is a separate modifier, not a theme). */
-export const ThemeSchema = z.enum(["light", "dark"]);
+const ThemeSchema = z.enum(["light", "dark"]);
 export type Theme = z.infer<typeof ThemeSchema>;
-
-/** Weight unit. Weights are stored canonically in kg; this controls display + input. */
-export const WeightUnitSchema = z.enum(["kg", "lb"]);
-export type WeightUnit = z.infer<typeof WeightUnitSchema>;
-
-const LB_PER_KG = 2.2046226218;
-
-/** Convert a canonical kg weight to the display unit, rounded to 1 decimal. */
-export function displayWeight(kg: number, unit: WeightUnit): number {
-  const v = unit === "lb" ? kg * LB_PER_KG : kg;
-  return Math.round(v * 10) / 10;
-}
-
-/** Convert a value typed in the display unit back to canonical kg. */
-export function kgFromDisplay(value: number, unit: WeightUnit): number {
-  const kg = unit === "lb" ? value / LB_PER_KG : value;
-  return Math.round(kg * 1000) / 1000;
-}
-
-/** Format a canonical kg weight for display, e.g. "60 kg" / "132.3 lb". */
-export function formatWeight(kg: number, unit: WeightUnit): string {
-  return `${displayWeight(kg, unit)} ${unit}`;
-}
 
 export const SettingsSchema = z.object({
   theme: ThemeSchema,
@@ -70,10 +48,9 @@ export const DEFAULT_SETTINGS: Settings = {
   equipment: [...EQUIPMENT_KEYS],
 };
 
-/** The material key for a theme + glass flag. */
-export type Material = "light" | "dark" | "lightGlass" | "darkGlass";
-export function materialKey(theme: Theme, glass: boolean): Material {
-  return glass ? ((theme + "Glass") as Material) : theme;
+/** The smallest load change the user can make, in kg. */
+export function loadStepKg(settings: Pick<Settings, "weightIncrement" | "weightUnit">): number {
+  return kgFromDisplay(settings.weightIncrement, settings.weightUnit);
 }
 
 /** How long a snoozed or dismissed nudge stays quiet, in minutes. */

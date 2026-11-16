@@ -12,9 +12,11 @@
   },
   "dependencies": {
     "@nabd/domain": "workspace:*",
+    "@nabd/dataset": "workspace:*",
     "@nabd/scheduling": "workspace:*",
     "@nabd/progression": "workspace:*",
     "@nabd/session": "workspace:*",
+    "@nabd/nudge": "workspace:*",
     "@nabd/design-system": "workspace:*"
   },
   "peerDependencies": {

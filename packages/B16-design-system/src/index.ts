@@ -7,6 +7,7 @@ export type { ModalLayer } from "./tokens";
 
 export { ThemeProvider } from "./theme-provider";
 export type { ThemeProviderProps } from "./theme-provider";
+export { THEME_OPTIONS } from "./theme-options";
 
 export { Page } from "./page";
 export type { PageProps } from "./page";
@@ -33,6 +34,8 @@ export { CloseButton } from "./close-button";
 export type { CloseButtonProps } from "./close-button";
 export { RowButton } from "./row-button";
 export type { RowButtonProps } from "./row-button";
+export { NavButton } from "./nav-button";
+export type { NavButtonProps } from "./nav-button";
 
 export { Stepper } from "./stepper";
 export type { StepperProps, StepperSize } from "./stepper";

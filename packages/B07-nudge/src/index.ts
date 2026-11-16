@@ -1,9 +1,10 @@
 // @nabd/nudge — decides, from the wall clock, when the user should be told to move.
 
-import type { Settings } from "@nabd/domain";
+import type { Settings, Trigger } from "@nabd/domain";
 import { addDays, atMinuteOfDay, formatClock, SNOOZE_MINUTES } from "@nabd/domain";
 
-export type NudgeReason = "timer" | "idle";
+/** What can prompt a nudge: every trigger of a set except the user's own initiative. */
+export type NudgeReason = Exclude<Trigger, "manual">;
 
 /** Everything the policy needs to know about the moment. */
 export interface NudgeContext {

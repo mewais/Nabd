@@ -7,7 +7,7 @@ const catalog = ExerciseLibrary.catalog;
 
 describe("the built-in catalog", () => {
   it("contains only valid exercises with unique ids", () => {
-    const all = catalog.all();
+    const all = catalog.find({});
     expect(all.length).toBeGreaterThan(200);
     expect(new Set(all.map((e) => e.id)).size).toBe(all.length);
     for (const ex of all) {
@@ -64,7 +64,7 @@ describe("compose", () => {
     const [, legUni] = compose([{ ...base, primary: ["quads"], equipment: ["dumbbell"] }]);
     expect(legUni!.name).toBe("Single-Leg Dumbbell Press");
     const [hold] = compose([
-      { ...base, equipment: ["bodyweight"], laterality: ["bilateral"], timeBased: true },
+      { ...base, equipment: ["bodyweight"], laterality: ["bilateral"], tracking: "duration" },
     ]);
     expect(hold!.tracking).toBe("duration");
   });
@@ -98,7 +98,7 @@ describe("ExerciseLibrary", () => {
 
   it("finds by name, group and owned equipment, in any combination", () => {
     expect(library.find({ text: "  odd LIFT " })).toEqual([custom]);
-    expect(library.find({}).length).toBe(library.all().length);
+    expect(library.find({})).toHaveLength(catalog.find({}).length + 1);
     const back = library.find({ group: "Back" });
     expect(back).toContain(custom);
     expect(back.every((e) => e.group === "Back")).toBe(true);
@@ -106,7 +106,7 @@ describe("ExerciseLibrary", () => {
     const doable = library.find({ equipment: owned });
     expect(doable.length).toBeGreaterThan(0);
     expect(doable.every((e) => owned.has(e.equipment as "dumbbell"))).toBe(true);
-    expect(library.find({ equipment: new Set(EQUIPMENT_KEYS) }).length).toBe(library.all().length);
+    expect(library.find({ equipment: new Set(EQUIPMENT_KEYS) })).toEqual(library.find({}));
     expect(library.find({ text: "odd", equipment: owned })).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 import { dateKey, kgFromDisplay } from "@nabd/domain";
-import type { Exercise, LoggedSet, TrackingType } from "@nabd/domain";
-import { ExerciseHistory, ProgressionAdvisor, repGoal } from "@nabd/progression";
+import type { Exercise, LoggedSet, SetSpec, TrackingType } from "@nabd/domain";
+import { ExerciseHistory, ProgressionAdvisor } from "@nabd/progression";
 import { exercise, logged, nov, prescription, working } from "../support/domain-factories";
 
 const TODAY = dateKey(nov(16));
@@ -12,13 +12,13 @@ function advise(
   options: { setIndex?: number; stepKg?: number; plan?: typeof range8to12 | null } = {},
 ) {
   const { setIndex = 0, stepKg = 2.5, plan = range8to12 } = options;
-  return new ProgressionAdvisor(stepKg).advise(
-    ex.tracking,
-    plan,
+  return new ProgressionAdvisor(stepKg).advise({
+    tracking: ex.tracking,
+    prescription: plan,
     setIndex,
-    new ExerciseHistory(sets, ex.id),
-    TODAY,
-  );
+    history: new ExerciseHistory(sets, ex.id),
+    date: TODAY,
+  });
 }
 
 describe("double progression on a weighted exercise", () => {
@@ -157,12 +157,14 @@ describe("other ways of tracking", () => {
   });
 });
 
-describe("repGoal", () => {
-  it("reads a range, a fixed count, and falls back to sensible defaults", () => {
-    expect(repGoal(working(8, 12), "weight_reps")).toEqual({ lo: 8, hi: 12 });
-    expect(repGoal(working(5), "weight_reps")).toEqual({ lo: 5, hi: 5 });
-    expect(repGoal(null, "weight_reps")).toEqual({ lo: 8, hi: 12 });
-    expect(repGoal(null, "duration")).toEqual({ lo: 30, hi: 30 });
+describe("the goal a set is measured against", () => {
+  it("is the bottom of a range, a fixed count, or a sensible default when nothing is prescribed", () => {
+    const start = (spec: SetSpec | null, tracking: TrackingType): number =>
+      new ProgressionAdvisor(2.5).startingPoint(tracking, spec).primary.reps;
+    expect(start(working(8, 12), "weight_reps")).toBe(8);
+    expect(start(working(5), "weight_reps")).toBe(5);
+    expect(start(null, "weight_reps")).toBe(8);
+    expect(start(null, "duration")).toBe(30);
   });
 
   it("an unplanned exercise uses the default window", () => {

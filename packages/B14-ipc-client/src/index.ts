@@ -132,9 +132,9 @@ export function isTauri(): boolean {
 export function tauriClient(): IpcClient {
   const invoke: Invoke = (cmd, args) =>
     import("@tauri-apps/api/core").then((api) => api.invoke(cmd, args));
-  const listen: Listen = (event, handler) =>
+  const listen: Listen = <T>(event: string, handler: (payload: T) => void) =>
     import("@tauri-apps/api/event").then((api) =>
-      api.listen(event, (e) => handler(e.payload as never)),
+      api.listen<T>(event, (e) => handler(e.payload)),
     );
   return createIpcClient(invoke, listen);
 }

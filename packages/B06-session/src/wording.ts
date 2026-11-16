@@ -77,8 +77,3 @@ export function describeAdvice(
     basis: advice.basis && `Last time: ${say(advice.basis)}`,
   };
 }
-
-/** "M:SS" for a duration in seconds. */
-export function formatDuration(seconds: number): string {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-}

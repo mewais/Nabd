@@ -27,13 +27,13 @@ export class Coach {
   }
 
   private advise(item: PlanItem): Advice {
-    return this.advisor.advise(
-      item.exercise.tracking,
-      item.prescription,
-      item.workingSetsDone,
-      this.historyOf(item.exercise.id),
-      this.today,
-    );
+    return this.advisor.advise({
+      tracking: item.exercise.tracking,
+      prescription: item.prescription,
+      setIndex: item.workingSetsDone,
+      history: this.historyOf(item.exercise.id),
+      date: this.today,
+    });
   }
 
   /** The progression advice for the item's next set; none for a warm-up. */

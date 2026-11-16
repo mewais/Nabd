@@ -2,7 +2,7 @@ import type {
   Day,
   DayRecord,
   DayState,
-  Exercise,
+  ExerciseLookup,
   LoggedSet,
   MuscleKey,
   Prescription,
@@ -13,8 +13,6 @@ import { MUSCLE_NAMES, dateKey } from "@nabd/domain";
 import { floatingDay } from "./floating";
 import { PlanItem } from "./plan-item";
 import { TodaysSets } from "./todays-sets";
-
-export type ExerciseLookup = (exId: string) => Exercise | undefined;
 
 export interface TodayPlanInput {
   program: Program;
@@ -27,7 +25,7 @@ export interface TodayPlanInput {
 }
 
 /** Which program day applies on `date`: by weekday, or the current floating day. */
-export function resolveDay(program: Program, date: Date, dayId: string | null): Day | null {
+function resolveDay(program: Program, date: Date, dayId: string | null): Day | null {
   if (program.schedule === "weekday") {
     return program.days.find((d) => d.weekday === date.getDay()) ?? null;
   }
@@ -35,7 +33,7 @@ export function resolveDay(program: Program, date: Date, dayId: string | null): 
 }
 
 /** The exercise a cycled pool is currently pointing at. */
-export function rotatedExercise(
+function rotatedExercise(
   slotId: string,
   pool: readonly string[],
   rotation: RotationState,
@@ -157,6 +155,11 @@ export class TodayPlan {
 
   get setsRemaining(): number {
     return sum(this.items, (i) => i.remaining);
+  }
+
+  /** Prescribed sets already logged; sets beyond a prescription do not count. */
+  get plannedSetsDone(): number {
+    return this.setsPlanned - this.setsRemaining;
   }
 
   /** Everything prescribed has been logged (and something actually was). */

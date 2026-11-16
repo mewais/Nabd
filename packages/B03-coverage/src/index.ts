@@ -1,15 +1,27 @@
 // @nabd/coverage — per-muscle training volume, from the plan or from history.
 
-import type { Coverage, Exercise, LoggedSet, MuscleKey, Program } from "@nabd/domain";
-import { MUSCLES } from "@nabd/domain";
+import type {
+  Coverage,
+  Exercise,
+  ExerciseLookup,
+  LoggedSet,
+  MuscleKey,
+  Program,
+} from "@nabd/domain";
+import { MUSCLES, isWarmup, workingSets } from "@nabd/domain";
 
-export type ExerciseLookup = (exId: string) => Exercise | undefined;
 export type Recommendation = "rest" | "push" | "none";
+
+/** The muscles most worth resting and most worth pushing, most pressing first. */
+export interface VolumeInsight {
+  rest: MuscleKey[];
+  push: MuscleKey[];
+}
 
 /** Weekly sets that count as fully covering a muscle. */
 export const FULL_COVERAGE_SETS = 16;
 const SECONDARY_WEIGHT = 0.5;
-const COVERAGE_WINDOW_DAYS = 7;
+const COVERAGE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const REST_AT_PCT = 66;
 const PUSH_AT_PCT = 38;
 const INSIGHT_MUSCLES = 3;
@@ -56,21 +68,19 @@ export class MuscleVolume {
    */
   static ofProgram(program: Program, lookup: ExerciseLookup): MuscleVolume {
     const volume = new MuscleVolume();
-    const workingSets = (p: { sets: { type: string }[] }): number =>
-      p.sets.filter((s) => s.type !== "warmup").length;
-
     for (const day of program.days) {
       if (program.type === "fixed") {
         for (const row of day.exercises) {
           const exercise = lookup(row.exId);
-          if (exercise) volume.credit(exercise, workingSets(row));
+          if (exercise) volume.credit(exercise, workingSets(row).length);
         }
         continue;
       }
       for (const slot of day.slots) {
         const pool = slot.pool.map(lookup).filter((e): e is Exercise => e !== undefined);
-        if (pool.length === 0) volume.add(slot.muscle, workingSets(slot));
-        for (const exercise of pool) volume.credit(exercise, workingSets(slot) / pool.length);
+        const sets = workingSets(slot).length;
+        if (pool.length === 0) volume.add(slot.muscle, sets);
+        for (const exercise of pool) volume.credit(exercise, sets / pool.length);
       }
     }
     return volume;
@@ -87,9 +97,9 @@ export class MuscleVolume {
     now: Date,
   ): MuscleVolume {
     const volume = new MuscleVolume();
-    const cutoff = now.getTime() - COVERAGE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    const cutoff = now.getTime() - COVERAGE_WINDOW_MS;
     for (const set of history) {
-      if (set.setType === "warmup" || new Date(set.ts).getTime() < cutoff) continue;
+      if (isWarmup(set) || new Date(set.ts).getTime() < cutoff) continue;
       const [first, ...rest] = set.muscles;
       volume.credit(lookup(set.exId) ?? { primary: first ? [first] : [], secondary: rest }, 1);
     }
@@ -109,10 +119,7 @@ export function recommendation(pct: number): Recommendation {
  * targets can be "lagging" — nobody needs to be told to push a muscle they
  * never meant to train.
  */
-export function insight(
-  actual: Coverage,
-  planned: MuscleVolume,
-): { rest: MuscleKey[]; push: MuscleKey[] } {
+export function insight(actual: Coverage, planned: MuscleVolume): VolumeInsight {
   const most = [...MUSCLES].sort((a, b) => actual[b] - actual[a]);
   const least = [...MUSCLES].sort((a, b) => actual[a] - actual[b]);
   return {

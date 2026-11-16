@@ -23,6 +23,8 @@ export interface ButtonProps {
   /** Fill the available width. */
   block?: boolean;
   disabled?: boolean;
+  /** For a button that switches a mode on and off: whether it is on. */
+  pressed?: boolean;
   /** Tooltip. */
   title?: string;
   /** Accessible name, when the visible text is not enough. */
@@ -71,6 +73,7 @@ export function Button({
   dashed = false,
   block = false,
   disabled = false,
+  pressed,
   title,
   ariaLabel,
   style,
@@ -82,6 +85,7 @@ export function Button({
       disabled={disabled}
       title={title}
       aria-label={ariaLabel}
+      aria-pressed={pressed}
       style={{
         display: "inline-flex",
         alignItems: "center",

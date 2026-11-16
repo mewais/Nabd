@@ -1,4 +1,5 @@
 import type { LoggedSet } from "@nabd/domain";
+import { isWarmup } from "@nabd/domain";
 
 /** What was actually performed in one set: reps (or seconds) and load in kg. */
 export interface Performance {
@@ -18,7 +19,7 @@ export class ExerciseHistory {
   constructor(history: readonly LoggedSet[], exId: string) {
     const sessions = new Map<string, LoggedSet[]>();
     for (const set of history) {
-      if (set.exId !== exId || set.setType === "warmup") continue;
+      if (set.exId !== exId || isWarmup(set)) continue;
       const session = sessions.get(set.date);
       if (session) session.push(set);
       else sessions.set(set.date, [set]);

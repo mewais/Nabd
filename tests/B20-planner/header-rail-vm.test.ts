@@ -6,7 +6,7 @@ import { cycledProgram, fixedProgram, floating, vmOf } from "./fixtures";
 const floatingPlanOf = (days: number): Program => ({
   ...EMPTY_PROGRAM,
   schedule: "floating",
-  days: Array.from({ length: days }, (_unused, i) => ({
+  days: [...Array(days).keys()].map((i) => ({
     id: `d-${i}`,
     name: `Day ${i + 1}`,
     weekday: null,

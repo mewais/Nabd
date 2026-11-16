@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Canonical equipment keys (the prototype's 11). */
+/** Every kind of equipment an exercise can need. */
 export const EQUIPMENT_KEYS = [
   "bodyweight",
   "dumbbell",

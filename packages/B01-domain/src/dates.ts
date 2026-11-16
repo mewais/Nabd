@@ -33,7 +33,7 @@ export function startOfWeek(d: Date): Date {
 }
 
 /** Minutes since local midnight. */
-export function minuteOfDay(d: Date): number {
+function minuteOfDay(d: Date): number {
   return d.getHours() * 60 + d.getMinutes();
 }
 
@@ -51,6 +51,9 @@ export function formatMinuteOfDay(minute: number): string {
 export function formatClock(d: Date): string {
   return formatMinuteOfDay(minuteOfDay(d));
 }
+
+/** Weekday numbers (0 = Sunday) in the order a week is shown: Monday first. */
+export const WEEK_ORDER: readonly number[] = [1, 2, 3, 4, 5, 6, 0];
 
 /** Weekday names, indexed like `Date.getDay()` (0 = Sunday). */
 const WEEKDAY_NAMES = [

@@ -7,7 +7,6 @@ import {
   Coach,
   LogSession,
   describeAdvice,
-  formatDuration,
   formatPerformance,
   formatTarget,
 } from "@nabd/session";
@@ -193,11 +192,5 @@ describe("wording", () => {
     // An unweighted first time has nothing to pick.
     const reps = new ProgressionAdvisor(2.5).startingPoint("bodyweight_reps", working(8, 12));
     expect(describeAdvice(reps, "bodyweight_reps", "kg")!.primary).toBe("8 reps");
-  });
-
-  it("formats durations as M:SS", () => {
-    expect(formatDuration(0)).toBe("0:00");
-    expect(formatDuration(75)).toBe("1:15");
-    expect(formatDuration(600)).toBe("10:00");
   });
 });

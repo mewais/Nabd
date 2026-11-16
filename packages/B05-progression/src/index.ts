@@ -2,7 +2,8 @@
 
 export { ExerciseHistory, assistedScore, strengthScore } from "./history";
 export type { Performance } from "./history";
-export { ProgressionAdvisor, repGoal } from "./advisor";
-export type { Advice, AdviceKind, RepGoal } from "./advisor";
-export { exerciseTrends, formatAmount, formatGain, trendPoints } from "./trend";
+export { ProgressionAdvisor } from "./advisor";
+export type { Advice, AdviceKind, AdviceRequest } from "./advisor";
+export { exerciseTrends, trendPoints } from "./trend";
+export { formatAmount, formatGain } from "./trend-wording";
 export type { ExerciseTrend } from "./trend";

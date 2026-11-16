@@ -1,6 +1,6 @@
 import type {
   Day,
-  Exercise,
+  ExerciseLookup,
   Intensity,
   MuscleKey,
   Prescription,
@@ -8,12 +8,10 @@ import type {
   ProgramType,
   RepMode,
   Schedule,
-  SetSpec,
-  SetType,
 } from "@nabd/domain";
-import { GROUP_PRIMARY_MUSCLE, isTimeBased } from "@nabd/domain";
-
-export type ExerciseLookup = (exId: string) => Exercise | undefined;
+import { WEEK_ORDER, isTimeBased } from "@nabd/domain";
+import { deriveSlots } from "./derive-slots";
+import * as prescriptions from "./prescription-edits";
 
 /** Points at the prescription being edited: a fixed exercise row or a cycled slot. */
 export interface EditRef {
@@ -24,30 +22,8 @@ export interface EditRef {
 /** A change to the program, expressed against an editor (see {@link ProgramEditor}). */
 export type ProgramEdit = (editor: ProgramEditor) => Program;
 
-const SET_TYPE_CYCLE: SetType[] = ["working", "warmup", "drop"];
-/** Monday-first weekday numbers (0 = Sunday). */
-export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
-const REST_STEP_SEC = 15;
-const TIME_STEP_SEC = 5;
-const RPE = { min: 5, max: 10, step: 0.5, initial: 8 };
-const PCT = { min: 40, max: 100, step: 2.5, initial: 70 };
-
 /** Days a weekday schedule has room for: one per weekday, as a further day could never come up. */
 const WEEKDAY_SLOTS = WEEK_ORDER.length;
-
-/** The set a new prescription starts from: a 45 s hold, or 8–12 reps. */
-const defaultSet = (timeBased: boolean): SetSpec =>
-  timeBased ? { type: "working", a: 45 } : { type: "working", a: 8, b: 12 };
-
-const defaultPrescription = (timeBased: boolean): Prescription => {
-  const set = defaultSet(timeBased);
-  return {
-    repMode: timeBased ? "time" : "range",
-    intensity: "none",
-    rest: timeBased ? 60 : 120,
-    sets: [{ ...set }, { ...set }, { ...set }],
-  };
-};
 
 /** Move the element at `index` one place up (-1) or down (+1), if there is room. */
 function shift<T>(list: T[], index: number, direction: number): void {
@@ -107,7 +83,7 @@ export class ProgramEditor {
       draft.type = type;
       if (type !== "cycled") return;
       for (const day of draft.days) {
-        if (day.slots.length === 0) day.slots = this.deriveSlots(day);
+        if (day.slots.length === 0) day.slots = deriveSlots(day, this.lookup, this.newId);
       }
     });
   }
@@ -187,7 +163,7 @@ export class ProgramEditor {
       day.exercises.push({
         id: this.newId(),
         exId: exercise.id,
-        ...defaultPrescription(isTimeBased(exercise.tracking)),
+        ...prescriptions.defaultPrescription(isTimeBased(exercise.tracking)),
       });
     });
   }
@@ -242,7 +218,7 @@ export class ProgramEditor {
 
   addSlot(dayId: string, muscle: MuscleKey): Program {
     return this.editDay(dayId, (day) => {
-      day.slots.push({ id: this.newId(), muscle, pool: [], ...defaultPrescription(false) });
+      day.slots.push({ id: this.newId(), muscle, pool: [], ...prescriptions.defaultPrescription(false) });
     });
   }
 
@@ -277,101 +253,36 @@ export class ProgramEditor {
     });
   }
 
-  /** One slot per muscle group of a fixed day, pooling that group's exercises. */
-  private deriveSlots(day: Day): Day["slots"] {
-    const byGroup = new Map<string, Day["slots"][number]>();
-    for (const row of day.exercises) {
-      const exercise = this.lookup(row.exId);
-      if (!exercise) continue;
-      let slot = byGroup.get(exercise.group);
-      if (!slot) {
-        const { repMode, intensity, rest, sets } = structuredClone(row);
-        slot = {
-          id: this.newId(),
-          muscle: GROUP_PRIMARY_MUSCLE[exercise.group],
-          pool: [],
-          repMode,
-          intensity,
-          rest,
-          sets,
-        };
-        byGroup.set(exercise.group, slot);
-      }
-      if (!slot.pool.includes(row.exId)) slot.pool.push(row.exId);
-    }
-    return [...byGroup.values()];
-  }
+  // ----- Prescriptions (an exercise row or a cycled slot; see prescription-edits.ts) -----
 
-  // ----- Prescriptions (an exercise row or a cycled slot) -----
-
-  /**
-   * Switch how sets are prescribed. Seconds and reps are different quantities,
-   * so crossing between time and a rep mode starts every set from that mode's
-   * default instead of reading 45 s as 45 reps.
-   */
   setRepMode(dayId: string, ref: EditRef, mode: RepMode): Program {
-    return this.editPrescription(dayId, ref, (p) => {
-      const fresh =
-        (p.repMode === "time") !== (mode === "time") ? defaultSet(mode === "time") : null;
-      p.repMode = mode;
-      for (const set of p.sets) {
-        if (fresh) set.a = fresh.a;
-        if (fresh || mode !== "range") delete set.b;
-        if (mode === "range") set.b ??= fresh?.b ?? set.a + 2;
-      }
-    });
+    return this.editPrescription(dayId, ref, (p) => prescriptions.setRepMode(p, mode));
   }
 
   setIntensity(dayId: string, ref: EditRef, mode: Intensity): Program {
-    return this.editPrescription(dayId, ref, (p) => {
-      p.intensity = mode;
-      for (const set of p.sets) {
-        if (mode === "none") delete set.val;
-        else set.val ??= mode === "rpe" ? RPE.initial : PCT.initial;
-      }
-    });
+    return this.editPrescription(dayId, ref, (p) => prescriptions.setIntensity(p, mode));
   }
 
-  /** Change rest by `direction` (±1) steps of 15 s. */
   stepRest(dayId: string, ref: EditRef, direction: number): Program {
-    return this.editPrescription(dayId, ref, (p) => {
-      p.rest = Math.max(0, p.rest + direction * REST_STEP_SEC);
-    });
+    return this.editPrescription(dayId, ref, (p) => prescriptions.stepRest(p, direction));
   }
 
-  /** Append a working set copied from the last set. */
   addSet(dayId: string, ref: EditRef): Program {
-    return this.editPrescription(dayId, ref, (p) => {
-      const template: SetSpec = p.sets.at(-1) ?? defaultPrescription(p.repMode === "time").sets[0]!;
-      p.sets.push({ ...template, type: "working" });
-    });
+    return this.editPrescription(dayId, ref, prescriptions.addSet);
   }
 
-  /** Prepend a warm-up set modelled on the first set. */
   addWarmup(dayId: string, ref: EditRef): Program {
-    return this.editPrescription(dayId, ref, (p) => {
-      const template: SetSpec = p.sets[0] ?? defaultPrescription(p.repMode === "time").sets[0]!;
-      p.sets.unshift({ ...template, type: "warmup" });
-    });
+    return this.editPrescription(dayId, ref, prescriptions.addWarmup);
   }
 
-  /** Remove a set (a prescription always keeps at least one). */
   removeSet(dayId: string, ref: EditRef, index: number): Program {
-    return this.editPrescription(dayId, ref, (p) => {
-      if (p.sets.length > 1) p.sets.splice(index, 1);
-    });
+    return this.editPrescription(dayId, ref, (p) => prescriptions.removeSet(p, index));
   }
 
-  /** working → warmup → drop → working. */
   cycleSetType(dayId: string, ref: EditRef, index: number): Program {
-    return this.editPrescription(dayId, ref, (p) => {
-      const set = p.sets[index];
-      if (!set) return;
-      set.type = SET_TYPE_CYCLE[(SET_TYPE_CYCLE.indexOf(set.type) + 1) % SET_TYPE_CYCLE.length]!;
-    });
+    return this.editPrescription(dayId, ref, (p) => prescriptions.cycleSetType(p, index));
   }
 
-  /** Step a set's reps/seconds (`a`) or the top of its range (`b`), keeping a ≤ b. */
   stepRep(
     dayId: string,
     ref: EditRef,
@@ -379,27 +290,13 @@ export class ProgramEditor {
     which: "a" | "b",
     direction: number,
   ): Program {
-    return this.editPrescription(dayId, ref, (p) => {
-      const set = p.sets[index];
-      if (!set) return;
-      const step = p.repMode === "time" ? TIME_STEP_SEC : 1;
-      if (which === "a") {
-        set.a = Math.max(step, set.a + direction * step);
-        if (set.b !== undefined) set.b = Math.max(set.b, set.a);
-      } else if (set.b !== undefined) {
-        set.b = Math.max(set.a, set.b + direction * step);
-      }
-    });
+    return this.editPrescription(dayId, ref, (p) =>
+      prescriptions.stepRep(p, index, which, direction),
+    );
   }
 
-  /** Step a set's intensity (RPE or %1RM) within its bounds. */
   stepVal(dayId: string, ref: EditRef, index: number, direction: number): Program {
-    return this.editPrescription(dayId, ref, (p) => {
-      const set = p.sets[index];
-      if (!set || set.val === undefined || p.intensity === "none") return;
-      const scale = p.intensity === "rpe" ? RPE : PCT;
-      set.val = Math.min(scale.max, Math.max(scale.min, set.val + direction * scale.step));
-    });
+    return this.editPrescription(dayId, ref, (p) => prescriptions.stepVal(p, index, direction));
   }
 
   setNotes(dayId: string, ref: EditRef, notes: string): Program {

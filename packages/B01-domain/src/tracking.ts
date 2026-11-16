@@ -28,7 +28,7 @@ export const TRACK_NAMES: Record<TrackingType, string> = {
 };
 
 /** Tracking types that record a weight value in the logger. */
-export const WEIGHTED_TRACKS: ReadonlySet<TrackingType> = new Set<TrackingType>([
+const WEIGHTED_TRACKS: ReadonlySet<TrackingType> = new Set<TrackingType>([
   "weight_reps",
   "weighted_bodyweight",
   "assisted_bodyweight",
@@ -36,7 +36,7 @@ export const WEIGHTED_TRACKS: ReadonlySet<TrackingType> = new Set<TrackingType>(
 ]);
 
 /** Tracking types whose primary unit is time (seconds), not reps. */
-export const TIME_TRACKS: ReadonlySet<TrackingType> = new Set<TrackingType>([
+const TIME_TRACKS: ReadonlySet<TrackingType> = new Set<TrackingType>([
   "duration",
   "weight_duration",
   "distance_duration",
@@ -44,3 +44,6 @@ export const TIME_TRACKS: ReadonlySet<TrackingType> = new Set<TrackingType>([
 
 export const isWeighted = (t: TrackingType): boolean => WEIGHTED_TRACKS.has(t);
 export const isTimeBased = (t: TrackingType): boolean => TIME_TRACKS.has(t);
+
+/** Time-based amounts are entered and progressed in steps of this many seconds. */
+export const SECONDS_STEP = 5;

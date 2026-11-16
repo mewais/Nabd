@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@nabd/domain": "workspace:*",
+    "@nabd/nudge": "workspace:*",
     "@nabd/design-system": "workspace:*"
   },
   "peerDependencies": {

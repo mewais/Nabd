@@ -5,16 +5,25 @@ export interface RowButtonProps {
   onClick: () => void;
   /** Accessible name, when the row's content is not enough. */
   ariaLabel?: string;
+  /** The row that is selected in its list. */
+  current?: boolean;
   /** Layout of the row and of its content (grid, padding, dividers). */
   style?: CSSProperties;
 }
 
 /** A whole list or table row that is one button: it looks like its content, not like a button. */
-export function RowButton({ children, onClick, ariaLabel, style }: RowButtonProps): JSX.Element {
+export function RowButton({
+  children,
+  onClick,
+  ariaLabel,
+  current,
+  style,
+}: RowButtonProps): JSX.Element {
   return (
     <button
       type="button"
       aria-label={ariaLabel}
+      aria-current={current}
       onClick={onClick}
       style={{
         width: "100%",

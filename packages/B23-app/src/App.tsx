@@ -1,10 +1,12 @@
+import { useMemo } from "react";
+import type { ReactNode } from "react";
 import type { StoreApi } from "zustand";
-import { formatClock } from "@nabd/domain";
 import type { IpcClient } from "@nabd/ipc-client";
-import { describeNudge } from "@nabd/nudge";
-import { AppLayout, NoticeBanner, Sidebar, TopBar, formatDate, greeting } from "@nabd/shell";
+import { AppShell, buildShellVM } from "@nabd/shell";
+import type { ShellActions } from "@nabd/shell";
 import type { NabdStore } from "@nabd/store";
 import { selectNudgeStatus, selectTodayPlan } from "@nabd/store";
+import { version } from "../../../package.json";
 import { LibraryContainer } from "./containers/LibraryContainer";
 import { PlannerContainer } from "./containers/PlannerContainer";
 import { ProgressContainer } from "./containers/ProgressContainer";
@@ -20,63 +22,44 @@ const SCREENS = {
   progress: ProgressContainer,
 };
 
-function Shell({ store, client }: AppProps): JSX.Element {
-  useAppLoop(store, client);
-  const capabilities = useNabd((s) => s.capabilities);
-  const appNotice = useNabd((s) => s.appNotice);
-  const actions = useActions();
+function Shell({ children }: { children: ReactNode }): JSX.Element {
+  const store = useActions();
+  const now = useNabd((s) => s.now);
   const screen = useNabd((s) => s.screen);
   const settings = useNabd((s) => s.settings);
-  const now = useNabd((s) => s.now);
+  const glassSupported = useNabd((s) => s.capabilities.glass);
   const paused = useNabd((s) => s.paused);
-  const plan = useNabd(selectTodayPlan);
   const nudge = useNabd(selectNudgeStatus);
+  const sets = useNabd(selectTodayPlan);
+  const notice = useNabd((s) => s.appNotice);
 
-  const setsDone = plan.setsPlanned - plan.setsRemaining;
-  // A stored "glass on" (say, data imported from another machine) must not
-  // leave the panels see-through where the window itself cannot be.
-  const glass = settings.glass && capabilities.glass;
-  const Screen = SCREENS[screen];
+  const vm = useMemo(
+    () =>
+      buildShellVM({ now, screen, settings, glassSupported, paused, nudge, sets, notice, version }),
+    [now, screen, settings, glassSupported, paused, nudge, sets, notice],
+  );
+  const actions = useMemo(
+    (): ShellActions => ({
+      navigate: store.setScreen,
+      togglePause: store.togglePause,
+      setTheme: (theme) => store.updateSettings({ theme }),
+      setGlass: (glass) => store.updateSettings({ glass }),
+      openSettings: () => store.setSettingsOpen(true),
+      dismissNotice: store.dismissNotice,
+    }),
+    [store],
+  );
 
   return (
-    <AppLayout
-      theme={settings.theme}
-      glass={glass}
-      opacity={settings.opacity}
-      sidebar={
-        <Sidebar
-          screen={screen}
-          onNavigate={actions.setScreen}
-          setsDone={setsDone}
-          setsTotal={plan.setsPlanned}
-          pct={plan.setsPlanned > 0 ? Math.round((setsDone / plan.setsPlanned) * 100) : 0}
-        />
-      }
-      topbar={
-        <TopBar
-          greeting={greeting(now.getHours())}
-          dateStr={formatDate(now)}
-          clockStr={formatClock(now)}
-          nudgeLine={describeNudge(nudge)}
-          due={nudge.state === "due"}
-          paused={paused}
-          onTogglePause={actions.togglePause}
-          theme={settings.theme}
-          onTheme={(theme) => actions.updateSettings({ theme })}
-          glassAvailable={capabilities.glass}
-          glass={glass}
-          onToggleGlass={() => actions.updateSettings({ glass: !settings.glass })}
-          onOpenSettings={() => actions.setSettingsOpen(true)}
-        />
-      }
-    >
-      {appNotice && <NoticeBanner notice={appNotice} onDismiss={actions.dismissNotice} />}
-      <Screen />
-      <SessionContainer />
-      <SettingsContainer />
-      <LibraryContainer />
-    </AppLayout>
+    <AppShell vm={vm} actions={actions}>
+      {children}
+    </AppShell>
   );
+}
+
+function CurrentScreen(): JSX.Element {
+  const Screen = SCREENS[useNabd((s) => s.screen)];
+  return <Screen />;
 }
 
 export interface AppProps {
@@ -84,10 +67,22 @@ export interface AppProps {
   client: IpcClient;
 }
 
+function Main({ store, client }: AppProps): JSX.Element {
+  useAppLoop(store, client);
+  return (
+    <Shell>
+      <CurrentScreen />
+      <SessionContainer />
+      <SettingsContainer />
+      <LibraryContainer />
+    </Shell>
+  );
+}
+
 export function App({ store, client }: AppProps): JSX.Element {
   return (
     <StoreContext.Provider value={store}>
-      <Shell store={store} client={client} />
+      <Main store={store} client={client} />
     </StoreContext.Provider>
   );
 }

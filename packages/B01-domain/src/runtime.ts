@@ -4,7 +4,7 @@ import { SetTypeSchema } from "./program";
 import { dateKey } from "./dates";
 
 /** What prompted a logged set. */
-export const TriggerSchema = z.enum(["idle", "timer", "manual"]);
+const TriggerSchema = z.enum(["idle", "timer", "manual"]);
 export type Trigger = z.infer<typeof TriggerSchema>;
 
 /** A persisted, completed set (one row of history). */
@@ -29,6 +29,9 @@ export const LoggedSetSchema = z.object({
 });
 export type LoggedSet = z.infer<typeof LoggedSetSchema>;
 
+/** A warm-up says nothing about volume or progress, so most counts leave it out. */
+export const isWarmup = (set: Pick<LoggedSet, "setType">): boolean => set.setType === "warmup";
+
 /** Per-muscle 0–100 coverage. */
 export type Coverage = Record<MuscleKey, number>;
 
@@ -37,7 +40,7 @@ export const RotationStateSchema = z.record(z.string(), z.number().int().nonnega
 export type RotationState = z.infer<typeof RotationStateSchema>;
 
 /** An unplanned exercise the user added to a single day. */
-export const ExtraItemSchema = z.object({ id: z.string(), exId: z.string() });
+const ExtraItemSchema = z.object({ id: z.string(), exId: z.string() });
 export type ExtraItem = z.infer<typeof ExtraItemSchema>;
 
 /**
@@ -70,7 +73,7 @@ export const freshDayState = (date: Date, dayId: string | null = null): DayState
 });
 
 /** How a finished training day went (drives completion analytics). */
-export const DayRecordSchema = z.object({
+const DayRecordSchema = z.object({
   date: z.string(),
   planned: z.number().int().nonnegative(),
   done: z.number().int().nonnegative(),

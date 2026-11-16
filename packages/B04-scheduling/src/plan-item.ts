@@ -1,4 +1,5 @@
 import type { Exercise, LoggedSet, Prescription, SetSpec } from "@nabd/domain";
+import { isWarmup } from "@nabd/domain";
 
 export type PlanItemStatus = "done" | "skipped" | "pending";
 
@@ -65,6 +66,6 @@ export class PlanItem {
 
   /** How many non-warm-up sets have been logged (the index progression compares on). */
   get workingSetsDone(): number {
-    return this.logged.filter((s) => s.setType !== "warmup").length;
+    return this.logged.filter((set) => !isWarmup(set)).length;
   }
 }

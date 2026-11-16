@@ -1,0 +1,164 @@
+// The set table of one exercise (or slot), driven through the planner.
+
+import { fireEvent, screen } from "@testing-library/react";
+import { cycledProgram, dayOf, fixedProgram } from "./fixtures";
+import { card, renderPlanner, stepper } from "./render";
+
+const BENCH_CARD = "Barbell Bench Press";
+const OHP_CARD = "Barbell Overhead Press";
+const PLANK_CARD = "Plank";
+
+const press = (scope: ReturnType<typeof card>, name: string | RegExp): void => {
+  fireEvent.click(scope.getByRole("button", { name }));
+};
+
+/** The planner on Monday's "Push" day, and that day's exercise rows after every edit. */
+function renderPush() {
+  const planner = renderPlanner(fixedProgram());
+  const [bench, ohp, plank] = [0, 1, 2].map(
+    (index) => () => dayOf(planner.program(), "d-push").exercises[index]!,
+  );
+  return { bench: bench!, ohp: ohp!, plank: plank! };
+}
+
+describe("SetTable", () => {
+  it("shows a badge per set with its type, and the prescribed reps, load, rest and note", () => {
+    renderPush();
+    const bench = card(BENCH_CARD);
+
+    expect(bench.getByTitle("Warm-up — click to change")).toHaveTextContent("W");
+    expect(bench.getAllByTitle("Working — click to change").map((b) => b.textContent)).toEqual([
+      "1",
+      "2",
+    ]);
+    expect(bench.getByTitle("Drop set — click to change")).toHaveTextContent("D");
+    expect(stepper(bench, "Set 3 reps").getByText("6")).toBeInTheDocument();
+    expect(stepper(bench, "Set 3 top of range").getByText("8")).toBeInTheDocument();
+    expect(stepper(bench, "Set 3 RPE").getByText("8.5")).toBeInTheDocument();
+    expect(stepper(bench, "Rest").getByText("2:30")).toBeInTheDocument();
+    expect(bench.getByRole("textbox", { name: "Note" })).toHaveValue("Pause on the chest");
+  });
+
+  it("marks the active rep mode and load mode", () => {
+    renderPush();
+    const ohp = card(OHP_CARD);
+
+    expect(ohp.getByRole("button", { name: "Fixed" })).toHaveAttribute("aria-pressed", "true");
+    expect(ohp.getByRole("button", { name: "Range" })).toHaveAttribute("aria-pressed", "false");
+    expect(ohp.getByRole("button", { name: "%1RM" })).toHaveAttribute("aria-pressed", "true");
+    expect(ohp.getByRole("button", { name: "None" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("offers no load stepper when load is off, and seconds for a timed hold", () => {
+    renderPush();
+    const plank = card(PLANK_CARD);
+
+    expect(stepper(plank, "Set 1 seconds").getByText("45s")).toBeInTheDocument();
+    expect(stepper(plank, "Set 2 seconds").getByText("60s")).toBeInTheDocument();
+    expect(plank.queryByRole("group", { name: /^Set 1 (RPE|%1RM|load)$/ })).toBeNull();
+    expect(plank.queryByRole("group", { name: "Set 1 top of range" })).toBeNull();
+  });
+
+  it("clicking a badge cycles that set's type", () => {
+    const { bench } = renderPush();
+
+    press(card(BENCH_CARD), "2");
+
+    expect(bench().sets.map((s) => s.type)).toEqual(["warmup", "working", "warmup", "drop"]);
+  });
+
+  it.each([
+    ["Set 2 reps", "increase", { a: 9, b: 10, val: 8 }],
+    ["Set 2 reps", "decrease", { a: 7, b: 10, val: 8 }],
+    ["Set 2 top of range", "increase", { a: 8, b: 11, val: 8 }],
+    ["Set 2 top of range", "decrease", { a: 8, b: 9, val: 8 }],
+    ["Set 2 RPE", "increase", { a: 8, b: 10, val: 8.5 }],
+    ["Set 2 RPE", "decrease", { a: 8, b: 10, val: 7.5 }],
+  ])("%s → %s edits only its own value", (group, direction, expected) => {
+    const { bench } = renderPush();
+
+    fireEvent.click(stepper(card(BENCH_CARD), group).getByRole("button", { name: direction }));
+
+    expect(bench().sets[1]).toMatchObject(expected);
+    expect(bench().sets[0]).toEqual({ type: "warmup", a: 10, b: 12, val: 6 });
+  });
+
+  it("× removes that set", () => {
+    const { bench } = renderPush();
+
+    press(card(BENCH_CARD), "Remove set 2");
+
+    expect(bench().sets.map((s) => [s.type, s.a])).toEqual([
+      ["warmup", 10],
+      ["working", 6],
+      ["drop", 12],
+    ]);
+  });
+
+  it("+ Add set appends a working set and + Warmup prepends a warm-up, on that exercise only", () => {
+    const { bench, ohp } = renderPush();
+
+    press(card(OHP_CARD), "+ Add set");
+    expect(ohp().sets).toHaveLength(4);
+    expect(ohp().sets.at(-1)).toEqual({ type: "working", a: 5, val: 75 });
+
+    press(card(OHP_CARD), "+ Warmup");
+    expect(ohp().sets).toHaveLength(5);
+    expect(ohp().sets[0]).toMatchObject({ type: "warmup", a: 5 });
+    expect(bench().sets).toHaveLength(4);
+    expect(screen.getByText("3 exercises · 11 sets")).toBeInTheDocument();
+  });
+
+  it("switching reps to Time drops the range tops", () => {
+    const { bench } = renderPush();
+
+    press(card(BENCH_CARD), "Time");
+
+    expect(bench().repMode).toBe("time");
+    expect(bench().sets.every((s) => s.b === undefined)).toBe(true);
+  });
+
+  it("switching load to %1RM gives every set a percentage, None clears it", () => {
+    const { plank, bench } = renderPush();
+
+    press(card(PLANK_CARD), "%1RM");
+    expect(plank().intensity).toBe("pct");
+    expect(plank().sets.map((s) => s.val)).toEqual([70, 70]);
+
+    press(card(BENCH_CARD), "None");
+    expect(bench().intensity).toBe("none");
+    expect(bench().sets.every((s) => s.val === undefined)).toBe(true);
+  });
+
+  it("the Rest stepper moves rest in 15 s steps", () => {
+    const { bench } = renderPush();
+    const rest = () => stepper(card(BENCH_CARD), "Rest");
+
+    fireEvent.click(rest().getByRole("button", { name: "increase" }));
+    expect(bench().rest).toBe(165);
+
+    fireEvent.click(rest().getByRole("button", { name: "decrease" }));
+    fireEvent.click(rest().getByRole("button", { name: "decrease" }));
+    expect(bench().rest).toBe(135);
+  });
+
+  it("typing a note stores it on the prescription", () => {
+    const { ohp } = renderPush();
+
+    fireEvent.change(card(OHP_CARD).getByRole("textbox", { name: "Note" }), {
+      target: { value: "Squeeze glutes" },
+    });
+
+    expect(ohp().notes).toBe("Squeeze glutes");
+  });
+
+  it("edits a cycled slot's prescription inside a slot card", () => {
+    const planner = renderPlanner(cycledProgram());
+
+    press(card("Lats"), "+ Add set");
+
+    const [chest, lats] = dayOf(planner.program(), "d-upper").slots;
+    expect(lats!.sets).toHaveLength(3);
+    expect(chest!.sets).toHaveLength(3);
+  });
+});

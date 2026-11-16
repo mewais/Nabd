@@ -2,11 +2,11 @@ import { z } from "zod";
 import { MuscleKeySchema } from "./muscles";
 
 /** How reps are prescribed for an exercise. */
-export const RepModeSchema = z.enum(["range", "fixed", "time"]);
+const RepModeSchema = z.enum(["range", "fixed", "time"]);
 export type RepMode = z.infer<typeof RepModeSchema>;
 
 /** How load is prescribed. */
-export const IntensitySchema = z.enum(["none", "rpe", "pct"]);
+const IntensitySchema = z.enum(["none", "rpe", "pct"]);
 export type Intensity = z.infer<typeof IntensitySchema>;
 
 export const SetTypeSchema = z.enum(["warmup", "working", "drop"]);
@@ -16,7 +16,7 @@ export type SetType = z.infer<typeof SetTypeSchema>;
  * One prescribed set. `a` = reps / seconds / low end of a range; `b` = high end
  * (range mode only); `val` = RPE (5–10) or %1RM (40–100) when intensity != none.
  */
-export const SetSpecSchema = z.object({
+const SetSpecSchema = z.object({
   type: SetTypeSchema,
   a: z.number(),
   b: z.number().optional(),
@@ -25,7 +25,7 @@ export const SetSpecSchema = z.object({
 export type SetSpec = z.infer<typeof SetSpecSchema>;
 
 /** What to do for one exercise: the sets, how they are measured, rest, notes. */
-export const PrescriptionSchema = z.object({
+const PrescriptionSchema = z.object({
   repMode: RepModeSchema,
   intensity: IntensitySchema,
   /** Seconds of rest between back-to-back sets. */
@@ -35,8 +35,13 @@ export const PrescriptionSchema = z.object({
 });
 export type Prescription = z.infer<typeof PrescriptionSchema>;
 
+/** The sets of a prescription that count as work: every set but the warm-ups. */
+export function workingSets(prescription: Pick<Prescription, "sets">): SetSpec[] {
+  return prescription.sets.filter((set) => set.type !== "warmup");
+}
+
 /** A planned exercise within a day (fixed mode). */
-export const ExercisePrescriptionSchema = PrescriptionSchema.extend({
+const ExercisePrescriptionSchema = PrescriptionSchema.extend({
   id: z.string(),
   exId: z.string(),
   supersetId: z.string().optional(),
@@ -60,14 +65,14 @@ export function supersetTags(
 }
 
 /** A cycled slot: targets one muscle with a rotating pool sharing one prescription. */
-export const CycledSlotSchema = PrescriptionSchema.extend({
+const CycledSlotSchema = PrescriptionSchema.extend({
   id: z.string(),
   muscle: MuscleKeySchema,
   pool: z.array(z.string()),
 });
 export type CycledSlot = z.infer<typeof CycledSlotSchema>;
 
-export const DaySchema = z.object({
+const DaySchema = z.object({
   id: z.string(),
   name: z.string(),
   /** 0=Sun..6=Sat for weekday schedules; null = floating/unassigned. */
@@ -77,10 +82,10 @@ export const DaySchema = z.object({
 });
 export type Day = z.infer<typeof DaySchema>;
 
-export const ProgramTypeSchema = z.enum(["fixed", "cycled"]);
+const ProgramTypeSchema = z.enum(["fixed", "cycled"]);
 export type ProgramType = z.infer<typeof ProgramTypeSchema>;
 
-export const ScheduleSchema = z.enum(["weekday", "floating"]);
+const ScheduleSchema = z.enum(["weekday", "floating"]);
 export type Schedule = z.infer<typeof ScheduleSchema>;
 
 export const ProgramSchema = z.object({
