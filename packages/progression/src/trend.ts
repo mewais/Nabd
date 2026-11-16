@@ -1,6 +1,7 @@
 import type { LoggedSet, TrackingType, WeightUnit } from "@nabd/domain";
 import { inUnit, isTimeBased, roundTo } from "@nabd/domain";
-import { ExerciseHistory, assistedScore, estimatedMax } from "./history";
+import { estimatedMax } from "./epley";
+import { ExerciseHistory, assistedScore } from "./history";
 import type { Performance } from "./history";
 
 /**

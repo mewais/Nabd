@@ -73,5 +73,12 @@ export async function boot(
       get().openSession(itemId);
       for (let i = 0; i < count; i++) await get().logSet();
     },
+    /** Log every set today's plan still owes. */
+    finishDay: async () => {
+      for (const item of selectTodayPlan(get()).items) {
+        get().openSession(item.id);
+        for (let i = 0; i < item.remaining; i++) await get().logSet();
+      }
+    },
   };
 }

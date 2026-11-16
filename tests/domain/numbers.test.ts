@@ -1,4 +1,4 @@
-import { clamp, roundTo } from "@nabd/domain";
+import { clamp, roundTo, sum } from "@nabd/domain";
 
 describe("roundTo", () => {
   it("rounds to the given number of decimals", () => {
@@ -18,5 +18,12 @@ describe("clamp", () => {
     expect(clamp(120, 0, 100)).toBe(100);
     expect(clamp(-5, 0, 100)).toBe(0);
     expect(clamp(47, 0, 100)).toBe(47);
+  });
+});
+
+describe("sum", () => {
+  it("totals what each element amounts to, and is zero for none", () => {
+    expect(sum([{ n: 2 }, { n: 3 }], (e) => e.n)).toBe(5);
+    expect(sum([], () => 1)).toBe(0);
   });
 });

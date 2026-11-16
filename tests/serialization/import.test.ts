@@ -115,6 +115,43 @@ describe("parseImport", () => {
     });
   });
 
+  it("reads a version 3 export: the day state and the settings take what they did not have", () => {
+    const result = parseImport(
+      JSON.stringify({
+        app: "Nabd",
+        version: 3,
+        settings: { interval: 30 },
+        dayState: { date: "2026-11-16", dayId: "a", skipped: ["r"] },
+      }),
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        version: APPDATA_VERSION,
+        settings: { interval: 30 },
+        dayState: { dayId: "a", skipped: ["r"], carried: {} },
+      },
+    });
+  });
+
+  it("keeps what an unfinished day has behind it, and refuses a count that is not one", () => {
+    const withCarried = (carried: object) =>
+      parseImport(doc({ dayState: { date: "2026-11-16", carried } }));
+    expect(withCarried({ r: 2 })).toMatchObject({
+      ok: true,
+      data: { dayState: { carried: { r: 2 } } },
+    });
+    expect(withCarried({ r: -1 }).ok).toBe(false);
+  });
+
+  it("takes the workdays an export holds, and refuses none", () => {
+    expect(parseImport(doc({ settings: { workDays: [6, 0] } }))).toMatchObject({
+      ok: true,
+      data: { settings: { workDays: [6, 0] } },
+    });
+    expect(parseImport(doc({ settings: { workDays: [] } })).ok).toBe(false);
+  });
+
   it("drops fields it does not know", () => {
     const result = parseImport(doc({ somethingElse: 1 }));
     expect(result.ok && "somethingElse" in result.data).toBe(false);

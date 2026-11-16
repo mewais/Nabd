@@ -12,7 +12,8 @@ import {
   plural,
 } from "@nabd/domain";
 import type { PlanItem } from "@nabd/scheduling";
-import type { Advice, AdviceKind, Performance } from "@nabd/progression";
+import { prescribedIntensity, repsInReserve } from "@nabd/progression";
+import type { Advice, AdviceKind, IntensityBasis, Performance } from "@nabd/progression";
 
 /**
  * "9 × 25 lb", "12 reps", "45 s", "45 s · 10 kg", "8 + 5 kg", "8 − 20 kg assist".
@@ -41,12 +42,15 @@ function formatAmountAsked(spec: SetSpec, prescription: Prescription): string {
   return `${spec.amount}–${plural(spec.upTo, "rep")}`;
 }
 
-/** How hard a prescribed set should be: "RPE 8", "70% 1RM"; null when load is not prescribed. */
+/** How hard a set should be: "RPE 8", "70% 1RM". */
+function formatIntensity({ kind, value }: Pick<IntensityBasis, "kind" | "value">): string {
+  return kind === "rpe" ? `${INTENSITY_NAMES.rpe} ${value}` : `${value}% 1RM`;
+}
+
+/** How hard a prescribed set should be; null when load is not prescribed. */
 function formatIntensityAsked(spec: SetSpec, prescription: Prescription): string | null {
-  if (spec.intensity === undefined || prescription.intensity === "none") return null;
-  return prescription.intensity === "rpe"
-    ? `${INTENSITY_NAMES.rpe} ${spec.intensity}`
-    : `${spec.intensity}% 1RM`;
+  const asked = prescribedIntensity(prescription, spec);
+  return asked && formatIntensity(asked);
 }
 
 /** What a prescribed set asks for: "Working set · 8–12 reps · RPE 8". */
@@ -84,6 +88,22 @@ const ADVICE_REASONS: Record<AdviceKind, string> = {
   deload: "Two sessions short of your range — back off one step and rebuild.",
 };
 
+/**
+ * Why, in a sentence: the intensity that set the load, or double progression's
+ * reason — with a note on the intensity that is waiting for an estimate to
+ * apply to.
+ */
+function describeReason({ kind, intensity }: Advice, unit: WeightUnit): string {
+  if (intensity === null) return ADVICE_REASONS[kind];
+  if (intensity.max === null) {
+    return `${ADVICE_REASONS[kind]} ${formatIntensity(intensity)} applies once there is history.`;
+  }
+  if (intensity.kind === "pct") {
+    return `${intensity.value}% of your estimated max (${formatWeight(intensity.max, unit)}).`;
+  }
+  return `${formatIntensity(intensity)} ≈ ${plural(repsInReserve(intensity.value), "rep")} in reserve.`;
+}
+
 export interface AdviceWording {
   /** The headline target, e.g. "9 × 25 lb". */
   primary: string;
@@ -111,7 +131,7 @@ export function describeAdvice(
       ? `${say({ ...advice.primary, weight: null })} — pick a starting weight`
       : say(advice.primary),
     alternative: advice.alternative && say(advice.alternative),
-    reason: ADVICE_REASONS[advice.kind],
+    reason: describeReason(advice, unit),
     basis: advice.basis && `Last time: ${say(advice.basis)}`,
   };
 }

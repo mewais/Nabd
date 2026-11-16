@@ -1,5 +1,6 @@
 import type { LoggedSet, SetType } from "@nabd/domain";
 import { isWarmup } from "@nabd/domain";
+import { estimatedMax } from "./epley";
 
 /** What was actually performed in one set: reps (or seconds) and load in kg. */
 export interface Performance {
@@ -70,19 +71,21 @@ export class ExerciseHistory {
       .map((d) => this.on(d));
   }
 
+  /**
+   * The estimated one-rep max, in kg, of the latest session before `date`: its
+   * best set's. Undefined when that session moved no load, so there is no
+   * estimate to go on.
+   */
+  estimateBefore(date: string): number | undefined {
+    const [latest = []] = this.sessionsBefore(date, 1);
+    const best = Math.max(0, ...latest.map(estimatedMax));
+    return best > 0 ? best : undefined;
+  }
+
   /** Each session's best set as measured by `score`, oldest first (for trend charts). */
   bestPerSession(score: (set: Performance) => number): number[] {
     return this.dates.map((d) => Math.max(...this.on(d).map(score)));
   }
-}
-
-/**
- * Estimated one-rep max in kg (Epley). A set without load scores 0: it says
- * nothing about the weight that could be lifted, and must never be read as its
- * rep count.
- */
-export function estimatedMax({ reps, weight }: Performance): number {
-  return (weight ?? 0) * (1 + reps / 30);
 }
 
 /**

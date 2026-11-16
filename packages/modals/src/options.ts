@@ -11,7 +11,9 @@ import {
   MUSCLE_NAMES,
   TRACKING_KEYS,
   TRACK_NAMES,
+  WEEK_ORDER,
   WEIGHT_UNITS,
+  weekdayShort,
 } from "@nabd/domain";
 
 export const EQUIPMENT_OPTIONS: readonly Option<Equipment>[] = optionsOf(
@@ -40,4 +42,10 @@ export const GROUP_OPTIONS: readonly Option<GroupFilter>[] = [
 export const WEIGHT_UNIT_OPTIONS: readonly SegOption<WeightUnit>[] = WEIGHT_UNITS.map((unit) => ({
   value: unit,
   label: unit,
+}));
+
+/** Monday to Sunday, "Mon" … "Sun"; the value is the weekday number as text. */
+export const WEEKDAY_OPTIONS: readonly Option[] = WEEK_ORDER.map((weekday) => ({
+  value: String(weekday),
+  label: weekdayShort(weekday),
 }));

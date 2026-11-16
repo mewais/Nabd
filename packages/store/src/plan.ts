@@ -1,6 +1,11 @@
 import { parseDateKey } from "@nabd/domain";
 import { ProgramEditor } from "@nabd/program-editor";
-import { dayIdAfterEdit, plannerDayAfterEdit, rotationAfterEdit } from "@nabd/scheduling";
+import {
+  carriedAfterEdit,
+  dayIdAfterEdit,
+  plannerDayAfterEdit,
+  rotationAfterEdit,
+} from "@nabd/scheduling";
 import type { StoreContext } from "./context";
 import { selectLibrary, selectTodayPlan } from "./selectors";
 import type { PlanSlice } from "./slices";
@@ -17,9 +22,12 @@ export function planSlice({ get, set, newId, persistTogether }: StoreContext): P
       });
       const edited = edit(editor);
       if (edited === program) return;
-      // Today stays on the day it is on, and each pool on the exercise it was about to give.
+      // Today stays on the day it is on, with what it has behind it, and each pool on the
+      // exercise it was about to give.
       const dayId = dayIdAfterEdit(program, edited, s.dayState.dayId, today);
-      const dayState = dayId === s.dayState.dayId ? s.dayState : { ...s.dayState, dayId };
+      const carried = carriedAfterEdit(edited, dayId, s.dayState.carried);
+      const same = dayId === s.dayState.dayId && carried === s.dayState.carried;
+      const dayState = same ? s.dayState : { ...s.dayState, dayId, carried };
       const rotationState = rotationAfterEdit(program, edited, s.rotationState);
       // One change of state, so nothing ever sees the new plan with the old day.
       set({

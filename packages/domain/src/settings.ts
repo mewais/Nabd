@@ -28,6 +28,8 @@ export const SettingsSchema = z.object({
   /** Workday bounds (minutes since midnight); the app never nudges outside them. */
   workStart: z.number().int().min(0).max(1439),
   workEnd: z.number().int().min(1).max(1440),
+  /** The weekdays (0 = Sunday … 6 = Saturday) the app nudges on; at least one. */
+  workDays: z.array(z.number().int().min(0).max(6)).min(1),
   /** Weight unit for display + input (weights are stored canonically in kg). */
   weightUnit: WeightUnitSchema,
   /** Smallest weight jump the user can make, in the display unit (micro-plates go down to 0.25). */
@@ -67,6 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   idleNudge: 30,
   workStart: 9 * 60,
   workEnd: 18 * 60,
+  workDays: [1, 2, 3, 4, 5],
   weightUnit: "kg",
   weightIncrement: DEFAULT_INCREMENT.kg,
   equipment: [...EQUIPMENT_KEYS],
@@ -89,6 +92,10 @@ export function withWeightUnit(settings: Settings, unit: WeightUnit): Settings {
 /** Whether the workday has a start before its end. */
 export const hasWorkday = (settings: Pick<Settings, "workStart" | "workEnd">): boolean =>
   settings.workStart < settings.workEnd;
+
+/** Whether `date` falls on a day the user works, the only days the app nudges on. */
+export const isWorkDay = (settings: Pick<Settings, "workDays">, date: Date): boolean =>
+  settings.workDays.includes(date.getDay());
 
 /**
  * Settings read from storage field by field: every valid field is kept, and a

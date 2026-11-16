@@ -9,7 +9,7 @@ const pushPull = plan([day("Push", [planned(bench.id)]), day("Pull", [planned(cu
 const TUESDAY = dayAfter(MONDAY);
 const WEDNESDAY = dayAfter(TUESDAY);
 
-test("a floating plan moves on only after a completed day, and yesterday feeds today", async ({
+test("an unfinished floating day comes back with only the rest, and finishing it moves the plan on", async ({
   app,
 }) => {
   const { shell, today, logger, progress } = app;
@@ -24,11 +24,11 @@ test("a floating plan moves on only after a completed day, and yesterday feeds t
 
   await app.sleepUntil(at("00:01", TUESDAY));
 
-  await test.step("Tuesday: the unfinished day comes back, with a clean slate", async () => {
+  await test.step("Tuesday: the unfinished day comes back, owing the one set that is left", async () => {
     await expect(shell.topBar).toContainText("TUESDAY · Nov 17");
-    await expect(today.row(bench.name)).toContainText("0/2 sets");
+    await expect(today.row(bench.name)).toContainText("1/2 sets");
     await expect(today.row(curl.name)).toBeHidden();
-    await expect(shell.ring).toHaveAccessibleName("0 of 2 sets done today");
+    await expect(shell.ring).toHaveAccessibleName("0 of 1 set done today");
     await expect(shell.status).toContainText("Quiet until 09:00");
   });
 
@@ -36,16 +36,17 @@ test("a floating plan moves on only after a completed day, and yesterday feeds t
     await expect(today.stat("Streak")).toContainText("1");
     await expect(today.stat("This week")).toContainText("1");
     await expect(today.stat("Lifted today")).toContainText("0");
+    await expect(today.screen).toContainText("Set 2 of 2");
     await expect(today.screen).toContainText("Try 9 × 20 kg or 8 × 22.5 kg");
     await expect(today.screen).toContainText("Last time: 8 × 20 kg");
   });
 
-  await test.step("Tuesday: Push gets finished", async () => {
+  await test.step("Tuesday: the rest of Push gets done, and that is the day complete", async () => {
     await today.startSet.click();
-    await logger.log();
     await logger.log();
     await logger.done();
     await expect(today.screen).toContainText("Day complete");
+    await expect(today.row(bench.name)).toContainText("2/2 sets");
   });
 
   await app.sleepUntil(at("00:01", WEDNESDAY));
@@ -56,14 +57,14 @@ test("a floating plan moves on only after a completed day, and yesterday feeds t
     await expect(today.row(bench.name)).toBeHidden();
   });
 
-  await test.step("Progress counts both days and what was planned on each", async () => {
+  await test.step("Progress counts what each day owed: Monday 1 of 2, Tuesday 1 of 1", async () => {
     await shell.goTo("Progress");
     await expect(progress.kpi("Current streak")).toContainText("2");
-    await expect(progress.kpi("Sets this week")).toContainText("3");
+    await expect(progress.kpi("Sets this week")).toContainText("2");
     await expect(progress.kpi("Active days 30d")).toContainText("2");
-    // Monday 1 of 2, Tuesday 2 of 2. Wednesday has no set yet, and a floating
-    // plan has no calendar to fall behind: a day only counts once it is trained.
-    await expect(progress.kpi("Completion this wk")).toContainText("75");
+    // 2 of the 3 sets owed over the two days. Wednesday has no set yet, and a
+    // floating plan has no calendar to fall behind: a day only counts once it is trained.
+    await expect(progress.kpi("Completion this wk")).toContainText("67");
   });
 });
 
@@ -98,7 +99,9 @@ test("a weekday plan has rest days, on which anything can still be logged", asyn
   await expect(shell.status).toContainText("Nothing left today");
 });
 
-test("a cycled plan rotates the pools that were trained, and only those", async ({ app }) => {
+test("a cycled plan rotates the pools that were trained once its day is done, and only those", async ({
+  app,
+}) => {
   const { today, logger } = app;
   const program = plan(
     [
@@ -122,10 +125,28 @@ test("a cycled plan rotates the pools that were trained, and only those", async 
 
   await app.sleepUntil(at("00:01", TUESDAY));
 
-  await expect(today.row(barbellBench.name)).toContainText("0/2 sets");
-  await expect(today.row(bench.name)).toBeHidden();
-  await expect(today.row(curl.name)).toContainText("0/2 sets");
-  await expect(today.row(hammerCurl.name)).toBeHidden();
+  await test.step("Tuesday: the day is not done, so each pool is still on the exercise it gave", async () => {
+    await expect(today.row(bench.name)).toContainText("1/2 sets");
+    await expect(today.row(barbellBench.name)).toBeHidden();
+    await expect(today.row(curl.name)).toContainText("0/2 sets");
+    await expect(today.row(hammerCurl.name)).toBeHidden();
+  });
+
+  await test.step("the biceps are skipped and the chest finished: that is the day", async () => {
+    await today.rowButton(curl.name, "Skip").click();
+    await today.startSet.click();
+    await logger.log();
+    await logger.done();
+  });
+
+  await app.sleepUntil(at("00:01", WEDNESDAY));
+
+  await test.step("Wednesday: the chest moved on, the biceps stayed where they were", async () => {
+    await expect(today.row(barbellBench.name)).toContainText("0/2 sets");
+    await expect(today.row(bench.name)).toBeHidden();
+    await expect(today.row(curl.name)).toContainText("0/2 sets");
+    await expect(today.row(hammerCurl.name)).toBeHidden();
+  });
 });
 
 test("a floating day that sat idle is not a missed day", async ({ app }) => {
@@ -156,6 +177,7 @@ test("editing a pool neither skips nor repeats an exercise", async ({ app }) => 
   await test.step("Monday: the pool gives its first exercise, which is then taken out of it", async () => {
     await today.startSet.click();
     await logger.log({ reps: 8, weight: 20 });
+    await logger.log();
     await logger.done();
     await shell.goTo("Plan");
     await planner
@@ -163,7 +185,7 @@ test("editing a pool neither skips nor repeats an exercise", async ({ app }) => 
       .getByRole("button", { name: `Remove ${bench.name} from pool` })
       .click();
     await shell.goTo("Today");
-    await expect(today.row(bench.name)).toContainText("1/2 sets");
+    await expect(today.row(bench.name)).toContainText("2/2 sets");
   });
 
   await app.sleepUntil(at("00:01", TUESDAY));

@@ -43,8 +43,9 @@ describe("Today · next set", () => {
     expect(card.getByText("Triceps")).toBeInTheDocument();
     expect(card.getByText("Front Delts")).toBeInTheDocument();
     expect(card.getByText("Pause at the chest")).toBeInTheDocument();
-    expect(container).toHaveTextContent("Try 9 × 60 kg or 8 × 62.5 kg");
+    expect(container).toHaveTextContent("Try 8 × 57.5 kg or 9 × 60 kg");
     expect(container).toHaveTextContent("Last time: 8 × 60 kg");
+    expect(container).toHaveTextContent("RPE 8 ≈ 2 reps in reserve.");
   });
 
   it("shows no advice for a warm-up", () => {

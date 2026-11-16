@@ -1,5 +1,5 @@
-import type { LoggedSet, Program } from "@nabd/domain";
-import { dateKey, freshDayState } from "@nabd/domain";
+import type { CarriedSets, LoggedSet, Program } from "@nabd/domain";
+import { DEFAULT_SETTINGS, dateKey, freshDayState } from "@nabd/domain";
 import { ProgressionAdvisor } from "@nabd/progression";
 import { TodayPlan } from "@nabd/scheduling";
 import type { PlanItem } from "@nabd/scheduling";
@@ -19,14 +19,19 @@ export const program: Program = {
   days: [{ id: "d", name: "D", weekday: null, exercises: [curlRow, plankRow], slots: [] }],
 };
 
-export function itemsFor(history: LoggedSet[]): { curlItem: PlanItem; plankItem: PlanItem } {
+/** Today's curl and plank, with `carried` sets of each already done on earlier days. */
+export function itemsFor(
+  history: LoggedSet[],
+  carried: CarriedSets = {},
+): { curlItem: PlanItem; plankItem: PlanItem } {
   const plan = TodayPlan.build({
     program,
     date: TODAY,
-    dayState: freshDayState(TODAY),
+    dayState: freshDayState(TODAY, null, carried),
     rotation: {},
     history,
     lookup: lookupIn([curl, plank]),
+    workDays: DEFAULT_SETTINGS.workDays,
   });
   return { curlItem: plan.item(curlRow.id)!, plankItem: plan.item(plankRow.id)! };
 }

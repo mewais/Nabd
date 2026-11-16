@@ -28,6 +28,16 @@ describe("booting", () => {
     expect(app.get().loadProblems).toEqual([]);
   });
 
+  it("reads a day state stored before unfinished days were carried over, and writes it back whole", async () => {
+    const app = await boot({
+      program: catalogPushPull,
+      dayState: { date: dateKey(nov(16)), dayId: "pull", skipped: [], extras: [], paused: false },
+    });
+    expect(app.get().dayState).toMatchObject({ dayId: "pull", carried: {} });
+    expect(app.get().loadProblems).toEqual([]);
+    expect(app.data.dayState).toMatchObject({ carried: {} });
+  });
+
   it("brings the OS in line with the stored autostart and translucency settings", async () => {
     const app = await boot({ settings: { ...DEFAULT_SETTINGS, glass: true, opacity: 0.5 } });
     expect(app.client.setGlass).toHaveBeenCalledWith(true);

@@ -21,7 +21,7 @@ function build(settings: Partial<Settings> = {}, over: Partial<Omit<Input, "sett
 
 /** The stepper row titled `title`, wherever it is. */
 function stepper(vm: SettingsVM, title: string) {
-  const rows = [...vm.workday, ...vm.nudges, vm.training.increment, vm.appearance.opacity];
+  const rows = [...vm.workday.hours, ...vm.nudges, vm.training.increment, vm.appearance.opacity];
   const row = rows.find((candidate) => candidate?.title === title);
   if (!row) throw new Error(`no stepper row "${title}"`);
   return row;
@@ -51,6 +51,11 @@ describe("buildSettingsVM", () => {
       decrease: { workEnd: 17 * 60 + 30 },
       increase: { workEnd: 18 * 60 + 30 },
     });
+  });
+
+  it("carries the weekdays that are worked", () => {
+    expect(build().workday.days).toEqual([1, 2, 3, 4, 5]);
+    expect(build({ workDays: [0, 6] }).workday.days).toEqual([0, 6]);
   });
 
   it("moves the nudge timings in steps of five", () => {
@@ -118,6 +123,13 @@ describe("buildSettingsVM", () => {
       hint: "This desktop shows no tray icons, so Nabd always opens as a window.",
     });
     expect(build().startup[0]!.disabled).toBe(false);
+  });
+
+  it("says Open at startup begins in the tray where there is one, and in a window where not", () => {
+    const hint = (tray: boolean) =>
+      build({}, { capabilities: { tray, glass: true, idle: true } }).startup[0]!.hint;
+    expect(hint(true)).toBe("Launch Nabd when you log in, quietly in the tray.");
+    expect(hint(false)).toBe("Launch Nabd when you log in.");
   });
 
   it("says what a change of unit does to the weight increment", () => {

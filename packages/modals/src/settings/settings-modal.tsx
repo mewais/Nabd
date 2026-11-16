@@ -7,6 +7,7 @@ import type { SettingsVM } from "./settings-vm";
 import { StepperRow } from "./stepper-row";
 import { ToggleRow } from "./toggle-row";
 import { TrainingSection } from "./training-section";
+import { WorkdaySection } from "./workday-section";
 
 interface SettingsModalProps {
   vm: SettingsVM;
@@ -18,11 +19,7 @@ export function SettingsModal({ vm, actions }: SettingsModalProps): JSX.Element 
   return (
     <ModalShell title="Settings" onClose={actions.close} width={540} layer="modalTop">
       <Stack gap="xxl" paddingX="xxl" paddingY="xl">
-        <FormSection title="Workday">
-          {vm.workday.map((row) => (
-            <StepperRow key={row.title} vm={row} actions={actions} />
-          ))}
-        </FormSection>
+        <WorkdaySection vm={vm.workday} actions={actions} />
         <FormSection title="Nudges">
           {vm.nudges.map((row) => (
             <StepperRow key={row.title} vm={row} actions={actions} />

@@ -6,24 +6,70 @@ import { nov } from "../support/builders";
 // Workday 09:00–18:00, timer 50 min, minimum gap 15 min, idle after 30 s.
 const policy = new NudgePolicy(DEFAULT_SETTINGS);
 
-function at(hour: number, minute: number, overrides: Partial<NudgeContext> = {}) {
-  return policy.evaluate({
-    now: nov(16, hour, minute),
-    lastSetAt: null,
-    activeSince: null,
-    snoozedUntil: null,
-    idleSeconds: 0,
-    paused: false,
-    hasWork: true,
-    ...overrides,
-  });
+const baseContext: NudgeContext = {
+  now: nov(16, 9),
+  lastSetAt: null,
+  activeSince: null,
+  snoozedUntil: null,
+  idleSeconds: 0,
+  paused: false,
+  hasWork: true,
+};
+
+function evaluateAt(now: Date, overrides: Partial<NudgeContext> = {}) {
+  return policy.evaluate({ ...baseContext, now, ...overrides });
 }
+
+/** The policy's verdict on Monday 16 Nov 2026 at `hour:minute`. */
+const at = (hour: number, minute: number, overrides: Partial<NudgeContext> = {}) =>
+  evaluateAt(nov(16, hour, minute), overrides);
 
 describe("NudgePolicy", () => {
   it("stays silent outside the workday and says when it resumes", () => {
-    expect(at(7, 0, { idleSeconds: 999 })).toEqual({ state: "off_hours", at: nov(16, 9) });
-    expect(at(18, 0)).toEqual({ state: "off_hours", at: nov(17, 9) });
-    expect(at(23, 30, { idleSeconds: 999 })).toEqual({ state: "off_hours", at: nov(17, 9) });
+    expect(at(7, 0, { idleSeconds: 999 })).toEqual({
+      state: "off_hours",
+      at: nov(16, 9),
+      inDays: 0,
+    });
+    expect(at(18, 0)).toEqual({ state: "off_hours", at: nov(17, 9), inDays: 1 });
+    expect(at(23, 30, { idleSeconds: 999 })).toEqual({
+      state: "off_hours",
+      at: nov(17, 9),
+      inDays: 1,
+    });
+  });
+
+  describe("workdays", () => {
+    const FRIDAY = 20;
+    const SATURDAY = 21;
+    const SUNDAY = 22;
+    const onDay = (day: number, hour: number, overrides: Partial<NudgeContext> = {}) =>
+      evaluateAt(nov(day, hour), { idleSeconds: 999, ...overrides });
+
+    it("never nudges on a day that is not a workday, however long the user has been idle", () => {
+      expect(onDay(SATURDAY, 12)).toEqual({ state: "off_hours", at: nov(23, 9), inDays: 2 });
+      expect(onDay(SUNDAY, 12)).toEqual({ state: "off_hours", at: nov(23, 9), inDays: 1 });
+      expect(onDay(SATURDAY, 12, { lastSetAt: nov(SATURDAY, 8) }).state).toBe("off_hours");
+    });
+
+    it("after the last workday ends, stays quiet until the next one starts", () => {
+      expect(onDay(FRIDAY, 19)).toEqual({ state: "off_hours", at: nov(23, 9), inDays: 3 });
+      expect(onDay(FRIDAY, 8)).toEqual({ state: "off_hours", at: nov(FRIDAY, 9), inDays: 0 });
+    });
+
+    it("follows the chosen days, even a single one, and resumes a week on from that very day", () => {
+      const saturdays = new NudgePolicy({ ...DEFAULT_SETTINGS, workDays: [6] });
+      const on = (day: number, hour: number) =>
+        saturdays.evaluate({ ...baseContext, now: nov(day, hour) });
+      expect(on(SATURDAY, 9).state).toBe("waiting");
+      expect(on(SATURDAY, 19)).toEqual({ state: "off_hours", at: nov(28, 9), inDays: 7 });
+      expect(on(16, 10)).toEqual({ state: "off_hours", at: nov(SATURDAY, 9), inDays: 5 });
+    });
+
+    it("still reports a paused day or one with nothing left before the day off", () => {
+      expect(onDay(SATURDAY, 12, { paused: true })).toEqual({ state: "paused" });
+      expect(onDay(SATURDAY, 12, { hasWork: false })).toEqual({ state: "nothing_left" });
+    });
   });
 
   it("the timer counts from the start of the workday until a set is logged", () => {
@@ -87,15 +133,7 @@ describe("NudgePolicy", () => {
 
   it("a minimum gap longer than the interval cannot delay the timer's own nudge", () => {
     const eager = new NudgePolicy({ ...DEFAULT_SETTINGS, interval: 10, minGap: 30 });
-    const status = eager.evaluate({
-      now: nov(16, 9, 10),
-      lastSetAt: null,
-      activeSince: null,
-      snoozedUntil: null,
-      idleSeconds: 0,
-      paused: false,
-      hasWork: true,
-    });
+    const status = eager.evaluate({ ...baseContext, now: nov(16, 9, 10) });
     expect(status).toEqual({ state: "due", reason: "timer" });
   });
 });
@@ -139,7 +177,7 @@ describe("a pending nudge", () => {
     for (const status of [
       { state: "paused" },
       { state: "nothing_left" },
-      { state: "off_hours", at: nov(17, 9) },
+      { state: "off_hours", at: nov(17, 9), inDays: 1 },
     ] as const) {
       expect(policy.latch(pending, status, nov(16, 18))).toBeNull();
     }
@@ -153,7 +191,12 @@ describe("describeNudge", () => {
     expect(describeNudge({ state: "waiting", at: nov(16, 11, 40), idleFrom: nov(16, 11) })).toBe(
       "Next nudge at 11:40, sooner if you go idle",
     );
-    expect(describeNudge({ state: "off_hours", at: nov(17, 9) })).toBe("Quiet until 09:00");
+    expect(describeNudge({ state: "off_hours", at: nov(17, 9), inDays: 1 })).toBe(
+      "Quiet until 09:00",
+    );
+    expect(describeNudge({ state: "off_hours", at: nov(23, 9), inDays: 2 })).toBe(
+      "Quiet until Mon 09:00",
+    );
     expect(describeNudge({ state: "paused" })).toBe("Nudges paused");
     expect(describeNudge({ state: "nothing_left" })).toBe("Nothing left today");
   });

@@ -28,14 +28,28 @@ describe("buildTodayVM · hero", () => {
 
   it("after the warm-up, advises beating last week's first working set", () => {
     const history = [...lastWeek(), did("p-bench", "bench", 10, 40, { setType: "warmup" })];
-    const hero = nextHero(todayVM({ program: pushDay(), history }).hero);
+    const hero = nextHero(todayVM({ program: pushDay("none"), history }).hero);
 
     expect(hero.kicker).toBe("Up next · Set 2 of 3");
-    expect(hero.set.target).toBe("Working set · 8–12 reps · RPE 8");
+    expect(hero.set.target).toBe("Working set · 8–12 reps");
     expect(hero.set.advice).toEqual({
       primary: "9 × 60 kg",
       alternative: "8 × 62.5 kg",
       reason: "Inside your range — beat last time.",
+      basis: "Last time: 8 × 60 kg",
+    });
+  });
+
+  it("where the set asks for an RPE, advises the load that leaves those reps in reserve", () => {
+    const history = [...lastWeek(), did("p-bench", "bench", 10, 40, { setType: "warmup" })];
+    const hero = nextHero(todayVM({ program: pushDay(), history }).hero);
+
+    expect(hero.set.target).toBe("Working set · 8–12 reps · RPE 8");
+    // Last week's 8 × 60 kg is an estimated max of 76 kg; RPE 8 is 2 in reserve.
+    expect(hero.set.advice).toEqual({
+      primary: "8 × 57.5 kg",
+      alternative: "9 × 60 kg",
+      reason: "RPE 8 ≈ 2 reps in reserve.",
       basis: "Last time: 8 × 60 kg",
     });
   });
@@ -46,7 +60,7 @@ describe("buildTodayVM · hero", () => {
       did("p-bench", "bench", 10, 40, { setType: "warmup" }),
       did("p-bench", "bench", 9, 60),
     ];
-    const hero = nextHero(todayVM({ program: pushDay(), history }).hero);
+    const hero = nextHero(todayVM({ program: pushDay("none"), history }).hero);
 
     expect(hero.kicker).toBe("Up next · Set 3 of 3");
     // Last week's second working set was 7 reps: under the 8–12 range.
@@ -60,7 +74,7 @@ describe("buildTodayVM · hero", () => {
 
   it("words loads in pounds when that is the display unit", () => {
     const history = [...lastWeek(), did("p-bench", "bench", 10, 40, { setType: "warmup" })];
-    const hero = nextHero(todayVM({ program: pushDay(), history }, { unit: "lb" }).hero);
+    const hero = nextHero(todayVM({ program: pushDay("none"), history }, { unit: "lb" }).hero);
 
     expect(hero.set.advice).toMatchObject({
       primary: "9 × 132.3 lb",

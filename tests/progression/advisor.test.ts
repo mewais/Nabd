@@ -71,6 +71,7 @@ describe("double progression on a weighted exercise", () => {
       primary: { reps: 8, weight: 0 },
       alternative: null,
       basis: null,
+      intensity: null,
     });
   });
 });
@@ -203,5 +204,108 @@ describe("where a first warm-up starts", () => {
     expect(advisor.warmupFrom("assisted_bodyweight", { reps: 6, weight: 20 }, warmup).weight).toBe(
       20,
     );
+  });
+});
+
+describe("a prescribed intensity", () => {
+  const bench = exercise();
+  /** 8 × 50 kg: an estimated max of 50 × (1 + 8/30) = 63.33 kg. */
+  const lastSession = [logged(bench, nov(9), 8, 50)];
+  const asked = (kind: "pct" | "rpe", value: number, hi = 12) =>
+    prescription([working(8, hi, value)], { intensity: kind });
+
+  it("%1RM: that share of the estimated max, on the load step, for the bottom of the range", () => {
+    const advice = advise(bench, lastSession, { plan: asked("pct", 70) });
+    // 70% of 63.33 kg is 44.33 kg: the nearest 2.5 kg step is 45.
+    expect(advice.primary).toEqual({ reps: 8, weight: 45 });
+    expect(advice.intensity).toEqual({ kind: "pct", value: 70, max: 50 * (1 + 8 / 30) });
+  });
+
+  it("RPE: the load at which the reps leave 10 − RPE in reserve", () => {
+    // RPE 8 leaves 2 reps: 8 + 2 reps against a max of 63.33 kg is 63.33 / (1 + 10/30) = 47.5 kg.
+    expect(advise(bench, lastSession, { plan: asked("rpe", 8) }).primary).toEqual({
+      reps: 8,
+      weight: 47.5,
+    });
+    // RPE 10 is to failure: the load at which the prescribed reps are all there are.
+    expect(advise(bench, lastSession, { plan: asked("rpe", 10) }).primary.weight).toBe(50);
+    // A half RPE is half a rep: 8.5 reps asked, 1.5 held back.
+    expect(advise(bench, lastSession, { plan: asked("rpe", 8.5) }).primary.weight).toBe(47.5);
+  });
+
+  it("keeps double progression on offer as the alternative", () => {
+    const advice = advise(bench, lastSession, { plan: asked("pct", 70) });
+    expect(advice.kind).toBe("add_reps");
+    expect(advice.alternative).toEqual({ reps: 9, weight: 50 });
+    expect(advice.basis).toEqual({ reps: 8, weight: 50 });
+  });
+
+  it("does not offer the same target twice", () => {
+    const top = [logged(bench, nov(9), 12, 40)];
+    // 76% of 56 kg is 42.56: 42.5 kg, which is what double progression suggests too.
+    const advice = advise(bench, top, { plan: asked("pct", 76) });
+    expect(advice.primary).toEqual({ reps: 8, weight: 42.5 });
+    expect(advice.alternative).toEqual({ reps: 13, weight: 40 });
+  });
+
+  it("measures each set against its own intensity", () => {
+    const plan = prescription([working(8, 12, 60), working(8, 12, 80)], { intensity: "pct" });
+    expect(advise(bench, lastSession, { plan, setIndex: 0 }).primary.weight).toBe(37.5);
+    expect(advise(bench, lastSession, { plan, setIndex: 1 }).primary.weight).toBe(50);
+  });
+
+  it("waits for an estimate: with no history, or none that moved a load", () => {
+    const plan = asked("pct", 70);
+    expect(advise(bench, [], { plan })).toMatchObject({
+      kind: "start",
+      primary: { reps: 8, weight: 0 },
+      intensity: { kind: "pct", value: 70, max: null },
+    });
+    const unloaded = [logged(bench, nov(9), 10, null)];
+    expect(advise(bench, unloaded, { plan }).intensity).toMatchObject({ max: null });
+  });
+
+  it("never suggests less than one step of a load that has to be picked", () => {
+    const feather = [logged(bench, nov(9), 5, 1)];
+    expect(advise(bench, feather, { plan: asked("pct", 40) }).primary.weight).toBe(2.5);
+  });
+
+  it("leaves a bodyweight exercise reps-first while the load would be nothing", () => {
+    const dip = exercise({ tracking: "weighted_bodyweight" });
+    const plan = asked("pct", 50);
+    // Unloaded so far: no estimate, so the plain advice stands.
+    const bare = advise(dip, [logged(dip, nov(9), 12, 0)], { plan });
+    expect(bare).toMatchObject({ kind: "add_load", intensity: { max: null } });
+    // A little added load that rounds to nothing is not worth suggesting either.
+    const light = advise(dip, [logged(dip, nov(9), 10, 1)], { plan });
+    expect(light.intensity).toBeNull();
+    expect(light.primary).toEqual({ reps: 11, weight: 1 });
+    // Enough added load, and it is suggested like any other.
+    const loaded = advise(dip, [logged(dip, nov(9), 10, 10)], { plan });
+    expect(loaded.primary).toEqual({ reps: 8, weight: 7.5 });
+  });
+
+  it("is ignored where there is no load to lift: holds, assistance and bodyweight reps", () => {
+    for (const tracking of [
+      "duration",
+      "weight_duration",
+      "assisted_bodyweight",
+      "bodyweight_reps",
+    ] as const) {
+      const ex = exercise({ tracking });
+      const plan = prescription([working(8, 12, 70)], { intensity: "pct" });
+      expect(advise(ex, [logged(ex, nov(9), 8, 20)], { plan }).intensity).toBeNull();
+    }
+  });
+
+  it("is ignored when the plan prescribes none, or none for this set", () => {
+    const plain = advise(bench, lastSession, { plan: prescription([working(8, 12, 70)]) });
+    expect(plain.intensity).toBeNull();
+    const unset = advise(bench, lastSession, {
+      plan: prescription([working(8, 12)], { intensity: "rpe" }),
+    });
+    expect(unset.intensity).toBeNull();
+    expect(unset.primary).toEqual({ reps: 9, weight: 50 });
+    expect(advise(bench, lastSession, { plan: null }).intensity).toBeNull();
   });
 });

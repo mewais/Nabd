@@ -46,8 +46,19 @@ describe("buildShellVM · nudge status", () => {
   });
 
   it("says until when it stays quiet outside the workday", () => {
-    const early = status({ now: nov(16, 7), nudge: { state: "off_hours", at: nov(16, 9) } });
+    const early = status({
+      now: nov(16, 7),
+      nudge: { state: "off_hours", at: nov(16, 9), inDays: 0 },
+    });
     expect(early).toEqual({ clock: "07:00", line: "Quiet until 09:00", due: false });
+  });
+
+  it("names the weekday when nudging is more than a day off, as on a weekend", () => {
+    const saturday = status({
+      now: nov(21, 10),
+      nudge: { state: "off_hours", at: nov(23, 9), inDays: 2 },
+    });
+    expect(saturday.line).toBe("Quiet until Mon 09:00");
   });
 
   it("says so when nudges are paused or nothing is left", () => {

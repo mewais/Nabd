@@ -174,10 +174,13 @@ first_launch() {
 
 # Yesterday was skipped outright, with nudges paused: a floating plan moves on
 # from such a day and puts it on record (a day it merely sat idle is not recorded).
+# Every weekday is a workday here: a day off nothing was logged on is not recorded
+# either, and yesterday may have been one.
 restart_keeps_data() {
   sql "INSERT OR REPLACE INTO kv (key, value) VALUES
          ('program', '$PLAN'),
-         ('dayState', '{\"date\":\"$YESTERDAY\",\"dayId\":null,\"skipped\":[\"row\"],\"extras\":[],\"paused\":true}')"
+         ('settings', '{\"workDays\":[0,1,2,3,4,5,6]}'),
+         ('dayState', '{\"date\":\"$YESTERDAY\",\"dayId\":null,\"carried\":{},\"skipped\":[\"row\"],\"extras\":[],\"paused\":true}')"
   launch
   wait_for 30 day_is "$TODAY" || fail "yesterday's day was not rolled over at launch"
   expect "stored plan after a restart" "$(sql "SELECT value FROM kv WHERE key = 'program'")" "$PLAN"

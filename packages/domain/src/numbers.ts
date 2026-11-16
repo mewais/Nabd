@@ -11,3 +11,8 @@ export function roundTo(value: number, decimals: number): number {
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
+
+/** The total of `amount` over `list`. */
+export function sum<T>(list: readonly T[], amount: (element: T) => number): number {
+  return list.reduce((total, element) => total + amount(element), 0);
+}

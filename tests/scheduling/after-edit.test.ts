@@ -1,8 +1,13 @@
 import type { Program } from "@nabd/domain";
-import { dayIdAfterEdit, rotationAfterEdit, plannerDayAfterEdit } from "@nabd/scheduling";
+import {
+  carriedAfterEdit,
+  dayIdAfterEdit,
+  plannerDayAfterEdit,
+  rotationAfterEdit,
+} from "@nabd/scheduling";
 import { nov } from "../support/builders";
 import { EX } from "../support/exercises";
-import { cycledPlan, floatingPushPull, pushPull } from "../support/programs";
+import { benchRow, cycledPlan, floatingPushPull, flyRow, pushPull } from "../support/programs";
 import { MONDAY } from "./fixtures";
 
 describe("a floating plan across plan edits", () => {
@@ -116,5 +121,36 @@ describe("the rotation across plan edits", () => {
     expect(rotationAfterEdit(three, three, { chest: EX.fly.id, removed: EX.bench.id })).toEqual({
       chest: EX.fly.id,
     });
+  });
+});
+
+describe("what an unfinished floating day has behind it, across plan edits", () => {
+  const carried = { [benchRow.id]: 2, [flyRow.id]: 1 };
+  const [push, pull] = floatingPushPull.days as [Program["days"][0], Program["days"][0]];
+
+  it("is the same while every item is still on the day", () => {
+    const renamed: Program = { ...floatingPushPull, name: "Renamed" };
+    expect(carriedAfterEdit(renamed, "mon", carried)).toBe(carried);
+  });
+
+  it("loses the count of an item that was deleted", () => {
+    const withoutFly: Program = {
+      ...floatingPushPull,
+      days: [{ ...push, exercises: push.exercises.filter((item) => item.id !== flyRow.id) }, pull],
+    };
+    expect(carriedAfterEdit(withoutFly, "mon", carried)).toEqual({ [benchRow.id]: 2 });
+  });
+
+  it("is dropped with a deleted day, which the day that took its place starts clean of", () => {
+    expect(carriedAfterEdit({ ...floatingPushPull, days: [pull] }, "wed", carried)).toEqual({});
+    expect(carriedAfterEdit({ ...floatingPushPull, days: [] }, null, carried)).toEqual({});
+  });
+
+  it("is dropped when the plan stops being floating", () => {
+    expect(carriedAfterEdit(pushPull, null, carried)).toEqual({});
+  });
+
+  it("belongs to the day it was earned on: another day's items are not carried", () => {
+    expect(carriedAfterEdit(floatingPushPull, "wed", carried)).toEqual({});
   });
 });

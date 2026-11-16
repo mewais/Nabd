@@ -189,21 +189,21 @@ describe("the completion record", () => {
     const plan = build(history, dayState(MONDAY, { extras: [{ id: "x1", exId: EX.dip.id }] }));
     expect(plan.setsDone).toBe(6);
     expect(plan.plannedSetsDone).toBe(4);
-    expect(plan.record()).toEqual({ date: dateKey(MONDAY), planned: 10, done: 4 });
+    expect(plan.ledger.record()).toEqual({ date: dateKey(MONDAY), planned: 10, done: 4 });
   });
 
   it("a skipped exercise still counts as planned; a day without a plan has no record", () => {
     const skipped = build([], dayState(MONDAY, { skipped: [flyRow.id] }));
-    expect(skipped.record()).toEqual({ date: dateKey(MONDAY), planned: 10, done: 0 });
+    expect(skipped.ledger.record()).toEqual({ date: dateKey(MONDAY), planned: 10, done: 0 });
     const tuesday = TodayPlan.build({ ...input(), date: nov(17), dayState: dayState(nov(17)) });
-    expect(tuesday.record()).toBeNull();
+    expect(tuesday.ledger.record()).toBeNull();
   });
 
   it("a floating day is only on record once it has a set, or the plan has moved past it", () => {
     const idle = build([], dayState(MONDAY), floatingPushPull);
-    expect(idle.record()).toBeNull();
-    expect(idle.record(true)).toEqual({ date: dateKey(MONDAY), planned: 10, done: 0 });
-    expect(build([benchSet(9)], dayState(MONDAY), floatingPushPull).record()).toEqual({
+    expect(idle.ledger.record()).toBeNull();
+    expect(idle.ledger.record(true)).toEqual({ date: dateKey(MONDAY), planned: 10, done: 0 });
+    expect(build([benchSet(9)], dayState(MONDAY), floatingPushPull).ledger.record()).toEqual({
       date: dateKey(MONDAY),
       planned: 10,
       done: 1,

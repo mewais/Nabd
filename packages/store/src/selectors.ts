@@ -35,8 +35,16 @@ export const selectLibrary = memoize(
 
 /** Today's queue. */
 export const selectTodayPlan = memoize(
-  (s) => [s.program, s.dayState, s.rotationState, s.history, selectLibrary(s)] as const,
-  (program, dayState, rotation, history, library) =>
+  (s) =>
+    [
+      s.program,
+      s.dayState,
+      s.rotationState,
+      s.history,
+      selectLibrary(s),
+      s.settings.workDays,
+    ] as const,
+  (program, dayState, rotation, history, library, workDays) =>
     TodayPlan.build({
       program,
       dayState,
@@ -44,6 +52,7 @@ export const selectTodayPlan = memoize(
       history,
       date: parseDateKey(dayState.date),
       lookup: library.lookup,
+      workDays,
     }),
 );
 
@@ -135,7 +144,7 @@ export const selectExerciseProgress = memoize(
 const selectTodayRecord = memoize(
   (s) => [selectTodayPlan(s)] as const,
   (plan): DayRecord[] => {
-    const record = plan.record();
+    const record = plan.ledger.record();
     return record === null ? [] : [record];
   },
 );

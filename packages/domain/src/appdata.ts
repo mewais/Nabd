@@ -5,7 +5,7 @@ import { SettingsSchema } from "./settings";
 import { LoggedSetSchema, RotationStateSchema, DayStateSchema, DayLogSchema } from "./runtime";
 
 /** Current export/import envelope version. */
-export const APPDATA_VERSION = 3;
+export const APPDATA_VERSION = 4;
 
 /**
  * The export/import snapshot. Most fields are optional on import so partial or

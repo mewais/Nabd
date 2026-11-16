@@ -105,9 +105,17 @@ const ExtraItemSchema = z.object({ id: z.string(), exId: z.string() });
 export type ExtraItem = z.infer<typeof ExtraItemSchema>;
 
 /**
+ * How many of a plan item's prescribed sets (the first ones, in order) were
+ * already done on earlier calendar days of the floating day that is still
+ * open, keyed by plan-item id. Only items with something done are listed.
+ */
+export const CarriedSetsSchema = z.record(z.string(), z.number().int().positive());
+export type CarriedSets = z.infer<typeof CarriedSetsSchema>;
+
+/**
  * The per-day bookkeeping that is not derivable from program + history: which
- * floating day we are on, what was skipped, what was added ad hoc, and whether
- * nudges are paused for the day.
+ * floating day we are on and what it already got done on earlier days, what
+ * was skipped, what was added ad hoc, and whether nudges are paused for the day.
  */
 export const DayStateSchema = z.object({
   date: z.string(),
@@ -117,6 +125,8 @@ export const DayStateSchema = z.object({
    * which day is today.
    */
   dayId: z.string().nullable().default(null),
+  /** What an unfinished floating day already has behind it: it comes back with only the rest. */
+  carried: CarriedSetsSchema.default({}),
   skipped: z.array(z.string()).default([]),
   extras: z.array(ExtraItemSchema).default([]),
   /** Nudges are paused until the day ends. */
@@ -124,10 +134,15 @@ export const DayStateSchema = z.object({
 });
 export type DayState = z.infer<typeof DayStateSchema>;
 
-/** A day with nothing skipped, added or paused, on floating day `dayId`. */
-export const freshDayState = (date: Date, dayId: string | null = null): DayState => ({
+/** A day with nothing skipped, added or paused, on floating day `dayId` (with `carried` already done). */
+export const freshDayState = (
+  date: Date,
+  dayId: string | null = null,
+  carried: CarriedSets = {},
+): DayState => ({
   date: dateKey(date),
   dayId,
+  carried,
   skipped: [],
   extras: [],
   paused: false,

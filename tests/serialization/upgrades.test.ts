@@ -26,7 +26,7 @@ describe("upgradeStored", () => {
         slots: [slot("chest", [CATALOG.bench, CATALOG.fly], { type: "working", amount: 8 })],
       }),
       settings: { theme: "light", glass: false },
-      dayState: { date: "2026-11-16", dayId: "a" },
+      dayState: { date: "2026-11-16", dayId: "a", carried: { chest: 2 } },
       rotationState: { chest: CATALOG.fly },
     };
     const upgraded = upgradeStored(stored);

@@ -63,6 +63,35 @@ describe("SettingsModal", () => {
     expect(actions.change).toHaveBeenCalledTimes(3);
   });
 
+  it("shows the weekdays worked, Monday first, and toggles one", () => {
+    const { actions, setting } = setup({ workDays: [1, 2, 3, 4, 5] });
+    const days = setting("Working days");
+    const chips = days.getAllByRole("button");
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun",
+    ]);
+    expect(chips.map((chip) => chip.getAttribute("aria-pressed"))).toEqual([
+      "true",
+      "true",
+      "true",
+      "true",
+      "true",
+      "false",
+      "false",
+    ]);
+
+    fireEvent.click(days.getByRole("button", { name: "Sat" }));
+    expect(actions.change).toHaveBeenLastCalledWith({ workDays: [1, 2, 3, 4, 5, 6] });
+    fireEvent.click(days.getByRole("button", { name: "Mon" }));
+    expect(actions.change).toHaveBeenLastCalledWith({ workDays: [2, 3, 4, 5] });
+  });
+
   it("explains the idle moment where the system cannot report idle time", () => {
     setup({}, { capabilities: { tray: true, glass: true, idle: false } });
     expect(screen.getByRole("group", { name: "Idle moment" })).toHaveTextContent(

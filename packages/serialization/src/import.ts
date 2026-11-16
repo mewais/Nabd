@@ -8,6 +8,10 @@ type ImportResult = { ok: true; data: AppData } | { ok: false; errors: string[] 
  * Bring an older export up to the current shape.
  *  - v1 → v2: the theme moved from a top-level field into `settings`.
  *  - v2 → v3: prescribed sets took their present field names.
+ *  - v3 → v4: the day state tracks the sets an unfinished floating day already
+ *    has behind it (`carried`) and the settings the weekdays that are worked
+ *    (`workDays`); a document without them takes their defaults on validation,
+ *    which is the whole upgrade.
  *  - Whatever the version, the values an export shares with what the app
  *    stores are upgraded the same way ({@link upgradeStored}).
  */

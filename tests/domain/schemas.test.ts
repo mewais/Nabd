@@ -16,6 +16,7 @@ import {
   exerciseFromDraft,
   formatWeight,
   isCompleteDraft,
+  isWorkDay,
   kgFromDisplay,
   loadStepKg,
   salvageSettings,
@@ -55,6 +56,23 @@ describe("settings", () => {
     expect(invalid({ equipment: ["sled"] })).toBe(false);
     expect(invalid({ theme: "translucent" })).toBe(false);
   });
+
+  it("works Monday to Friday unless told otherwise, and always on at least one weekday", () => {
+    expect(DEFAULT_SETTINGS.workDays).toEqual([1, 2, 3, 4, 5]);
+    const invalid = (workDays: unknown) =>
+      SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, workDays }).success;
+    expect(invalid([0, 6])).toBe(true);
+    expect(invalid([])).toBe(false);
+    expect(invalid([7])).toBe(false);
+    expect(invalid([1.5])).toBe(false);
+  });
+
+  it("knows which dates fall on a workday", () => {
+    // Fri 20 and Sat 21 Nov 2026.
+    expect(isWorkDay(DEFAULT_SETTINGS, new Date(2026, 10, 20))).toBe(true);
+    expect(isWorkDay(DEFAULT_SETTINGS, new Date(2026, 10, 21))).toBe(false);
+    expect(isWorkDay({ workDays: [6] }, new Date(2026, 10, 21, 23, 59))).toBe(true);
+  });
 });
 
 describe("settings read back from storage, field by field", () => {
@@ -73,6 +91,18 @@ describe("settings read back from storage, field by field", () => {
     });
     expect(salvageSettings(null)).toEqual({ settings: DEFAULT_SETTINGS, reset: [] });
     expect(salvageSettings("garbage").settings).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it("gives settings saved before workdays existed the default week, and mends a bad one", () => {
+    expect(salvageSettings({ interval: 30 }).settings.workDays).toEqual([1, 2, 3, 4, 5]);
+    expect(salvageSettings({ workDays: [6, 0] })).toEqual({
+      settings: { ...DEFAULT_SETTINGS, workDays: [6, 0] },
+      reset: [],
+    });
+    expect(salvageSettings({ workDays: [] })).toEqual({
+      settings: DEFAULT_SETTINGS,
+      reset: ["workDays"],
+    });
   });
 
   it("puts back a workday that ends before it starts", () => {
@@ -192,10 +222,19 @@ describe("persisted shapes tolerate older data", () => {
     expect(DayStateSchema.parse({ date: "2026-11-16", slots: [{}] })).toEqual({
       date: "2026-11-16",
       dayId: null,
+      carried: {},
       skipped: [],
       extras: [],
       paused: false,
     });
+  });
+
+  it("a day state keeps the sets an unfinished day has behind it, as whole positive counts", () => {
+    const state = (carried: object) => ({ date: "2026-11-16", carried });
+    expect(DayStateSchema.parse(state({ bench: 2 })).carried).toEqual({ bench: 2 });
+    for (const carried of [{ bench: 0 }, { bench: 1.5 }, { bench: "2" }]) {
+      expect(DayStateSchema.safeParse(state(carried)).success).toBe(false);
+    }
   });
 
   it("the weight increment goes down to a quarter, for micro-plates", () => {

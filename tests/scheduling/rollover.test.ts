@@ -1,33 +1,38 @@
 import type { DayState, LoggedSet, Program } from "@nabd/domain";
 import { dateKey } from "@nabd/domain";
 import { rollOver } from "@nabd/scheduling";
+import type { TodayPlanInput } from "@nabd/scheduling";
 import { logged, nov } from "../support/builders";
-import { EX, LIBRARY } from "../support/exercises";
-import {
-  benchRow,
-  cycledPlan,
-  floatingPushPull,
-  flyRow,
-  pushPull,
-  raiseRow,
-} from "../support/programs";
+import { EX } from "../support/exercises";
+import { benchRow, cycledPlan, floatingPushPull, flyRow, raiseRow } from "../support/programs";
 import { MONDAY, benchSet, dayState, input } from "./fixtures";
 
+const TUESDAY = nov(17);
+
+/** Rolling over from the day in `overrides.dayState` (Monday's, unless it says) to `overrides.date`. */
+const roll = (overrides: Partial<TodayPlanInput>) => rollOver({ ...input(), ...overrides });
+
+/** A cycled weekday plan: its first day on Sunday 15 Nov, its second on a Wednesday. */
+const weekdayCycled: Program = {
+  ...cycledPlan,
+  schedule: "weekday",
+  days: cycledPlan.days.map((day, index) => ({ ...day, weekday: index === 0 ? 0 : 3 })),
+};
+
+const chestSet = (hour: number, at = nov(16, hour)): LoggedSet =>
+  logged(EX.bench, at, 10, 40, { planItemId: "chest" });
+
 describe("rolling over to a new day", () => {
-  it("rollover advances only the pools that were trained", () => {
-    const sunday = dayState(nov(15));
-    const history = [logged(EX.bench, nov(15), 10, 40, { planItemId: "chest" })];
-    const result = rollOver({
-      program: cycledPlan,
-      dayState: sunday,
-      rotation: {},
-      history,
-      lookup: LIBRARY.lookup,
-      date: MONDAY,
+  it("a weekday plan's trained pools move on to their next exercise, the others stay", () => {
+    const sunday = nov(15);
+    const result = roll({
+      program: weekdayCycled,
+      dayState: dayState(sunday),
+      history: [chestSet(10, nov(15))],
     });
     expect(result.rotation).toEqual({ chest: EX.fly.id });
     expect(result.dayState).toEqual(dayState(MONDAY));
-    expect(result.records).toEqual([{ date: dateKey(nov(15)), planned: 6, done: 1 }]);
+    expect(result.records).toEqual([{ date: dateKey(sunday), planned: 6, done: 1 }]);
   });
 
   it("a pool moves on from the exercise it gave, wrapping round, wherever that now sits", () => {
@@ -36,10 +41,10 @@ describe("rolling over to a new day", () => {
       rotation: Record<string, string>,
       pool: string[],
     ) =>
-      rollOver({
+      roll({
         program: {
-          ...cycledPlan,
-          days: cycledPlan.days.map((day) => ({
+          ...weekdayCycled,
+          days: weekdayCycled.days.map((day) => ({
             ...day,
             slots: day.slots.map((slot) => (slot.id === "chest" ? { ...slot, pool } : slot)),
           })),
@@ -47,8 +52,6 @@ describe("rolling over to a new day", () => {
         dayState: dayState(nov(15)),
         rotation,
         history: [logged(exercise, nov(15), 10, 40, { planItemId: "chest" })],
-        lookup: LIBRARY.lookup,
-        date: MONDAY,
       }).rotation;
     const pool = [EX.bench.id, EX.fly.id, EX.dip.id];
     expect(trainedOn(EX.dip, { chest: EX.dip.id }, pool)).toEqual({ chest: EX.bench.id });
@@ -63,94 +66,48 @@ describe("rolling over to a new day", () => {
   });
 
   it("a floating plan moves on once the day owes nothing, clearing skips, extras and pause", () => {
-    const sunday = dayState(nov(15), {
+    const monday = dayState(MONDAY, {
       dayId: "a",
       skipped: ["delts"],
       extras: [{ id: "x", exId: EX.dip.id }],
       paused: true,
     });
-    const done = [10, 11, 12].map((h) =>
-      logged(EX.bench, nov(15, h), 10, 40, { planItemId: "chest" }),
-    );
-    const args = {
-      program: cycledPlan,
-      dayState: sunday,
-      rotation: {},
-      lookup: LIBRARY.lookup,
-      date: MONDAY,
-    };
-    expect(rollOver({ ...args, history: done }).dayState).toEqual(dayState(MONDAY, { dayId: "b" }));
-    expect(rollOver({ ...args, history: done.slice(1) }).dayState.dayId).toBe("a");
+    const done = [10, 11, 12].map((hour) => chestSet(hour));
+    const args = { program: cycledPlan, dayState: monday, date: TUESDAY };
+    expect(roll({ ...args, history: done }).dayState).toEqual(dayState(TUESDAY, { dayId: "b" }));
+    expect(roll({ ...args, history: done.slice(1) }).dayState.dayId).toBe("a");
   });
 
   it("a floating plan wraps from its last day back to the first", () => {
-    const onB = dayState(nov(15), { dayId: "b" });
-    const result = rollOver({
-      program: cycledPlan,
-      dayState: onB,
-      rotation: {},
-      history: [],
-      lookup: LIBRARY.lookup,
-      date: MONDAY,
-    });
-    expect(result.dayState.dayId).toBe("a");
+    const onB = dayState(MONDAY, { dayId: "b" });
+    expect(roll({ program: cycledPlan, dayState: onB, date: TUESDAY }).dayState.dayId).toBe("a");
   });
 
   it("a floating day with nothing plannable does not hold the plan up", () => {
-    const args = {
-      program: cycledPlan,
-      rotation: {},
-      history: [],
-      lookup: LIBRARY.lookup,
-      date: MONDAY,
-    };
+    const args = { program: cycledPlan, date: TUESDAY };
     // Day B is empty.
-    expect(rollOver({ ...args, dayState: dayState(nov(15), { dayId: "b" }) }).dayState.dayId).toBe(
-      "a",
-    );
+    expect(roll({ ...args, dayState: dayState(MONDAY, { dayId: "b" }) }).dayState.dayId).toBe("a");
     // Every exercise of day A was skipped.
-    const skippedAll = dayState(nov(15), { dayId: "a", skipped: ["chest", "delts"] });
-    expect(rollOver({ ...args, dayState: skippedAll }).dayState.dayId).toBe("b");
+    const skippedAll = dayState(MONDAY, { dayId: "a", skipped: ["chest", "delts"] });
+    expect(roll({ ...args, dayState: skippedAll }).dayState.dayId).toBe("b");
     // Every pool of day A is empty.
     const noPools: Program = {
       ...cycledPlan,
       days: cycledPlan.days.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s, pool: [] })) })),
     };
-    const onA = dayState(nov(15), { dayId: "a" });
-    expect(rollOver({ ...args, program: noPools, dayState: onA }).dayState.dayId).toBe("b");
-  });
-
-  it("an untouched floating day with work on it comes back the next day", () => {
-    const onA = dayState(nov(15), { dayId: "a" });
-    const result = rollOver({
-      program: cycledPlan,
-      dayState: onA,
-      rotation: {},
-      history: [],
-      lookup: LIBRARY.lookup,
-      date: MONDAY,
-    });
-    expect(result.dayState.dayId).toBe("a");
+    const onA = dayState(MONDAY, { dayId: "a" });
+    expect(roll({ ...args, program: noPools, dayState: onA }).dayState.dayId).toBe("b");
   });
 
   it("records nothing for a day with no plan and no sets", () => {
-    const tuesday = dayState(nov(17));
-    const result = rollOver({
-      program: pushPull,
-      dayState: tuesday,
-      rotation: {},
-      history: [],
-      lookup: LIBRARY.lookup,
-      date: nov(18),
-    });
+    const result = roll({ dayState: dayState(TUESDAY), date: nov(18) });
     expect(result.records).toEqual([]);
     expect(result.rotation).toEqual({});
   });
 
   it("rollover records every planned weekday the app was not running for", () => {
     // Last opened on Monday 16th; next opened on Thursday 26th.
-    const history = [benchSet(10)];
-    const result = rollOver({ ...input(), history, date: nov(26) });
+    const result = roll({ history: [benchSet(10)], date: nov(26) });
     expect(result.records).toEqual([
       { date: dateKey(nov(16)), planned: 10, done: 1 },
       { date: dateKey(nov(18)), planned: 3, done: 0 },
@@ -160,19 +117,13 @@ describe("rolling over to a new day", () => {
   });
 
   it("a floating plan has no missed days: it waits for the user", () => {
-    const result = rollOver({
-      ...input(),
-      program: floatingPushPull,
-      history: [benchSet(10)],
-      date: nov(26),
-    });
+    const result = roll({ program: floatingPushPull, history: [benchSet(10)], date: nov(26) });
     expect(result.records).toEqual([{ date: dateKey(nov(16)), planned: 10, done: 1 }]);
   });
 
   describe("what a floating plan puts on record", () => {
     const from = (state: DayState, history: LoggedSet[] = []) =>
-      rollOver({ ...input(), program: floatingPushPull, dayState: state, history, date: nov(17) })
-        .records;
+      roll({ program: floatingPushPull, dayState: state, history, date: TUESDAY }).records;
 
     it("nothing for a day it sat idle: that day comes back, it was not missed", () => {
       expect(from(dayState(MONDAY))).toEqual([]);
@@ -188,5 +139,31 @@ describe("rolling over to a new day", () => {
       const skippedAll = dayState(MONDAY, { skipped: [benchRow.id, flyRow.id, raiseRow.id] });
       expect(from(skippedAll)).toEqual([{ date: dateKey(MONDAY), planned: 10, done: 0 }]);
     });
+  });
+});
+
+describe("pools on a floating plan that is not finished", () => {
+  const monday = dayState(MONDAY, { dayId: "a" });
+  const partial = [10, 11].map((hour) => chestSet(hour));
+
+  it("stay on the exercise they gave until the day is done", () => {
+    const next = roll({ program: cycledPlan, dayState: monday, history: partial, date: TUESDAY });
+    expect(next.rotation).toEqual({});
+    expect(next.dayState.carried).toEqual({ chest: 2 });
+  });
+
+  it("move on together, those trained on earlier days included, when the day completes", () => {
+    const earlier = dayState(TUESDAY, { dayId: "a", carried: { chest: 3 } });
+    const delts = [10, 11, 12].map((hour) =>
+      logged(EX.raise, nov(17, hour), 10, 10, { planItemId: "delts" }),
+    );
+    const result = roll({
+      program: cycledPlan,
+      dayState: earlier,
+      history: [...partial, ...delts],
+      date: nov(18),
+    });
+    expect(result.rotation).toEqual({ chest: EX.fly.id, delts: EX.raise.id });
+    expect(result.dayState).toEqual(dayState(nov(18), { dayId: "b" }));
   });
 });

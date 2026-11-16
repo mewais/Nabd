@@ -33,8 +33,15 @@ export interface ToggleRowVM {
   disabled: boolean;
 }
 
+/** The workday: its hours, and the weekdays it is worked on. */
+export interface WorkdayVM {
+  hours: StepperRowVM[];
+  /** The weekdays worked, 0 = Sunday … 6 = Saturday. */
+  days: number[];
+}
+
 export interface SettingsVM {
-  workday: StepperRowVM[];
+  workday: WorkdayVM;
   nudges: StepperRowVM[];
   training: { unit: WeightUnit; increment: StepperRowVM; equipment: Equipment[] };
   /** `glass` and `opacity` are null where they are not offered. */
@@ -59,6 +66,11 @@ type BooleanSetting = {
 const STEP_DECIMALS = 2;
 
 const minutes = (value: number): string => `${value} min`;
+
+const STARTUP_HINT = {
+  tray: "Launch Nabd when you log in, quietly in the tray.",
+  noTray: "Launch Nabd when you log in.",
+};
 
 const MINIMIZED_HINT = {
   tray: "Sit quietly in the tray until a set is due.",
@@ -103,13 +115,16 @@ class SettingsRows {
 export function buildSettingsVM({ settings, capabilities, notice }: SettingsInput): SettingsVM {
   const rows = new SettingsRows(settings);
   return {
-    workday: [
-      rows.stepper("workStart", formatMinuteOfDay, {
-        title: "Starts",
-        hint: "Nabd stays silent before this.",
-      }),
-      rows.stepper("workEnd", formatMinuteOfDay, { title: "Ends", hint: "…and after this." }),
-    ],
+    workday: {
+      hours: [
+        rows.stepper("workStart", formatMinuteOfDay, {
+          title: "Starts",
+          hint: "Nabd stays silent before this.",
+        }),
+        rows.stepper("workEnd", formatMinuteOfDay, { title: "Ends", hint: "…and after this." }),
+      ],
+      days: settings.workDays,
+    },
     nudges: [
       rows.stepper("interval", minutes, {
         title: "Interval",
@@ -152,7 +167,7 @@ export function buildSettingsVM({ settings, capabilities, notice }: SettingsInpu
     startup: [
       rows.toggle("openAtStartup", {
         title: "Open at startup",
-        hint: "Launch Nabd when you log in.",
+        hint: capabilities.tray ? STARTUP_HINT.tray : STARTUP_HINT.noTray,
       }),
       rows.toggle(
         "minimizedByDefault",

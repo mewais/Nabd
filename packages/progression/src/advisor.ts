@@ -1,65 +1,28 @@
-import type { Prescription, SetSpec, TrackingType } from "@nabd/domain";
-import { SECONDS_STEP, isTimeBased, isWeighted, roundKg, workingSets } from "@nabd/domain";
-import type { ExerciseHistory, Performance } from "./history";
+import type { SetSpec, TrackingType } from "@nabd/domain";
+import {
+  SECONDS_STEP,
+  isBodyweightLoaded,
+  isTimeBased,
+  isWeighted,
+  roundKg,
+  workingSets,
+} from "@nabd/domain";
+import { repGoal } from "./advice";
+import type { Advice, AdviceRequest, Progression, RepGoal } from "./advice";
+import type { Performance } from "./history";
+import { loadFor, prescribedIntensity, steersLoad } from "./intensity";
+import type { PrescribedIntensity } from "./intensity";
 
-/** The rep (or seconds) window a set should land in. */
-interface RepGoal {
-  lo: number;
-  hi: number;
-}
-
-/** Why the advisor chose its primary target. */
-export type AdviceKind =
-  /** No history: start at the bottom of the range. */
-  | "start"
-  /** Below the range last time: same load, reach the bottom of the range. */
-  | "reach_range"
-  /** Inside the range: one more rep (or a few more seconds) at the same load. */
-  | "add_reps"
-  /** Topped the range: more load, back to the bottom of the range. */
-  | "add_load"
-  /** Topped the range with no load to add: keep pushing reps. */
-  | "beyond_range"
-  /** Missed the range twice running: back the load off one step. */
-  | "deload";
-
-export interface Advice {
-  kind: AdviceKind;
-  primary: Performance;
-  /** The other sensible way to progress (e.g. more load instead of one more rep). */
-  alternative: Performance | null;
-  /** What the advice was based on; null when there is no history. */
-  basis: Performance | null;
-}
-
-const DEFAULT_REP_GOAL: RepGoal = { lo: 8, hi: 12 };
-const DEFAULT_TIME_GOAL: RepGoal = { lo: 30, hi: 30 };
 /** Sessions that must miss the range in a row before backing the load off. */
 const STALL_SESSIONS = 2;
 /** The share of the last working load a first warm-up starts from. */
 const WARMUP_SHARE = 0.5;
 
-/** What the advisor is asked about: one set of one exercise in a session. */
-interface AdviceRequest {
-  tracking: TrackingType;
-  /** Null for an exercise done outside the plan. */
-  prescription: Prescription | null;
-  /** Which set of the session, 0-based, warm-ups excluded. */
-  setIndex: number;
-  history: ExerciseHistory;
-  /** The session's local date key; only earlier sessions are compared against. */
-  date: string;
-}
-
-/** The goal a prescribed set asks for; a default window when nothing is prescribed. */
-function repGoal(spec: SetSpec | null, tracking: TrackingType): RepGoal {
-  if (spec === null) return isTimeBased(tracking) ? DEFAULT_TIME_GOAL : DEFAULT_REP_GOAL;
-  return { lo: spec.amount, hi: spec.upTo ?? spec.amount };
-}
-
 /**
  * Double progression: earn reps inside the prescribed range first, then trade
- * them for load and start again at the bottom of the range.
+ * them for load and start again at the bottom of the range. Where the plan
+ * prescribes an RPE or a %1RM and there is a one-rep max to measure it
+ * against, the load follows that instead (see {@link Advice}).
  *
  * Loads are in kg. For assisted exercises the "load" is the assistance, so
  * progressing means *removing* it.
@@ -71,26 +34,32 @@ export class ProgressionAdvisor {
   /** Advice for one set, compared against the same set of the previous session. */
   advise({ tracking, prescription, setIndex, history, date }: AdviceRequest): Advice {
     const planned = prescription ? workingSets(prescription) : [];
-    const goal = repGoal(planned[setIndex] ?? planned.at(-1) ?? null, tracking);
+    const spec = planned[setIndex] ?? planned.at(-1) ?? null;
+    const goal = repGoal(spec, tracking);
     /** The set of a session this one is compared against: the same one, else its last. */
     const counterpart = (session: Performance[]): Performance | undefined =>
       session[setIndex] ?? session.at(-1);
 
     const recent = history.sessionsBefore(date, STALL_SESSIONS);
     const basis = recent[0] && counterpart(recent[0]);
-    if (basis === undefined) return this.startingPoint(tracking, planned[setIndex] ?? null);
-
     const stalled =
       recent.length === STALL_SESSIONS &&
       recent.every((session) => (counterpart(session)?.reps ?? goal.lo) < goal.lo);
-    return this.progressFrom(tracking, goal, basis, stalled);
+    const plain =
+      basis === undefined
+        ? this.startingPoint(tracking, planned[setIndex] ?? null)
+        : this.progressFrom(tracking, goal, basis, stalled);
+
+    const intensity = steersLoad(tracking) ? prescribedIntensity(prescription, spec) : null;
+    return this.steered(plain, tracking, intensity, goal, history.estimateBefore(date));
   }
 
   /** Where to begin with no history: the bottom of the range, load still to be found. */
   startingPoint(tracking: TrackingType, spec: SetSpec | null): Advice {
     const goal = repGoal(spec, tracking);
     const weight = isWeighted(tracking) ? 0 : null;
-    return { kind: "start", primary: { reps: goal.lo, weight }, alternative: null, basis: null };
+    const primary = { reps: goal.lo, weight };
+    return { kind: "start", primary, alternative: null, basis: null, intensity: null };
   }
 
   private progressFrom(
@@ -98,7 +67,7 @@ export class ProgressionAdvisor {
     goal: RepGoal,
     basis: Performance,
     stalled: boolean,
-  ): Advice {
+  ): Progression {
     const repStep = isTimeBased(tracking) ? SECONDS_STEP : 1;
     const moreReps: Performance = { reps: basis.reps + repStep, weight: basis.weight };
     const harder = this.stepLoad(tracking, basis.weight, "harder");
@@ -118,6 +87,47 @@ export class ProgressionAdvisor {
         : { kind: "add_load", primary, alternative: moreReps, basis };
     }
     return { kind: "add_reps", primary: moreReps, alternative: moreLoad(basis.reps), basis };
+  }
+
+  /**
+   * `plain` with the prescribed `intensity` brought in. With an estimated
+   * one-rep max `max` its load becomes the primary target, for the bottom of
+   * the rep goal, and double progression's own target the alternative (the
+   * alternative it already had when the two agree). Without one the advice
+   * stays as it is, and says which intensity it is waiting to use.
+   */
+  private steered(
+    plain: Progression,
+    tracking: TrackingType,
+    intensity: PrescribedIntensity | null,
+    goal: RepGoal,
+    max: number | undefined,
+  ): Advice {
+    if (intensity === null) return { ...plain, intensity: null };
+    if (max === undefined) return { ...plain, intensity: { ...intensity, max: null } };
+    const weight = this.intensityLoad(tracking, loadFor(intensity, max, goal.lo));
+    if (weight === null) return { ...plain, intensity: null };
+    const primary: Performance = { reps: goal.lo, weight };
+    const agrees = primary.weight === plain.primary.weight && primary.reps === plain.primary.reps;
+    const alternative = agrees ? plain.alternative : plain.primary;
+    return { ...plain, primary, alternative, intensity: { ...intensity, max } };
+  }
+
+  /** `kg` on the user's load step. */
+  private onStep(kg: number): number {
+    return roundKg(Math.round(kg / this.loadStepKg) * this.loadStepKg);
+  }
+
+  /**
+   * The load an intensity asks for, on the load step and never below one step.
+   * For a bodyweight exercise, whose plain form is no load at all, a load that
+   * rounds to nothing is no load worth suggesting: null, and the reps-first
+   * advice stands.
+   */
+  private intensityLoad(tracking: TrackingType, kg: number): number | null {
+    const load = this.onStep(kg);
+    if (load > 0) return load;
+    return isBodyweightLoaded(tracking) ? null : this.loadStepKg;
   }
 
   /**
@@ -147,7 +157,6 @@ export class ProgressionAdvisor {
     if (working.weight === null || tracking === "assisted_bodyweight") {
       return { reps, weight: working.weight };
     }
-    const steps = Math.round((working.weight * WARMUP_SHARE) / this.loadStepKg);
-    return { reps, weight: roundKg(steps * this.loadStepKg) };
+    return { reps, weight: this.onStep(working.weight * WARMUP_SHARE) };
   }
 }

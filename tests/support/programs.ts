@@ -7,7 +7,7 @@
 //  - `officeStrength`, `rotationPlan`: a fuller fixed and a cycled plan of
 //    built-in exercises, for the planner.
 
-import type { ExercisePrescription, LoggedSet, Program, SetSpec } from "@nabd/domain";
+import type { ExercisePrescription, Intensity, LoggedSet, Program, SetSpec } from "@nabd/domain";
 import { logged, nov, prescription, row, threeSets, warmup, working } from "./builders";
 import { CATALOG, EX } from "./exercises";
 import type { ExKey } from "./exercises";
@@ -47,11 +47,14 @@ export function did(
   return logged(EX[ex], at, reps, weight, { planItemId: itemId, ...rest });
 }
 
-/** Monday's plan: bench (warm-up + 2 working sets at RPE 8), rows, a plank hold. */
-export const pushDay = (): Program =>
+/**
+ * Monday's plan: bench (warm-up + 2 working sets at RPE 8, or at no intensity
+ * when `intensity` says "none"), rows, a plank hold.
+ */
+export const pushDay = (intensity: Intensity = "rpe"): Program =>
   mondayProgram([
     planRow("p-bench", "bench", [warmup(10), working(8, 12, 8), working(8, 12, 8)], {
-      intensity: "rpe",
+      intensity,
       notes: "Pause at the chest",
     }),
     planRow("p-row", "row", [working(8, 12), working(8, 12)]),

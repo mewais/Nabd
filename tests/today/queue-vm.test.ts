@@ -98,4 +98,29 @@ describe("buildTodayVM · queue", () => {
   it("an extra with logged sets is done and can no longer be removed", () => {
     expect(row("x-pullup")).toMatchObject({ state: "done", badge: "2 sets", skipLabel: null });
   });
+
+  describe("on a floating day that came back with only the rest", () => {
+    // Bench was done on an earlier day, and one of the push-up's two sets.
+    const comeback = () =>
+      todayVM({
+        program: program(),
+        carried: { "p-bench": 2, "p-pushup": 1 },
+        history: [did("p-pushup", "pushup", 12, null)],
+      });
+    const comebackRow = (id: string) => comeback().queue.rows.find((r) => r.id === id);
+
+    it("shows what earlier days did as done, and the next exercise as the one still owing", () => {
+      expect(comebackRow("p-bench")).toMatchObject({ state: "done", badge: "2/2 sets" });
+      expect(comebackRow("p-pushup")).toMatchObject({ state: "done", badge: "2/2 sets" });
+      expect(comeback().queue.rows.find((r) => r.state === "next")?.id).toBe("p-dip");
+    });
+
+    it("counts a set done yesterday toward the set tally, so the exercise still owes the rest", () => {
+      const rest = todayVM({ program: program(), carried: { "p-dip": 1 } });
+      expect(rest.queue.rows.find((r) => r.id === "p-dip")).toMatchObject({
+        state: "pending",
+        badge: "1/2 sets",
+      });
+    });
+  });
 });

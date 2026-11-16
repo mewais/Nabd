@@ -1,7 +1,7 @@
 // What stays put across a plan edit: the day a floating plan is on, the day
 // the planner has open, and the exercise each cycled pool is about to give.
 
-import type { CycledSlot, Program, RotationState } from "@nabd/domain";
+import type { CarriedSets, CycledSlot, Program, RotationState } from "@nabd/domain";
 import { floatingDay } from "./floating";
 
 const hasDay = (program: Program, dayId: string): boolean =>
@@ -36,6 +36,24 @@ export function dayIdAfterEdit(
   }
   const current = floatingDay(before, dayId);
   return current === null ? dayId : successorDay(before, after, current.id);
+}
+
+/**
+ * What an unfinished floating day has behind it after an edit: the counts of
+ * the items that are still on the day `dayId` (the day after the edit) — an
+ * item deleted from the plan takes its count with it, and a day that took the
+ * place of a deleted one starts clean. A weekday plan carries nothing. Returns
+ * `carried` itself when nothing changed.
+ */
+export function carriedAfterEdit(
+  after: Program,
+  dayId: string | null,
+  carried: CarriedSets,
+): CarriedSets {
+  const day = after.schedule === "floating" ? floatingDay(after, dayId) : null;
+  const items = day === null ? [] : [...day.exercises, ...day.slots];
+  const kept = Object.entries(carried).filter(([id]) => items.some((item) => item.id === id));
+  return kept.length === Object.keys(carried).length ? carried : Object.fromEntries(kept);
 }
 
 /**

@@ -48,9 +48,9 @@ describe("buildSessionVM", () => {
 
     expect(form.setLine).toBe("Set 2 of 3 · Working set · 8–12 reps · RPE 8");
     expect(form.set.advice).toEqual({
-      primary: "9 × 60 kg",
-      alternative: "8 × 62.5 kg",
-      reason: "Inside your range — beat last time.",
+      primary: "8 × 57.5 kg",
+      alternative: "9 × 60 kg",
+      reason: "RPE 8 ≈ 2 reps in reserve.",
       basis: "Last time: 8 × 60 kg",
     });
   });
@@ -62,7 +62,7 @@ describe("buildSessionVM", () => {
 
     expect(form.weightLabel).toBe("Weight (lb)");
     expect(form.weight).toBe(132.28);
-    expect(form.set.advice?.primary).toBe("9 × 132.3 lb");
+    expect(form.set.advice?.primary).toBe("8 × 126.8 lb");
     expect(form.logged.map((s) => s.text)).toEqual(["10 × 88.2 lb"]);
   });
 
@@ -91,6 +91,24 @@ describe("buildSessionVM", () => {
         unsaved: false,
       },
     ]);
+  });
+
+  it("on a day that came back with only the rest, counts the sets done on earlier days", () => {
+    // The warm-up and the first working set were done earlier: the last working set is next.
+    const vm = sessionVM(
+      { program: pushDay(), history: lastWeek(), carried: { "p-bench": 2 } },
+      "p-bench",
+    );
+
+    expect(vm.form.setLine).toBe("Set 3 of 3 · Working set · 8–12 reps · RPE 8");
+    expect(vm.form.logged).toEqual([]);
+    expect(vm.list.find((row) => row.itemId === "p-bench")).toMatchObject({
+      progress: "2/3",
+      complete: false,
+    });
+    // Compared against last week's second working set, the 7.
+    expect(vm.form.set.advice?.basis).toBe("Last time: 7 × 60 kg");
+    expect(vm.footer).toBe("No sets logged yet today");
   });
 
   it("marks the sets that are not saved yet", () => {

@@ -34,6 +34,7 @@ export function beginDay({ get, set, now, persistTogether }: StoreContext): bool
     history: s.history,
     date: today,
     lookup: selectLibrary(s).lookup,
+    workDays: s.settings.workDays,
   });
   const dayLog = withRecords(s.dayLog, records);
   set({

@@ -15,16 +15,23 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   exercises, moving on to the next one each time the day comes round. Days are pinned
   to weekdays (at most one per weekday, so seven), or _floating_: Day 1, 2, 3 … in
   order, moving on once a day owes nothing more — completed, skipped, or empty. An
-  unfinished floating day comes back the next day, weekends included; a day it merely
-  waited on is not a missed day, so only days with a set (or that the plan moved on
-  from) count toward completion. A few rules hold whatever is edited, stored or
-  imported:
+  unfinished floating day comes back the next day, with only what is still owed: the
+  sets already logged for each exercise on the earlier days count as done (an exercise
+  that is whole shows as done and is not nudged for, and a warm-up done yesterday means
+  today starts at the first working set), and the plan moves on when the rest is done.
+  A skip is for its calendar day only, so a skipped exercise is owed again; the one
+  exception is that a day owing nothing moves on. Each calendar day puts on record what
+  it owed and what it did, so a day that came back for two sets and did them is 100%; a
+  day it merely waited on is not a missed day, so only days with a set (or that the plan
+  moved on from) count toward completion. A weekday plan has no such memory: its days
+  belong to the calendar. A few rules hold whatever is edited, stored or imported:
   - whether a set is counted in reps or in seconds is the exercise's doing, not a
     choice: a rep-counted exercise is prescribed as a range or a fixed number, a hold in
     seconds. A cycled pool shares one prescription, so it holds one kind — the kind of
     its first exercise — and the library only offers that kind for it;
   - a pool is tracked by exercise, not by position, so editing it never skips or
-    repeats one;
+    repeats one — and on a floating plan a pool moves on only when its day does, so a
+    day that comes back is on the same exercises;
   - a superset stays together: an exercise moved past it steps over the whole group, a
     member moves within it, and a member moved out past its edge is unlinked. The
     supersets of a day are lettered A, B, C … (A1/A2, B1/B2);
@@ -41,7 +48,12 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   counted, and a logger open on an exercise that leaves the queue moves on to the next
   one (or closes) rather than linger.
 - **Nudges** follow four rules:
-  1. never outside the workday (Settings → Workday), while paused, or with nothing left;
+  1. never outside the workday or on a day off (Settings → Workday: the hours, and the
+     weekdays worked — Monday to Friday unless changed, whatever the schedule), while
+     paused, or with nothing left. The top bar says when nudging resumes ("Quiet until
+     Mon 09:00"). A day off still shows its plan and takes sets, but owes nothing until a
+     set is logged on it: an idle one neither moves a floating plan on nor counts toward
+     completion;
   2. the timer nudges _interval_ minutes after your last set (before the first one: after
      the workday started, the app was launched, or the plan got work — whichever is latest);
   3. an idle moment (no keyboard or mouse for the _idle moment_ setting) nudges earlier —
@@ -83,13 +95,25 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   upgraded as it is read (and written back in today's shape): the field names of
   prescribed sets (export format 3), the old "translucent" theme, plans and rotations
   that pointed at positions instead of ids, and exercises the catalog has since retired
-  — a single-arm variant of two-handed equipment becomes the two-handed exercise.
+  — a single-arm variant of two-handed equipment becomes the two-handed exercise. What
+  came later (an unfinished day's carried sets and the workdays, export format 4) is
+  simply missing from older data and takes its default: nothing carried, Monday to Friday.
 - **Suggestions** use double progression against the same set of your previous session:
   inside your rep range → one more rep (or, alternatively, the same reps with more
   load); at the top → more load, back at the bottom of the range; below it → hold the
   load; below it twice running → back off one step. "More load" is your own weight
   increment (Settings → Training; 2.5 kg or 5 lb unless you choose your own, which a
   change of unit leaves alone), so 8 × 25 lb suggests 9 × 25 lb or 8 × 27.5 lb.
+  Where a set is prescribed at a %1RM or an RPE and the exercise has an estimated 1RM
+  (Epley, from its latest session: the same estimate the trends use), the load follows
+  the prescription instead, rounded to your increment, for the bottom of the rep range: a
+  %1RM is that share of the estimate ("70% of your estimated max (86 kg)"), an RPE is
+  10 − RPE reps in reserve, the load at which the prescribed reps plus those in reserve
+  make up the estimate ("RPE 8 ≈ 2 reps in reserve"). Plain double progression stays the
+  alternative. Until there is history the advice is plain double progression and says the
+  intensity will apply later; a hold, an assisted exercise and bodyweight reps ignore it,
+  a bodyweight exercise whose load would round to nothing stays reps-first, and no
+  loaded exercise is ever asked for less than one increment.
   A bodyweight exercise with nothing added is plain reps — "12 reps", then "8 + 2.5 kg
   or 13 reps" at the top of the range — and only an exercise that needs a bar or a
   dumbbell asks you to pick a starting weight. Warm-ups are left out of progression,
@@ -259,7 +283,8 @@ packages/
                   notice, the library's state — shared by the store and the screens
   dataset         ExerciseLibrary: movement catalog × equipment × laterality
   coverage        MuscleVolume: sets per muscle, from the plan or from history
-  scheduling      TodayPlan / PlanItem (today's queue) and day rollover
+  scheduling      TodayPlan / PlanItem (today's queue), DayLedger (what a day owed and
+                  did) and day rollover
   progression     ProgressionAdvisor, ExerciseHistory, ExerciseProgress (trends, in kg)
   session         LogSession (the set being entered), Coach, wording
   nudge           NudgePolicy: when to say "time to move"

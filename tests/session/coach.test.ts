@@ -1,4 +1,4 @@
-import { freshDayState } from "@nabd/domain";
+import { DEFAULT_SETTINGS, freshDayState } from "@nabd/domain";
 import { TodayPlan } from "@nabd/scheduling";
 import { exercise, logged, lookupIn, nov, row, working } from "../support/builders";
 import { TODAY, curl, curlRow, itemsFor, coachFor, program } from "./fixtures";
@@ -94,9 +94,42 @@ describe("Coach", () => {
       rotation: {},
       history,
       lookup: lookupIn([squat]),
+      workDays: DEFAULT_SETTINGS.workDays,
     }).item(squatRow.id)!;
     expect(item.nextSet?.type).toBe("drop");
     expect(coachFor(history).startFor(item)).toEqual({ reps: 12, weight: 40 });
+  });
+
+  describe("on a floating day that comes back with only the rest", () => {
+    // Warm-up and one working set were done on earlier days; last week went 8 then 7.
+    const carried = { [curlRow.id]: 2 };
+
+    it("advises the next owed set against the same set of the previous session", () => {
+      const item = itemsFor(lastWeek, carried).curlItem;
+      expect(item.nextSet).toEqual(working(8, 12));
+      const advice = coachFor(lastWeek).adviceFor(item);
+      // Set 2 of the day is compared with set 2 of last week: the 7.
+      expect(advice?.basis).toEqual({ reps: 7, weight: 25 });
+    });
+
+    it("gives no advice while the warm-up is what is owed, whatever the day before did", () => {
+      const noneYet = itemsFor(lastWeek).curlItem;
+      expect(coachFor(lastWeek).adviceFor(noneYet)).toBeNull();
+    });
+  });
+
+  it("gives no progression advice for a warm-up even where an intensity is prescribed", () => {
+    const rpe = { ...curlRow, intensity: "rpe" as const };
+    const item = TodayPlan.build({
+      program: { ...program, days: [{ ...program.days[0]!, exercises: [rpe] }] },
+      date: TODAY,
+      dayState: freshDayState(TODAY),
+      rotation: {},
+      history: lastWeek,
+      lookup: lookupIn([curl]),
+      workDays: DEFAULT_SETTINGS.workDays,
+    }).item(rpe.id)!;
+    expect(coachFor(lastWeek).adviceFor(item)).toBeNull();
   });
 
   it("with no history, starts from the prescription", () => {

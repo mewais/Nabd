@@ -2,7 +2,7 @@
 // (tests/support/programs.ts) and whatever a test varies.
 
 import type { DayState, LoggedSet, Program } from "@nabd/domain";
-import { freshDayState } from "@nabd/domain";
+import { DEFAULT_SETTINGS, freshDayState, parseDateKey } from "@nabd/domain";
 import { TodayPlan } from "@nabd/scheduling";
 import type { TodayPlanInput } from "@nabd/scheduling";
 import { logged, nov } from "../support/builders";
@@ -24,16 +24,24 @@ export const input = (): TodayPlanInput => ({
   rotation: {},
   history: [],
   lookup: LIBRARY.lookup,
+  workDays: DEFAULT_SETTINGS.workDays,
 });
 
-/** Monday's plan for the given history, day state, program and rotation. */
+/** The weekday Push / Pull plan with its Push day moved to `weekday` (0 = Sunday … 6 = Saturday). */
+export const pushPullOn = (weekday: number): Program => ({
+  ...pushPull,
+  days: [{ ...pushPull.days[0]!, weekday }],
+});
+
+/** The plan of the day `state` is on (Monday, unless it says), for the given history, program and rotation. */
 export function build(
   history: LoggedSet[] = [],
   state: DayState = dayState(MONDAY),
   program: Program = pushPull,
   rotation = {},
 ): TodayPlan {
-  return TodayPlan.build({ ...input(), program, dayState: state, rotation, history });
+  const date = parseDateKey(state.date);
+  return TodayPlan.build({ ...input(), program, date, dayState: state, rotation, history });
 }
 
 /** A bench set logged against Monday's bench row at `hour`. */

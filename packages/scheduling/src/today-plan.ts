@@ -1,15 +1,15 @@
 import type {
   Day,
-  DayRecord,
   DayState,
   ExerciseLookup,
   LoggedSet,
   MuscleKey,
   Program,
   RotationState,
-  Schedule,
+  Settings,
 } from "@nabd/domain";
-import { dateKey, exerciseOfSet } from "@nabd/domain";
+import { dateKey, exerciseOfSet, isWorkDay, sum } from "@nabd/domain";
+import { DayLedger } from "./day-ledger";
 import { queueEntries, resolveDay } from "./queue-entries";
 import { PlanItem } from "./plan-item";
 import { TodaysSets } from "./todays-sets";
@@ -22,10 +22,9 @@ export interface TodayPlanInput {
   /** Full history; only sets logged on `date` are attributed. */
   history: readonly LoggedSet[];
   lookup: ExerciseLookup;
+  /** The weekdays that are worked: a day off owes nothing until a set is logged on it. */
+  workDays: Settings["workDays"];
 }
-
-const sum = <T>(list: readonly T[], amount: (element: T) => number): number =>
-  list.reduce((total, element) => total + amount(element), 0);
 
 /**
  * Today's queue, derived on demand from the program, the rotation and today's
@@ -36,8 +35,8 @@ export class TodayPlan {
     readonly date: string,
     /** The program day that applies today; null on a rest day or with no plan. */
     private readonly day: Day | null,
-    /** Whether the plan follows the calendar (weekdays) or its own order (floating). */
-    private readonly schedule: Schedule,
+    /** What the day owed and what it did. */
+    readonly ledger: DayLedger,
     readonly items: readonly PlanItem[],
     /** Muscles of cycled slots that cannot be trained yet: their pool is empty. */
     readonly emptySlots: readonly MuscleKey[],
@@ -60,7 +59,7 @@ export class TodayPlan {
    * then shown as its sets recorded it.
    */
   static build(input: TodayPlanInput): TodayPlan {
-    const { program, date, dayState, rotation, history, lookup } = input;
+    const { program, date, dayState, rotation, history, lookup, workDays } = input;
     const today = dateKey(date);
     const sets = new TodaysSets(history.filter((set) => set.date === today));
     const day = resolveDay(program, date, dayState.dayId);
@@ -72,29 +71,34 @@ export class TodayPlan {
       const exercise = lookup(exId) ?? (firstSet ? exerciseOfSet(firstSet) : null);
       if (!exercise) return [];
       const skipped = dayState.skipped.includes(entry.id);
-      return [new PlanItem({ ...entry, exercise, label: label ?? exercise.group, skipped })];
+      const carried = dayState.carried[entry.id] ?? 0;
+      const init = { ...entry, exercise, label: label ?? exercise.group, carried, skipped };
+      return [new PlanItem(init)];
     });
-    return new TodayPlan(today, day, program.schedule, items, emptySlots);
+    const floating = program.schedule === "floating";
+    const ledger = new DayLedger(today, items, floating, isWorkDay({ workDays }, date));
+    return new TodayPlan(today, day, ledger, items, emptySlots);
   }
 
   item(id: string): PlanItem | undefined {
     return this.items.find((i) => i.id === id);
   }
 
-  /** Prescribed sets across items that were not skipped. */
+  /** Prescribed sets this day owes across items that were not skipped. */
   get setsPlanned(): number {
-    return sum(this.items, (i) => (i.skipped ? 0 : i.planned));
+    return sum(this.items, (i) => (i.skipped ? 0 : i.owed));
   }
 
+  /** Sets logged today, whatever they count toward. */
   get setsDone(): number {
-    return sum(this.items, (i) => i.done);
+    return sum(this.items, (i) => i.logged.length);
   }
 
   get setsRemaining(): number {
     return sum(this.items, (i) => i.remaining);
   }
 
-  /** Prescribed sets already logged; sets beyond a prescription do not count. */
+  /** Owed sets already logged today; sets beyond a prescription do not count. */
   get plannedSetsDone(): number {
     return this.setsPlanned - this.setsRemaining;
   }
@@ -109,36 +113,15 @@ export class TodayPlan {
     return sum(this.items, (i) => i.loadLifted);
   }
 
-  /** Everything prescribed has been logged (and something actually was). */
+  /** Everything prescribed has been done (and something actually was, today or on an earlier day). */
   get isComplete(): boolean {
-    return this.setsRemaining === 0 && this.setsDone > 0;
+    return this.setsRemaining === 0 && this.items.some((i) => i.done > 0);
   }
 
   /** There is a plan for today, but every exercise in it was skipped. */
   get isAllSkipped(): boolean {
     const planned = this.items.filter((i) => !i.isExtra);
     return planned.length > 0 && planned.every((i) => i.skipped);
-  }
-
-  /**
-   * How the day stands against its plan, for the completion charts; null when
-   * nothing was planned. A skipped exercise still counts as planned, while
-   * extras and sets beyond a prescription earn nothing: only planned work can
-   * complete a plan.
-   *
-   * A floating plan has no calendar to fall behind: a day it sat idle is not a
-   * missed day, so it has no record either until a set is logged or — `closed`
-   * — the plan has moved on from it.
-   */
-  record(closed = false): DayRecord | null {
-    const planned = sum(this.items, (i) => i.planned);
-    if (planned === 0) return null;
-    if (this.schedule === "floating" && this.setsDone === 0 && !closed) return null;
-    return {
-      date: this.date,
-      planned,
-      done: sum(this.items, (i) => Math.min(i.done, i.planned)),
-    };
   }
 
   /** The first exercise that still owes a set. */

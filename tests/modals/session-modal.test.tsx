@@ -159,9 +159,9 @@ describe("SessionModal", () => {
     const vm = sessionVM({ program: pushDay(), history: [...lastWeek(), SETS.warmup] }, "p-bench");
     const { actions } = setup(vm);
 
-    fireEvent.click(screen.getByRole("button", { name: "9 × 60 kg" }));
+    fireEvent.click(screen.getByRole("button", { name: "8 × 57.5 kg" }));
     expect(actions.applyAdvice).toHaveBeenLastCalledWith("primary");
-    fireEvent.click(screen.getByRole("button", { name: "8 × 62.5 kg" }));
+    fireEvent.click(screen.getByRole("button", { name: "9 × 60 kg" }));
     expect(actions.applyAdvice).toHaveBeenLastCalledWith("alternative");
   });
 

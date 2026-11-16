@@ -18,7 +18,7 @@ describe("across restarts and days", () => {
     expect(second.plan().setsRemaining).toBe(1);
   });
 
-  it("an unfinished floating day comes back tomorrow, with a record of today", async () => {
+  it("an unfinished floating day comes back tomorrow with only the rest, and a record of today", async () => {
     const app = await boot();
     await app.log(catalogBenchRow.id, 2);
     app.get().toggleSkip(catalogFlyRow.id);
@@ -26,9 +26,41 @@ describe("across restarts and days", () => {
 
     expect(app.plan().dayName).toBe("Push");
     expect(app.plan().setsDone).toBe(0);
-    expect(app.get().dayState).toEqual(freshDayState(nov(17)));
+    expect(app.get().dayState).toEqual(freshDayState(nov(17), null, { [catalogBenchRow.id]: 2 }));
+    expect(app.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, owed: 1, remaining: 1 });
+    // The skip was for yesterday only: fly is owed in full again.
+    expect(app.plan().item(catalogFlyRow.id)).toMatchObject({ skipped: false, owed: 3 });
     expect(app.get().dayLog).toEqual([{ date: dateKey(nov(16)), planned: 6, done: 2 }]);
     expect(app.get().session).toBeNull();
+  });
+
+  it("the rest of it is what finishes the day, and then the plan moves on", async () => {
+    const app = await boot();
+    await app.log(catalogBenchRow.id, 2);
+    app.advanceTo(nov(17, 9, 30));
+    await app.finishDay();
+    expect(app.plan().isComplete).toBe(true);
+    // Tuesday owed 4 sets and did 4: complete, though the day took two calendar days.
+    expect(app.plan().ledger.record()).toEqual({ date: dateKey(nov(17)), planned: 4, done: 4 });
+
+    app.advanceTo(nov(18, 9, 30));
+    expect(app.plan().dayName).toBe("Pull");
+    expect(app.get().dayState.carried).toEqual({});
+    expect(app.get().dayLog).toEqual([
+      { date: dateKey(nov(16)), planned: 6, done: 2 },
+      { date: dateKey(nov(17)), planned: 4, done: 4 },
+    ]);
+  });
+
+  it("what is carried survives a restart", async () => {
+    const first = await boot();
+    await first.log(catalogBenchRow.id, 2);
+    first.advanceTo(nov(17, 9, 30));
+    expect(first.data.dayState).toMatchObject({ carried: { [catalogBenchRow.id]: 2 } });
+
+    const second = await boot({}, { client: first.client, data: first.data }, nov(17, 10));
+    expect(second.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, remaining: 1 });
+    expect(second.get().session).toBeNull();
   });
 
   it("a completed floating day moves on to the next one", async () => {
@@ -40,17 +72,33 @@ describe("across restarts and days", () => {
     expect(app.data.dayState).toMatchObject({ dayId: "pull" });
   });
 
-  it("cycled pools rotate after a day they were trained", async () => {
-    const app = await boot();
-    app.get().editProgram((e) => e.setType("cycled"));
-    const slot = app.get().program.days[0]!.slots[0]!;
-    expect(slot.pool).toEqual([CATALOG.bench, CATALOG.fly]);
-    expect(app.plan().items[0]!.exercise.id).toBe(CATALOG.bench);
+  describe("cycled pools", () => {
+    async function cycled() {
+      const app = await boot();
+      app.get().editProgram((e) => e.setType("cycled"));
+      const slot = app.get().program.days[0]!.slots[0]!;
+      expect(slot.pool).toEqual([CATALOG.bench, CATALOG.fly]);
+      expect(app.plan().items[0]!.exercise.id).toBe(CATALOG.bench);
+      return { app, slot };
+    }
 
-    await app.log(slot.id, 1);
-    app.advanceTo(nov(17, 9, 30));
-    expect(app.get().rotationState).toEqual({ [slot.id]: CATALOG.fly });
-    expect(app.plan().items[0]!.exercise.id).toBe(CATALOG.fly);
+    it("rotate after a day they were trained", async () => {
+      const { app, slot } = await cycled();
+      await app.finishDay();
+      app.advanceTo(nov(17, 9, 30));
+      expect(app.get().rotationState).toEqual({ [slot.id]: CATALOG.fly });
+      expect(app.plan().dayName).toBe("Pull");
+    });
+
+    it("stay on the same exercise while their day comes back unfinished", async () => {
+      const { app, slot } = await cycled();
+      await app.log(slot.id, 1);
+      app.advanceTo(nov(17, 9, 30));
+      expect(app.get().rotationState).toEqual({});
+      expect(app.plan().dayName).toBe("Push");
+      expect(app.plan().items[0]!.exercise.id).toBe(CATALOG.bench);
+      expect(app.plan().item(slot.id)).toMatchObject({ done: 1, remaining: 2 });
+    });
   });
 
   it("a floating plan is not held up by a day that was skipped outright", async () => {

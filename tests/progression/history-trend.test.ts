@@ -50,6 +50,15 @@ describe("ExerciseHistory", () => {
     expect(history.bestPerSession(estimatedMax)).toEqual([50 * (1 + 9 / 30), 60 * (1 + 8 / 30)]);
   });
 
+  it("estimates the max from the best set of the latest session before a date", () => {
+    expect(history.estimateBefore(dateKey(nov(12)))).toBe(50 * (1 + 9 / 30));
+    expect(history.estimateBefore(dateKey(nov(16)))).toBe(60 * (1 + 8 / 30));
+    // Nothing before the first session, and a session without load is no estimate.
+    expect(history.estimateBefore(dateKey(nov(9)))).toBeUndefined();
+    const bodyweight = new ExerciseHistory([logged(other, nov(9), 20, null)], other.id);
+    expect(bodyweight.estimateBefore(dateKey(nov(16)))).toBeUndefined();
+  });
+
   it("remembers warm-ups apart from the sessions: the last one, or the last one of a day", () => {
     expect(history.latest("warmup")).toEqual({ reps: 10, weight: 20 });
     expect(history.latest("warmup", dateKey(nov(9)))).toBeUndefined();

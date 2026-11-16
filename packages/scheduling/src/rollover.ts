@@ -17,11 +17,17 @@ interface Rollover {
 
 /**
  * Close the day in `input.dayState` and open `input.date`:
- *  - every cycled pool that was actually trained moves on to its next exercise;
  *  - a floating plan moves on to its next day once the ended day owes nothing.
  *    That covers a completed day, but also an empty day, a day whose pools are
  *    all empty and a day that was skipped outright — none of those can ever be
- *    "completed", so waiting for it would park the plan there forever;
+ *    "completed", so waiting for it would park the plan there forever. A day
+ *    off that nothing was logged on owes nothing only by not being a day on,
+ *    so it neither moves the plan on nor counts;
+ *  - a floating day that is not finished comes back with what it has behind
+ *    it, counting what earlier days did: only the rest is owed;
+ *  - every cycled pool that was actually trained moves on to its next exercise
+ *    when its day closes — at once on a weekday plan, and on a floating plan
+ *    when the plan moves on, so an unfinished day stays on the same exercises;
  *  - skips, extras and the pause are cleared.
  */
 export function rollOver(input: TodayPlanInput): Rollover {
@@ -29,20 +35,25 @@ export function rollOver(input: TodayPlanInput): Rollover {
   const endedOn = parseDateKey(dayState.date);
   const ended = TodayPlan.build({ ...input, date: endedOn });
 
-  const nextRotation = program.type === "cycled" ? rotated(program, ended, rotation) : rotation;
-  const moveOn = program.schedule === "floating" && ended.setsRemaining === 0;
+  const floating = program.schedule === "floating";
+  const moveOn = floating && ended.ledger.owesNothing;
+  const closes = !floating || moveOn;
+  const nextRotation =
+    program.type === "cycled" && closes ? rotated(program, ended, rotation) : rotation;
   const missed = missedDays(program, endedOn, date).map((day) =>
     TodayPlan.build({
       ...input,
       rotation: nextRotation,
       date: day,
       dayState: freshDayState(day),
-    }).record(),
+    }).ledger.record(),
   );
   return {
-    dayState: freshDayState(date, moveOn ? dayAfter(program, dayState.dayId) : dayState.dayId),
+    dayState: moveOn
+      ? freshDayState(date, dayAfter(program, dayState.dayId))
+      : freshDayState(date, dayState.dayId, floating ? ended.ledger.carryOver : {}),
     rotation: nextRotation,
-    records: [ended.record(moveOn), ...missed].filter((record) => record !== null),
+    records: [ended.ledger.record(moveOn), ...missed].filter((record) => record !== null),
   };
 }
 

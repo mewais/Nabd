@@ -1,7 +1,7 @@
 // @nabd/nudge — decides, from the wall clock, when the user should be told to move.
 
 import type { Settings, Trigger } from "@nabd/domain";
-import { addDays, atMinuteOfDay, formatClock } from "@nabd/domain";
+import { addDays, atMinuteOfDay, formatClock, isWorkDay, weekdayShort } from "@nabd/domain";
 
 /** How long a snoozed nudge stays quiet, in minutes. */
 export const SNOOZE_MINUTES = 5;
@@ -35,8 +35,8 @@ export type NudgeStatus =
   | { state: "due"; reason: NudgeReason }
   /** Counting down; the timer fires at `at` unless an idle moment comes first. */
   | { state: "waiting"; at: Date; idleFrom: Date }
-  /** Outside the workday; counting resumes at `at`. */
-  | { state: "off_hours"; at: Date }
+  /** Outside the workday, or on a day off; counting resumes at `at`, `inDays` calendar days from now. */
+  | { state: "off_hours"; at: Date; inDays: number }
   | { state: "paused" }
   | { state: "nothing_left" };
 
@@ -56,16 +56,21 @@ export interface PendingNudge {
   remindedAt: Date;
 }
 
-type NudgeSettings = Pick<Settings, "interval" | "minGap" | "idleNudge" | "workStart" | "workEnd">;
+type NudgeSettings = Pick<
+  Settings,
+  "interval" | "minGap" | "idleNudge" | "workStart" | "workEnd" | "workDays"
+>;
 
 const MS_PER_MINUTE = 60_000;
+const DAYS_PER_WEEK = 7;
 const later = (a: Date, b: Date | null): Date => (b !== null && b > a ? b : a);
 const plusMinutes = (d: Date, minutes: number): Date =>
   new Date(d.getTime() + minutes * MS_PER_MINUTE);
 
 /**
  * The nudge rules:
- *  - never outside the workday, while paused, or with nothing left to do;
+ *  - never outside the workday, on a day that is not a workday, while paused,
+ *    or with nothing left to do;
  *  - the timer nudges `interval` minutes after the last set — or, before the first
  *    one, after the workday started or there first was work to do, whichever is later;
  *  - an idle moment nudges earlier, but never sooner than `minGap` minutes after it;
@@ -84,8 +89,8 @@ export class NudgePolicy {
 
     const opens = atMinuteOfDay(now, workStart);
     const closes = atMinuteOfDay(now, workEnd);
-    if (now < opens) return { state: "off_hours", at: opens };
-    if (now >= closes) return { state: "off_hours", at: atMinuteOfDay(addDays(now, 1), workStart) };
+    if (!isWorkDay(this.settings, now) || now >= closes) return this.quietUntilNextWorkday(now);
+    if (now < opens) return { state: "off_hours", at: opens, inDays: 0 };
 
     const since = later(later(opens, ctx.activeSince), ctx.lastSetAt);
     const timerAt = later(plusMinutes(since, interval), ctx.snoozedUntil);
@@ -94,6 +99,20 @@ export class NudgePolicy {
     if (now >= timerAt) return { state: "due", reason: "timer" };
     if (now >= idleFrom && ctx.idleSeconds >= idleNudge) return { state: "due", reason: "idle" };
     return { state: "waiting", at: timerAt, idleFrom };
+  }
+
+  /** Quiet until the workday starts on the next day that is one. */
+  private quietUntilNextWorkday(now: Date): NudgeStatus {
+    const ahead = Array.from({ length: DAYS_PER_WEEK }, (_, i) => i + 1).find((days) =>
+      isWorkDay(this.settings, addDays(now, days)),
+    );
+    // Settings always keep a workday; without one, tomorrow is as good a guess as any.
+    const inDays = ahead ?? 1;
+    return {
+      state: "off_hours",
+      at: atMinuteOfDay(addDays(now, inDays), this.settings.workStart),
+      inDays,
+    };
   }
 
   /**
@@ -117,6 +136,12 @@ export class NudgePolicy {
   }
 }
 
+/** When nudging resumes: "09:00" today or tomorrow, "Mon 09:00" further off. */
+function resumes({ at, inDays }: { at: Date; inDays: number }): string {
+  const clock = formatClock(at);
+  return inDays > 1 ? `${weekdayShort(at.getDay())} ${clock}` : clock;
+}
+
 /** A one-line, human description of where nudging stands. */
 export function describeNudge(status: NudgeStatus): string {
   switch (status.state) {
@@ -125,7 +150,7 @@ export function describeNudge(status: NudgeStatus): string {
     case "waiting":
       return `Next nudge at ${formatClock(status.at)}, sooner if you go idle`;
     case "off_hours":
-      return `Quiet until ${formatClock(status.at)}`;
+      return `Quiet until ${resumes(status)}`;
     case "paused":
       return "Nudges paused";
     case "nothing_left":

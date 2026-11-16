@@ -79,6 +79,63 @@ describe("wording", () => {
     expect(describeAdvice(null, "weight_reps", "kg")).toBeNull();
   });
 
+  describe("when the plan prescribes an intensity", () => {
+    // 8 × 60 kg last week: an estimated max of 76 kg.
+    const history = [logged(curl, nov(9), 8, 60)];
+    const wording = (intensity: "pct" | "rpe", value: number, sessions = history) =>
+      describeAdvice(
+        new ProgressionAdvisor(2.5).advise({
+          tracking: "weight_reps",
+          prescription: prescription([working(8, 12, value)], { intensity }),
+          setIndex: 0,
+          history: new ExerciseHistory(sessions, curl.id),
+          date: dateKey(TODAY),
+        }),
+        "weight_reps",
+        "kg",
+      )!;
+
+    it("says a %1RM load is that share of the estimated max", () => {
+      expect(wording("pct", 70)).toEqual({
+        primary: "8 × 52.5 kg",
+        alternative: "9 × 60 kg",
+        reason: "70% of your estimated max (76 kg).",
+        basis: "Last time: 8 × 60 kg",
+      });
+    });
+
+    it("says an RPE is reps in reserve", () => {
+      expect(wording("rpe", 8)).toMatchObject({
+        primary: "8 × 57.5 kg",
+        reason: "RPE 8 ≈ 2 reps in reserve.",
+      });
+      expect(wording("rpe", 9).reason).toBe("RPE 9 ≈ 1 rep in reserve.");
+      expect(wording("rpe", 7.5).reason).toBe("RPE 7.5 ≈ 2.5 reps in reserve.");
+    });
+
+    it("shows the weight in the user's unit", () => {
+      const advice = new ProgressionAdvisor(2.5).advise({
+        tracking: "weight_reps",
+        prescription: prescription([working(8, 12, 70)], { intensity: "pct" }),
+        setIndex: 0,
+        history: new ExerciseHistory(history, curl.id),
+        date: dateKey(TODAY),
+      });
+      expect(describeAdvice(advice, "weight_reps", "lb")!.reason).toBe(
+        "70% of your estimated max (167.6 lb).",
+      );
+    });
+
+    it("says the intensity will apply once there is history, and otherwise words the advice as ever", () => {
+      expect(wording("pct", 70, [])).toMatchObject({
+        primary: "8 reps — pick a starting weight",
+        reason:
+          "First time — start light and find your level. 70% 1RM applies once there is history.",
+      });
+      expect(wording("rpe", 8, []).reason).toMatch(/RPE 8 applies once there is history\.$/);
+    });
+  });
+
   it("counts a single rep as one rep", () => {
     expect(formatPerformance({ reps: 1, weight: null }, "bodyweight_reps", "kg")).toBe("1 rep");
     expect(formatTarget({ type: "working", amount: 1 }, prescription([]))).toBe(

@@ -210,11 +210,12 @@ describe("destructive actions wait for a yes", () => {
 describe("today across plan edits", () => {
   it("editing a pool neither skips nor repeats an exercise", async () => {
     const app = await boot();
+    app.get().editProgram((e) => e.removeDay("pull"));
     app.get().editProgram((e) => e.setType("cycled"));
     const slot = app.get().program.days[0]!.slots[0]!;
     app.get().editProgram((e) => e.addPoolExercise("push", slot.id, CATALOG.row));
     // The pool is Bench, Fly, Row. Bench is trained, then taken out of the pool.
-    await app.log(slot.id, 1);
+    await app.finishDay();
     app.get().editProgram((e) => e.removePoolExercise("push", slot.id, CATALOG.bench));
     app.advanceTo(nov(17, 9, 30));
     expect(app.plan().dayName).toBe("Push");
@@ -226,7 +227,7 @@ describe("today across plan edits", () => {
     expect(app.plan().items[0]!.exercise.id).toBe(CATALOG.row);
 
     // Row is trained, so Bench is up next — and still is after Row is taken out and put back.
-    await app.log(slot.id, 1);
+    await app.finishDay();
     app.advanceTo(nov(18, 9, 30));
     expect(app.data.rotationState).toEqual({ [slot.id]: CATALOG.bench });
     app.get().editProgram((e) => e.removePoolExercise("push", slot.id, CATALOG.row));
@@ -257,6 +258,48 @@ describe("today across plan edits", () => {
     await app.log(app.plan().items[0]!.id, 3);
     app.advanceTo(nov(18, 9, 30));
     expect(app.plan().dayName).toBe("New day");
+  });
+
+  describe("while a floating day is still owed its rest", () => {
+    async function onTuesday() {
+      const app = await boot();
+      await app.log(catalogBenchRow.id, 2);
+      await app.log(catalogFlyRow.id, 1);
+      app.advanceTo(nov(17, 9, 30));
+      expect(app.get().dayState.carried).toEqual({
+        [catalogBenchRow.id]: 2,
+        [catalogFlyRow.id]: 1,
+      });
+      return app;
+    }
+
+    it("keeps what it has behind it through edits that leave its exercises alone", async () => {
+      const app = await onTuesday();
+      app.get().editProgram((e) => e.moveExercise("push", catalogFlyRow.id, -1));
+      app.get().editProgram((e) => e.addDay(null));
+      app.get().editProgram((e) => e.moveDay("pull", -1));
+      expect(app.data.dayState).toMatchObject({
+        carried: { [catalogBenchRow.id]: 2, [catalogFlyRow.id]: 1 },
+      });
+      expect(app.plan().item(catalogBenchRow.id)).toMatchObject({ done: 2, remaining: 1 });
+    });
+
+    it("loses the count of an exercise that is deleted, and of every one on a deleted day", async () => {
+      const app = await onTuesday();
+      app.get().editProgram((e) => e.removeExercise("push", catalogFlyRow.id));
+      expect(app.data.dayState).toMatchObject({ carried: { [catalogBenchRow.id]: 2 } });
+
+      app.get().editProgram((e) => e.removeDay("push"));
+      expect(app.plan().dayName).toBe("Pull");
+      expect(app.data.dayState).toMatchObject({ carried: {} });
+      expect(app.plan().setsRemaining).toBe(3);
+    });
+
+    it("is dropped with the schedule that made it", async () => {
+      const app = await onTuesday();
+      app.get().editProgram((e) => e.setSchedule("weekday"));
+      expect(app.get().dayState.carried).toEqual({});
+    });
   });
 
   it("removing today's floating day moves today to the day that took its place", async () => {
