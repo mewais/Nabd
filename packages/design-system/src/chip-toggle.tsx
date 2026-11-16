@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { RADIUS, tint } from "./tokens";
+import { ButtonBase } from "./button-base";
+import { COLOR, FONT_SIZE, RADIUS, SPACE, tint } from "./tokens";
 
 interface ChipToggleProps {
   active: boolean;
@@ -10,23 +11,20 @@ interface ChipToggleProps {
 /** A chip that is on or off (a filter, a muscle, a piece of equipment). */
 export function ChipToggle({ active, onToggle, children }: ChipToggleProps): JSX.Element {
   return (
-    <button
-      type="button"
+    <ButtonBase
       aria-pressed={active}
       onClick={onToggle}
       style={{
-        fontSize: 12,
+        fontSize: FONT_SIZE.small,
         fontWeight: active ? 700 : 500,
-        fontFamily: "inherit",
-        padding: "5px 12px",
+        padding: `${SPACE.xs}px ${SPACE.md}px`,
         borderRadius: RADIUS.chip,
-        border: `1px solid ${active ? "var(--accent)" : "var(--line)"}`,
-        background: active ? tint("var(--accent)", 15) : "var(--surface2)",
-        color: active ? "var(--accent)" : "var(--text2)",
-        cursor: "pointer",
+        border: `1px solid ${active ? COLOR.accent : COLOR.line}`,
+        background: active ? tint(COLOR.accent, "soft") : COLOR.surfaceAlt,
+        color: active ? COLOR.accent : COLOR.textMuted,
       }}
     >
       {children}
-    </button>
+    </ButtonBase>
   );
 }

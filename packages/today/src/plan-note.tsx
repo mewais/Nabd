@@ -1,4 +1,4 @@
-import { Card } from "@nabd/design-system";
+import { Card, Text } from "@nabd/design-system";
 
 interface PlanNoteProps {
   text: string;
@@ -7,8 +7,10 @@ interface PlanNoteProps {
 /** A quiet remark about today's plan, between the headline and the queue. */
 export function PlanNote({ text }: PlanNoteProps): JSX.Element {
   return (
-    <Card padding="12px 20px" style={{ fontSize: 12.5, color: "var(--text2)" }}>
-      {text}
+    <Card padding="lg">
+      <Text variant="hint" tone="muted">
+        {text}
+      </Text>
     </Card>
   );
 }

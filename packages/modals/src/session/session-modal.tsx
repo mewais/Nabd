@@ -1,4 +1,4 @@
-import { Button, ModalShell, TEXT } from "@nabd/design-system";
+import { Button, Grid, ModalShell, Text } from "@nabd/design-system";
 import { ExerciseList } from "./exercise-list";
 import type { SessionActions } from "./session-actions";
 import type { SessionVM } from "./session-vm";
@@ -9,8 +9,21 @@ interface SessionModalProps {
   actions: SessionActions;
 }
 
+/** The exercise list's fixed width, then the form. */
+const COLUMNS = "248px minmax(0, 1fr)";
+/** One row as tall as the dialog allows: each pane scrolls on its own. */
+const ROWS = "minmax(0, 1fr)";
+
 /** The logger: today's exercises on the left, one set at a time on the right. */
 export function SessionModal({ vm, actions }: SessionModalProps): JSX.Element {
+  const footer = (
+    <>
+      <Text variant="hint">{vm.footer}</Text>
+      <Button tone="success" onClick={actions.close}>
+        Done
+      </Button>
+    </>
+  );
   return (
     <ModalShell
       eyebrow="Log sets"
@@ -18,26 +31,12 @@ export function SessionModal({ vm, actions }: SessionModalProps): JSX.Element {
       subtitle="One set, or as many as you have time for — switch exercises freely."
       onClose={actions.close}
       width={720}
+      footer={footer}
     >
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+      <Grid columns={COLUMNS} rows={ROWS} grow>
         <ExerciseList vm={vm.list} actions={actions} />
         <SetForm vm={vm.form} actions={actions} />
-      </div>
-      <footer
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexShrink: 0,
-          padding: "14px 22px",
-          borderTop: "1px solid var(--line)",
-        }}
-      >
-        <span style={TEXT.hint}>{vm.footer}</span>
-        <Button tone="success" onClick={actions.close}>
-          Done
-        </Button>
-      </footer>
+      </Grid>
     </ModalShell>
   );
 }

@@ -1,4 +1,4 @@
-import { Card, EmptyNote, TEXT } from "@nabd/design-system";
+import { Card, EmptyNote, Grid, Stack, Text } from "@nabd/design-system";
 import { isEmpty } from "./empty-vm";
 import type { EmptyVM } from "./empty-vm";
 import type { ProgressActions } from "./progress-actions";
@@ -21,17 +21,21 @@ export function ProgressionCard({ vm, actions }: ProgressionCardProps): JSX.Elem
       {empty ? (
         <EmptyNote>{vm.empty}</EmptyNote>
       ) : (
-        <>
-          <div style={{ ...PROGRESSION_COLUMNS, ...TEXT.eyebrow, padding: "0 2px 8px" }}>
-            <span>Exercise</span>
-            <span>Trend</span>
-            <span style={{ textAlign: "right" }}>Best</span>
-            <span>Gain</span>
+        <Stack gap="sm">
+          <Grid columns={PROGRESSION_COLUMNS} gap="lg" paddingX="xxs">
+            <Text variant="eyebrow">Exercise</Text>
+            <Text variant="eyebrow">Trend</Text>
+            <Text variant="eyebrow" align="end">
+              Best
+            </Text>
+            <Text variant="eyebrow">Gain</Text>
+          </Grid>
+          <div>
+            {vm.map((row) => (
+              <ProgressionRow key={row.exId} vm={row} actions={actions} />
+            ))}
           </div>
-          {vm.map((row) => (
-            <ProgressionRow key={row.exId} vm={row} actions={actions} />
-          ))}
-        </>
+        </Stack>
       )}
     </Card>
   );

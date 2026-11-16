@@ -1,4 +1,5 @@
-import { Button, FONT, Swatch, TEXT } from "@nabd/design-system";
+import { Button, CheckMark, Row, Text, TitleBlock } from "@nabd/design-system";
+import type { TextTone } from "@nabd/design-system";
 import type { QueueRowVM } from "./queue-vm";
 import type { TodayActions } from "./today-actions";
 
@@ -9,59 +10,48 @@ interface QueueRowProps {
 
 type RowState = QueueRowVM["state"];
 
-const DOT_COLOR: Record<RowState, string> = {
-  next: "var(--accent)",
-  pending: "var(--text3)",
-  done: "var(--accent2)",
-  skipped: "var(--line)",
+/** What the row's mark says to assistive tech; its shape says the same to the eye. */
+const STATE_NAMES: Record<RowState, string> = {
+  next: "Up next",
+  pending: "To do",
+  done: "Done",
+  skipped: "Skipped",
 };
 
-const BADGE_COLOR: Record<RowState, string> = {
-  next: "var(--accent)",
-  pending: "var(--text3)",
-  done: "var(--accent2)",
-  skipped: "var(--text3)",
+const BADGE_TONES: Record<RowState, TextTone> = {
+  next: "accent",
+  pending: "faint",
+  done: "success",
+  skipped: "faint",
 };
 
 /** One exercise of the day: where it stands and what can be done with it. */
 export function QueueRow({ vm, actions }: QueueRowProps): JSX.Element {
   const { state } = vm;
   return (
-    <li
-      aria-label={vm.exercise}
-      data-state={state}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "11px 20px",
-        borderTop: "1px solid var(--line)",
-        opacity: state === "skipped" ? 0.55 : 1,
-      }}
+    <Row
+      as="li"
+      ariaLabel={vm.exercise}
+      gap="md"
+      paddingX="xl"
+      paddingY="md"
+      edge="top"
+      dimmed={state === "skipped"}
     >
-      <span
-        style={{
-          fontFamily: FONT.mono,
-          fontSize: 12.5,
-          color: "var(--text3)",
-          width: 26,
-          flex: "none",
-        }}
-      >
+      <Text as="span" variant="mono" tone="faint">
         {vm.marker}
-      </span>
-      <Swatch color={DOT_COLOR[state]} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ ...TEXT.label, color: state === "next" ? "var(--text)" : "var(--text2)" }}>
-          {vm.exercise}
-        </div>
-        <div style={{ ...TEXT.cardSubtitle, marginTop: 1 }}>{vm.sub}</div>
-      </div>
-      <span
-        style={{ fontFamily: FONT.mono, fontSize: 12, color: BADGE_COLOR[state], flex: "none" }}
-      >
+      </Text>
+      <CheckMark checked={state === "done"} current={state === "next"} label={STATE_NAMES[state]} />
+      <TitleBlock
+        size="row"
+        title={vm.exercise}
+        subtitle={vm.sub}
+        tone={state === "next" ? "strong" : "muted"}
+        grow
+      />
+      <Text as="span" variant="mono" tone={BADGE_TONES[state]}>
         {vm.badge}
-      </span>
+      </Text>
       {vm.skipLabel !== null && (
         <Button variant="ghost" size="sm" onClick={() => actions.toggleSkip(vm.id)}>
           {vm.skipLabel}
@@ -72,6 +62,6 @@ export function QueueRow({ vm, actions }: QueueRowProps): JSX.Element {
           {vm.startLabel}
         </Button>
       )}
-    </li>
+    </Row>
   );
 }

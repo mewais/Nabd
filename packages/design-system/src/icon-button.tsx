@@ -1,15 +1,17 @@
 import type { CSSProperties } from "react";
+import { ButtonBase } from "./button-base";
 import { Icon } from "./icon";
 import type { IconName } from "./icon-paths";
-import { RADIUS, SURFACE2_BOX, toneColor } from "./tokens";
+import { COLOR, QUIET_BOX, RADIUS, RAISED_BOX } from "./tokens";
 import type { Tone } from "./tokens";
 
 /**
  * - `boxed`: a square filled button (close, duplicate, delete, settings).
- * - `mini`: the small square used in dense rows (reorder arrows).
+ * - `raised`: the same on a quiet fill, where `boxed` would not show (a stepper's − and +).
+ * - `mini`: the small square used in dense rows (reorder arrows, table steppers).
  * - `plain`: the bare glyph (remove ×).
  */
-type IconButtonVariant = "boxed" | "mini" | "plain";
+type IconButtonVariant = "boxed" | "raised" | "mini" | "plain";
 
 interface IconButtonProps {
   icon: IconName;
@@ -22,31 +24,27 @@ interface IconButtonProps {
   disabled?: boolean;
 }
 
+const LARGE = 32;
+const MINI = 24;
+
+function square(side: number, radius: number): CSSProperties {
+  return { width: side, height: side, borderRadius: radius };
+}
+
 const VARIANTS: Record<IconButtonVariant, { box: CSSProperties; iconSize: number }> = {
   boxed: {
-    box: {
-      ...SURFACE2_BOX,
-      width: 34,
-      height: 34,
-      borderRadius: RADIUS.field,
-      color: "var(--text2)",
-    },
+    box: { ...QUIET_BOX, ...square(LARGE, RADIUS.control), color: COLOR.textMuted },
+    iconSize: 15,
+  },
+  raised: {
+    box: { ...RAISED_BOX, ...square(LARGE, RADIUS.chip), color: COLOR.text },
     iconSize: 15,
   },
   mini: {
-    box: {
-      ...SURFACE2_BOX,
-      width: 22,
-      height: 22,
-      borderRadius: RADIUS.tag,
-      color: "var(--text2)",
-    },
+    box: { ...QUIET_BOX, ...square(MINI, RADIUS.tag), color: COLOR.textMuted },
     iconSize: 11,
   },
-  plain: {
-    box: { background: "none", border: "none", color: "var(--text3)" },
-    iconSize: 14,
-  },
+  plain: { box: { ...square(MINI, RADIUS.tag), color: COLOR.textFaint }, iconSize: 14 },
 };
 
 /** A button that is only an icon. */
@@ -60,8 +58,7 @@ export function IconButton({
 }: IconButtonProps): JSX.Element {
   const { box, iconSize } = VARIANTS[variant];
   return (
-    <button
-      type="button"
+    <ButtonBase
       aria-label={ariaLabel}
       title={ariaLabel}
       onClick={onClick}
@@ -70,19 +67,11 @@ export function IconButton({
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 0,
         flex: "none",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.5 : 1,
         ...box,
       }}
     >
-      <Icon
-        name={icon}
-        size={iconSize}
-        strokeWidth={2.2}
-        stroke={toneColor(tone) ?? "currentColor"}
-      />
-    </button>
+      <Icon name={icon} size={iconSize} strokeWidth={2.2} tone={tone} />
+    </ButtonBase>
   );
 }

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
+import { ButtonBase } from "./button-base";
 import { Icon } from "./icon";
 import type { Option } from "./option";
-import { RADIUS, SHADOW, SURFACE2_BOX, Z, tint } from "./tokens";
+import { COLOR, FONT_SIZE, HAIRLINE, QUIET_BOX, RADIUS, SHADOW, SPACE, Z, tint } from "./tokens";
 import { useEscapeKey } from "./use-escape-key";
 
 interface DropdownProps<V extends string = string> {
@@ -14,32 +15,31 @@ interface DropdownProps<V extends string = string> {
 }
 
 const TRIGGER: CSSProperties = {
-  ...SURFACE2_BOX,
+  ...QUIET_BOX,
   width: "100%",
+  boxSizing: "border-box",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  borderRadius: RADIUS.field,
-  padding: "12px 34px 12px 13px",
-  fontSize: 14,
-  fontFamily: "inherit",
-  color: "var(--text)",
+  borderRadius: RADIUS.control,
+  padding: SPACE.md,
+  fontSize: FONT_SIZE.medium,
+  color: COLOR.text,
   textAlign: "left",
-  cursor: "pointer",
 };
 
 const MENU: CSSProperties = {
   position: "absolute",
-  top: "calc(100% + 4px)",
+  top: `calc(100% + ${SPACE.xs}px)`,
   left: 0,
   right: 0,
   zIndex: Z.popover + 1,
   maxHeight: 220,
   overflowY: "auto",
   scrollbarWidth: "thin",
-  background: "var(--modal-bg)",
-  border: "1px solid var(--line)",
-  borderRadius: RADIUS.field,
+  background: COLOR.modal,
+  border: HAIRLINE,
+  borderRadius: RADIUS.control,
   boxShadow: SHADOW.popover,
 };
 
@@ -47,15 +47,12 @@ function optionStyle(selected: boolean): CSSProperties {
   return {
     display: "block",
     width: "100%",
-    padding: "10px 13px",
-    border: "none",
+    padding: `${SPACE.sm}px ${SPACE.md}px`,
     textAlign: "left",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
+    fontSize: FONT_SIZE.medium,
     fontWeight: selected ? 600 : 400,
-    color: selected ? "var(--accent)" : "var(--text)",
-    background: selected ? tint("var(--accent)", 15) : "transparent",
+    color: selected ? COLOR.accent : COLOR.text,
+    background: selected ? tint(COLOR.accent, "soft") : COLOR.none,
   };
 }
 
@@ -75,8 +72,7 @@ export function Dropdown<V extends string = string>({
 
   return (
     <div style={{ position: "relative", width: "100%" }}>
-      <button
-        type="button"
+      <ButtonBase
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
@@ -84,8 +80,8 @@ export function Dropdown<V extends string = string>({
         style={TRIGGER}
       >
         <span>{selectedLabel}</span>
-        <Icon name="chevron-down" size={14} strokeWidth={2.2} stroke="var(--text3)" />
-      </button>
+        <Icon name="chevron-down" size={14} strokeWidth={2.2} tone="faint" />
+      </ButtonBase>
       {open && (
         <>
           <div
@@ -95,9 +91,8 @@ export function Dropdown<V extends string = string>({
           />
           <div role="listbox" aria-label={ariaLabel} style={MENU}>
             {options.map((option) => (
-              <button
+              <ButtonBase
                 key={option.value}
-                type="button"
                 role="option"
                 aria-selected={option.value === value}
                 onClick={() => {
@@ -107,7 +102,7 @@ export function Dropdown<V extends string = string>({
                 style={optionStyle(option.value === value)}
               >
                 {option.label}
-              </button>
+              </ButtonBase>
             ))}
           </div>
         </>

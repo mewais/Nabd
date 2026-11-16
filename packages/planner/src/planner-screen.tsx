@@ -1,4 +1,4 @@
-import { Page } from "@nabd/design-system";
+import { Grid, Page } from "@nabd/design-system";
 import { CoverageRail } from "./coverage-rail";
 import { DayEditor } from "./day-editor";
 import type { PlannerActions } from "./planner-actions";
@@ -11,17 +11,20 @@ interface PlannerScreenProps {
   actions: PlannerActions;
 }
 
+/** The editor takes what the coverage rail's fixed width leaves. */
+const COLUMNS = "minmax(0, 1fr) 300px";
+
 /** The Plan screen: program header, week board, and the selected day beside the coverage rail. */
 export function PlannerScreen({ vm, actions }: PlannerScreenProps): JSX.Element {
   return (
-    <Page maxWidth={1320}>
+    <Page width="wide">
       <ProgramHeader vm={vm.header} actions={actions} />
       <WeekBoard vm={vm.board} actions={actions} />
       {vm.editor && (
-        <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <Grid columns={COLUMNS} gap="lg" align="start">
           <DayEditor vm={vm.editor} actions={actions} />
           <CoverageRail vm={vm.rail} />
-        </div>
+        </Grid>
       )}
     </Page>
   );

@@ -1,22 +1,25 @@
 import { ANIMATION } from "./global-styles";
-import { RADIUS } from "./tokens";
+import { COLOR, RADIUS } from "./tokens";
 
 interface LiveDotProps {
   /** Something needs attention now: the dot turns accent and pulses. */
   active: boolean;
 }
 
-/** A small status dot. */
+const SIZE = 8;
+
+/** A small status dot. Decorative: the words beside it say what it means. */
 export function LiveDot({ active }: LiveDotProps): JSX.Element {
   return (
     <span
-      data-active={active}
+      aria-hidden
       style={{
         display: "inline-block",
-        width: 8,
-        height: 8,
+        flex: "none",
+        width: SIZE,
+        height: SIZE,
         borderRadius: RADIUS.round,
-        background: active ? "var(--accent)" : "var(--text3)",
+        background: active ? COLOR.accent : COLOR.textFaint,
         animation: active ? ANIMATION.blink : undefined,
       }}
     />

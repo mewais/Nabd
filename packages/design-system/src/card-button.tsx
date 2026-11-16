@@ -1,27 +1,37 @@
 import type { CSSProperties, ReactNode } from "react";
-import { RADIUS, tint } from "./tokens";
+import { ButtonBase } from "./button-base";
+import { COLOR, RADIUS, RAISED_BOX, SPACE, tint } from "./tokens";
 
 interface CardButtonProps {
+  /** Phrasing content: lay it out with `as="span"` primitives. */
   children?: ReactNode;
   onClick: () => void;
   /** The one currently picked: drawn with an accent ring. */
   selected?: boolean;
-  /** A dashed, empty outline, for "add another" tiles. */
+  /** A dashed, empty outline with its content in the middle, for "add another" tiles. */
   dashed?: boolean;
   /** Accessible name, when the content is not enough. */
   ariaLabel?: string;
-  /** Layout of the tile's own box and of its content. */
-  style?: CSSProperties;
 }
 
+const COLUMN: CSSProperties = { display: "flex", flexDirection: "column" };
+
 function outline(selected: boolean, dashed: boolean): CSSProperties {
-  if (dashed)
-    return { background: "none", border: "1px dashed var(--line)", color: "var(--text3)" };
+  if (dashed) {
+    return {
+      border: `1px dashed ${COLOR.line}`,
+      color: COLOR.textFaint,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACE.sm,
+    };
+  }
+  if (!selected) return { ...RAISED_BOX, color: COLOR.text };
   return {
-    background: "var(--surface)",
-    color: "var(--text)",
-    border: selected ? "1.5px solid var(--accent)" : "1px solid var(--line)",
-    boxShadow: selected ? `0 0 0 3px ${tint("var(--accent)", 18)}` : "var(--cardshadow)",
+    background: COLOR.surface,
+    color: COLOR.text,
+    border: `1px solid ${COLOR.accent}`,
+    boxShadow: `0 0 0 3px ${tint(COLOR.accent, "soft")}`,
   };
 }
 
@@ -32,28 +42,22 @@ export function CardButton({
   selected = false,
   dashed = false,
   ariaLabel,
-  style,
 }: CardButtonProps): JSX.Element {
   return (
-    <button
-      type="button"
+    <ButtonBase
       aria-pressed={dashed ? undefined : selected}
       aria-label={ariaLabel}
       onClick={onClick}
       style={{
-        ...outline(selected, dashed),
-        display: "flex",
-        flexDirection: "column",
+        ...COLUMN,
         minWidth: 0,
-        padding: 11,
+        padding: SPACE.md,
         borderRadius: RADIUS.tile,
-        fontFamily: "inherit",
         textAlign: "left",
-        cursor: "pointer",
-        ...style,
+        ...outline(selected, dashed),
       }}
     >
       {children}
-    </button>
+    </ButtonBase>
   );
 }

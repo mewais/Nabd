@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Theme } from "@nabd/domain";
 import { GlobalStyles } from "./global-styles";
 import { themeStyle } from "./theme";
-import { FONT } from "./tokens";
+import { COLOR, FONT } from "./tokens";
 
 interface ThemeProviderProps {
   theme: Theme;
@@ -13,7 +13,10 @@ interface ThemeProviderProps {
   children?: ReactNode;
 }
 
-/** The app root: sets the theme's CSS variables, background, text colour and font. */
+/**
+ * The app root: sets the theme's CSS variables, background, text colour and
+ * font. It fills the window, and what is put in it can `grow` to fill it too.
+ */
 export function ThemeProvider({
   theme,
   glass,
@@ -26,11 +29,12 @@ export function ThemeProvider({
       data-glass={glass ? "on" : "off"}
       style={{
         ...themeStyle(theme, glass, opacity),
+        display: "flex",
         height: "100vh",
         width: "100%",
         overflow: "hidden",
         position: "relative",
-        color: "var(--text)",
+        color: COLOR.text,
         fontFamily: FONT.sans,
       }}
     >

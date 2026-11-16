@@ -1,4 +1,4 @@
-import { Card, LineChart, ModalShell, StatTile, TEXT } from "@nabd/design-system";
+import { Card, LineChart, ModalShell, Row, Stack, StatTile, Text } from "@nabd/design-system";
 import type { ChartActions } from "./chart-actions";
 import type { ChartVM } from "./chart-vm";
 
@@ -18,30 +18,24 @@ export function ChartModal({ vm, actions }: ChartModalProps): JSX.Element {
       width={760}
       layer="modalOver"
     >
-      <div style={{ padding: "18px 22px 22px" }}>
-        <div style={{ display: "flex", gap: 10 }}>
+      <Stack gap="xl" paddingX="xxl" paddingY="xl">
+        <Row gap="sm" align="stretch">
           {vm.stats.map((stat) => (
             <StatTile key={stat.label} variant="inset" {...stat} />
           ))}
-        </div>
-        <Card variant="inset" padding="16px 12px 8px" style={{ marginTop: 18 }}>
+        </Row>
+        <Card variant="inset" padding="md">
           <LineChart series={vm.series} ariaLabel={vm.chartLabel} />
-          <div
-            style={{
-              ...TEXT.monoValue,
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "4px 8px 2px",
-              fontSize: 11,
-              fontWeight: 400,
-              color: "var(--text3)",
-            }}
-          >
-            <span>{vm.startLabel}</span>
-            <span>{vm.endLabel}</span>
-          </div>
+          <Row justify="between" paddingX="sm">
+            <Text as="span" variant="monoCaption">
+              {vm.startLabel}
+            </Text>
+            <Text as="span" variant="monoCaption">
+              {vm.endLabel}
+            </Text>
+          </Row>
         </Card>
-      </div>
+      </Stack>
     </ModalShell>
   );
 }

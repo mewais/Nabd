@@ -1,5 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
-import { Z } from "@nabd/design-system";
+import type { ReactNode } from "react";
+import { Grid, Stack } from "@nabd/design-system";
 
 interface AppLayoutProps {
   sidebar: ReactNode;
@@ -10,24 +10,27 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
-const COLUMN: CSSProperties = {
-  flex: 1,
-  minWidth: 0,
-  minHeight: 0,
-  display: "flex",
-  flexDirection: "column",
-};
+/** The sidebar's width, then whatever is left. */
+const COLUMNS = "250px minmax(0, 1fr)";
+/** One row, as tall as the window. */
+const ROWS = "minmax(0, 1fr)";
 
 /** The window: the sidebar beside a column of top bar, notice and screen. */
 export function AppLayout({ sidebar, topBar, notice, children }: AppLayoutProps): JSX.Element {
   return (
-    <div style={{ position: "relative", zIndex: Z.raised, display: "flex", height: "100%" }}>
+    <Grid columns={COLUMNS} rows={ROWS} grow>
       {sidebar}
-      <div style={COLUMN}>
+      <Stack grow>
         {topBar}
-        {notice}
-        <main style={COLUMN}>{children}</main>
-      </div>
-    </div>
+        {notice && (
+          <Stack surface edge="bottom" paddingX="xxl" paddingY="md">
+            {notice}
+          </Stack>
+        )}
+        <Stack as="main" grow>
+          {children}
+        </Stack>
+      </Stack>
+    </Grid>
   );
 }

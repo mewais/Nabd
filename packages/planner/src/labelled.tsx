@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Eyebrow } from "@nabd/design-system";
+import { Row, Text } from "@nabd/design-system";
 
 interface LabelledProps {
   label: string;
@@ -9,9 +9,9 @@ interface LabelledProps {
 /** A compact control with its micro-label in front. */
 export function Labelled({ label, children }: LabelledProps): JSX.Element {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-      <Eyebrow>{label}</Eyebrow>
+    <Row gap="sm">
+      <Text variant="eyebrow">{label}</Text>
       {children}
-    </div>
+    </Row>
   );
 }

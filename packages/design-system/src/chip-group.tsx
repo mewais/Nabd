@@ -1,5 +1,6 @@
 import { ChipToggle } from "./chip-toggle";
 import type { Option } from "./option";
+import { Row } from "./row";
 
 interface ChipGroupProps<V extends string> {
   options: readonly Option<V>[];
@@ -18,7 +19,7 @@ export function ChipGroup<V extends string>({
   ariaLabel,
 }: ChipGroupProps<V>): JSX.Element {
   return (
-    <div role="group" aria-label={ariaLabel} style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+    <Row role="group" ariaLabel={ariaLabel} gap="sm" wrap>
       {options.map((option) => (
         <ChipToggle
           key={option.value}
@@ -28,6 +29,6 @@ export function ChipGroup<V extends string>({
           {option.label}
         </ChipToggle>
       ))}
-    </div>
+    </Row>
   );
 }

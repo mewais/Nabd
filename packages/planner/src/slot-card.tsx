@@ -1,4 +1,4 @@
-import { Card, Eyebrow, IconButton, TEXT } from "@nabd/design-system";
+import { Card, Divider, IconButton, Row, Stack, Text, TitleBlock } from "@nabd/design-system";
 import type { SlotCardVM } from "./editor-vm";
 import { MoveButtons } from "./move-buttons";
 import type { PlannerActions } from "./planner-actions";
@@ -16,13 +16,10 @@ export function SlotCard({ vm, dayId, actions }: SlotCardProps): JSX.Element {
   const { edit } = actions;
   const slotId = vm.id;
   return (
-    <section aria-label={vm.muscleName}>
-      <Card variant="tile" padding={15}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <div style={TEXT.cardTitle}>{vm.muscleName}</div>
-            <div style={{ ...TEXT.cardSubtitle, marginTop: 2 }}>{vm.hint}</div>
-          </div>
+    <Card variant="tile" padding="lg" ariaLabel={vm.muscleName}>
+      <Stack gap="md">
+        <Row gap="sm">
+          <TitleBlock title={vm.muscleName} subtitle={vm.hint} grow />
           <MoveButtons onMove={(direction) => edit((e) => e.moveSlot(dayId, slotId, direction))} />
           <IconButton
             icon="close"
@@ -30,26 +27,27 @@ export function SlotCard({ vm, dayId, actions }: SlotCardProps): JSX.Element {
             ariaLabel="Remove slot"
             onClick={() => edit((e) => e.removeSlot(dayId, slotId))}
           />
-        </div>
-        <Eyebrow style={{ margin: "12px 0 7px" }}>{vm.poolLabel}</Eyebrow>
-        <PoolChips
-          vm={vm.pool}
-          onRemove={(exId) => edit((e) => e.removePoolExercise(dayId, slotId, exId))}
-          onAdd={() => actions.addPoolExercise(dayId, slotId, vm.muscle)}
-        />
-        <div style={{ borderTop: "1px solid var(--line)", marginTop: 13, paddingTop: 13 }}>
-          <Eyebrow>Prescription</Eyebrow>
-          <div style={{ ...TEXT.cardSubtitle, marginTop: 3 }}>
-            Applies to whichever exercise rotates in
-          </div>
-          <SetTable
-            vm={vm.block}
-            onEdit={(change) =>
-              edit((e) => e.editPrescription(dayId, { kind: "slot", id: slotId }, change))
-            }
+        </Row>
+        <Stack gap="sm">
+          <Text variant="eyebrow">{vm.poolLabel}</Text>
+          <PoolChips
+            vm={vm.pool}
+            onRemove={(exId) => edit((e) => e.removePoolExercise(dayId, slotId, exId))}
+            onAdd={() => actions.addPoolExercise(dayId, slotId, vm.muscle)}
           />
-        </div>
-      </Card>
-    </section>
+        </Stack>
+        <Divider />
+        <Stack gap="xxs">
+          <Text variant="eyebrow">Prescription</Text>
+          <Text variant="caption">Applies to whichever exercise rotates in</Text>
+        </Stack>
+        <SetTable
+          vm={vm.block}
+          onEdit={(change) =>
+            edit((e) => e.editPrescription(dayId, { kind: "slot", id: slotId }, change))
+          }
+        />
+      </Stack>
+    </Card>
   );
 }

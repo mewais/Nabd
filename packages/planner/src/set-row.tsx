@@ -1,5 +1,5 @@
 import type { SetType } from "@nabd/domain";
-import { Badge, IconButton, Stepper, TEXT } from "@nabd/design-system";
+import { Badge, Grid, IconButton, Row, Stepper, Text } from "@nabd/design-system";
 import type { Tone } from "@nabd/design-system";
 import type { PrescriptionEdit } from "@nabd/program-editor";
 import type { SetRowVM } from "./set-block-vm";
@@ -23,7 +23,7 @@ const BADGE_TONES: Record<SetType, Tone> = {
 export function SetRow({ vm, columns, hasIntensityColumn, onEdit }: SetRowProps): JSX.Element {
   const { index, labels } = vm;
   return (
-    <div style={{ display: "grid", gridTemplateColumns: columns, gap: 9, alignItems: "center" }}>
+    <Grid columns={columns} gap="sm" align="center">
       <Badge
         tone={BADGE_TONES[vm.type]}
         title={vm.badgeTitle}
@@ -31,7 +31,7 @@ export function SetRow({ vm, columns, hasIntensityColumn, onEdit }: SetRowProps)
       >
         {vm.badge}
       </Badge>
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <Row gap="xs">
         <Stepper
           size="mini"
           ariaLabel={labels.amount}
@@ -40,7 +40,9 @@ export function SetRow({ vm, columns, hasIntensityColumn, onEdit }: SetRowProps)
         />
         {vm.upTo !== null && (
           <>
-            <span style={TEXT.hint}>–</span>
+            <Text as="span" variant="hint">
+              –
+            </Text>
             <Stepper
               size="mini"
               ariaLabel={labels.upTo}
@@ -49,7 +51,7 @@ export function SetRow({ vm, columns, hasIntensityColumn, onEdit }: SetRowProps)
             />
           </>
         )}
-      </div>
+      </Row>
       {hasIntensityColumn &&
         (vm.intensity === null ? (
           <span />
@@ -61,14 +63,12 @@ export function SetRow({ vm, columns, hasIntensityColumn, onEdit }: SetRowProps)
             onStep={(direction) => onEdit((p) => p.stepIntensity(index, direction))}
           />
         ))}
-      <div style={{ justifySelf: "end" }}>
-        <IconButton
-          icon="close"
-          variant="plain"
-          ariaLabel={labels.remove}
-          onClick={() => onEdit((p) => p.removeSet(index))}
-        />
-      </div>
-    </div>
+      <IconButton
+        icon="close"
+        variant="plain"
+        ariaLabel={labels.remove}
+        onClick={() => onEdit((p) => p.removeSet(index))}
+      />
+    </Grid>
   );
 }

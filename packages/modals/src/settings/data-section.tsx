@@ -1,4 +1,4 @@
-import { Button, FormSection, Icon } from "@nabd/design-system";
+import { Button, FormSection, Icon, Row, Stack, Text } from "@nabd/design-system";
 import type { Notice } from "@nabd/view";
 import type { SettingsActions } from "./settings-actions";
 
@@ -12,29 +12,28 @@ interface DataSectionProps {
 export function DataSection({ vm, actions }: DataSectionProps): JSX.Element {
   return (
     <FormSection title="Data">
-      <div style={{ display: "flex", gap: 10, paddingTop: 6 }}>
-        <Button variant="secondary" onClick={actions.exportData} style={{ flex: 1 }}>
-          <Icon name="download" size={15} />
-          Export data
-        </Button>
-        <Button variant="secondary" onClick={actions.importData} style={{ flex: 1 }}>
-          <Icon name="upload" size={15} />
-          Import data
-        </Button>
-      </div>
-      {vm !== null && (
-        <div
-          role="status"
-          style={{
-            marginTop: 10,
-            fontSize: 12.5,
-            color: vm.kind === "error" ? "var(--accent)" : "var(--text2)",
-            wordBreak: "break-word",
-          }}
-        >
-          {vm.text}
-        </div>
-      )}
+      <Stack gap="sm">
+        <Row gap="sm">
+          <Button variant="secondary" onClick={actions.exportData} grow>
+            <Icon name="download" size={15} />
+            Export data
+          </Button>
+          <Button variant="secondary" onClick={actions.importData} grow>
+            <Icon name="upload" size={15} />
+            Import data
+          </Button>
+        </Row>
+        {vm !== null && (
+          <Text
+            role="status"
+            variant="hint"
+            tone={vm.kind === "error" ? "accent" : "muted"}
+            breakWords
+          >
+            {vm.text}
+          </Text>
+        )}
+      </Stack>
     </FormSection>
   );
 }

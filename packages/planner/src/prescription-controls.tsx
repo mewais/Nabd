@@ -1,4 +1,4 @@
-import { Segmented, Stepper } from "@nabd/design-system";
+import { Row, Segmented, Spacer, Stepper } from "@nabd/design-system";
 import type { PrescriptionEdit } from "@nabd/program-editor";
 import { Labelled } from "./labelled";
 import { INTENSITY_OPTIONS, REP_STYLE_OPTIONS } from "./options";
@@ -12,7 +12,7 @@ interface PrescriptionControlsProps {
 /** How the sets of a prescription are written: rep style (where there is a choice), load mode and rest. */
 export function PrescriptionControls({ vm, onEdit }: PrescriptionControlsProps): JSX.Element {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+    <Row gap="lg" wrap>
       {vm.repStyle !== null && (
         <Labelled label="Reps">
           <Segmented
@@ -33,16 +33,15 @@ export function PrescriptionControls({ vm, onEdit }: PrescriptionControlsProps):
           onChange={(mode) => onEdit((p) => p.setIntensity(mode))}
         />
       </Labelled>
-      <div style={{ marginLeft: "auto" }}>
-        <Labelled label="Rest">
-          <Stepper
-            size="mini"
-            ariaLabel="Rest"
-            value={vm.rest}
-            onStep={(direction) => onEdit((p) => p.stepRest(direction))}
-          />
-        </Labelled>
-      </div>
-    </div>
+      <Spacer />
+      <Labelled label="Rest">
+        <Stepper
+          size="mini"
+          ariaLabel="Rest"
+          value={vm.rest}
+          onStep={(direction) => onEdit((p) => p.stepRest(direction))}
+        />
+      </Labelled>
+    </Row>
   );
 }

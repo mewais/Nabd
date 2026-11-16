@@ -1,4 +1,4 @@
-import { BarChart, Card, EmptyNote, Eyebrow, TEXT } from "@nabd/design-system";
+import { BarChart, Card, EmptyNote, Row, Spacer, Stack, Text } from "@nabd/design-system";
 import { isEmpty } from "./empty-vm";
 import type { EmptyVM } from "./empty-vm";
 import type { CompletionVM } from "./stats-vm";
@@ -14,25 +14,21 @@ export function CompletionCard({ vm }: CompletionCardProps): JSX.Element {
       {isEmpty(vm) ? (
         <EmptyNote>{vm.empty}</EmptyNote>
       ) : (
-        <>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6, margin: "2px 0 4px" }}>
-            <span
-              style={{
-                ...TEXT.monoValue,
-                fontSize: 42,
-                letterSpacing: "-0.03em",
-                color: "var(--accent)",
-              }}
-            >
+        <Stack gap="sm" grow>
+          <Row gap="sm" align="baseline">
+            <Text as="span" variant="bigStat" tone="accent">
               {vm.weekPct}
-            </span>
-            <span style={TEXT.hint}>this week</span>
-          </div>
-          <div style={{ marginTop: "auto" }}>
-            <Eyebrow style={{ marginBottom: 10 }}>Last 7 days</Eyebrow>
-            <BarChart bars={vm.days} height={88} tone="success" ariaLabel="Completion by day" />
-          </div>
-        </>
+            </Text>
+            <Text as="span" variant="hint">
+              this week
+            </Text>
+          </Row>
+          <Spacer />
+          <Stack gap="sm">
+            <Text variant="eyebrow">Last 7 days</Text>
+            <BarChart bars={vm.days} size="sm" tone="success" ariaLabel="Completion by day" />
+          </Stack>
+        </Stack>
       )}
     </Card>
   );

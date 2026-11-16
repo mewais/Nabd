@@ -1,7 +1,12 @@
 import type { CSSProperties } from "react";
 import type { AdviceChoice } from "@nabd/view";
+import { ButtonBase } from "./button-base";
+import { Card } from "./card";
 import { Icon } from "./icon";
-import { COLOR, RADIUS, SURFACE2_BOX, TEXT } from "./tokens";
+import { Row } from "./row";
+import { Stack } from "./stack";
+import { Text } from "./text";
+import { COLOR, RADIUS, TEXT } from "./tokens";
 
 /** A suggestion in words. */
 export interface AdviceText {
@@ -21,68 +26,50 @@ interface AdviceCardProps {
   onApply?: (which: AdviceChoice) => void;
 }
 
-const TARGET: CSSProperties = {
-  ...TEXT.monoValue,
-  fontWeight: 700,
-  fontSize: 13.5,
-  color: "var(--text)",
-  background: "transparent",
-  border: "none",
-  padding: 0,
-};
-
+const TARGET: CSSProperties = { ...TEXT.monoValue, fontWeight: 700, color: COLOR.text };
 const APPLY: CSSProperties = {
   ...TARGET,
-  cursor: "pointer",
   textDecoration: "underline dotted",
   textUnderlineOffset: 3,
+};
+const ICON_TILE: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flex: "none",
+  width: 28,
+  height: 28,
+  borderRadius: RADIUS.chip,
+  background: COLOR.accent,
 };
 
 /** The coach's suggestion: a target, an optional alternative, and the reasoning. */
 export function AdviceCard({ advice, onApply }: AdviceCardProps): JSX.Element {
   const target = (which: AdviceChoice, text: string): JSX.Element =>
     onApply ? (
-      <button type="button" title="Use this" onClick={() => onApply(which)} style={APPLY}>
+      <ButtonBase title="Use this" onClick={() => onApply(which)} style={APPLY}>
         {text}
-      </button>
+      </ButtonBase>
     ) : (
       <b style={TARGET}>{text}</b>
     );
 
   return (
-    <div
-      style={{
-        ...SURFACE2_BOX,
-        display: "flex",
-        alignItems: "center",
-        gap: 11,
-        borderRadius: RADIUS.button,
-        padding: "12px 15px",
-      }}
-    >
-      <div
-        style={{
-          width: 26,
-          height: 26,
-          flexShrink: 0,
-          borderRadius: RADIUS.chip,
-          background: "var(--accent)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Icon name="bolt" size={15} stroke={COLOR.onAccent} />
-      </div>
-      <div style={{ fontSize: 13.5, color: "var(--text2)", lineHeight: 1.45 }}>
-        <div>
-          Try {target("primary", advice.primary)}
-          {advice.alternative !== null && <> or {target("alternative", advice.alternative)}</>}
-        </div>
-        <div style={{ fontSize: 12, color: "var(--text3)" }}>
-          {[advice.basis, advice.reason].filter((line) => line !== null).join(" · ")}
-        </div>
-      </div>
-    </div>
+    <Card variant="inset" padding="md">
+      <Row gap="md">
+        <span style={ICON_TILE}>
+          <Icon name="bolt" size={15} tone="onAccent" />
+        </span>
+        <Stack gap="xxs">
+          <Text tone="muted">
+            Try {target("primary", advice.primary)}
+            {advice.alternative !== null && <> or {target("alternative", advice.alternative)}</>}
+          </Text>
+          <Text variant="hint">
+            {[advice.basis, advice.reason].filter((line) => line !== null).join(" · ")}
+          </Text>
+        </Stack>
+      </Row>
+    </Card>
   );
 }

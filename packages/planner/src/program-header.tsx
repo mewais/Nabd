@@ -1,4 +1,4 @@
-import { Eyebrow, Segmented, TitleInput } from "@nabd/design-system";
+import { Row, Segmented, Stack, Text, TitleInput } from "@nabd/design-system";
 import { PROGRAM_TYPE_OPTIONS, scheduleOptions } from "./options";
 import type { PlannerActions } from "./planner-actions";
 import type { HeaderVM } from "./planner-vm";
@@ -12,15 +12,15 @@ interface ProgramHeaderProps {
 export function ProgramHeader({ vm, actions }: ProgramHeaderProps): JSX.Element {
   const { edit } = actions;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-      <div>
-        <Eyebrow>Program</Eyebrow>
+    <Row gap="lg" wrap>
+      <Stack gap="xxs">
+        <Text variant="eyebrow">Program</Text>
         <TitleInput
           ariaLabel="Program name"
           value={vm.name}
           onChange={(name) => edit((e) => e.rename(name))}
         />
-      </div>
+      </Stack>
       <Segmented
         ariaLabel="Plan type"
         options={PROGRAM_TYPE_OPTIONS}
@@ -33,6 +33,6 @@ export function ProgramHeader({ vm, actions }: ProgramHeaderProps): JSX.Element 
         value={vm.schedule}
         onChange={(schedule) => edit((e) => e.setSchedule(schedule))}
       />
-    </div>
+    </Row>
   );
 }

@@ -1,5 +1,5 @@
 import type { Direction } from "@nabd/domain";
-import { IconButton } from "@nabd/design-system";
+import { IconButton, Row } from "@nabd/design-system";
 
 interface MoveButtonsProps {
   /** Earlier (-1) or later (+1). */
@@ -11,7 +11,7 @@ interface MoveButtonsProps {
 /** A pair of arrows that move something one place earlier or later. */
 export function MoveButtons({ onMove, horizontal = false }: MoveButtonsProps): JSX.Element {
   return (
-    <div style={{ display: "inline-flex", gap: 3, flex: "none" }}>
+    <Row gap="xs">
       <IconButton
         variant="mini"
         icon={horizontal ? "chevron-left" : "chevron-up"}
@@ -24,6 +24,6 @@ export function MoveButtons({ onMove, horizontal = false }: MoveButtonsProps): J
         ariaLabel="Move later"
         onClick={() => onMove(1)}
       />
-    </div>
+    </Row>
   );
 }

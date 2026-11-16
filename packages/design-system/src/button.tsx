@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
-import { COLOR, RADIUS, SURFACE2_BOX, toneColor } from "./tokens";
+import { ButtonBase } from "./button-base";
+import { COLOR, FONT_SIZE, QUIET_BOX, RADIUS, SPACE, toneColor } from "./tokens";
 import type { Tone } from "./tokens";
 
 /**
@@ -22,6 +23,8 @@ interface ButtonProps {
   dashed?: boolean;
   /** Fill the available width. */
   block?: boolean;
+  /** Take the free space of the Row it sits in. */
+  grow?: boolean;
   disabled?: boolean;
   /** For a button that switches a mode on and off: whether it is on. */
   pressed?: boolean;
@@ -29,35 +32,50 @@ interface ButtonProps {
   title?: string;
   /** Accessible name, when the visible text is not enough. */
   ariaLabel?: string;
-  /** Layout only (margins, flex). */
-  style?: CSSProperties;
 }
 
 const SIZES: Record<ButtonSize, CSSProperties> = {
-  sm: { borderRadius: RADIUS.chip, padding: "7px 14px", fontSize: 12.5 },
-  md: { borderRadius: RADIUS.field, padding: "11px 15px", fontSize: 13 },
-  lg: { borderRadius: RADIUS.button, padding: "14px 20px", fontSize: 14 },
+  sm: {
+    borderRadius: RADIUS.chip,
+    padding: `${SPACE.sm}px ${SPACE.md}px`,
+    fontSize: FONT_SIZE.small,
+  },
+  md: {
+    borderRadius: RADIUS.control,
+    padding: `${SPACE.md}px ${SPACE.lg}px`,
+    fontSize: FONT_SIZE.base,
+  },
+  lg: {
+    borderRadius: RADIUS.control,
+    padding: `${SPACE.lg}px ${SPACE.xl}px`,
+    fontSize: FONT_SIZE.medium,
+  },
 };
 
 function variantStyle(variant: ButtonVariant, tone: Tone, dashed: boolean): CSSProperties {
-  const color = toneColor(tone) ?? "var(--text2)";
+  const color = toneColor(tone) ?? COLOR.textMuted;
   switch (variant) {
     case "primary":
-      return { background: color, color: COLOR.onAccent, border: "none", fontWeight: 700 };
+      return {
+        background: color,
+        color: COLOR.onAccent,
+        border: "1px solid transparent",
+        fontWeight: 700,
+      };
     case "secondary":
-      return { ...SURFACE2_BOX, color: "var(--text)", fontWeight: 600 };
+      return { ...QUIET_BOX, color: COLOR.text, fontWeight: 600 };
     case "ghost":
       return {
-        background: "transparent",
         color,
-        border: `1px ${dashed ? "dashed" : "solid"} ${tone === "neutral" ? "var(--line)" : color}`,
+        border: `1px ${dashed ? "dashed" : "solid"} ${tone === "neutral" ? COLOR.line : color}`,
         fontWeight: 600,
       };
     case "link":
-      return { background: "none", color, border: "none", padding: 0, fontWeight: 600 };
+      return { color, padding: 0, fontWeight: 600 };
   }
 }
 
+/** A button with words on it. */
 export function Button({
   children,
   onClick,
@@ -66,15 +84,14 @@ export function Button({
   tone = variant === "primary" || variant === "link" ? "accent" : "neutral",
   dashed = false,
   block = false,
+  grow = false,
   disabled = false,
   pressed,
   title,
   ariaLabel,
-  style,
 }: ButtonProps): JSX.Element {
   return (
-    <button
-      type="button"
+    <ButtonBase
       onClick={onClick}
       disabled={disabled}
       title={title}
@@ -84,17 +101,16 @@ export function Button({
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: 8,
-        fontFamily: "inherit",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.5 : 1,
+        gap: SPACE.sm,
+        flex: grow ? 1 : "none",
         width: block ? "100%" : undefined,
+        textAlign: "center",
+        lineHeight: 1.2,
         ...SIZES[size],
         ...variantStyle(variant, tone, dashed),
-        ...style,
       }}
     >
       {children}
-    </button>
+    </ButtonBase>
   );
 }

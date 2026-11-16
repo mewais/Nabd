@@ -1,4 +1,12 @@
-import { Button, ChipGroup, Dropdown, FormSection, TextInput } from "@nabd/design-system";
+import {
+  Button,
+  ChipGroup,
+  Dropdown,
+  FormSection,
+  Row,
+  Stack,
+  TextInput,
+} from "@nabd/design-system";
 import { toggled } from "@nabd/domain";
 import { EQUIPMENT_OPTIONS, MUSCLE_OPTIONS, TRACKING_OPTIONS } from "../options";
 import type { LibraryActions } from "./library-actions";
@@ -13,7 +21,7 @@ interface ExerciseFormProps {
 export function ExerciseForm({ vm, actions }: ExerciseFormProps): JSX.Element {
   const { patchDraft } = actions;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "18px 18px 20px" }}>
+    <Stack gap="lg" padding="xl">
       <FormSection title="Exercise name">
         <TextInput
           value={vm.name}
@@ -52,14 +60,14 @@ export function ExerciseForm({ vm, actions }: ExerciseFormProps): JSX.Element {
           onToggle={(muscle) => patchDraft({ secondary: toggled(vm.secondary, muscle) })}
         />
       </FormSection>
-      <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-        <Button disabled={!vm.canCreate} onClick={actions.saveDraft} style={{ flex: 1 }}>
+      <Row gap="sm">
+        <Button disabled={!vm.canCreate} onClick={actions.saveDraft} grow>
           Create
         </Button>
         <Button variant="ghost" onClick={actions.cancelDraft}>
           Back
         </Button>
-      </div>
-    </div>
+      </Row>
+    </Stack>
   );
 }

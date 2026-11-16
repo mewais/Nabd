@@ -5,6 +5,15 @@ import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import { layerRules } from "./scripts/eslint/layers.js";
 import { oneImportPerModule } from "./scripts/eslint/one-import-per-module.js";
+import { stylingRules } from "./scripts/eslint/styling.js";
+
+/** Refused in every file: a type imported inline. */
+const RESTRICTED_SYNTAX = [
+  {
+    selector: "ImportSpecifier[importKind='type']",
+    message: "Import types with a separate `import type { … }` statement.",
+  },
+];
 
 export default [
   {
@@ -50,19 +59,15 @@ export default [
         "error",
         { prefer: "type-imports", fixStyle: "separate-type-imports" },
       ],
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "ImportSpecifier[importKind='type']",
-          message: "Import types with a separate `import type { … }` statement.",
-        },
-      ],
+      "no-restricted-syntax": ["error", ...RESTRICTED_SYNTAX],
       "nabd/one-import-per-module": "error",
     },
     settings: { react: { version: "detect" } },
   },
   // The dependency direction between packages (README, "Layout").
   ...layerRules,
+  // Styling lives in the design system (README, "Layout").
+  stylingRules(RESTRICTED_SYNTAX),
   {
     // Node scripts.
     files: ["scripts/**/*.mjs"],

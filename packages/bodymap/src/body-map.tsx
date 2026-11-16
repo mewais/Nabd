@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { Coverage } from "@nabd/domain";
 import { formatMuscles } from "@nabd/domain";
+import { COLOR } from "@nabd/design-system";
 import type { MapStyle, MapView } from "@nabd/view";
 import { BACK_MUSCLES, FRONT_MUSCLES, VIEWBOX } from "./drawing";
 import { regionCoverage } from "./regions";
@@ -16,15 +17,15 @@ interface BodyMapProps {
 
 const BODY_PARTS = { front: FRONT_MUSCLES, back: BACK_MUSCLES };
 const WIDTH = 124;
-const NEUTRAL: CSSProperties = { fill: "var(--map-muscle)" };
+const NEUTRAL: CSSProperties = { fill: COLOR.mapMuscle };
 
 /** An untrained region stays neutral; a trained one moves toward the accent with its coverage. */
 function regionPaint(pct: number, mapStyle: MapStyle): CSSProperties {
   if (pct <= 0) return NEUTRAL;
   const share = pct / 100;
   return mapStyle === "heat"
-    ? { fill: "var(--accent)", fillOpacity: 0.34 + 0.66 * share }
-    : { ...NEUTRAL, stroke: "var(--accent)", strokeOpacity: 0.2 + 0.8 * share };
+    ? { fill: COLOR.accent, fillOpacity: 0.34 + 0.66 * share }
+    : { ...NEUTRAL, stroke: COLOR.accent, strokeOpacity: 0.2 + 0.8 * share };
 }
 
 /** One side of the body, each region tinted by how covered its muscles are. */
@@ -46,6 +47,7 @@ export function BodyMap({ side, coverage, mapStyle = "heat" }: BodyMapProps): JS
             key={part.slug}
             data-region={part.slug}
             data-coverage={region === null ? undefined : Math.round(region.pct)}
+            // eslint-disable-next-line no-restricted-syntax -- an SVG region's paint is computed from its coverage
             style={paint}
           >
             {region !== null && (

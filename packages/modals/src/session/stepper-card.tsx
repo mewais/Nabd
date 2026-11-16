@@ -1,4 +1,4 @@
-import { Card, Eyebrow, Stepper } from "@nabd/design-system";
+import { Card, Stack, Stepper, Text } from "@nabd/design-system";
 import type { Direction } from "@nabd/domain";
 
 interface StepperCardProps {
@@ -19,9 +19,11 @@ export function StepperCard({
   onEnter,
 }: StepperCardProps): JSX.Element {
   return (
-    <Card variant="inset" stacked padding={14} style={{ flex: 1, alignItems: "center", gap: 10 }}>
-      <Eyebrow>{label}</Eyebrow>
-      <Stepper value={value} onStep={onStep} onSet={onSet} onEnter={onEnter} ariaLabel={label} />
+    <Card variant="inset" padding="lg" grow>
+      <Stack align="center" gap="sm">
+        <Text variant="eyebrow">{label}</Text>
+        <Stepper value={value} onStep={onStep} onSet={onSet} onEnter={onEnter} ariaLabel={label} />
+      </Stack>
     </Card>
   );
 }

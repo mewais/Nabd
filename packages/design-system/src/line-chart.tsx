@@ -1,6 +1,6 @@
 import { roundTo } from "@nabd/domain";
 import { seriesScale } from "./series-scale";
-import { FONT, tint } from "./tokens";
+import { COLOR, FONT, FONT_SIZE, tint } from "./tokens";
 
 const BOX = { width: 680, height: 240, pad: 30 };
 const BASELINE = BOX.height - BOX.pad;
@@ -36,23 +36,23 @@ export function LineChart({ series, ariaLabel }: LineChartProps): JSX.Element {
             x2={RIGHT}
             y1={scale.y(level)}
             y2={scale.y(level)}
-            stroke="var(--line)"
+            stroke={COLOR.line}
             strokeWidth={1}
           />
-          <text x={6} y={scale.y(level)} dy={4} fill="var(--text3)" fontSize={11}>
+          <text x={6} y={scale.y(level)} dy={4} fill={COLOR.textFaint} fontSize={FONT_SIZE.tiny}>
             {tick(level)}
           </text>
         </g>
       ))}
       <polygon
         points={`${LEFT},${BASELINE} ${scale.points} ${RIGHT},${BASELINE}`}
-        fill={tint("var(--accent)", 12)}
+        fill={tint(COLOR.accent, "soft")}
         stroke="none"
       />
       <polyline
         points={scale.points}
         fill="none"
-        stroke="var(--accent)"
+        stroke={COLOR.accent}
         strokeWidth={2.5}
         strokeLinecap="round"
         strokeLinejoin="round"

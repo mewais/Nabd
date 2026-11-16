@@ -1,6 +1,6 @@
 import type { MuscleStanding, Recommendation } from "@nabd/coverage";
 import { MUSCLE_NAMES } from "@nabd/domain";
-import { Eyebrow, MeterBar } from "@nabd/design-system";
+import { MeterBar } from "@nabd/design-system";
 import type { Tone } from "@nabd/design-system";
 
 /** One muscle's standing, as the coverage engine reports it. */
@@ -27,14 +27,8 @@ export function MuscleBar({ muscle, pct, recommendation }: MuscleBarProps): JSX.
       label={MUSCLE_NAMES[muscle]}
       pct={pct}
       value={`${Math.round(pct)}%`}
-      trailing={
-        <Eyebrow
-          tone={RECOMMENDATION_TONES[recommendation]}
-          style={{ width: 38, flex: "none", textAlign: "right" }}
-        >
-          {RECOMMENDATION_NAMES[recommendation]}
-        </Eyebrow>
-      }
+      tag={RECOMMENDATION_NAMES[recommendation]}
+      tagTone={RECOMMENDATION_TONES[recommendation]}
     />
   );
 }

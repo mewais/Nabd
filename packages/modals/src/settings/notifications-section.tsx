@@ -13,12 +13,7 @@ export function NotificationsSection({ actions }: NotificationsSectionProps): JS
         title="Desktop notification"
         hint="A set due while Nabd is in the background is announced by your desktop."
       >
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={actions.sendTestNotification}
-          style={{ flex: "none" }}
-        >
+        <Button variant="ghost" size="sm" onClick={actions.sendTestNotification}>
           Send test notification
         </Button>
       </FormRow>

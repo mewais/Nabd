@@ -1,5 +1,4 @@
-import type { CSSProperties } from "react";
-import { Page, StatTile, TEXT } from "@nabd/design-system";
+import { Grid, Page, Row, StatTile, Text } from "@nabd/design-system";
 import { CompletionCard } from "./completion-card";
 import { ConsistencyCard } from "./consistency-card";
 import { HeatmapCard } from "./heatmap-card";
@@ -14,29 +13,29 @@ interface ProgressScreenProps {
   actions: ProgressActions;
 }
 
-/** Two cards side by side, as tall as each other. */
-function pair(columns: string): CSSProperties {
-  return { display: "grid", gridTemplateColumns: columns, gap: 16, alignItems: "stretch" };
-}
+/** Two cards side by side, as tall as each other: the first wider, or both alike. */
+const PAIR = { wideFirst: "minmax(0, 1.5fr) minmax(0, 1fr)", even: 2 } as const;
 
 /** Progress: the headline figures, then how regularly, when, why and how well sets get done. */
 export function ProgressScreen({ vm, actions }: ProgressScreenProps): JSX.Element {
   return (
-    <Page maxWidth={1100}>
-      <h1 style={{ ...TEXT.title, margin: 0 }}>Progress</h1>
-      <div style={{ display: "flex", gap: 14 }}>
+    <Page width="narrow">
+      <Text as="h1" variant="title">
+        Progress
+      </Text>
+      <Row gap="lg" align="stretch">
         {vm.kpis.map((kpi) => (
           <StatTile key={kpi.label} {...kpi} />
         ))}
-      </div>
-      <div style={pair("minmax(0, 1.5fr) minmax(0, 1fr)")}>
+      </Row>
+      <Grid columns={PAIR.wideFirst} gap="lg">
         <ConsistencyCard vm={vm.consistency} actions={actions} />
         <CompletionCard vm={vm.completion} />
-      </div>
-      <div style={pair("minmax(0, 1fr) minmax(0, 1fr)")}>
+      </Grid>
+      <Grid columns={PAIR.even} gap="lg">
         <TimeOfDayCard vm={vm.timeOfDay} />
         <TriggerCard vm={vm.triggers} />
-      </div>
+      </Grid>
       <HeatmapCard vm={vm.heatmap} />
       <ProgressionCard vm={vm.progression} actions={actions} />
     </Page>

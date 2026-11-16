@@ -1,4 +1,12 @@
-import { Button, ChipGroup, EmptyNote, TEXT, TextInput } from "@nabd/design-system";
+import {
+  Button,
+  ChipGroup,
+  EmptyNote,
+  ScrollArea,
+  Stack,
+  Text,
+  TextInput,
+} from "@nabd/design-system";
 import { GROUP_OPTIONS } from "../options";
 import type { LibraryActions } from "./library-actions";
 import { LibraryRow } from "./library-row";
@@ -13,16 +21,7 @@ interface LibraryBrowserProps {
 export function LibraryBrowser({ vm, actions }: LibraryBrowserProps): JSX.Element {
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-          flexShrink: 0,
-          padding: "12px 20px",
-          borderBottom: "1px solid var(--line)",
-        }}
-      >
+      <Stack gap="sm" paddingX="xl" paddingY="md" edge="bottom">
         <TextInput
           type="search"
           value={vm.search}
@@ -36,32 +35,23 @@ export function LibraryBrowser({ vm, actions }: LibraryBrowserProps): JSX.Elemen
           selected={[vm.group]}
           onToggle={(group) => actions.filter({ group: group === "all" ? null : group })}
         />
-        {vm.scopeNote !== null && <div style={TEXT.hint}>{vm.scopeNote}</div>}
-      </div>
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "12px 16px 16px" }}>
-        {vm.emptyNote !== null && (
-          <div style={{ textAlign: "center" }}>
-            <EmptyNote>{vm.emptyNote}</EmptyNote>
-          </div>
-        )}
-        <ul
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 7,
-            margin: "0 0 11px",
-            padding: 0,
-            listStyle: "none",
-          }}
-        >
-          {vm.rows.map((row) => (
-            <LibraryRow key={row.id} vm={row} actions={actions} />
-          ))}
-        </ul>
-        <Button variant="ghost" tone="accent" dashed block onClick={() => actions.startDraft()}>
-          Create custom exercise
-        </Button>
-      </div>
+        {vm.scopeNote !== null && <Text variant="hint">{vm.scopeNote}</Text>}
+      </Stack>
+      <ScrollArea grow paddingX="xl" paddingY="md">
+        <Stack gap="md">
+          {vm.emptyNote !== null && <EmptyNote centred>{vm.emptyNote}</EmptyNote>}
+          {vm.rows.length > 0 && (
+            <Stack as="ul" gap="sm">
+              {vm.rows.map((row) => (
+                <LibraryRow key={row.id} vm={row} actions={actions} />
+              ))}
+            </Stack>
+          )}
+          <Button variant="ghost" tone="accent" dashed block onClick={() => actions.startDraft()}>
+            Create custom exercise
+          </Button>
+        </Stack>
+      </ScrollArea>
     </>
   );
 }

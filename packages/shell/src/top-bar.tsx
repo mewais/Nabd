@@ -1,11 +1,12 @@
 import {
   Button,
-  FONT,
   Icon,
   IconButton,
+  Row,
   Segmented,
-  TEXT,
+  Spacer,
   THEME_OPTIONS,
+  TitleBlock,
 } from "@nabd/design-system";
 import type { ShellActions } from "./shell-actions";
 import type { TopBarVM } from "./shell-vm";
@@ -19,24 +20,11 @@ interface TopBarProps {
 /** Greeting and date, the nudge status, and the app-wide switches. */
 export function TopBar({ vm, actions }: TopBarProps): JSX.Element {
   return (
-    <header
-      style={{
-        height: 66,
-        flexShrink: 0,
-        display: "flex",
-        alignItems: "center",
-        gap: 18,
-        padding: "0 26px",
-        background: "var(--surface)",
-        borderBottom: "1px solid var(--line)",
-      }}
-    >
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <div style={TEXT.cardTitle}>{vm.greeting}</div>
-        <div style={{ ...TEXT.cardSubtitle, fontFamily: FONT.mono }}>{vm.date}</div>
-      </div>
+    <Row as="header" surface edge="bottom" gap="xl" paddingX="xxl" paddingY="lg">
+      <TitleBlock title={vm.greeting} subtitle={vm.date} mono />
       <StatusPill vm={vm.status} />
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+      <Spacer />
+      <Row gap="md">
         <Segmented
           ariaLabel="Theme"
           options={THEME_OPTIONS}
@@ -64,7 +52,7 @@ export function TopBar({ vm, actions }: TopBarProps): JSX.Element {
           </Button>
         )}
         <IconButton icon="settings" ariaLabel="Settings" onClick={actions.openSettings} />
-      </div>
-    </header>
+      </Row>
+    </Row>
   );
 }

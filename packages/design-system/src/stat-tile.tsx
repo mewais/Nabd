@@ -1,6 +1,8 @@
 import { Card } from "./card";
 import type { CardVariant } from "./card";
-import { TEXT, toneColor } from "./tokens";
+import { Row } from "./row";
+import { Stack } from "./stack";
+import { Text } from "./text";
 import type { Tone } from "./tokens";
 
 /** One headline figure, as a view-model lists it. */
@@ -29,21 +31,20 @@ export function StatTile({
   variant = "card",
 }: StatTileProps): JSX.Element {
   return (
-    <Card variant={variant} ariaLabel={label} padding={16} style={{ flex: 1, minWidth: 0 }}>
-      <div style={TEXT.cardSubtitle}>{label}</div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginTop: 6 }}>
-        <span
-          style={{
-            ...TEXT.monoValue,
-            fontSize: 24,
-            letterSpacing: "-0.02em",
-            color: toneColor(tone) ?? "var(--text)",
-          }}
-        >
-          {value}
-        </span>
-        {unit !== undefined && <span style={TEXT.hint}>{unit}</span>}
-      </div>
+    <Card variant={variant} ariaLabel={label} padding="lg" grow>
+      <Stack gap="sm">
+        <Text variant="caption">{label}</Text>
+        <Row gap="xs" align="baseline">
+          <Text as="span" variant="stat" tone={tone === "neutral" ? "strong" : tone}>
+            {value}
+          </Text>
+          {unit !== undefined && (
+            <Text as="span" variant="hint">
+              {unit}
+            </Text>
+          )}
+        </Row>
+      </Stack>
     </Card>
   );
 }

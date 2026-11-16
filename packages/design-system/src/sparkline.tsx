@@ -1,4 +1,5 @@
 import { seriesScale } from "./series-scale";
+import { COLOR } from "./tokens";
 
 const BOX = { width: 120, height: 34, pad: 5 };
 
@@ -22,7 +23,7 @@ export function Sparkline({ series, ariaLabel }: SparklineProps): JSX.Element {
       <polyline
         points={seriesScale(series, BOX).points}
         fill="none"
-        stroke="var(--accent)"
+        stroke={COLOR.accent}
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"

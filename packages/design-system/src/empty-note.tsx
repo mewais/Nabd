@@ -1,16 +1,20 @@
 import type { ReactNode } from "react";
+import { Stack } from "./stack";
+import { Text } from "./text";
 
 interface EmptyNoteProps {
   children?: ReactNode;
+  /** In the middle of the space it stands in for (an empty list), instead of at its start. */
+  centred?: boolean;
 }
 
 /** The quiet sentence a card or list shows while it has nothing to show yet. */
-export function EmptyNote({ children }: EmptyNoteProps): JSX.Element {
+export function EmptyNote({ children, centred = false }: EmptyNoteProps): JSX.Element {
   return (
-    <p
-      style={{ margin: 0, padding: "14px 0", fontSize: 13, lineHeight: 1.5, color: "var(--text3)" }}
-    >
-      {children}
-    </p>
+    <Stack paddingY="md">
+      <Text as="p" tone="faint" align={centred ? "center" : undefined}>
+        {children}
+      </Text>
+    </Stack>
   );
 }

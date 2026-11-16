@@ -1,4 +1,4 @@
-import { Button, Eyebrow, TextInput } from "@nabd/design-system";
+import { Button, Divider, Grid, Row, Stack, Text, TextInput } from "@nabd/design-system";
 import type { PrescriptionEdit } from "@nabd/program-editor";
 import { PrescriptionControls } from "./prescription-controls";
 import type { SetBlockVM } from "./set-block-vm";
@@ -12,8 +12,8 @@ interface SetTableProps {
 
 /** Badge, reps, [load], remove. */
 const COLUMNS = {
-  plain: "30px minmax(150px,1fr) 26px",
-  withIntensity: "30px minmax(150px,1fr) 96px 26px",
+  plain: "24px minmax(150px, 1fr) 24px",
+  withIntensity: "24px minmax(150px, 1fr) 96px 24px",
 };
 
 /** A prescription's sets, with the controls that shape them and a note. */
@@ -21,35 +21,26 @@ export function SetTable({ vm, onEdit }: SetTableProps): JSX.Element {
   const hasIntensityColumn = vm.intensityHeader !== null;
   const columns = hasIntensityColumn ? COLUMNS.withIntensity : COLUMNS.plain;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 11, marginTop: 13 }}>
-      <div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: columns,
-            gap: 9,
-            padding: "0 2px 7px",
-            borderBottom: "1px solid var(--line)",
-          }}
-        >
-          <Eyebrow>Set</Eyebrow>
-          <Eyebrow>{vm.repHeader}</Eyebrow>
-          {hasIntensityColumn && <Eyebrow>{vm.intensityHeader}</Eyebrow>}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-          {vm.rows.map((row) => (
-            <SetRow
-              key={row.index}
-              vm={row}
-              columns={columns}
-              hasIntensityColumn={hasIntensityColumn}
-              onEdit={onEdit}
-            />
-          ))}
-        </div>
-      </div>
+    <Stack gap="md">
+      <Stack gap="sm">
+        <Grid columns={columns} gap="sm">
+          <Text variant="eyebrow">Set</Text>
+          <Text variant="eyebrow">{vm.repHeader}</Text>
+          {hasIntensityColumn && <Text variant="eyebrow">{vm.intensityHeader}</Text>}
+        </Grid>
+        <Divider />
+        {vm.rows.map((row) => (
+          <SetRow
+            key={row.index}
+            vm={row}
+            columns={columns}
+            hasIntensityColumn={hasIntensityColumn}
+            onEdit={onEdit}
+          />
+        ))}
+      </Stack>
       <PrescriptionControls vm={vm} onEdit={onEdit} />
-      <div style={{ display: "flex", gap: 16 }}>
+      <Row gap="lg">
         <Button variant="link" size="sm" onClick={() => onEdit((p) => p.addSet())}>
           + Add set
         </Button>
@@ -61,7 +52,7 @@ export function SetTable({ vm, onEdit }: SetTableProps): JSX.Element {
         >
           + Warmup
         </Button>
-      </div>
+      </Row>
       <TextInput
         size="sm"
         ariaLabel="Note"
@@ -69,6 +60,6 @@ export function SetTable({ vm, onEdit }: SetTableProps): JSX.Element {
         value={vm.notes}
         onChange={(notes) => onEdit((p) => p.setNotes(notes))}
       />
-    </div>
+    </Stack>
   );
 }

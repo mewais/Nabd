@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { Button } from "./button";
 import { ModalShell } from "./modal-shell";
+import { Row } from "./row";
+import { Stack } from "./stack";
+import { Text } from "./text";
 
 interface ConfirmDialogProps {
   /** The question: "Delete Push?". */
@@ -29,17 +32,17 @@ export function ConfirmDialog({
 }: ConfirmDialogProps): JSX.Element {
   return (
     <ModalShell title={title} onClose={onCancel} width={WIDTH} layer="confirm">
-      <div style={{ padding: "16px 22px 20px" }}>
-        <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "var(--text2)" }}>{children}</div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
+      <Stack gap="xl" paddingX="xxl" paddingY="xl">
+        <Text tone="muted">{children}</Text>
+        <Row justify="end" gap="sm">
           <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
           <Button tone="danger" onClick={onConfirm}>
             {confirmLabel}
           </Button>
-        </div>
-      </div>
+        </Row>
+      </Stack>
     </ModalShell>
   );
 }

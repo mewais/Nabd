@@ -1,9 +1,10 @@
-import type { CSSProperties } from "react";
 import type { AdviceChoice } from "@nabd/view";
 import { AdviceCard } from "./advice-card";
 import type { AdviceText } from "./advice-card";
 import { Chip } from "./chip";
-import { FONT, TEXT } from "./tokens";
+import { Row } from "./row";
+import { Stack } from "./stack";
+import { Text } from "./text";
 
 interface NextSetBlockProps {
   exercise: string;
@@ -21,16 +22,6 @@ interface NextSetBlockProps {
   variant?: "hero" | "form";
 }
 
-const TITLE: Record<NonNullable<NextSetBlockProps["variant"]>, CSSProperties> = {
-  hero: { fontSize: 32, fontWeight: 800, letterSpacing: "-0.025em", lineHeight: 1.05, margin: 0 },
-  form: { ...TEXT.title, fontSize: 24, margin: 0 },
-};
-
-const LINE: Record<NonNullable<NextSetBlockProps["variant"]>, CSSProperties> = {
-  hero: { fontFamily: FONT.mono, fontSize: 13, color: "var(--text2)" },
-  form: { fontFamily: FONT.mono, fontSize: 12.5, color: "var(--accent)" },
-};
-
 /**
  * The set that comes next: the exercise, what the plan asks for, the muscles
  * it works, the plan's note and the coach's advice.
@@ -46,18 +37,24 @@ export function NextSetBlock({
 }: NextSetBlockProps): JSX.Element {
   const hero = variant === "hero";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: hero ? 16 : 12 }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: hero ? 16 : 4 }}>
-        <h3 style={TITLE[variant]}>{exercise}</h3>
-        {line !== null && <div style={LINE[variant]}>{line}</div>}
-      </div>
-      <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+    <Stack gap={hero ? "lg" : "md"}>
+      <Stack gap={hero ? "md" : "xs"}>
+        <Text as="h3" variant={hero ? "display" : "headline"}>
+          {exercise}
+        </Text>
+        {line !== null && (
+          <Text variant="mono" tone={hero ? "muted" : "accent"}>
+            {line}
+          </Text>
+        )}
+      </Stack>
+      <Row gap="sm" wrap>
         {muscleNames.map((name) => (
           <Chip key={name}>{name}</Chip>
         ))}
-      </div>
-      {notes !== "" && <div style={TEXT.note}>{notes}</div>}
+      </Row>
+      {notes !== "" && <Text variant="note">{notes}</Text>}
       {advice !== null && <AdviceCard advice={advice} onApply={onApplyAdvice} />}
-    </div>
+    </Stack>
   );
 }

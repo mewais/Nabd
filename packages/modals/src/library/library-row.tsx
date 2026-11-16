@@ -1,4 +1,4 @@
-import { Chip, Icon, IconButton, RADIUS, RowButton, SURFACE2_BOX, TEXT } from "@nabd/design-system";
+import { Chip, Icon, IconButton, Row, RowButton, TitleBlock } from "@nabd/design-system";
 import type { LibraryActions } from "./library-actions";
 import type { LibraryRowVM } from "./library-vm";
 
@@ -9,36 +9,25 @@ interface LibraryRowProps {
 
 /** One exercise: press it to add it; duplicate it into the form; delete it if it is custom. */
 export function LibraryRow({ vm, actions }: LibraryRowProps): JSX.Element {
+  const customTag = (
+    <Chip variant="tag" tone="accent">
+      CUSTOM
+    </Chip>
+  );
   return (
-    <li style={{ display: "flex", alignItems: "center", gap: 7 }}>
-      <RowButton
-        ariaLabel={vm.addLabel}
-        onClick={() => actions.pick(vm.id)}
-        style={{
-          ...SURFACE2_BOX,
-          flex: 1,
-          minWidth: 0,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          boxSizing: "border-box",
-          borderRadius: RADIUS.button,
-          padding: "12px 14px",
-          color: "var(--text)",
-        }}
-      >
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ ...TEXT.label, display: "flex", alignItems: "center", gap: 7 }}>
-            {vm.name}
-            {vm.custom && (
-              <Chip variant="tag" tone="accent">
-                CUSTOM
-              </Chip>
-            )}
-          </span>
-          <span style={{ ...TEXT.cardSubtitle, display: "block", marginTop: 2 }}>{vm.detail}</span>
-        </span>
-        <Icon name="plus" size={16} strokeWidth={2.6} stroke="var(--accent)" />
+    <Row as="li" gap="sm">
+      <RowButton variant="boxed" ariaLabel={vm.addLabel} onClick={() => actions.pick(vm.id)}>
+        <Row as="span" gap="md">
+          <TitleBlock
+            size="row"
+            title={vm.name}
+            subtitle={vm.detail}
+            tag={vm.custom ? customTag : undefined}
+            inline
+            grow
+          />
+          <Icon name="plus" size={16} strokeWidth={2.6} tone="accent" />
+        </Row>
       </RowButton>
       <IconButton
         icon="copy"
@@ -53,6 +42,6 @@ export function LibraryRow({ vm, actions }: LibraryRowProps): JSX.Element {
           onClick={() => actions.deleteCustom(vm.id)}
         />
       )}
-    </li>
+    </Row>
   );
 }

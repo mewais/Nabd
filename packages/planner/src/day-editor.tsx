@@ -1,4 +1,4 @@
-import { Button, Card, TEXT, TitleInput } from "@nabd/design-system";
+import { Button, Card, Row, Spacer, Stack, Text, TitleInput } from "@nabd/design-system";
 import { DayPlacement } from "./day-placement";
 import type { EditorRowVM, EditorVM } from "./editor-vm";
 import { ExerciseCard } from "./exercise-card";
@@ -25,37 +25,25 @@ export function DayEditor({ vm, actions }: DayEditorProps): JSX.Element {
         return <SlotCard key={rowVM.id} vm={rowVM.slot} dayId={dayId} actions={actions} />;
     }
   };
+  const header = (
+    <Row gap="lg" wrap>
+      <TitleInput
+        size="md"
+        ariaLabel="Day name"
+        value={vm.name}
+        onChange={(name) => actions.edit((e) => e.renameDay(dayId, name))}
+      />
+      <DayPlacement vm={vm.placement} dayId={dayId} actions={actions} />
+      <Text variant="caption">{vm.summary}</Text>
+      <Spacer />
+      <Button variant="ghost" size="sm" onClick={() => actions.removeDay(dayId)}>
+        Delete day
+      </Button>
+    </Row>
+  );
   return (
-    <Card ariaLabel="Day editor" padding={0} style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-      <div
-        style={{
-          padding: "16px 18px",
-          borderBottom: "1px solid var(--line)",
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          flexWrap: "wrap",
-        }}
-      >
-        <TitleInput
-          size="md"
-          width={160}
-          ariaLabel="Day name"
-          value={vm.name}
-          onChange={(name) => actions.edit((e) => e.renameDay(dayId, name))}
-        />
-        <DayPlacement vm={vm.placement} dayId={dayId} actions={actions} />
-        <span style={TEXT.cardSubtitle}>{vm.summary}</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => actions.removeDay(dayId)}
-          style={{ marginLeft: "auto" }}
-        >
-          Delete day
-        </Button>
-      </div>
-      <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 11 }}>
+    <Card ariaLabel="Day editor" header={header} padding="lg" flush divided grow>
+      <Stack gap="md" padding="lg">
         {vm.rows.map(row)}
         {vm.type === "fixed" ? (
           <Button
@@ -71,7 +59,7 @@ export function DayEditor({ vm, actions }: DayEditorProps): JSX.Element {
         ) : (
           <MusclePicker onPick={(muscle) => actions.edit((e) => e.addSlot(dayId, muscle))} />
         )}
-      </div>
+      </Stack>
     </Card>
   );
 }

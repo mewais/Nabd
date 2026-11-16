@@ -1,4 +1,5 @@
-import { TEXT } from "./tokens";
+import { FIELD_CLASS } from "./global-styles";
+import { COLOR, RADIUS, TEXT } from "./tokens";
 
 interface TitleInputProps {
   value: string;
@@ -7,11 +8,12 @@ interface TitleInputProps {
   ariaLabel: string;
   /** `lg` for a screen's title, `md` for a panel's. */
   size?: "md" | "lg";
-  /** Width in px. */
-  width?: number;
 }
 
-const FONT_SIZE = { md: 18, lg: 22 } as const;
+const SIZES = {
+  md: { ...TEXT.heading, width: 160 },
+  lg: { ...TEXT.title, width: 280 },
+} as const;
 
 /** A heading the user renames in place: it reads as a title and edits as a field. */
 export function TitleInput({
@@ -19,24 +21,22 @@ export function TitleInput({
   onChange,
   ariaLabel,
   size = "lg",
-  width = 280,
 }: TitleInputProps): JSX.Element {
   return (
     <input
       type="text"
+      className={FIELD_CLASS}
       value={value}
       aria-label={ariaLabel}
       onChange={(event) => onChange(event.target.value)}
       style={{
-        ...TEXT.title,
-        fontSize: FONT_SIZE[size],
-        width,
+        ...SIZES[size],
         padding: 0,
         fontFamily: "inherit",
-        color: "var(--text)",
-        background: "transparent",
+        color: COLOR.text,
+        background: COLOR.none,
         border: "none",
-        outline: "none",
+        borderRadius: RADIUS.tag,
       }}
     />
   );

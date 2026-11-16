@@ -1,5 +1,6 @@
+import { ButtonBase } from "./button-base";
 import type { Option } from "./option";
-import { COLOR, RADIUS, SURFACE2_BOX } from "./tokens";
+import { COLOR, FONT_SIZE, QUIET_BOX, RADIUS, SPACE } from "./tokens";
 
 export interface SegOption<V extends string = string> extends Option<V> {
   /** Accessible name, when the label alone is not enough (e.g. an initial). */
@@ -20,8 +21,8 @@ interface SegmentedProps<V extends string = string> {
 }
 
 const SIZES = {
-  sm: { padding: "5px 9px", fontSize: 11.5, radius: RADIUS.tag },
-  md: { padding: "6px 12px", fontSize: 12.5, radius: RADIUS.chip },
+  sm: { padding: `${SPACE.xs}px ${SPACE.sm}px`, fontSize: FONT_SIZE.tiny, radius: RADIUS.tag },
+  md: { padding: `${SPACE.xs}px ${SPACE.md}px`, fontSize: FONT_SIZE.small, radius: RADIUS.chip },
 } as const;
 
 /** A row of mutually exclusive options; the chosen one is filled. */
@@ -38,19 +39,19 @@ export function Segmented<V extends string = string>({
       role="group"
       aria-label={ariaLabel}
       style={{
-        ...SURFACE2_BOX,
+        ...QUIET_BOX,
         display: "inline-flex",
-        borderRadius: radius + 2,
-        padding: 3,
-        gap: 2,
+        flex: "none",
+        borderRadius: radius + SPACE.xxs,
+        padding: SPACE.xxs,
+        gap: SPACE.xxs,
       }}
     >
       {options.map((option) => {
         const active = option.value === value;
         return (
-          <button
+          <ButtonBase
             key={option.value}
-            type="button"
             aria-pressed={active}
             aria-label={option.ariaLabel}
             title={option.title}
@@ -59,18 +60,15 @@ export function Segmented<V extends string = string>({
             style={{
               padding,
               fontSize,
+              lineHeight: 1.5,
               borderRadius: radius,
-              border: "none",
-              cursor: option.disabled ? "not-allowed" : "pointer",
-              opacity: option.disabled ? 0.5 : 1,
-              fontFamily: "inherit",
               fontWeight: 600,
-              background: active ? "var(--accent)" : "transparent",
-              color: active ? COLOR.onAccent : "var(--text2)",
+              background: active ? COLOR.accent : COLOR.none,
+              color: active ? COLOR.onAccent : COLOR.textMuted,
             }}
           >
             {option.label}
-          </button>
+          </ButtonBase>
         );
       })}
     </div>

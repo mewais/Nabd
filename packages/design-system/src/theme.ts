@@ -115,7 +115,7 @@ const GLASS_FROST = "blur(34px) saturate(1.7)";
  */
 export function themeStyle(theme: Theme, glass: boolean, opacity: number): CSSProperties {
   const { solid, glass: glassMaterial, glassTintRgb } = MATERIALS[theme];
-  if (!glass) return { ...solid, background: "var(--bg)" };
+  if (!glass) return { ...solid, background: solid["--bg"] };
   return {
     ...glassMaterial,
     background: `rgba(${glassTintRgb},${opacity})`,

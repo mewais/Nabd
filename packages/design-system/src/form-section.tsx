@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Eyebrow } from "./eyebrow";
+import { Stack } from "./stack";
+import { Text } from "./text";
 
 interface FormSectionProps {
   title: string;
@@ -9,9 +10,9 @@ interface FormSectionProps {
 /** A titled group of form rows or a single labelled field. */
 export function FormSection({ title, children }: FormSectionProps): JSX.Element {
   return (
-    <section aria-label={title}>
-      <Eyebrow style={{ marginBottom: 6 }}>{title}</Eyebrow>
-      {children}
-    </section>
+    <Stack as="section" ariaLabel={title} gap="sm">
+      <Text variant="eyebrow">{title}</Text>
+      <div>{children}</div>
+    </Stack>
   );
 }

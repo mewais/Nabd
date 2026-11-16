@@ -1,5 +1,4 @@
-import type { CSSProperties } from "react";
-import { Page, StatTile } from "@nabd/design-system";
+import { Grid, Page, Row, Stack, StatTile } from "@nabd/design-system";
 import { CoverageCard } from "./coverage-card";
 import { HeroNotice } from "./hero-notice";
 import { InsightCard } from "./insight-card";
@@ -14,21 +13,15 @@ interface TodayScreenProps {
   actions: TodayActions;
 }
 
-const COLUMNS: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0,1.55fr) minmax(0,1fr)",
-  gap: 20,
-  alignItems: "start",
-};
-
-const COLUMN: CSSProperties = { display: "flex", flexDirection: "column", gap: 18, minWidth: 0 };
+/** The day's column, and a narrower one for the week. */
+const COLUMNS = "minmax(0, 1.55fr) minmax(0, 1fr)";
 
 /** Today: the next set and the day's queue on the left, the week's coverage on the right. */
 export function TodayScreen({ vm, actions }: TodayScreenProps): JSX.Element {
   return (
     <Page>
-      <div style={COLUMNS}>
-        <div style={COLUMN}>
+      <Grid columns={COLUMNS} gap="xl" align="start">
+        <Stack gap="xl">
           {vm.hero.kind === "next" ? (
             <NextSetCard vm={vm.hero} actions={actions} />
           ) : (
@@ -36,17 +29,17 @@ export function TodayScreen({ vm, actions }: TodayScreenProps): JSX.Element {
           )}
           {vm.emptySlotsNote !== null && <PlanNote text={vm.emptySlotsNote} />}
           {vm.queue.rows.length > 0 && <QueueCard vm={vm.queue} actions={actions} />}
-        </div>
-        <div style={COLUMN}>
+        </Stack>
+        <Stack gap="xl">
           <CoverageCard vm={vm.coverage} actions={actions} />
           <InsightCard vm={vm.insight} />
-          <div style={{ display: "flex", gap: 12 }}>
+          <Row gap="md" align="stretch">
             {vm.stats.map((stat) => (
               <StatTile key={stat.label} {...stat} />
             ))}
-          </div>
-        </div>
-      </div>
+          </Row>
+        </Stack>
+      </Grid>
     </Page>
   );
 }

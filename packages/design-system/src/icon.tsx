@@ -1,21 +1,33 @@
 import { ICON_PATHS } from "./icon-paths";
 import type { IconName } from "./icon-paths";
+import { COLOR, toneColor } from "./tokens";
+import type { Tone } from "./tokens";
+
+/** An icon's colour: a tone, the faint text colour, or white on an accent fill. */
+type IconTone = Tone | "faint" | "onAccent";
 
 interface IconProps {
   name: IconName;
   /** Width and height in px. */
   size?: number;
-  stroke?: string;
+  /** `neutral` (default) draws in the surrounding text colour. */
+  tone?: IconTone;
   strokeWidth?: number;
   /** Accessible name. Without one the icon is decorative and hidden from assistive tech. */
   ariaLabel?: string;
+}
+
+function strokeOf(tone: IconTone): string {
+  if (tone === "faint") return COLOR.textFaint;
+  if (tone === "onAccent") return COLOR.onAccent;
+  return toneColor(tone) ?? "currentColor";
 }
 
 /** A stroke icon from the app's set. */
 export function Icon({
   name,
   size = 24,
-  stroke = "currentColor",
+  tone = "neutral",
   strokeWidth = 2,
   ariaLabel,
 }: IconProps): JSX.Element {
@@ -26,7 +38,7 @@ export function Icon({
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      stroke={stroke}
+      stroke={strokeOf(tone)}
       strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"

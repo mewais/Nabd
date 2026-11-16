@@ -1,6 +1,6 @@
 import { COLOR, RADIUS } from "./tokens";
 
-const ACCENT = "var(--accent)";
+const ACCENT = COLOR.accent;
 
 /** The vessels and highlights of the heart, drawn as strokes over its body. */
 const HEART_STROKES = [
@@ -26,7 +26,7 @@ export function BrandMark({ size = 36 }: BrandMarkProps): JSX.Element {
       style={{
         width: size,
         height: size,
-        borderRadius: RADIUS.button,
+        borderRadius: RADIUS.control,
         background: ACCENT,
         display: "flex",
         alignItems: "center",

@@ -1,4 +1,5 @@
-import { RADIUS, SURFACE2_BOX } from "./tokens";
+import { FIELD_CLASS } from "./global-styles";
+import { COLOR, FONT_SIZE, QUIET_BOX, RADIUS, SPACE } from "./tokens";
 
 interface TextInputProps {
   value: string;
@@ -13,8 +14,12 @@ interface TextInputProps {
 }
 
 const SIZES = {
-  sm: { borderRadius: RADIUS.chip, padding: "9px 11px", fontSize: 12.5 },
-  md: { borderRadius: RADIUS.field, padding: "12px 13px", fontSize: 14 },
+  sm: {
+    borderRadius: RADIUS.chip,
+    padding: `${SPACE.sm}px ${SPACE.md}px`,
+    fontSize: FONT_SIZE.small,
+  },
+  md: { borderRadius: RADIUS.control, padding: SPACE.md, fontSize: FONT_SIZE.medium },
 } as const;
 
 /** A single-line text field that fills its container. */
@@ -29,18 +34,18 @@ export function TextInput({
   return (
     <input
       type={type}
+      className={FIELD_CLASS}
       value={value}
       placeholder={placeholder}
       aria-label={ariaLabel}
       onChange={(event) => onChange(event.target.value)}
       style={{
-        ...SURFACE2_BOX,
+        ...QUIET_BOX,
         ...SIZES[size],
         width: "100%",
         boxSizing: "border-box",
         fontFamily: "inherit",
-        color: "var(--text)",
-        outline: "none",
+        color: COLOR.text,
       }}
     />
   );

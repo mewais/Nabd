@@ -19,7 +19,7 @@ export function TimeOfDayCard({ vm }: TimeOfDayCardProps): JSX.Element {
       {empty ? (
         <EmptyNote>{vm.empty}</EmptyNote>
       ) : (
-        <BarChart bars={vm.bars} height={124} tone="accent" ariaLabel="Sets by hour" />
+        <BarChart bars={vm.bars} tone="accent" ariaLabel="Sets by hour" />
       )}
     </Card>
   );

@@ -1,4 +1,5 @@
-import { FONT, shade } from "./tokens";
+import type { CSSProperties } from "react";
+import { COLOR, RADIUS, SPACE, TEXT, shade } from "./tokens";
 import type { Tone } from "./tokens";
 
 export interface BarDatum {
@@ -17,33 +18,46 @@ type BarTone = Extract<Tone, "neutral" | "accent" | "success">;
 
 interface BarChartProps {
   bars: readonly BarDatum[];
-  /** Chart height in px, captions included. */
-  height: number;
+  /** `sm` under a headline figure, `lg` when the chart is the card. */
+  size?: keyof typeof HEIGHT;
   tone?: BarTone;
   /** Names the chart for assistive tech. */
   ariaLabel: string;
 }
 
+/** Chart heights in px, captions included. */
+const HEIGHT = { sm: 88, md: 124, lg: 160 } as const;
+
 const TONE_FILL: Record<BarTone, string> = {
-  neutral: "var(--surface2)",
-  accent: shade("var(--accent)", 30),
-  success: shade("var(--accent2)", 70),
+  neutral: COLOR.surfaceAlt,
+  accent: shade(COLOR.accent, "low"),
+  success: shade(COLOR.success, "high"),
 };
 
 /** A fixed line box, so a bar with a blank caption still stands on the same baseline. */
-const CAPTION = {
-  fontFamily: FONT.mono,
-  fontSize: 10,
+const CAPTION: CSSProperties = {
+  ...TEXT.monoCaption,
+  fontSize: TEXT.eyebrow.fontSize,
   lineHeight: "12px",
   minHeight: 12,
   whiteSpace: "nowrap",
-  color: "var(--text3)",
-} as const;
+};
+
+const COLUMN: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: SPACE.xs,
+};
 
 /** Vertical bars that share the width evenly; an empty bar keeps a sliver so it stays visible. */
 export function BarChart({
   bars,
-  height,
+  size = "md",
   tone = "neutral",
   ariaLabel,
 }: BarChartProps): JSX.Element {
@@ -51,7 +65,7 @@ export function BarChart({
     <div
       role="list"
       aria-label={ariaLabel}
-      style={{ display: "flex", alignItems: "flex-end", height, gap: 6 }}
+      style={{ display: "flex", alignItems: "flex-end", height: HEIGHT[size], gap: SPACE.xs }}
     >
       {bars.map((bar, index) => (
         <div
@@ -59,16 +73,7 @@ export function BarChart({
           role="listitem"
           aria-current={bar.highlight ? true : undefined}
           data-height-pct={bar.heightPct}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: 6,
-          }}
+          style={COLUMN}
         >
           {bar.value !== undefined && <span style={CAPTION}>{bar.value}</span>}
           <div
@@ -76,8 +81,8 @@ export function BarChart({
               width: "100%",
               height: `${bar.heightPct}%`,
               minHeight: 3,
-              borderRadius: "3px 3px 0 0",
-              background: bar.highlight ? "var(--accent)" : TONE_FILL[tone],
+              borderRadius: `${RADIUS.bar}px ${RADIUS.bar}px 0 0`,
+              background: bar.highlight ? COLOR.accent : TONE_FILL[tone],
               transition: "height 0.3s",
             }}
           />

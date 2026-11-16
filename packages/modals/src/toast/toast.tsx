@@ -1,4 +1,4 @@
-import { ANIMATION, Button, Card, Eyebrow, LiveDot, SHADOW, TEXT, Z } from "@nabd/design-system";
+import { Button, LiveDot, Row, Spacer, Stack, Text, ToastFrame } from "@nabd/design-system";
 import type { ToastActions } from "./toast-actions";
 import type { ToastVM } from "./toast-vm";
 
@@ -10,35 +10,33 @@ interface ToastProps {
 /** The in-app nudge: a card in the corner naming the set that is due. */
 export function Toast({ vm, actions }: ToastProps): JSX.Element {
   return (
-    <Card
-      padding={18}
-      style={{
-        position: "fixed",
-        bottom: 24,
-        right: 24,
-        width: 330,
-        zIndex: Z.toast,
-        boxShadow: SHADOW.toast,
-        animation: ANIMATION.toast,
-      }}
-    >
-      <div role="status">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <LiveDot active />
-          <Eyebrow tone="accent">{vm.title}</Eyebrow>
-          <span style={{ ...TEXT.hint, marginLeft: "auto" }}>{vm.reason}</span>
-        </div>
-        <div style={{ ...TEXT.title, fontSize: 19 }}>{vm.exercise}</div>
-        <div style={{ ...TEXT.hint, marginTop: 3 }}>{vm.detail}</div>
-      </div>
-      <div style={{ display: "flex", gap: 9, marginTop: 15 }}>
-        <Button size="md" onClick={actions.start} style={{ flex: 1 }}>
-          {"Let's go"}
-        </Button>
-        <Button variant="ghost" size="md" onClick={actions.snooze}>
-          Snooze
-        </Button>
-      </div>
-    </Card>
+    <ToastFrame>
+      <Stack gap="lg">
+        <Stack role="status" gap="sm">
+          <Row gap="sm">
+            <LiveDot active />
+            <Text variant="eyebrow" tone="accent">
+              {vm.title}
+            </Text>
+            <Spacer />
+            <Text as="span" variant="hint">
+              {vm.reason}
+            </Text>
+          </Row>
+          <Stack gap="xxs">
+            <Text variant="heading">{vm.exercise}</Text>
+            <Text variant="hint">{vm.detail}</Text>
+          </Stack>
+        </Stack>
+        <Row gap="sm">
+          <Button size="md" onClick={actions.start} grow>
+            {"Let's go"}
+          </Button>
+          <Button variant="ghost" size="md" onClick={actions.snooze}>
+            Snooze
+          </Button>
+        </Row>
+      </Stack>
+    </ToastFrame>
   );
 }

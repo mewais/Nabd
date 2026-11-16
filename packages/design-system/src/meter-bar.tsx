@@ -1,6 +1,8 @@
-import type { ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { clamp } from "@nabd/domain";
-import { FONT, RADIUS } from "./tokens";
+import { Row } from "./row";
+import { COLOR, RADIUS, TEXT, toneColor } from "./tokens";
+import type { Tone } from "./tokens";
 
 interface MeterBarProps {
   label: string;
@@ -8,28 +10,41 @@ interface MeterBarProps {
   pct: number;
   /** The figure after the bar, e.g. "47%" or "6 sets". */
   value: string;
-  /** Width reserved for the figure, in px, so a column of meters lines up. */
-  valueWidth?: number;
-  /** Something after the figure, such as a status tag. */
-  trailing?: ReactNode;
+  /** `wide` keeps room for a figure with its unit ("1.5 sets"), so a column of meters lines up. */
+  valueWidth?: "narrow" | "wide";
+  /** A word after the figure when the meter stands out ("Push"); room is kept for it when given, even empty. */
+  tag?: string;
+  tagTone?: Tone;
 }
+
+const LABEL_WIDTH = 76;
+const VALUE_WIDTH = { narrow: 32, wide: 64 } as const;
+const TAG_WIDTH = 40;
+const HEIGHT = 6;
+
+const FIGURE: CSSProperties = {
+  ...TEXT.monoCaption,
+  color: COLOR.textMuted,
+  textAlign: "right",
+  flex: "none",
+};
+const TAG: CSSProperties = { ...TEXT.eyebrow, width: TAG_WIDTH, textAlign: "right", flex: "none" };
 
 /** A labelled horizontal meter: name, bar, figure. */
 export function MeterBar({
   label,
   pct,
   value,
-  valueWidth = 32,
-  trailing,
+  valueWidth = "narrow",
+  tag,
+  tagTone = "neutral",
 }: MeterBarProps): JSX.Element {
   const filled = Math.round(clamp(pct, 0, 100));
   return (
-    <div
-      role="group"
-      aria-label={label}
-      style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0" }}
-    >
-      <span style={{ width: 74, flex: "none", fontSize: 12.5 }}>{label}</span>
+    <Row role="group" ariaLabel={label} gap="sm" paddingY="xs">
+      <span style={{ ...TEXT.hint, color: COLOR.text, width: LABEL_WIDTH, flex: "none" }}>
+        {label}
+      </span>
       <div
         role="meter"
         aria-label={label}
@@ -39,9 +54,9 @@ export function MeterBar({
         aria-valuetext={value}
         style={{
           flex: 1,
-          height: 6,
+          height: HEIGHT,
           borderRadius: RADIUS.bar,
-          background: "var(--surface2)",
+          background: COLOR.surfaceAlt,
           overflow: "hidden",
         }}
       >
@@ -50,24 +65,15 @@ export function MeterBar({
             width: `${filled}%`,
             height: "100%",
             borderRadius: RADIUS.bar,
-            background: "var(--accent)",
+            background: COLOR.accent,
             transition: "width .5s",
           }}
         />
       </div>
-      <span
-        style={{
-          fontFamily: FONT.mono,
-          fontSize: 11,
-          color: "var(--text2)",
-          width: valueWidth,
-          textAlign: "right",
-          flex: "none",
-        }}
-      >
-        {value}
-      </span>
-      {trailing}
-    </div>
+      <span style={{ ...FIGURE, width: VALUE_WIDTH[valueWidth] }}>{value}</span>
+      {tag !== undefined && (
+        <span style={{ ...TAG, color: toneColor(tagTone) ?? TEXT.eyebrow.color }}>{tag}</span>
+      )}
+    </Row>
   );
 }

@@ -1,4 +1,4 @@
-import { Chip } from "@nabd/design-system";
+import { Chip, Row } from "@nabd/design-system";
 import type { DayPlacementVM } from "./editor-vm";
 import { MoveButtons } from "./move-buttons";
 import type { PlannerActions } from "./planner-actions";
@@ -21,12 +21,12 @@ export function DayPlacement({ vm, dayId, actions }: DayPlacementProps): JSX.Ele
     );
   }
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    <Row gap="sm">
       <Chip variant="tag">{vm.label}</Chip>
       <MoveButtons
         horizontal
         onMove={(direction) => actions.edit((e) => e.moveDay(dayId, direction))}
       />
-    </div>
+    </Row>
   );
 }

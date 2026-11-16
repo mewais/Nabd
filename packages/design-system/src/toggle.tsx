@@ -1,4 +1,5 @@
-import { COLOR, RADIUS } from "./tokens";
+import { ButtonBase } from "./button-base";
+import { COLOR, RADIUS, SPACE } from "./tokens";
 
 interface ToggleProps {
   on: boolean;
@@ -11,13 +12,13 @@ interface ToggleProps {
 
 const WIDTH = 40;
 const HEIGHT = 24;
-const KNOB = HEIGHT - 4;
+const INSET = SPACE.xxs;
+const KNOB = HEIGHT - 2 * INSET;
 
 /** An on/off switch. */
 export function Toggle({ on, onChange, ariaLabel, disabled = false }: ToggleProps): JSX.Element {
   return (
-    <button
-      type="button"
+    <ButtonBase
       role="switch"
       aria-checked={on}
       aria-label={ariaLabel}
@@ -25,21 +26,19 @@ export function Toggle({ on, onChange, ariaLabel, disabled = false }: ToggleProp
       onClick={() => onChange(!on)}
       style={{
         position: "relative",
+        flex: "none",
         width: WIDTH,
         height: HEIGHT,
-        borderRadius: HEIGHT / 2,
-        background: on ? "var(--accent)" : "var(--surface2)",
-        border: "none",
-        cursor: disabled ? "default" : "pointer",
-        opacity: disabled ? 0.45 : 1,
-        padding: 0,
+        borderRadius: RADIUS.pill,
+        background: on ? COLOR.accent : COLOR.surfaceAlt,
+        boxShadow: on ? undefined : `inset 0 0 0 1px ${COLOR.line}`,
       }}
     >
       <span
         style={{
           position: "absolute",
-          top: 2,
-          left: on ? WIDTH - KNOB - 2 : 2,
+          top: INSET,
+          left: on ? WIDTH - KNOB - INSET : INSET,
           width: KNOB,
           height: KNOB,
           borderRadius: RADIUS.round,
@@ -47,6 +46,6 @@ export function Toggle({ on, onChange, ariaLabel, disabled = false }: ToggleProp
           transition: "left 0.2s",
         }}
       />
-    </button>
+    </ButtonBase>
   );
 }

@@ -1,4 +1,4 @@
-import { Button, FormSection, ModalShell } from "@nabd/design-system";
+import { Button, FormSection, ModalShell, Stack } from "@nabd/design-system";
 import { AppearanceSection } from "./appearance-section";
 import { DataSection } from "./data-section";
 import { NotificationsSection } from "./notifications-section";
@@ -17,7 +17,7 @@ interface SettingsModalProps {
 export function SettingsModal({ vm, actions }: SettingsModalProps): JSX.Element {
   return (
     <ModalShell title="Settings" onClose={actions.close} width={540} layer="modalTop">
-      <div style={{ display: "flex", flexDirection: "column", gap: 22, padding: "18px 22px 22px" }}>
+      <Stack gap="xxl" paddingX="xxl" paddingY="xl">
         <FormSection title="Workday">
           {vm.workday.map((row) => (
             <StepperRow key={row.title} vm={row} actions={actions} />
@@ -40,7 +40,7 @@ export function SettingsModal({ vm, actions }: SettingsModalProps): JSX.Element 
         <Button variant="secondary" block onClick={actions.quit}>
           Quit Nabd
         </Button>
-      </div>
+      </Stack>
     </ModalShell>
   );
 }

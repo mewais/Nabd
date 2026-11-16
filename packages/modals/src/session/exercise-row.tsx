@@ -1,23 +1,6 @@
-import type { CSSProperties } from "react";
-import { COLOR, ELLIPSIS, Icon, RADIUS, RowButton, TEXT, tint } from "@nabd/design-system";
+import { CheckMark, Row, RowButton, Text, TitleBlock } from "@nabd/design-system";
 import type { SessionActions } from "./session-actions";
 import type { SessionListRowVM } from "./session-vm";
-
-const MARK_SIZE = 18;
-
-function rowStyle(row: SessionListRowVM): CSSProperties {
-  return {
-    display: "flex",
-    alignItems: "center",
-    gap: 9,
-    boxSizing: "border-box",
-    padding: "9px 10px",
-    borderRadius: RADIUS.field,
-    background: row.active ? tint("var(--accent)", 12) : "transparent",
-    border: `1px solid ${row.active ? tint("var(--accent)", 30) : "transparent"}`,
-    opacity: row.skipped ? 0.5 : 1,
-  };
-}
 
 interface ExerciseRowProps {
   vm: SessionListRowVM;
@@ -28,61 +11,26 @@ interface ExerciseRowProps {
 export function ExerciseRow({ vm, actions }: ExerciseRowProps): JSX.Element {
   return (
     <RowButton
+      variant="nav"
       current={vm.active}
+      dimmed={vm.skipped}
       onClick={() => actions.focusItem(vm.itemId)}
-      style={rowStyle(vm)}
     >
-      <span
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flex: "none",
-          boxSizing: "border-box",
-          width: MARK_SIZE,
-          height: MARK_SIZE,
-          borderRadius: RADIUS.round,
-          background: vm.complete ? "var(--accent2)" : "var(--surface)",
-          border: vm.complete ? "none" : "1px solid var(--line)",
-        }}
-      >
-        {vm.complete && (
-          <Icon
-            name="check"
-            size={12}
-            strokeWidth={3.4}
-            stroke={COLOR.onAccent}
-            ariaLabel="complete"
-          />
-        )}
-      </span>
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span
-          style={{
-            ...ELLIPSIS,
-            display: "block",
-            fontSize: 13,
-            fontWeight: 600,
-            color: vm.active ? "var(--accent)" : "var(--text)",
-          }}
-        >
-          {vm.exercise}
-        </span>
-        <span style={{ ...ELLIPSIS, display: "block", fontSize: 11, color: "var(--text3)" }}>
-          {vm.detail}
-        </span>
-      </span>
-      <span
-        style={{
-          ...TEXT.monoValue,
-          flex: "none",
-          fontSize: 11,
-          fontWeight: 400,
-          color: vm.complete ? "var(--accent2)" : "var(--text3)",
-        }}
-      >
-        {vm.progress}
-      </span>
+      <Row as="span" gap="sm">
+        <CheckMark checked={vm.complete} label={vm.complete ? "complete" : undefined} />
+        <TitleBlock
+          size="dense"
+          title={vm.exercise}
+          subtitle={vm.detail}
+          tone={vm.active ? "accent" : "strong"}
+          truncate
+          inline
+          grow
+        />
+        <Text as="span" variant="monoCaption" tone={vm.complete ? "success" : "faint"}>
+          {vm.progress}
+        </Text>
+      </Row>
     </RowButton>
   );
 }

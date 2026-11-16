@@ -1,4 +1,4 @@
-import { Card, Chip, FONT, IconButton, TEXT } from "@nabd/design-system";
+import { Card, Chip, IconButton, Row, Stack, Text, TitleBlock } from "@nabd/design-system";
 import type { ExerciseCardVM } from "./editor-vm";
 import { MoveButtons } from "./move-buttons";
 import type { PlannerActions } from "./planner-actions";
@@ -16,25 +16,15 @@ export function ExerciseCard({ vm, dayId, actions }: ExerciseCardProps): JSX.Ele
   const { edit } = actions;
   const rowId = vm.id;
   return (
-    <section aria-label={vm.name}>
-      <Card variant="tile" padding={14}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+    <Card variant="tile" padding="lg" ariaLabel={vm.name}>
+      <Stack gap="md">
+        <Row gap="sm" align="start">
           {vm.supersetTag !== null && (
-            <span
-              style={{
-                fontFamily: FONT.mono,
-                fontWeight: 700,
-                fontSize: 12,
-                color: "var(--accent2)",
-              }}
-            >
+            <Text as="span" variant="monoValue" tone="success">
               {vm.supersetTag}
-            </span>
+            </Text>
           )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={TEXT.cardTitle}>{vm.name}</div>
-            <div style={{ ...TEXT.cardSubtitle, marginTop: 3 }}>{vm.muscles}</div>
-          </div>
+          <TitleBlock title={vm.name} subtitle={vm.muscles} grow />
           {vm.equipment !== "" && <Chip variant="tag">{vm.equipment}</Chip>}
           <MoveButtons
             onMove={(direction) => edit((e) => e.moveExercise(dayId, rowId, direction))}
@@ -45,20 +35,20 @@ export function ExerciseCard({ vm, dayId, actions }: ExerciseCardProps): JSX.Ele
             ariaLabel="Remove exercise"
             onClick={() => edit((e) => e.removeExercise(dayId, rowId))}
           />
-        </div>
+        </Row>
         <SetTable
           vm={vm.block}
           onEdit={(change) =>
             edit((e) => e.editPrescription(dayId, { kind: "exercise", id: rowId }, change))
           }
         />
-        <div style={{ marginTop: 10 }}>
+        <Row>
           <SupersetToggle
             linked={vm.supersetTag !== null}
             onToggle={() => edit((e) => e.toggleSuperset(dayId, rowId))}
           />
-        </div>
-      </Card>
-    </section>
+        </Row>
+      </Stack>
+    </Card>
   );
 }

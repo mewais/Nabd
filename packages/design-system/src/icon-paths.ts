@@ -10,6 +10,7 @@ export const ICON_PATHS = {
   check: "M20 6L9 17l-5-5",
   close: "M18 6L6 18M6 6l12 12",
   plus: "M12 5v14M5 12h14",
+  minus: "M5 12h14",
   "chevron-up": "M18 15l-6-6-6 6",
   "chevron-down": "M6 9l6 6 6-6",
   "chevron-left": "M15 18l-6-6 6-6",

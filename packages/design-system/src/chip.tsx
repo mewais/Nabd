@@ -1,6 +1,16 @@
 import type { CSSProperties, ReactNode } from "react";
 import { IconButton } from "./icon-button";
-import { ELLIPSIS, FONT, RADIUS, SURFACE2_BOX, tint, toneColor } from "./tokens";
+import {
+  COLOR,
+  ELLIPSIS,
+  FONT_SIZE,
+  QUIET_BOX,
+  RADIUS,
+  SPACE,
+  TEXT,
+  tint,
+  toneColor,
+} from "./tokens";
 import type { Tone } from "./tokens";
 
 type ChipVariant = "pill" | "tag" | "box";
@@ -25,35 +35,36 @@ function variantStyle(variant: ChipVariant, color: string | null): CSSProperties
   switch (variant) {
     case "tag":
       return {
-        fontFamily: FONT.mono,
-        fontSize: 9.5,
+        ...TEXT.monoCaption,
+        fontSize: FONT_SIZE.micro,
         letterSpacing: ".04em",
-        color: color ?? "var(--text3)",
-        border: `1px solid ${color ?? "var(--line)"}`,
+        color: color ?? COLOR.textFaint,
+        border: `1px solid ${color ?? COLOR.line}`,
         borderRadius: RADIUS.tag,
-        padding: "3px 7px",
+        padding: `${SPACE.xxs}px ${SPACE.sm}px`,
         flex: "none",
+        whiteSpace: "nowrap",
       };
     case "box":
       return {
         display: "flex",
         alignItems: "center",
-        gap: 6,
+        gap: SPACE.xs,
         minWidth: 0,
-        fontSize: 12,
-        color: color ?? "var(--text2)",
-        background: color ? tint(color, 14) : "var(--surface2)",
-        border: `1px solid ${color ? tint(color, 30) : "var(--line)"}`,
+        fontSize: FONT_SIZE.small,
+        color: color ?? COLOR.textMuted,
+        background: color ? tint(color, "soft") : COLOR.surfaceAlt,
+        border: `1px solid ${color ? tint(color, "edge") : COLOR.line}`,
         borderRadius: RADIUS.chip,
-        padding: "5px 9px",
+        padding: `${SPACE.xs}px ${SPACE.sm}px`,
       };
     case "pill":
       return {
-        ...SURFACE2_BOX,
-        fontSize: 12,
-        color: color ?? "var(--text2)",
+        ...QUIET_BOX,
+        fontSize: FONT_SIZE.small,
+        color: color ?? COLOR.textMuted,
         borderRadius: RADIUS.pill,
-        padding: "5px 11px",
+        padding: `${SPACE.xs}px ${SPACE.md}px`,
       };
   }
 }
