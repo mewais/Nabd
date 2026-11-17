@@ -67,24 +67,26 @@
   1. never outside the workday or on a day off (Settings → Workday: the hours, and the
      weekdays worked — Monday to Friday unless changed, whatever the schedule), on a day
      skipped, while paused, or with nothing left. The top bar says when nudging resumes
-     ("Quiet until Mon 09:00"). A day off still shows its plan and takes sets, but owes
-     nothing until a set is logged on it: an idle one neither moves a floating plan on nor
-     counts toward completion. The streak counts workdays only: a workday with a set adds
-     to it, a workday without one ends it, and days off do neither, so a Monday-to-Friday
-     streak carries over the weekend;
-     - **Skip today** (top bar, the nudge toast, the tray), for a day you will not train
-       (the office, a coffee shop): no nudges until tomorrow, and the top bar says
-       "Skipped today". The day is a day off for the plan: a floating day comes back
-       tomorrow as it was, with what is still owed, and a weekday plan's day neither
+     ("Quiet until Mon 09:00"), and its nudge menu — a button reading Pause, or Paused,
+     Skipped or Nudging while one is in force — pauses nudges until the day ends and holds
+     today's one choice of the two below. A day off still shows its plan and takes sets,
+     but owes nothing until a set is logged on it: an idle one neither moves a floating
+     plan on nor counts toward completion. The streak counts workdays only: a workday with
+     a set adds to it, a workday without one ends it, and days off do neither, so a
+     Monday-to-Friday streak carries over the weekend;
+     - **Skip today** (the top bar's nudge menu, the nudge toast, the tray), for a day you
+       will not train (the office, a coffee shop): no nudges until tomorrow, and the top
+       bar says "Skipped today". The day is a day off for the plan: a floating day comes
+       back tomorrow as it was, with what is still owed, and a weekday plan's day neither
        counts against completion nor ends the streak. Sets can still be logged on it:
        they count as on any day (toward the plan, completion and the streak), and the day
        stays quiet. Resume today takes the skip back the same day; it ends by itself at
        midnight;
-     - **Nudge me today**, offered instead while it is quiet for a day off or outside the
-       workday hours (a one-off Saturday, a late start): nudges then follow rules 2–4,
-       counting from the moment it was switched on as from a launch, until the day owes
-       nothing more or ends — never into the next day — and Stop nudging today turns it
-       off again. A day off so nudged owes its plan like a workday; it adds to the streak
+     - **Nudge me today**, offered instead (in the nudge menu and the tray) while it is
+       quiet for a day off or outside the workday hours (a one-off Saturday, a late
+       start): nudges then follow rules 2–4, counting from the moment it was switched on
+       as from a launch, until the day owes nothing more or ends — never into the next day
+       — and Stop nudging today turns it off again. A day off so nudged owes its plan like a workday; it adds to the streak
        if a set is logged on it, and never ends it;
   2. the timer nudges _interval_ minutes after your last set (before the first one: after
      the workday started, the app was launched, the plan got work, or a quiet day was

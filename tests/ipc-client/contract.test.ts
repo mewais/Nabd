@@ -10,9 +10,9 @@ import {
   NO_CAPABILITIES,
   SettingsSchema,
 } from "@nabd/domain";
-import type { TodayChoice } from "@nabd/domain";
 import type { IpcClient, TrayAction } from "@nabd/ipc-client";
 import { SINGLETON_KEYS, tauriClient } from "@nabd/ipc-client";
+import { TODAY_CHOICE_NAMES, pauseName } from "@nabd/nudge";
 import { exercise, logged, nov } from "../support/builders";
 
 // Tauri's own API, as the client reaches it: what is invoked and listened to is recorded.
@@ -92,12 +92,6 @@ const TRAY_ACTIONS = Object.keys({
   nudge: true,
   quit: true,
 } satisfies Record<TrayAction, true>);
-const TODAY_CHOICES = Object.keys({
-  skip: true,
-  resume: true,
-  nudge: true,
-  stop: true,
-} satisfies Record<TodayChoice, true>);
 const EXPORT_PURPOSES = Object.keys({
   manual: true,
   before_import: true,
@@ -161,7 +155,7 @@ describe("the frontend and the Rust backend agree on", () => {
     expect(Object.keys(set).sort()).toEqual(row.sort());
   });
 
-  it("the tray's state, today's choices in it, and the actions it hands the frontend", () => {
+  it("the tray's state, today's choices in it and their words, and the actions it hands the frontend", () => {
     const tray = rust("crates/native/src/tray.rs");
     const [, { state }] = tauri.invoked.find(([command]) => command === "update_tray") as [
       string,
@@ -170,7 +164,14 @@ describe("the frontend and the Rust backend agree on", () => {
     expect(Object.keys(state).sort()).toEqual(structFields(tray, "TrayState").sort());
     const choices = /pub enum TodayChoice \{([^}]*)\}/.exec(tray)?.[1] ?? "";
     const variants = [...choices.matchAll(/^\s*(\w+),/gm)].map((v) => v[1]!.toLowerCase());
-    expect(variants).toEqual(TODAY_CHOICES);
+    expect(variants).toEqual(Object.keys(TODAY_CHOICE_NAMES));
+    // The tray words the pause and today's choice as the window's nudge menu does.
+    const entries = [...tray.matchAll(/Self::(\w+) => \(TRAY_\w+, "([^"]+)"\)/g)].map(
+      ([, variant, label]) => [variant!.toLowerCase(), label],
+    );
+    expect(Object.fromEntries(entries)).toEqual(TODAY_CHOICE_NAMES);
+    expect(tray).toContain(`"${pauseName(true)}"`);
+    expect(tray).toContain(`"${pauseName(false)}"`);
     const handed = /fn frontend_action[\s\S]*?\n {4}\}/.exec(tray)?.[0] ?? "";
     const actions = [...handed.matchAll(/Some\((TRAY_\w+)\)/g)].map((id) =>
       stringConst(tray, id[1]!),

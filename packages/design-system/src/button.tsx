@@ -12,8 +12,8 @@ import type { Size, Tone } from "./tokens";
  * - `add`: a dashed outline, for "add another".
  * - `badge`: a small square mono marker, tinted by its tone (a set's kind in a table).
  */
-type ButtonVariant = "primary" | "secondary" | "ghost" | "link" | "add" | "badge";
-type ButtonSize = Extract<Size, "sm" | "md" | "lg">;
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "link" | "add" | "badge";
+export type ButtonSize = Extract<Size, "sm" | "md" | "lg">;
 
 /** The side of a badge, in px. */
 const BADGE_SIZE = 24;
@@ -87,13 +87,29 @@ function variantStyle(variant: ButtonVariant, tone: Tone): CSSProperties {
   }
 }
 
+/** The colour a button of `variant` takes when given none: `accent` for primary and link, `neutral` otherwise. */
+export const defaultTone = (variant: ButtonVariant): Tone =>
+  variant === "primary" || variant === "link" ? "accent" : "neutral";
+
+/** The look of a button with words on it: by its variant, size and tone. */
+export function buttonStyle(variant: ButtonVariant, size: ButtonSize, tone: Tone): CSSProperties {
+  return {
+    ...CENTERED,
+    gap: SPACE.sm,
+    textAlign: "center",
+    lineHeight: 1.2,
+    ...(variant === "badge" ? undefined : SIZES[size]),
+    ...variantStyle(variant, tone),
+  };
+}
+
 /** A button with words on it. */
 export function Button({
   children,
   onClick,
   variant = "primary",
   size = "lg",
-  tone = variant === "primary" || variant === "link" ? "accent" : "neutral",
+  tone = defaultTone(variant),
   block = false,
   grow = false,
   disabled = false,
@@ -109,14 +125,9 @@ export function Button({
       aria-label={ariaLabel}
       aria-pressed={on}
       style={{
-        ...CENTERED,
-        gap: SPACE.sm,
         flex: grow ? 1 : "none",
         width: block ? "100%" : undefined,
-        textAlign: "center",
-        lineHeight: 1.2,
-        ...(variant === "badge" ? undefined : SIZES[size]),
-        ...variantStyle(variant, tone),
+        ...buttonStyle(variant, size, tone),
       }}
     >
       {children}

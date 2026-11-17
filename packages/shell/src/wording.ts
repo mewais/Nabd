@@ -6,6 +6,8 @@ import { monthAndDay, weekdayName, weekdayOf } from "@nabd/domain";
 export const WORDS = {
   dismiss: "Dismiss",
   glass: "Glass",
+  /** What the top bar's nudge menu says: where nudging stands today. */
+  nudgeMenu: { idle: "Pause", paused: "Paused", skipped: "Skipped", nudged: "Nudging" },
 } as const;
 
 const NOON = 12;

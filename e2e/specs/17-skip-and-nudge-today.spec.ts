@@ -30,11 +30,13 @@ test("Skip today: a day without the workout is quiet, still takes a set, and its
   });
 
   await test.step("Resume today takes the skip back, and the top bar can skip again", async () => {
-    await shell.button("Resume today").click();
+    await expect(shell.nudgeMenu).toHaveText("Skipped");
+    await shell.fromNudgeMenu("Resume today");
+    await expect(shell.nudgeMenu).toHaveText("Pause");
     await app.tick();
     await expect(shell.toast).toContainText("Interval's up");
     await shell.snooze.click();
-    await shell.button("Skip today").click();
+    await shell.fromNudgeMenu("Skip today");
     await expect(shell.status).toContainText("Skipped today");
   });
 
@@ -70,7 +72,7 @@ test("a skipped workday on a weekday plan neither ends the streak nor counts aga
   );
   const monday = loggedSet(curl.id, { day: MONDAY, reps: 10, kg: 8 });
   await app.launch(at("09:30", TUESDAY), { program, history: [monday] });
-  await shell.button("Skip today").click();
+  await shell.fromNudgeMenu("Skip today");
 
   await app.sleepUntil(at("10:00", WEDNESDAY));
   await today.startSet.click();
@@ -92,21 +94,22 @@ test("Nudge me today: a day off is nudged from the moment it is asked, until sto
   await expect(shell.status).toContainText("Quiet until Mon 09:00");
 
   await test.step("switched on at 11:00, the interval counts from then", async () => {
-    await shell.button("Nudge me today").click();
+    await shell.fromNudgeMenu("Nudge me today");
     await expect(shell.status).toContainText("Next nudge at 11:50");
+    await expect(shell.nudgeMenu).toHaveText("Nudging");
     await app.idleFor(50);
     await expect(shell.toast).toContainText("Interval's up");
   });
 
   await test.step("Stop nudging today quietens the day again", async () => {
-    await shell.button("Stop nudging today").click();
+    await shell.fromNudgeMenu("Stop nudging today");
     await expect(shell.toast).toBeHidden();
     await expect(shell.status).toContainText("Quiet until Mon 09:00");
   });
 
   await test.step("on again, it counts afresh, and ends once the day owes nothing", async () => {
     await app.idleFor(10);
-    await shell.button("Nudge me today").click();
+    await shell.fromNudgeMenu("Nudge me today");
     await expect(shell.status).toContainText("Next nudge at 12:50");
     await today.startSet.click();
     await logger.log({ reps: 8, weight: 20 });
@@ -120,6 +123,7 @@ test("Nudge me today: a day off is nudged from the moment it is asked, until sto
 
   await test.step("Sunday: it did not carry over", async () => {
     await expect(shell.status).toContainText("Quiet until 09:00");
-    await expect(shell.button("Nudge me today")).toBeVisible();
+    await shell.nudgeMenu.click();
+    await expect(shell.menuItem("Nudge me today")).toBeVisible();
   });
 });

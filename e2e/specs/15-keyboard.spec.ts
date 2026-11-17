@@ -78,6 +78,34 @@ test("a dropdown is a listbox: arrows, Home and End, a letter, Enter and Escape"
   });
 });
 
+test("the nudge menu is a menu button: Enter or ↓ opens it, the arrows move, Enter acts, Escape closes", async ({
+  app,
+  page,
+}) => {
+  const { shell } = app;
+  await app.launch(at("10:00"), { program });
+
+  await test.step("Enter opens it on its first item; Escape closes it and gives focus back", async () => {
+    await shell.nudgeMenu.focus();
+    await page.keyboard.press("Enter");
+    await expect(shell.menuItem("Pause nudges")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(shell.topBar.getByRole("menu")).toBeHidden();
+    await expect(shell.nudgeMenu).toBeFocused();
+    await expect(shell.nudgeMenu).toHaveText("Pause");
+  });
+
+  await test.step("↓ opens it, the arrows move, and Enter acts and closes it", async () => {
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await expect(shell.menuItem("Skip today")).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(shell.topBar.getByRole("menu")).toBeHidden();
+    await expect(shell.nudgeMenu).toHaveText("Skipped");
+    await expect(shell.nudgeMenu).toBeFocused();
+  });
+});
+
 test("every stepper button and row button says what it acts on", async ({ app }) => {
   const { shell, today, settings } = app;
   await app.launch(at("10:00"), { program });

@@ -95,32 +95,40 @@ describe("AppShell · top bar", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Interval's up");
   });
 
-  it("offers Pause while nudges run, and toggles on click", () => {
-    const { actions } = renderShell({ paused: false });
-    expect(screen.queryByRole("button", { name: "Resume" })).toBeNull();
-    expect(button("Pause")).toHaveAttribute("title", "Pause nudges");
-    fireEvent.click(button("Pause"));
-    expect(actions.togglePause).toHaveBeenCalledTimes(1);
-  });
+  describe("the nudge menu", () => {
+    const pick = (menuButton: string, item: string): void => {
+      fireEvent.click(button(menuButton));
+      fireEvent.click(screen.getByRole("menuitem", { name: item }));
+    };
 
-  it("offers Resume while nudges are paused, and toggles on click", () => {
-    const { actions } = renderShell({ paused: true, nudge: { state: "paused" } });
-    expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
-    expect(button("Resume")).toHaveAttribute("title", "Resume nudges");
-    fireEvent.click(button("Resume"));
-    expect(actions.togglePause).toHaveBeenCalledTimes(1);
-  });
+    it("says Pause while nudges run, and pauses them from its menu", () => {
+      const { actions } = renderShell({ paused: false });
+      expect(button("Pause")).toHaveAttribute("aria-haspopup", "menu");
+      expect(screen.queryByRole("menu")).toBeNull();
+      pick("Pause", "Pause nudges");
+      expect(actions.togglePause).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole("menu")).toBeNull();
+    });
 
-  it("skips the day, or nudges a quiet one, from the control beside Pause", () => {
-    const workday = renderShell({ today: "skip" });
-    fireEvent.click(button("Skip today"));
-    expect(workday.actions.toggleSkipToday).toHaveBeenCalledTimes(1);
-    workday.unmount();
+    it("says Paused while they are paused, and resumes them", () => {
+      const { actions } = renderShell({ paused: true, nudge: { state: "paused" } });
+      expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
+      pick("Paused", "Resume nudges");
+      expect(actions.togglePause).toHaveBeenCalledTimes(1);
+    });
 
-    const quiet = renderShell({ today: "nudge" });
-    fireEvent.click(button("Nudge me today"));
-    expect(quiet.actions.toggleNudgeToday).toHaveBeenCalledTimes(1);
-    expect(quiet.actions.toggleSkipToday).not.toHaveBeenCalled();
+    it("skips a workday, or nudges a quiet day, and is the top bar's only control for either", () => {
+      const workday = renderShell({ today: "skip" });
+      expect(screen.queryByRole("button", { name: "Skip today" })).toBeNull();
+      pick("Pause", "Skip today");
+      expect(workday.actions.toggleSkipToday).toHaveBeenCalledTimes(1);
+      workday.unmount();
+
+      const quiet = renderShell({ today: "nudge" });
+      pick("Pause", "Nudge me today");
+      expect(quiet.actions.toggleNudgeToday).toHaveBeenCalledTimes(1);
+      expect(quiet.actions.toggleSkipToday).not.toHaveBeenCalled();
+    });
   });
 
   it("marks the active theme and reports the one that is picked", () => {

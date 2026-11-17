@@ -42,10 +42,11 @@ describe("App over the demo backend", () => {
     expect(navButton("Today")).not.toHaveAttribute("aria-current");
   });
 
-  it("pauses nudges from the top bar, which then offers Resume", async () => {
+  it("pauses nudges from the top bar's nudge menu, whose button then says Paused", async () => {
     await renderApp();
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
-    expect(await screen.findByRole("button", { name: "Resume" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Pause nudges" }));
+    expect(await screen.findByRole("button", { name: "Paused" })).toBeInTheDocument();
     expect(screen.getAllByText("Nudges paused").length).toBeGreaterThan(0);
   });
 

@@ -2,8 +2,10 @@ import type { PlatformCapabilities, Settings, Theme, TodayChoice } from "@nabd/d
 import { formatClock, glassInEffect, percentOf, plural } from "@nabd/domain";
 import { TODAY_CHOICE_NAMES, pauseName, summarizeNudge } from "@nabd/nudge";
 import type { NudgeStatus, NudgeSummary } from "@nabd/nudge";
+import type { Option } from "@nabd/design-system";
 import type { Notice, Screen } from "@nabd/view";
-import { dateLabel, greeting, versionLabel } from "./wording";
+import type { ShellActions } from "./shell-actions";
+import { WORDS, dateLabel, greeting, versionLabel } from "./wording";
 
 export interface ShellInput {
   now: Date;
@@ -44,23 +46,23 @@ export interface StatusVM extends NudgeSummary {
   clock: string;
 }
 
-/** The control for today's one choice: skip the day or resume it, nudge it or stop. */
-interface TodayVM {
-  /** "Skip today", "Resume today", "Nudge me today" or "Stop nudging today". */
-  label: string;
-  /** The day is skipped or nudged on. */
-  on: boolean;
-  /** What choosing it toggles: the skip, or the nudging. */
-  toggles: "skip" | "nudge";
-}
+/** What a pick in the top bar's nudge menu does: one of the shell's actions. */
+type NudgeMenuAction = keyof Pick<
+  ShellActions,
+  "togglePause" | "toggleSkipToday" | "toggleNudgeToday"
+>;
 
-/** The button that pauses nudges, or resumes them. */
-interface PauseVM {
-  paused: boolean;
-  /** "Pause", or "Resume" while paused. */
+/**
+ * The top bar's one nudge control: a menu button that says where nudging
+ * stands, and lists the pause and today's choice.
+ */
+interface NudgeMenuVM {
+  /** "Pause"; "Skipped", "Paused" or "Nudging" while today is changed so. */
   label: string;
-  /** "Pause nudges", or "Resume nudges" while paused. */
-  title: string;
+  /** Today's nudging is changed: skipped, paused or nudged on. */
+  changed: boolean;
+  /** "Pause nudges" (or "Resume nudges"), then today's choice ("Skip today", "Nudge me today"…). */
+  items: Option<NudgeMenuAction>[];
 }
 
 export interface TopBarVM {
@@ -68,8 +70,7 @@ export interface TopBarVM {
   date: string;
   status: StatusVM;
   theme: Theme;
-  pause: PauseVM;
-  today: TodayVM;
+  nudgeMenu: NudgeMenuVM;
   /** Whether the Glass switch is offered at all. */
   glassAvailable: boolean;
   glass: boolean;
@@ -96,15 +97,31 @@ function buildDayProgressVM({ done, planned }: ShellInput["sets"]): DayProgressV
   };
 }
 
-function pauseVM(paused: boolean): PauseVM {
-  return { paused, label: paused ? "Resume" : "Pause", title: pauseName(paused) };
+/** What choosing each of today's choices does. */
+const TODAY_ACTIONS: Record<TodayChoice, NudgeMenuAction> = {
+  skip: "toggleSkipToday",
+  resume: "toggleSkipToday",
+  nudge: "toggleNudgeToday",
+  stop: "toggleNudgeToday",
+};
+
+/** What the nudge menu's button says: the change in force, as the status line ranks them. */
+function nudgeMenuLabel(paused: boolean, today: TodayChoice): string {
+  if (today === "resume") return WORDS.nudgeMenu.skipped;
+  if (paused) return WORDS.nudgeMenu.paused;
+  if (today === "stop") return WORDS.nudgeMenu.nudged;
+  return WORDS.nudgeMenu.idle;
 }
 
-function todayVM(choice: TodayChoice): TodayVM {
+function nudgeMenuVM(paused: boolean, today: TodayChoice): NudgeMenuVM {
+  const label = nudgeMenuLabel(paused, today);
   return {
-    label: TODAY_CHOICE_NAMES[choice],
-    on: choice === "resume" || choice === "stop",
-    toggles: choice === "skip" || choice === "resume" ? "skip" : "nudge",
+    label,
+    changed: label !== WORDS.nudgeMenu.idle,
+    items: [
+      { value: "togglePause", label: pauseName(paused) },
+      { value: TODAY_ACTIONS[today], label: TODAY_CHOICE_NAMES[today] },
+    ],
   };
 }
 
@@ -125,8 +142,7 @@ export function buildShellVM(input: ShellInput): ShellVM {
       date: dateLabel(now),
       status: { clock: formatClock(now), ...summarizeNudge(nudge) },
       theme: settings.theme,
-      pause: pauseVM(input.paused),
-      today: todayVM(input.today),
+      nudgeMenu: nudgeMenuVM(input.paused, input.today),
       glassAvailable: capabilities.glass,
       glass,
     },
