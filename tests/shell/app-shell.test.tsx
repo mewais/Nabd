@@ -143,7 +143,7 @@ describe("AppShell · top bar", () => {
   });
 
   it("offers no Glass button where the window cannot be translucent", () => {
-    renderShell({ capabilities: { glass: false } });
+    renderShell({ capabilities: { glass: null } });
     expect(screen.queryByRole("button", { name: "Glass" })).not.toBeInTheDocument();
     expect(button("Pause")).toBeInTheDocument();
   });

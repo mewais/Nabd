@@ -12,7 +12,7 @@ use tauri::{
 };
 
 use crate::error::AppResult;
-use crate::tray;
+use crate::{glass, tray};
 
 /// The label the capability file grants the app's commands to.
 const MAIN_WINDOW: &str = "main";
@@ -22,21 +22,23 @@ const SIZE: (f64, f64) = (1280.0, 820.0);
 const MIN_SIZE: (f64, f64) = (980.0, 640.0);
 /// What an opaque window shows until the page has painted: the dark theme's
 /// background, read from the design system's prepaint.json by build.rs, so a
-/// launch does not flash white.
-const BACKGROUND: Color = include!(concat!(env!("OUT_DIR"), "/background.rs"));
+/// launch does not flash white (or, where the window is see-through, the
+/// desktop: see `glass::starts_opaque`).
+pub const BACKGROUND: Color = include!(concat!(env!("OUT_DIR"), "/background.rs"));
 
 /// Create the main window, hidden: the launch decides whether it is shown.
-/// It is transparent only where a glass effect can go behind it; elsewhere
-/// it is opaque.
+/// It is transparent only where it can have glass; elsewhere it is opaque.
+/// A transparent window's page is transparent too (the window's background
+/// colour does not reach it), so the page paints the tint or its theme.
 pub fn create<R: Runtime>(app: &AppHandle<R>, platform: Platform) -> AppResult<()> {
-    let translucent = platform.glass_effect().is_some();
+    let effect = platform.glass_effect();
     let mut window = WebviewWindowBuilder::new(app, MAIN_WINDOW, WebviewUrl::default())
         .title(TITLE)
         .inner_size(SIZE.0, SIZE.1)
         .min_inner_size(MIN_SIZE.0, MIN_SIZE.1)
         .visible(false)
-        .transparent(translucent);
-    if !translucent {
+        .transparent(effect.is_some());
+    if glass::starts_opaque(effect) {
         window = window.background_color(BACKGROUND);
     }
     window.build()?;

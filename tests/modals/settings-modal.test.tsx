@@ -14,7 +14,7 @@ type Input = Parameters<typeof buildSettingsVM>[0];
 function setup(settings: Partial<Settings> = {}, over: Partial<Omit<Input, "settings">> = {}) {
   const vm = buildSettingsVM({
     settings: { ...DEFAULT_SETTINGS, ...settings },
-    capabilities: { tray: true, glass: true, idle: true },
+    capabilities: { tray: true, glass: "blurred", idle: true },
     notice: null,
     ...over,
   });
@@ -96,7 +96,7 @@ describe("SettingsModal", () => {
   });
 
   it("explains the idle moment where the system cannot report idle time", () => {
-    setup({}, { capabilities: { tray: true, glass: true, idle: false } });
+    setup({}, { capabilities: { tray: true, glass: "blurred", idle: false } });
     expect(screen.getByRole("group", { name: "Idle moment" })).toHaveTextContent(
       "System idle detection is unavailable on this desktop",
     );
@@ -173,7 +173,7 @@ describe("SettingsModal", () => {
   });
 
   it("hides the translucency rows where the window cannot be translucent", () => {
-    setup({ glass: true }, { capabilities: { tray: true, glass: false, idle: true } });
+    setup({ glass: true }, { capabilities: { tray: true, glass: null, idle: true } });
     expect(screen.queryByRole("group", { name: "Translucent window" })).toBeNull();
     expect(screen.queryByRole("group", { name: "Background opacity" })).toBeNull();
     expect(screen.getByRole("group", { name: "Theme" })).toBeInTheDocument();
@@ -190,7 +190,7 @@ describe("SettingsModal", () => {
   it("without a tray, Start minimized is switched off for good and explains itself", () => {
     const { actions, setting } = setup(
       {},
-      { capabilities: { tray: false, glass: true, idle: true } },
+      { capabilities: { tray: false, glass: "blurred", idle: true } },
     );
     const row = setting("Start minimized");
     expect(row.getByRole("switch")).toBeDisabled();

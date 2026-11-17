@@ -67,7 +67,7 @@ describe("booting", () => {
   it("learns what the computer supports", async () => {
     const app = await boot();
     await vi.waitFor(() =>
-      expect(app.get().capabilities).toEqual({ tray: true, glass: true, idle: true }),
+      expect(app.get().capabilities).toEqual({ tray: true, glass: "blurred", idle: true }),
     );
   });
 
@@ -79,7 +79,7 @@ describe("booting", () => {
     expect(app.get().capabilities).toBe(before);
     // The idle backend was lost: from now on the reading is the window's own.
     app.get().tick(0, false);
-    expect(app.get().capabilities).toEqual({ tray: true, glass: true, idle: false });
+    expect(app.get().capabilities).toEqual({ tray: true, glass: "blurred", idle: false });
     app.get().tick(0, true);
     expect(app.get().capabilities.idle).toBe(true);
   });

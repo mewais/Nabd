@@ -223,6 +223,30 @@ test("the theme can be switched from Settings and from the top bar", async ({ ap
   await expect(shell.root).toHaveAttribute("data-theme", "dark");
 });
 
+test("over a desktop that is not blurred, Glass paints a heavier tint and says why", async ({
+  app,
+}) => {
+  const { shell, settings } = app;
+  // A Linux desktop whose compositor blurs nothing: the desktop shows through sharp.
+  await app.launch(at("10:00"), { program }, { glass: "seeThrough" });
+  /** How opaque the tint the window paints is. */
+  const tint = () =>
+    shell.root.evaluate((root) =>
+      Number(/,\s*([\d.]+)\)$/.exec(getComputedStyle(root).backgroundColor)?.[1] ?? 1),
+    );
+
+  await shell.button("Glass").click();
+  await expect(shell.root).toHaveAttribute("data-glass", "on");
+  await shell.button("Settings").click();
+  await expect(settings.row("Translucent window")).toContainText("does not blur it");
+  await expect(settings.row("Background opacity")).toContainText("70%");
+  // Far stronger than the 70 % a blurred desktop gets, and the setting still moves it.
+  expect(await tint()).toBeCloseTo(0.85);
+  await step(settings.row("Background opacity"), "decrease", 2);
+  await expect(settings.row("Background opacity")).toContainText("60%");
+  expect(await tint()).toBeCloseTo(0.8);
+});
+
 test("export says where the file went; import asks first, then reports what it did", async ({
   app,
 }) => {

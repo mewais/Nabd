@@ -1,10 +1,12 @@
 //! Linux: tray icons are StatusNotifier items, which only appear if a host
 //! (KDE's panel, GNOME's AppIndicator extension, …) is registered with the
-//! watcher. Stock GNOME has none, and then nothing draws the icon.
+//! watcher. Stock GNOME has none, and then nothing draws the icon. The glass
+//! effect depends on what composites the window (see `compositor`).
 
 use std::time::Duration;
 
-use nabd_native::{tray_host_present, Platform};
+use gtk::glib::object::ObjectExt;
+use nabd_native::{kde_session, tray_host_present, Compositor, Platform};
 use zbus::blocking::fdo::DBusProxy;
 use zbus::blocking::{Connection, Proxy};
 use zbus::names::BusName;
@@ -27,7 +29,24 @@ pub fn detect(at_login: bool) -> Platform {
     };
     Platform::Linux {
         tray_host: await_tray_host(patience),
+        compositor: compositor(),
     }
+}
+
+/// What composites the app's windows, asked of GDK (which Tauri has set up
+/// by now, on this, the main thread) and of the session's environment.
+fn compositor() -> Compositor {
+    let screen = gtk::gdk::Screen::default();
+    let composited = screen
+        .as_ref()
+        .is_some_and(|screen| screen.is_composited() && screen.rgba_visual().is_some());
+    let x11_window =
+        gtk::gdk::Display::default().is_some_and(|display| display.is::<gdkx11::X11Display>());
+    let kde = kde_session(
+        std::env::var("XDG_CURRENT_DESKTOP").ok().as_deref(),
+        std::env::var("KDE_FULL_SESSION").ok().as_deref(),
+    );
+    Compositor::detect(composited, x11_window, kde)
 }
 
 /// Poll for a tray host until one is there or `patience` runs out.

@@ -8,7 +8,7 @@ function shellInput(overrides: Partial<ShellInput> = {}): ShellInput {
     now: nov(16, 10, 30),
     screen: "today",
     settings: { theme: "dark", glass: false, opacity: 0.7 },
-    capabilities: { glass: true },
+    capabilities: { glass: "blurred" },
     paused: false,
     today: "skip",
     nudge: { state: "waiting", at: nov(16, 11, 20), idleFrom: nov(16, 10, 45) },

@@ -30,7 +30,7 @@ const SPIED = [
 
 /** An in-memory backend on a computer that supports everything, with spies on its calls. */
 export function fakeBackend(initial: Partial<BootSnapshot> = {}): MemoryBackend {
-  const backend = createMemoryBackend(initial, { tray: true, glass: true, idle: true });
+  const backend = createMemoryBackend(initial, { tray: true, glass: "blurred", idle: true });
   for (const call of SPIED) vi.spyOn(backend.client, call);
   return backend;
 }

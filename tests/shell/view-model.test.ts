@@ -104,21 +104,32 @@ describe("buildShellVM · theme, glass, pause and notice", () => {
     expect(vm).toMatchObject({ theme: "light", opacity: 0.4, topBar: { theme: "light" } });
   });
 
-  it("offers glass, and turns it on when the setting is on, where the platform has it", () => {
+  it("offers glass, and turns it on with the platform's backdrop when the setting is on", () => {
+    for (const backdrop of ["blurred", "seeThrough"] as const) {
+      const vm = shellVM({
+        settings: { theme: "dark", glass: true, opacity: 0.7 },
+        capabilities: { glass: backdrop },
+      });
+      expect(vm.glass).toBe(backdrop);
+      expect(vm.topBar).toMatchObject({ glassAvailable: true, glass: true });
+    }
+  });
+
+  it("offers glass but leaves the window opaque while the setting is off", () => {
     const vm = shellVM({
-      settings: { theme: "dark", glass: true, opacity: 0.7 },
-      capabilities: { glass: true },
+      settings: { theme: "dark", glass: false, opacity: 0.7 },
+      capabilities: { glass: "seeThrough" },
     });
-    expect(vm.glass).toBe(true);
-    expect(vm.topBar).toMatchObject({ glassAvailable: true, glass: true });
+    expect(vm.glass).toBeNull();
+    expect(vm.topBar).toMatchObject({ glassAvailable: true, glass: false });
   });
 
   it("neither offers nor applies a stored glass setting where the platform lacks it", () => {
     const vm = shellVM({
       settings: { theme: "dark", glass: true, opacity: 0.7 },
-      capabilities: { glass: false },
+      capabilities: { glass: null },
     });
-    expect(vm.glass).toBe(false);
+    expect(vm.glass).toBeNull();
     expect(vm.topBar).toMatchObject({ glassAvailable: false, glass: false });
   });
 

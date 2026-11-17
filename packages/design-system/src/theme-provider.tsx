@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Theme } from "@nabd/domain";
+import type { GlassBackdrop, Theme } from "@nabd/domain";
 import { GlobalStyles } from "./global-styles";
 import { themeStyle } from "./theme";
 import { COLOR, FONT } from "./tokens";
@@ -7,9 +7,12 @@ import { ROW } from "./styles";
 
 interface ThemeProviderProps {
   theme: Theme;
-  /** Translucent window: use the theme's glass material over a frosted tint. */
-  glass: boolean;
-  /** Strength of the glass tint, 0–1. Ignored when `glass` is off. */
+  /**
+   * Translucent window, over this backdrop: use the theme's glass material
+   * over a frosted tint. Null: the solid material.
+   */
+  glass: GlassBackdrop | null;
+  /** The glass tint strength setting, 0.1–1. Ignored when `glass` is off. */
   opacity: number;
   children?: ReactNode;
 }
@@ -27,7 +30,7 @@ export function ThemeProvider({
   return (
     <div
       data-theme={theme}
-      data-glass={glass ? "on" : "off"}
+      data-glass={glass === null ? "off" : "on"}
       style={{
         ...themeStyle(theme, glass, opacity),
         ...ROW,

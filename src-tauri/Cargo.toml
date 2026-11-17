@@ -51,8 +51,9 @@ thiserror = { workspace = true }
 nabd-native = { workspace = true }
 nabd-ipc = { workspace = true }
 
-# Linux idle time and tray-host detection speak D-Bus, X11 and Wayland directly.
-# All are pure Rust (zbus, gtk and gdkx11 are already in the tree through Tauri),
+# Linux idle time and tray-host detection speak D-Bus, X11 and Wayland directly;
+# the window's focus and glass go through GTK and GDK. All are pure Rust or
+# bindings Tauri already links (zbus, gtk and gdkx11 are in the tree through it),
 # so no extra system library is linked: no libXss, no libwayland.
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = "5"

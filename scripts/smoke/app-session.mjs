@@ -27,6 +27,9 @@ import { clock, expectNudge, notifications, tray } from "./linux-desktop.mjs";
 import { screenFor } from "./screen.mjs";
 import { Session, driverStatus } from "./webdriver.mjs";
 
+/** The top bar's Glass switch. */
+const GLASS_SWITCH = "//button[normalize-space()='Glass']";
+
 /** What the nudges for the smoke plan's one exercise say, by what prompted them. */
 const NUDGE = {
   timer: "Push-Up — Interval's up",
@@ -165,6 +168,31 @@ const LINUX_ACTS = {
     if (waited < QUIT_GRACE_MS - 1000) {
       throw new SmokeFailure("the window given its grace before the app exits", `${waited} ms`);
     }
+  },
+
+  /**
+   * A desktop that composites nothing (X11 with openbox alone) would show a
+   * transparent window black, so the window has no glass: the top bar offers
+   * no Glass switch.
+   */
+  async "no-glass"(app) {
+    // The top bar is up once its Settings button is.
+    await app.waitFor("//button[@aria-label='Settings']");
+    if (await app.find(GLASS_SWITCH)) {
+      throw new SmokeFailure("no Glass switch without a compositor", "the top bar offers one");
+    }
+  },
+
+  /**
+   * A compositor with no blur to ask for (sway, as GNOME or any desktop but
+   * KDE's on X11): Glass is offered, turns the window see-through, and
+   * Settings says the desktop shows through unblurred.
+   */
+  async "see-through-glass"(app) {
+    await app.press("Glass");
+    await app.waitFor("//*[@data-glass='on']");
+    await app.pressNamed("Settings");
+    await app.waitForText("does not blur it");
   },
 
   /** The tray's "Start next set" brings the hidden window back with the logger open. */

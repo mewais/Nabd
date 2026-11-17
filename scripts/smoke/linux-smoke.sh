@@ -186,6 +186,13 @@ timer_nudges() {
   ok "timer nudges notify within the workday only, again per interval, not while snoozed or paused"
 }
 
+# Openbox composites nothing, so the window is offered no glass.
+no_glass() {
+  needs_webdriver "no glass without a compositor" || return 0
+  act no-glass
+  ok "without a compositor the window has no glass: the top bar offers no Glass switch"
+}
+
 idle_nudges() {
   needs_webdriver "idle time and the idle-moment nudge" || return 0
   start_day 3 '{"interval":60,"minGap":2,"idleNudge":5,"workStart":0,"workEnd":1440}'
@@ -195,14 +202,15 @@ idle_nudges() {
 }
 
 # A headless sway: a Wayland session (no XWayland) whose idle time comes from
-# ext-idle-notify-v1, as on KDE, Sway or Hyprland. Its runtime directory is
-# short-named: a Wayland socket's path must fit in 108 bytes.
-wayland_idle() {
+# ext-idle-notify-v1, as on KDE, Sway or Hyprland, and which composites but
+# blurs nothing. Its runtime directory is short-named: a Wayland socket's path
+# must fit in 108 bytes.
+wayland_session() {
   if ! command -v sway >/dev/null || ! command -v wtype >/dev/null; then
-    ok "(skipped: idle time under Wayland — sway or wtype is not installed)"
+    ok "(skipped: the Wayland session — sway or wtype is not installed)"
     return
   fi
-  needs_webdriver "idle time under Wayland" || return 0
+  needs_webdriver "the Wayland session" || return 0
   local runtime
   runtime="$(mktemp -d /tmp/nabd-wl.XXXXXX)"
   (
@@ -211,7 +219,7 @@ wayland_idle() {
     WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman sway -c /dev/null &
     # A compositor that cannot start here says nothing about the app.
     if ! wait_for 15 test -S "$runtime/wayland-1"; then
-      ok "(skipped: idle time under Wayland — headless sway did not start in this environment)"
+      ok "(skipped: the Wayland session — headless sway did not start in this environment)"
       cleanup
       exit 0
     fi
@@ -220,6 +228,8 @@ wayland_idle() {
     start_webdriver
     act system-idle
     ok "under Wayland (sway: ext-idle-notify-v1) the tick carries the idle time, reset by input"
+    act see-through-glass
+    ok "under a compositor without blur (sway) Glass is offered and says the desktop shows through unblurred"
     cleanup
   )
   rm -rf "$runtime"
@@ -232,12 +242,13 @@ inside() {
   "$NABD_SMOKE_PYTHON" "$SMOKE/desktop_bus.py" elsewhere &
   if webdriver_installed; then start_webdriver; fi
   checks first-launch restart second-instance logged-set autostart-setting quit-from-settings
+  no_glass
   login_launch
   checks --tray tray-menu close-to-tray login-launch close-after-nudge
   tray_actions
   timer_nudges
   idle_nudges
-  wayland_idle
+  wayland_session
   ok "all expectations met"
 }
 

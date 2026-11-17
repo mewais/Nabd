@@ -56,8 +56,9 @@ src-tauri/
   crates/ipc           DataCommands: what the frontend can ask of the stored data
   src/                 the Tauri binary: lib, main, commands/ (data, native), db, error,
                        tray, app_menu (the macOS menu bar's app menu: Cmd+Q), window,
-                       clock, glass, autostart, notifications, export, platform/ (what
-                       differs between the desktops: linux, macos, windows) and idle/
+                       clock, glass (and glass/kwin, KWin's blur on X11), autostart,
+                       notifications, export, platform/ (what differs between the
+                       desktops: linux, macos, windows) and idle/
                        (one backend per platform API: dbus, wayland, x11 under linux;
                        macos; windows)
   build.rs             the version check, the window title and its background (development.md, Checks)
