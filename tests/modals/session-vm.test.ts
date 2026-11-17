@@ -126,13 +126,15 @@ describe("buildSessionVM", () => {
     );
   });
 
-  it("marks the sets that are not saved yet", () => {
+  it("marks the sets that are not saved yet, and counts them across exercises", () => {
     const first = did("p-row", "row", 12, 50);
     const second = did("p-row", "row", 11, 50);
-    const vm = sessionVM({ program: pushDay(), history: [first, second] }, "p-row", {
-      unsaved: [second.id],
+    const bench = did("p-bench", "bench", 10, 40);
+    const vm = sessionVM({ program: pushDay(), history: [first, second, bench] }, "p-row", {
+      unsaved: [second.id, bench.id],
     });
     expect(vm.form.logged.map((set) => set.unsaved)).toEqual([false, true]);
+    expect(vm.footer).toBe("3 sets logged today, 2 not saved yet");
   });
 
   it("shows a load to the quarter kilo, exactly as it was entered", () => {

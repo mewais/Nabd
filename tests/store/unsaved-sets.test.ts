@@ -82,3 +82,51 @@ describe("a set that could not be saved", () => {
     expect(app.data.history).toEqual([]);
   });
 });
+
+describe("a set being saved", () => {
+  /** Log one set that the backend takes only once `release` is called. */
+  const logHeld = async () => {
+    const app = await boot();
+    let release = (): void => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    vi.mocked(app.client.appendSet).mockImplementationOnce(async (set) => {
+      await held;
+      app.data.history.push(set);
+    });
+    const logging = app.log(catalogBenchRow.id, 1);
+    return { app, release, logging };
+  };
+
+  it("is marked as not saved yet from the moment it is logged until the backend has it", async () => {
+    const { app, release, logging } = await logHeld();
+    const [set] = app.get().history;
+    expect(app.get().unsavedSets).toEqual([set!.id]);
+
+    release();
+    await logging;
+    expect(app.get().unsavedSets).toEqual([]);
+    expect(app.data.history).toEqual([set]);
+    expect(app.get().appNotice).toBeNull();
+  });
+
+  it("is saved before quitting, however long the backend takes", async () => {
+    const { app, release } = await logHeld();
+    app.get().quit();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(app.client.quit).not.toHaveBeenCalled();
+
+    release();
+    await vi.waitFor(() => expect(app.client.quit).toHaveBeenCalledTimes(1));
+    expect(app.data.history).toEqual(app.get().history);
+  });
+
+  it("undone before the backend has it, it is taken back out once it gets there", async () => {
+    const { app, release, logging } = await logHeld();
+    await app.get().undoSet(app.get().history[0]!.id);
+    expect(app.get().history).toEqual([]);
+
+    release();
+    await logging;
+    await vi.waitFor(() => expect(app.data.history).toEqual([]));
+  });
+});

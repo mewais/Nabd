@@ -49,7 +49,7 @@ export type NoticePlace = "appNotice" | "dataNotice";
 export interface NabdState extends Singletons {
   booted: boolean;
   history: LoggedSet[];
-  /** Ids of logged sets the backend has not accepted yet; they are retried until it does. */
+  /** Ids of logged sets not saved yet: being saved, or waiting to be tried again. */
   unsavedSets: string[];
   /** What this computer can do; nothing platform-dependent is offered until the backend has said. */
   capabilities: PlatformCapabilities;

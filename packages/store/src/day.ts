@@ -23,7 +23,7 @@ function watchNudge({ get, set }: Pick<StoreContext, "get" | "set">): void {
 
 /** The app's heartbeat: boot, then one beat a second. */
 export function daySlice(ctx: StoreContext): DaySlice {
-  const { get, set, client, now, attempt, persist, flushSets } = ctx;
+  const { get, set, client, now, attempt, persist, retrySets } = ctx;
 
   /** Bring the OS in line with the stored settings, and learn what it can do. */
   function syncDesktop(): void {
@@ -74,7 +74,7 @@ export function daySlice(ctx: StoreContext): DaySlice {
       });
       beginDay(ctx);
       watchNudge(ctx);
-      if (get().unsavedSets.length > 0) void flushSets();
+      retrySets();
     },
   };
 }

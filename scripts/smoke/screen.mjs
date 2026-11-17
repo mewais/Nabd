@@ -83,6 +83,7 @@ function x11Screen() {
     shown: () => x11("shown") !== null,
     count: () => Number(x11("count")),
     focused: () => x11("focused") !== null,
+    // A window that could not be closed is a failure, not an answer of "no".
     close: () => run(here("x11.sh"), ["close"]),
     describe: () => `${x11("count")} Nabd window(s) shown on the X server`,
     input() {

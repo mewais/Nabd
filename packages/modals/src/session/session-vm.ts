@@ -38,7 +38,7 @@ export interface LoggedSetVM {
   text: string;
   /** Accessible name of its delete button. */
   deleteLabel: string;
-  /** The backend has not accepted it yet; it is being retried. */
+  /** Not saved yet: being saved, or waiting to be tried again. */
   unsaved: boolean;
 }
 
@@ -69,7 +69,7 @@ export interface SessionVM {
   subtitle: string;
   list: SessionListRowVM[];
   form: SetFormVM;
-  /** How much has been logged today, across all exercises. */
+  /** How much has been logged today, across all exercises, and how much of it is not saved yet. */
   footer: string;
 }
 
@@ -141,9 +141,16 @@ export function buildSessionVM(input: SessionInput): SessionVM | null {
     subtitle: sessionSubtitle(plan),
     list: plan.items.map((other) => buildListRowVM(other, item.id)),
     form: buildSetFormVM(item, input),
-    footer:
-      plan.setsLogged === 0
-        ? "No sets logged yet today"
-        : `${plural(plan.setsLogged, "set")} logged today`,
+    footer: footer(input),
   };
+}
+
+/** "3 sets logged today", and ", 1 not saved yet" while any of them is not. */
+function footer({ plan, unsaved }: SessionInput): string {
+  if (plan.setsLogged === 0) return "No sets logged yet today";
+  const notSaved = plan.items
+    .flatMap((item) => item.logged)
+    .filter((set) => unsaved.includes(set.id)).length;
+  const logged = `${plural(plan.setsLogged, "set")} logged today`;
+  return notSaved === 0 ? logged : `${logged}, ${notSaved} not saved yet`;
 }

@@ -111,9 +111,11 @@ autostart) and a React/TypeScript frontend that holds all the domain logic.
   was entered, to two decimals, so quarter steps read exactly; shown in the other unit
   it is a conversion, rounded to one decimal (20 kg is "44.1 lb"). The form's own
   field always holds two decimals, so it can be stepped by the finest increment.
-- **Nothing logged is lost quietly.** A set the database would not take stays in the
-  list, marked "not saved yet", and is retried on every clock beat, after any save that
-  works, and before an export or quitting — from Settings, the tray menu, Cmd+Q, or by
+- **Nothing logged is lost quietly.** A logged set shows at once, marked "not saved
+  yet" until the database has it, and the logger's count of the day says how many are
+  not ("3 sets logged today, 1 not saved yet"). A set the database would not take stays
+  marked, and is retried on every clock beat, after any save that works, and before an
+  export or quitting — from Settings, the tray menu, Cmd+Q, or by
   closing a window that has no tray to hide in, alike (each of those is carried out by
   the window, which saves first; if the window cannot answer within three seconds the
   app exits anyway). What the app is never told of cannot wait for it: the session

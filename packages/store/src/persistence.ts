@@ -1,4 +1,3 @@
-import type { LoggedSet } from "@nabd/domain";
 import type { Singletons } from "@nabd/ipc-client";
 import type { Notice } from "@nabd/view";
 import type { StoreCore } from "./context";
@@ -25,13 +24,15 @@ export interface Persistence {
   /** Write several singletons as one transaction (those that may be written). */
   persistTogether: (what: string, values: Partial<Singletons>) => void;
   /**
-   * Save a logged set. One the backend does not accept is not lost: it waits
-   * in `unsavedSets` and is tried again — on every clock beat, after any
-   * backend call that works, and before an export or quitting.
+   * Save the logged sets in `unsavedSets` (where a set goes the moment it is
+   * logged); resolves to whether none is left waiting. One the backend does
+   * not accept is not lost: it stays there and is tried again — on every clock
+   * beat (see `retrySets`), after any backend call that works, and before an
+   * export or quitting.
    */
-  saveSet: (logged: LoggedSet) => Promise<void>;
-  /** Try to save the sets that are waiting; resolves to whether none is left waiting. */
   flushSets: () => Promise<boolean>;
+  /** Save the waiting sets, if there are any, without waiting for it. */
+  retrySets: () => void;
 }
 
 export type Notify = Persistence["notify"];
@@ -89,13 +90,12 @@ export function createPersistence(core: StoreCore): Persistence {
   const notify = noticesFor(core);
   // Each call that works is a good moment to retry the waiting sets, and retrying is itself
   // made of attempts: the two refer to each other.
-  const attempt = attemptsFor(notify, () => sets.retry());
+  const attempt = attemptsFor(notify, () => sets.retrySets());
   const sets = setSaver(core, notify, attempt);
   return {
     notify,
     attempt,
-    saveSet: sets.saveSet,
-    flushSets: sets.flushSets,
+    ...sets,
     ...singletonWriter(core, attempt),
   };
 }

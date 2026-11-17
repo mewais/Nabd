@@ -26,7 +26,7 @@ function useClock(store: StoreApi<NabdStore>, client: IpcClient): void {
 }
 
 /** What each tray menu action asks of the store. */
-const TRAY_ACTIONS: Record<TrayAction, (store: NabdStore) => void> = {
+const TRAY_HANDLERS: Record<TrayAction, (store: NabdStore) => void> = {
   start: (store) => store.openSession(),
   pause: (store) => store.togglePause(),
   // Like Settings → Quit: whatever waits to be saved is saved first.
@@ -36,7 +36,7 @@ const TRAY_ACTIONS: Record<TrayAction, (store: NabdStore) => void> = {
 /** Act on the tray menu, and keep it showing what is next. */
 function useTray(store: StoreApi<NabdStore>, client: IpcClient): void {
   useEffect(() => {
-    const subscription = client.onTrayAction((action) => TRAY_ACTIONS[action](store.getState()));
+    const subscription = client.onTrayAction((action) => TRAY_HANDLERS[action](store.getState()));
     return () =>
       bestEffort(
         "stop following the tray",

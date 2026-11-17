@@ -82,7 +82,7 @@ function formActions(
 
 /** What today records: a set logged or undone, an exercise skipped or restored. */
 function recordActions(ctx: StoreContext): Actions<"logSet" | "undoSet" | "toggleSkip"> {
-  const { get, set, client, now, newId, attempt, save, saveSet } = ctx;
+  const { get, set, client, now, newId, attempt, save, flushSets } = ctx;
   return {
     logSet: async () => {
       const entry = sessionForLogging(ctx);
@@ -91,15 +91,21 @@ function recordActions(ctx: StoreContext): Actions<"logSet" | "undoSet" | "toggl
       // The set counts toward the day that is open, whatever the clock says (see beginDay),
       // and belongs to its session.
       const logged = session.toLoggedSet(item, newId(), now(), selectTodayPlan(get()));
-      // Show the set first; saving must never be able to stall the logger.
-      set((s) => ({ history: [...s.history, logged], snoozedUntil: null, pendingNudge: null }));
+      // Show the set at once, marked as not saved yet until the backend has it: saving must
+      // never be able to stall the logger, nor a set be shown as saved before it is.
+      set((s) => ({
+        history: [...s.history, logged],
+        unsavedSets: [...s.unsavedSets, logged.id],
+        snoozedUntil: null,
+        pendingNudge: null,
+      }));
       set({ session: sessionAfter(ctx, session, item, logged) });
-      await saveSet(logged);
+      await flushSets();
     },
 
     undoSet: async (setId) => {
       const forget = (): void => set((s) => ({ history: s.history.filter((h) => h.id !== setId) }));
-      // A set the backend never got has nothing to delete there.
+      // A set not saved yet is the saving's to take back (see saveWaitingSets).
       if (get().unsavedSets.includes(setId)) forget();
       // Otherwise the backend goes first: a set that could not be deleted stays on screen.
       else if ((await attempt("undo that set", () => client.deleteSet(setId))).ok) forget();
