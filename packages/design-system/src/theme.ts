@@ -1,7 +1,7 @@
 // Theme materials: the CSS custom properties every primitive paints with.
 
 import type { CSSProperties } from "react";
-import type { Theme } from "@nabd/domain";
+import type { GlassBackdrop, Theme } from "@nabd/domain";
 import { COLOR } from "./tokens";
 import prepaint from "../prepaint.json";
 
@@ -109,16 +109,37 @@ const MATERIALS: Record<
 const GLASS_FROST = "blur(34px) saturate(1.7)";
 
 /**
- * The root style for a theme: its material's CSS variables plus the window
- * background. Solid paints `--bg`; glass paints a frosted tint whose strength
- * is `opacity`, so the desktop behind the transparent window shows through.
+ * The weakest tint over a desktop that shows through sharp: text over an
+ * unblurred desktop needs a much stronger one than over a blurred one.
  */
-export function themeStyle(theme: Theme, glass: boolean, opacity: number): CSSProperties {
+const SEE_THROUGH_TINT_FLOOR = 0.5;
+
+/**
+ * How opaque the glass tint is, from the opacity setting (0.1–1). Over a
+ * blurred backdrop it is the setting itself; over a sharp one the setting's
+ * range is laid between the floor and fully solid, so each step still tells.
+ */
+function tintAlpha(backdrop: GlassBackdrop, opacity: number): number {
+  if (backdrop === "blurred") return opacity;
+  return SEE_THROUGH_TINT_FLOOR + (1 - SEE_THROUGH_TINT_FLOOR) * opacity;
+}
+
+/**
+ * The root style for a theme: its material's CSS variables plus the window
+ * background. Solid paints `--bg`; glass (`glass` is its backdrop, null when
+ * off) paints a frosted tint as strong as `opacity` calls for, so the desktop
+ * behind the transparent window shows through.
+ */
+export function themeStyle(
+  theme: Theme,
+  glass: GlassBackdrop | null,
+  opacity: number,
+): CSSProperties {
   const { solid, glass: glassMaterial, glassTintRgb } = MATERIALS[theme];
-  if (!glass) return { ...solid, background: COLOR.bg };
+  if (glass === null) return { ...solid, background: COLOR.bg };
   return {
     ...glassMaterial,
-    background: `rgba(${glassTintRgb},${opacity})`,
+    background: `rgba(${glassTintRgb},${tintAlpha(glass, opacity)})`,
     backdropFilter: GLASS_FROST,
     WebkitBackdropFilter: GLASS_FROST,
   };

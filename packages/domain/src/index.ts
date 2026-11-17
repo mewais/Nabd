@@ -117,7 +117,7 @@ export {
 } from "./settings";
 export type { NumericSetting, Settings, Theme } from "./settings";
 export { NO_CAPABILITIES, glassInEffect } from "./platform";
-export type { PlatformCapabilities } from "./platform";
+export type { GlassBackdrop, PlatformCapabilities } from "./platform";
 export { APPDATA_VERSION, APP_NAME, AppDataSchema } from "./appdata";
 export type { AppData } from "./appdata";
 export {

@@ -27,11 +27,21 @@ import { clock, expectNudge, notifications, tray } from "./linux-desktop.mjs";
 import { screenFor } from "./screen.mjs";
 import { Session, driverStatus } from "./webdriver.mjs";
 
+/** The top bar's Glass switch. */
+const GLASS_SWITCH = "//button[normalize-space()='Glass']";
+
 /** What the nudges for the smoke plan's one exercise say, by what prompted them. */
 const NUDGE = {
   timer: "Push-Up — Interval's up",
   idle: "Push-Up — You've gone quiet",
 };
+
+/**
+ * How long a launch with a 1-minute minimum gap and a 5-second idle moment
+ * (the check's settings) takes to nudge someone who is away: the gap, then
+ * the beat that sees it over.
+ */
+const NUDGE_WITHIN_MS = 90_000;
 
 /** The acts every platform with a WebDriver has: each `(app, screen, binary)`. */
 const ACTS = {
@@ -87,6 +97,30 @@ const ACTS = {
   },
 
   /**
+   * The window hidden in the tray, brought back by a nudge (an idle moment a
+   * minute after the launch), the day skipped from the top bar's nudge menu,
+   * then closed: it hides again. (On Windows the nudge shows the window behind
+   * the back of Tauri's window library, which then took a close for a window
+   * already hidden and left it on screen.)
+   */
+  async "close-after-nudge"(app, screen) {
+    await app.waitForButton("Start set");
+    screen.close();
+    await screen.expectShown(false);
+    await screen.expectShown(true, NUDGE_WITHIN_MS);
+    await app.press("Pause");
+    await app.press("Skip today");
+    await app.waitForButton("Skipped");
+    await untilStored(
+      "the skip in the stored day state",
+      () => database.stored("dayState", ".override") === "skipped",
+      () => database.value("dayState"),
+    );
+    screen.close();
+    await screen.expectShown(false);
+  },
+
+  /**
    * The idle seconds of the clock beat grow while nobody is at the computer,
    * and synthetic input resets them: the system's idle time, not the
    * window's (X11 under Linux, a compositor's under Wayland, GetLastInputInfo
@@ -134,6 +168,31 @@ const LINUX_ACTS = {
     if (waited < QUIT_GRACE_MS - 1000) {
       throw new SmokeFailure("the window given its grace before the app exits", `${waited} ms`);
     }
+  },
+
+  /**
+   * A desktop that composites nothing (X11 with openbox alone) would show a
+   * transparent window black, so the window has no glass: the top bar offers
+   * no Glass switch.
+   */
+  async "no-glass"(app) {
+    // The top bar is up once its Settings button is.
+    await app.waitFor("//button[@aria-label='Settings']");
+    if (await app.find(GLASS_SWITCH)) {
+      throw new SmokeFailure("no Glass switch without a compositor", "the top bar offers one");
+    }
+  },
+
+  /**
+   * A compositor with no blur to ask for (sway, as GNOME or any desktop but
+   * KDE's on X11): Glass is offered, turns the window see-through, and
+   * Settings says the desktop shows through unblurred.
+   */
+  async "see-through-glass"(app) {
+    await app.press("Glass");
+    await app.waitFor("//*[@data-glass='on']");
+    await app.pressNamed("Settings");
+    await app.waitForText("does not blur it");
   },
 
   /** The tray's "Start next set" brings the hidden window back with the logger open. */

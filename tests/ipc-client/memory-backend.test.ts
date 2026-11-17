@@ -14,7 +14,7 @@ describe("the in-memory backend", () => {
       dayLog: null,
       history: [],
     });
-    expect(await client.platformCapabilities()).toEqual({ tray: false, glass: false, idle: false });
+    expect(await client.platformCapabilities()).toEqual({ tray: false, glass: null, idle: false });
   });
 
   it("keeps what is saved, one value or several at once", async () => {

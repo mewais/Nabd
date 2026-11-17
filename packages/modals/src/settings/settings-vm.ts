@@ -1,4 +1,4 @@
-import type { PlatformCapabilities, Settings, Theme } from "@nabd/domain";
+import type { GlassBackdrop, PlatformCapabilities, Settings, Theme } from "@nabd/domain";
 import { APP_NAME, glassInEffect } from "@nabd/domain";
 import type { Notice } from "@nabd/view";
 import { SettingsRows } from "./rows-vm";
@@ -39,6 +39,13 @@ const MINIMIZED_HINT = {
   noTray: `This desktop shows no tray icons, so ${APP_NAME} always opens as a window.`,
 };
 
+/** What Glass does to the window, by how the desktop looks through it. */
+const GLASS_HINT: Record<GlassBackdrop, string> = {
+  blurred: "Frost the panels so your desktop shows through.",
+  seeThrough:
+    "Let your desktop show through the panels. This desktop does not blur it, so the tint stays strong enough to read over.",
+};
+
 const IDLE_HINT = {
   system: "Once the minimum gap has passed, this long without keyboard or mouse nudges early.",
   inApp: `System idle detection is unavailable on this desktop, so this counts time without activity inside ${APP_NAME} instead.`,
@@ -65,18 +72,20 @@ export function buildSettingsVM({ settings, capabilities, notice }: SettingsInpu
     training: buildTrainingVM(settings, rows),
     appearance: {
       theme: settings.theme,
-      glass: capabilities.glass
-        ? rows.toggle("glass", {
-            title: COMMON_WORDS.translucentWindow,
-            hint: "Frost the panels so your desktop shows through.",
-          })
-        : null,
-      opacity: glassInEffect(settings, capabilities)
-        ? rows.stepper("opacity", (value) => `${Math.round(value * 100)}%`, {
-            title: "Background opacity",
-            hint: "Higher = more solid.",
-          })
-        : null,
+      glass:
+        capabilities.glass === null
+          ? null
+          : rows.toggle("glass", {
+              title: COMMON_WORDS.translucentWindow,
+              hint: GLASS_HINT[capabilities.glass],
+            }),
+      opacity:
+        glassInEffect(settings, capabilities) === null
+          ? null
+          : rows.stepper("opacity", (value) => `${Math.round(value * 100)}%`, {
+              title: "Background opacity",
+              hint: "Higher = more solid.",
+            }),
     },
     startup: [
       rows.toggle("openAtStartup", {

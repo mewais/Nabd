@@ -1,4 +1,10 @@
-import type { PlatformCapabilities, Settings, Theme, TodayChoice } from "@nabd/domain";
+import type {
+  GlassBackdrop,
+  PlatformCapabilities,
+  Settings,
+  Theme,
+  TodayChoice,
+} from "@nabd/domain";
 import { formatClock, glassInEffect, percentOf, plural } from "@nabd/domain";
 import { TODAY_CHOICE_NAMES, pauseName, summarizeNudge } from "@nabd/nudge";
 import type { NudgeStatus, NudgeSummary } from "@nabd/nudge";
@@ -78,8 +84,9 @@ export interface TopBarVM {
 
 export interface ShellVM {
   theme: Theme;
-  glass: boolean;
-  /** Strength of the glass tint, 0–1. */
+  /** The backdrop of the translucent window; null while it is opaque. */
+  glass: GlassBackdrop | null;
+  /** The glass tint strength setting, 0.1–1. */
   opacity: number;
   sidebar: SidebarVM;
   topBar: TopBarVM;
@@ -143,8 +150,8 @@ export function buildShellVM(input: ShellInput): ShellVM {
       status: { clock: formatClock(now), ...summarizeNudge(nudge) },
       theme: settings.theme,
       nudgeMenu: nudgeMenuVM(input.paused, input.today),
-      glassAvailable: capabilities.glass,
-      glass,
+      glassAvailable: capabilities.glass !== null,
+      glass: glass !== null,
     },
     notice: input.notice,
   };

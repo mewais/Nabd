@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import type { PlatformCapabilities } from "@nabd/domain";
 import type { BootSnapshot } from "@nabd/ipc-client";
 import { Confirm } from "./pages/confirm";
 import { Library } from "./pages/library";
@@ -42,11 +43,23 @@ export class App {
     this.confirm = new Confirm(page);
   }
 
-  /** Open the app at the moment `at`, with `stored` as everything its backend holds (nothing: a first run). */
-  async launch(at: Date, stored: Partial<BootSnapshot> = {}): Promise<void> {
-    await this.page.addInitScript((snapshot) => {
-      window.__NABD_E2E_SNAPSHOT__ = snapshot;
-    }, stored);
+  /**
+   * Open the app at the moment `at`, with `stored` as everything its backend
+   * holds (nothing: a first run), on a machine that can do what the browser
+   * demo can, unless `capabilities` says otherwise.
+   */
+  async launch(
+    at: Date,
+    stored: Partial<BootSnapshot> = {},
+    capabilities: Partial<PlatformCapabilities> = {},
+  ): Promise<void> {
+    await this.page.addInitScript(
+      (seams) => {
+        window.__NABD_E2E_SNAPSHOT__ = seams.stored;
+        window.__NABD_E2E_CAPABILITIES__ = seams.capabilities;
+      },
+      { stored, capabilities },
+    );
     await this.page.clock.install({ time: at });
     await this.page.clock.pauseAt(at);
     this.now = at;

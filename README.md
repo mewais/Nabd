@@ -55,7 +55,8 @@ next time.
   and extras.
 - **Your data stays local** in a SQLite database on your machine, with export and import
   as JSON.
-- **Glass:** an optional translucent window (off by default; Windows and macOS).
+- **Glass:** an optional translucent window (off by default): blurred on Windows, macOS
+  and KDE Plasma on X11, plainly see-through on other Linux desktops that composite.
 - **Windows, macOS and Linux**, built with Tauri 2.
 
 ## Install

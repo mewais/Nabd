@@ -10,6 +10,7 @@ import {
   NO_CAPABILITIES,
   SettingsSchema,
 } from "@nabd/domain";
+import type { GlassBackdrop } from "@nabd/domain";
 import type { IpcClient, TrayAction } from "@nabd/ipc-client";
 import { SINGLETON_KEYS, tauriClient } from "@nabd/ipc-client";
 import { TODAY_CHOICE_NAMES, pauseName } from "@nabd/nudge";
@@ -92,6 +93,10 @@ const TRAY_ACTIONS = Object.keys({
   nudge: true,
   quit: true,
 } satisfies Record<TrayAction, true>);
+const GLASS_BACKDROPS = Object.keys({
+  blurred: true,
+  seeThrough: true,
+} satisfies Record<GlassBackdrop, true>);
 const EXPORT_PURPOSES = Object.keys({
   manual: true,
   before_import: true,
@@ -179,7 +184,7 @@ describe("the frontend and the Rust backend agree on", () => {
     expect(actions.sort()).toEqual(TRAY_ACTIONS.sort());
   });
 
-  it("a desktop notification, the machine's capabilities and the export purposes", () => {
+  it("a desktop notification, the machine's capabilities, the glass backdrops and the export purposes", () => {
     const native = (file: string) => rust(`crates/native/src/${file}.rs`);
     const [, { notification }] = tauri.invoked.find(([command]) => command === "notify_nudge") as [
       string,
@@ -188,7 +193,15 @@ describe("the frontend and the Rust backend agree on", () => {
     expect(Object.keys(notification)).toEqual(
       structFields(native("notification"), "DesktopNotification"),
     );
-    expect(Object.keys(NO_CAPABILITIES)).toEqual(structFields(native("platform"), "Capabilities"));
+    const platform = native("platform");
+    expect(Object.keys(NO_CAPABILITIES)).toEqual(structFields(platform, "Capabilities"));
+    // Glass is offered with its backdrop, a variant of Backdrop as serde names it.
+    expect(platform).toMatch(/pub glass: Option<Backdrop>,/);
+    const backdrop = /rename_all = "camelCase"\)\]\s*pub enum Backdrop \{([^}]*)\}/.exec(platform);
+    const variants = [...(backdrop?.[1] ?? "").matchAll(/^\s*(\w+),/gm)].map(
+      (v) => v[1]!.charAt(0).toLowerCase() + v[1]!.slice(1),
+    );
+    expect(variants).toEqual(GLASS_BACKDROPS);
     const purposes = /pub enum ExportPurpose \{([^}]*)\}/.exec(native("export"))?.[1] ?? "";
     const snakeCase = (name: string) => name.replace(/(?<!^)([A-Z])/g, "_$1").toLowerCase();
     expect([...purposes.matchAll(/^\s*(\w+),/gm)].map((v) => snakeCase(v[1]!))).toEqual(
