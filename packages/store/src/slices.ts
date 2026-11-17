@@ -29,6 +29,10 @@ export interface DaySlice {
 export interface NudgeSlice {
   snooze: () => void;
   togglePause: () => void;
+  /** Skip today — no nudges, nothing owed until tomorrow — or take the skip back. */
+  toggleSkipToday: () => void;
+  /** Have a day off (or the hours outside the workday) nudged, counting from now; or stop that. */
+  toggleNudgeToday: () => void;
 }
 
 export interface LoggingSlice {

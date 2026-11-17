@@ -12,5 +12,6 @@ export {
   selectPendingNudge,
   selectPlannedVolume,
   selectStats,
+  selectTodayChoice,
   selectTodayPlan,
 } from "./selectors";

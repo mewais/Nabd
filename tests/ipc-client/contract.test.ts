@@ -10,6 +10,7 @@ import {
   NO_CAPABILITIES,
   SettingsSchema,
 } from "@nabd/domain";
+import type { TodayChoice } from "@nabd/domain";
 import type { IpcClient, TrayAction } from "@nabd/ipc-client";
 import { SINGLETON_KEYS, tauriClient } from "@nabd/ipc-client";
 import { exercise, logged, nov } from "../support/builders";
@@ -87,8 +88,16 @@ function commands(): Map<string, string[]> {
 const TRAY_ACTIONS = Object.keys({
   start: true,
   pause: true,
+  skip: true,
+  nudge: true,
   quit: true,
 } satisfies Record<TrayAction, true>);
+const TODAY_CHOICES = Object.keys({
+  skip: true,
+  resume: true,
+  nudge: true,
+  stop: true,
+} satisfies Record<TodayChoice, true>);
 const EXPORT_PURPOSES = Object.keys({
   manual: true,
   before_import: true,
@@ -108,7 +117,8 @@ const CALLS: Record<keyof IpcClient, (client: IpcClient) => Promise<unknown>> = 
   sendTestNotification: (c) => c.sendTestNotification(),
   setGlass: (c) => c.setGlass(true),
   setAutostart: (c) => c.setAutostart(true),
-  updateTray: (c) => c.updateTray({ nextExercise: "Bench", done: 1, total: 3, paused: false }),
+  updateTray: (c) =>
+    c.updateTray({ nextExercise: "Bench", done: 1, total: 3, paused: false, today: "skip" }),
   quit: (c) => c.quit(),
   onTick: (c) => c.onTick(() => {}),
   onTrayAction: (c) => c.onTrayAction(() => {}),
@@ -151,13 +161,16 @@ describe("the frontend and the Rust backend agree on", () => {
     expect(Object.keys(set).sort()).toEqual(row.sort());
   });
 
-  it("the tray's state, and the actions it hands the frontend", () => {
+  it("the tray's state, today's choices in it, and the actions it hands the frontend", () => {
     const tray = rust("crates/native/src/tray.rs");
     const [, { state }] = tauri.invoked.find(([command]) => command === "update_tray") as [
       string,
       { state: object },
     ];
     expect(Object.keys(state).sort()).toEqual(structFields(tray, "TrayState").sort());
+    const choices = /pub enum TodayChoice \{([^}]*)\}/.exec(tray)?.[1] ?? "";
+    const variants = [...choices.matchAll(/^\s*(\w+),/gm)].map((v) => v[1]!.toLowerCase());
+    expect(variants).toEqual(TODAY_CHOICES);
     const handed = /fn frontend_action[\s\S]*?\n {4}\}/.exec(tray)?.[0] ?? "";
     const actions = [...handed.matchAll(/Some\((TRAY_\w+)\)/g)].map((id) =>
       stringConst(tray, id[1]!),

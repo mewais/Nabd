@@ -18,5 +18,6 @@ pub use launch::{CloseAction, Launch, AUTOSTART_ARG};
 pub use notification::DesktopNotification;
 pub use platform::{tray_host_present, Capabilities, GlassEffect, Platform};
 pub use tray::{
-    TrayCommand, TrayItem, TrayState, TRAY_OPEN, TRAY_PAUSE, TRAY_QUIT, TRAY_START, TRAY_STATUS,
+    TodayChoice, TrayCommand, TrayItem, TrayState, TRAY_NUDGE, TRAY_OPEN, TRAY_PAUSE, TRAY_QUIT,
+    TRAY_SKIP, TRAY_START, TRAY_STATUS,
 };

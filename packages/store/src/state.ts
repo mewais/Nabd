@@ -44,7 +44,7 @@ export type NoticePlace = "appNotice" | "dataNotice";
 /**
  * The app's state. What is persisted comes first: the stored singletons
  * (`dayState`, today's bookkeeping, holds `paused`: nudges are off until the
- * day ends) and the set history.
+ * day ends, and `override`: the day was skipped or nudged on) and the set history.
  */
 export interface NabdState extends Singletons {
   booted: boolean;
