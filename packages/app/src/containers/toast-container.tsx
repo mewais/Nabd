@@ -8,6 +8,7 @@ import { useBoundActions, useViewModel } from "./wiring";
 const bind = (store: NabdActions): ToastActions => ({
   start: () => store.openSession(),
   snooze: store.snooze,
+  skipToday: store.toggleSkipToday,
 });
 
 /** The nudge toast, while a set is due and the logger is not already open. */

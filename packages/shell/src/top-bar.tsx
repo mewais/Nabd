@@ -41,6 +41,13 @@ export function TopBar({ vm, actions }: TopBarProps): JSX.Element {
         >
           {vm.pause.label}
         </Button>
+        <Button
+          variant={vm.today.on ? "primary" : "secondary"}
+          size="sm"
+          onClick={vm.today.toggles === "skip" ? actions.toggleSkipToday : actions.toggleNudgeToday}
+        >
+          {vm.today.label}
+        </Button>
         {vm.glassAvailable && (
           <Button
             variant={vm.glass ? "primary" : "secondary"}

@@ -1,6 +1,6 @@
-import type { PlatformCapabilities, Settings, Theme } from "@nabd/domain";
+import type { PlatformCapabilities, Settings, Theme, TodayChoice } from "@nabd/domain";
 import { formatClock, glassInEffect, percentOf, plural } from "@nabd/domain";
-import { summarizeNudge } from "@nabd/nudge";
+import { TODAY_CHOICE_NAMES, pauseName, summarizeNudge } from "@nabd/nudge";
 import type { NudgeStatus, NudgeSummary } from "@nabd/nudge";
 import type { Notice, Screen } from "@nabd/view";
 import { dateLabel, greeting, versionLabel } from "./wording";
@@ -12,6 +12,8 @@ export interface ShellInput {
   /** Whether this machine can make the window translucent. */
   capabilities: Pick<PlatformCapabilities, "glass">;
   paused: boolean;
+  /** What can be changed about today's nudging besides a pause. */
+  today: TodayChoice;
   nudge: NudgeStatus;
   /** Today's prescribed sets: how many are logged, out of how many. */
   sets: { done: number; planned: number };
@@ -42,6 +44,16 @@ export interface StatusVM extends NudgeSummary {
   clock: string;
 }
 
+/** The control for today's one choice: skip the day or resume it, nudge it or stop. */
+interface TodayVM {
+  /** "Skip today", "Resume today", "Nudge me today" or "Stop nudging today". */
+  label: string;
+  /** The day is skipped or nudged on. */
+  on: boolean;
+  /** What choosing it toggles: the skip, or the nudging. */
+  toggles: "skip" | "nudge";
+}
+
 /** The button that pauses nudges, or resumes them. */
 interface PauseVM {
   paused: boolean;
@@ -57,6 +69,7 @@ export interface TopBarVM {
   status: StatusVM;
   theme: Theme;
   pause: PauseVM;
+  today: TodayVM;
   /** Whether the Glass switch is offered at all. */
   glassAvailable: boolean;
   glass: boolean;
@@ -84,8 +97,15 @@ function buildDayProgressVM({ done, planned }: ShellInput["sets"]): DayProgressV
 }
 
 function pauseVM(paused: boolean): PauseVM {
-  const label = paused ? "Resume" : "Pause";
-  return { paused, label, title: `${label} nudges` };
+  return { paused, label: paused ? "Resume" : "Pause", title: pauseName(paused) };
+}
+
+function todayVM(choice: TodayChoice): TodayVM {
+  return {
+    label: TODAY_CHOICE_NAMES[choice],
+    on: choice === "resume" || choice === "stop",
+    toggles: choice === "skip" || choice === "resume" ? "skip" : "nudge",
+  };
 }
 
 export function buildShellVM(input: ShellInput): ShellVM {
@@ -106,6 +126,7 @@ export function buildShellVM(input: ShellInput): ShellVM {
       status: { clock: formatClock(now), ...summarizeNudge(nudge) },
       theme: settings.theme,
       pause: pauseVM(input.paused),
+      today: todayVM(input.today),
       glassAvailable: capabilities.glass,
       glass,
     },

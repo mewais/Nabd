@@ -13,6 +13,7 @@ const baseContext: NudgeContext = {
   snoozedUntil: null,
   idleSeconds: 0,
   paused: false,
+  override: null,
   hasWork: true,
 };
 

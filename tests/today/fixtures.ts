@@ -24,6 +24,7 @@ export function nudgeAt(
     activeSince: null,
     snoozedUntil: null,
     idleSeconds: 0,
+    override: null,
     paused: ctx.paused ?? false,
     hasWork: ctx.hasWork ?? true,
   });
