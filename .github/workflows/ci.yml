@@ -41,13 +41,13 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Install Linux build dependencies
+      - name: Install Linux build and lint dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential curl wget file pkg-config libssl-dev \
-            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev rpm
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev rpm shellcheck
 
       # No `version`: it comes from `packageManager` in package.json.
       - uses: pnpm/action-setup@v4
@@ -68,6 +68,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      # The smoke kit's shell scripts run on Linux only, where shellcheck is installed above.
+      - run: pnpm lint:sh
+        if: runner.os == 'Linux'
       - run: pnpm lint:rust
       - run: pnpm typecheck
       - run: pnpm test
@@ -79,14 +82,11 @@ jobs:
 
       - run: pnpm tauri build ${{ matrix.bundle-args }}
 
-      # The binary just built, in a throw-away X session with a fake tray host and
-      # notification service: the checks every platform shares (window, SQLite,
-      # restart, single instance, the login entry, a set logged through WebDriver,
-      # Settings → Quit), then the tray menu, nudge notifications and idle time
-      # (X11, and Wayland under a headless sway). The README (Smoke test) says
-      # what each part checks. The WebDriver for WebKitGTK is `webkit2gtk-driver`
-      # up to Ubuntu 24.04 and `webkitgtk-webdriver` after; whichever this image
-      # has is installed.
+      # The binary just built, in a throw-away X session (and a headless sway, for
+      # Wayland) with a fake tray host and notification service; the README
+      # (Smoke test) says what it checks. The WebDriver for WebKitGTK is
+      # `webkit2gtk-driver` up to Ubuntu 24.04 and `webkitgtk-webdriver` after;
+      # whichever this image has is installed.
       - name: Smoke-test the app (Linux)
         if: runner.os == 'Linux'
         timeout-minutes: 20
@@ -97,9 +97,8 @@ jobs:
           driver=webkit2gtk-driver
           apt-cache policy "$driver" | grep -q 'Candidate: [0-9]' || driver=webkitgtk-webdriver
           sudo apt-get install -y --no-install-recommends \
-            xvfb dbus dbus-x11 openbox xdotool curl libfaketime shellcheck \
+            xvfb dbus openbox xdotool libfaketime \
             python3-dbus python3-gi gir1.2-gtk-3.0 sway wtype "$driver"
-          pnpm lint:sh
           cargo install tauri-driver --locked
           scripts/smoke/linux-smoke.sh
 

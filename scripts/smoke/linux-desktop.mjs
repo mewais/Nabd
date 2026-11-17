@@ -15,10 +15,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import process from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
-import { fileURLToPath } from "node:url";
-import { SmokeFailure, eventually, isMain } from "./app.mjs";
-
-const here = (file) => fileURLToPath(new URL(file, import.meta.url));
+import { SmokeFailure, eventually, here, isMain } from "./app.mjs";
 
 /**
  * The app's wall clock, moved by libfaketime: the offset file holds how many

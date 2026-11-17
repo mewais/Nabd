@@ -10,8 +10,8 @@ import {
   NO_CAPABILITIES,
   SettingsSchema,
 } from "@nabd/domain";
-import type { IpcClient } from "@nabd/ipc-client";
-import { EXPORT_PURPOSES, SINGLETON_KEYS, TRAY_ACTIONS, tauriClient } from "@nabd/ipc-client";
+import type { IpcClient, TrayAction } from "@nabd/ipc-client";
+import { SINGLETON_KEYS, tauriClient } from "@nabd/ipc-client";
 import { exercise, logged, nov } from "../support/builders";
 
 // Tauri's own API, as the client reaches it: what is invoked and listened to is recorded.
@@ -82,6 +82,18 @@ function commands(): Map<string, string[]> {
   );
 }
 
+// The client's types, spelled out: the compiler holds each list to its type, so
+// a value added to or dropped from the type must be added or dropped here too.
+const TRAY_ACTIONS = Object.keys({
+  start: true,
+  pause: true,
+  quit: true,
+} satisfies Record<TrayAction, true>);
+const EXPORT_PURPOSES = Object.keys({
+  manual: true,
+  before_import: true,
+} satisfies Record<Parameters<IpcClient["exportData"]>[0], true>);
+
 /** Every method of the client, called once: a new method must be added here. */
 const CALLS: Record<keyof IpcClient, (client: IpcClient) => Promise<unknown>> = {
   loadAll: (c) => c.loadAll(),
@@ -150,7 +162,7 @@ describe("the frontend and the Rust backend agree on", () => {
     const actions = [...handed.matchAll(/Some\((TRAY_\w+)\)/g)].map((id) =>
       stringConst(tray, id[1]!),
     );
-    expect(actions.sort()).toEqual([...TRAY_ACTIONS].sort());
+    expect(actions.sort()).toEqual(TRAY_ACTIONS.sort());
   });
 
   it("a desktop notification, the machine's capabilities and the export purposes", () => {
@@ -165,9 +177,9 @@ describe("the frontend and the Rust backend agree on", () => {
     expect(Object.keys(NO_CAPABILITIES)).toEqual(structFields(native("platform"), "Capabilities"));
     const purposes = /pub enum ExportPurpose \{([^}]*)\}/.exec(native("export"))?.[1] ?? "";
     const snakeCase = (name: string) => name.replace(/(?<!^)([A-Z])/g, "_$1").toLowerCase();
-    expect([...purposes.matchAll(/^\s*(\w+),/gm)].map((v) => snakeCase(v[1]!))).toEqual([
-      ...EXPORT_PURPOSES,
-    ]);
+    expect([...purposes.matchAll(/^\s*(\w+),/gm)].map((v) => snakeCase(v[1]!))).toEqual(
+      EXPORT_PURPOSES,
+    );
   });
 
   it("the settings the backend reads itself", () => {

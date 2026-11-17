@@ -16,6 +16,7 @@ import {
   databasePath,
   dayState,
   eventually,
+  existingLoginEntry,
   expectEqual,
   expectLoginEntry,
   instances,
@@ -175,8 +176,7 @@ export const CHECKS = {
   async "login-launch"(ctx) {
     // A day to roll over, so the launch is seen to have booted.
     database.put({ dayState: dayState({ date: YESTERDAY }) });
-    const entry = loginEntry();
-    if (entry === null) throw new SmokeFailure(`a login entry at ${loginEntryLocation()}`, "none");
+    const entry = existingLoginEntry();
     const app = ctx.launch(entry.args, entry.program);
     await eventually("the login launch booting (rolling the day over)", dayIsToday, {
       timeoutMs: 30_000,
@@ -198,17 +198,22 @@ export const CHECKS = {
     const app = ctx.launch();
     await ctx.screen.expectShown(true, 60_000);
     await eventually("the frontend storing today's day state", dayIsToday, { found: storedDay });
-    await sleep(3000); // the frontend updates the menu once it has booted
-    let entries;
+    const menu = async () => JSON.stringify(await ctx.trayMenu());
     try {
-      entries = ctx.quitFromTray();
+      await menu();
     } catch (error) {
       if (!(error instanceof AccessibilityUnavailable)) throw error;
       skipped("the tray menu and its Quit", `UI scripting is not allowed here: ${error.message}`);
       return ctx.end(app);
     }
-    expectEqual("the tray menu", entries, TRAY_MENU);
+    // The frontend updates the menu once it has booted.
+    await eventually(
+      `the tray menu ${JSON.stringify(TRAY_MENU)}`,
+      async () => (await menu()) === JSON.stringify(TRAY_MENU),
+      { found: menu },
+    );
     ok("the tray menu: where the day stands, Start next set, Pause nudges, Open Nabd, Quit");
+    await ctx.quitFromTray();
     await expectCleanExit(app, "the tray's Quit");
     ok("the tray's Quit ends the app, with the database sound");
   },

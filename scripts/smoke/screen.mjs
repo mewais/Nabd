@@ -17,10 +17,8 @@
 import { execFileSync, spawn } from "node:child_process";
 import process from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
-import { fileURLToPath } from "node:url";
-import { SmokeFailure, eventually } from "./app.mjs";
+import { SmokeFailure, eventually, here } from "./app.mjs";
 
-const here = (file) => fileURLToPath(new URL(file, import.meta.url));
 const run = (command, args) => execFileSync(command, args, { encoding: "utf8" }).trim();
 
 /** The screen of the platform this runs on, watching the app started from `binary`. */
@@ -167,14 +165,13 @@ function macosScreen(executable) {
   // (offscreen, 30 points high): the main window is never under 640 high.
   const shownWindows = () =>
     windows().filter((w) => w.layer === 0 && w.onscreen && w.height >= MIN_WINDOW_HEIGHT);
-  const pid = () => run("sh", ["-c", `pgrep -x '${executable}' | head -n 1`]);
   return {
     shown: () => shownWindows().length > 0,
     count: () => shownWindows().length,
     focused: () => null,
     close: () =>
       systemEvents(
-        `tell (first process whose unix id is ${pid()}) to ` +
+        `tell (first process whose unix id is ${macosPid(executable)}) to ` +
           `click (first button of window 1 whose subrole is "AXCloseButton")`,
       ),
     describe: () =>
@@ -183,6 +180,9 @@ function macosScreen(executable) {
         .join("\n") || `no window of a process named ${executable}`,
   };
 }
+
+/** The id of the (first) process running `executable`, on macOS. */
+export const macosPid = (executable) => run("sh", ["-c", `pgrep -x '${executable}' | head -n 1`]);
 
 /** Below the main window's smallest height (640), above any strip of menu bar. */
 const MIN_WINDOW_HEIGHT = 200;

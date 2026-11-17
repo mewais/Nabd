@@ -70,13 +70,14 @@ EOF
 }
 
 outside() {
-  require xvfb-run dbus-run-session openbox xdotool curl node
+  require xvfb-run dbus-run-session openbox xdotool node
   local binary python faketime status=0
   python="$(dbus_python)"
   faketime="$(libfaketime)"
   binary="$(node "$SMOKE/app.mjs" built-binary nabd)"
   SANDBOX="$(mktemp -d)"
-  trap 'rm -rf "$SANDBOX"' EXIT
+  STILL_RUNNING="" FOLLOWER=""
+  trap 'kill $STILL_RUNNING $FOLLOWER 2>/dev/null || true; rm -rf "$SANDBOX"' EXIT
   # No ~/.config: a fresh account has none until something writes a setting.
   mkdir "$SANDBOX"/{home,data,config,cache}
   # A private copy: a rebuild while the test runs cannot swap the binary under it.
@@ -85,17 +86,21 @@ outside() {
 
   # The results are written to a file and followed here: xvfb-run and
   # dbus-run-session need not pass any descriptor but the standard three on.
+  # The follower stops once STILL_RUNNING is gone (ended with the session),
+  # after printing what is left.
   : >"$SANDBOX/results"
-  tail -n +1 -f "$SANDBOX/results" &
-  local follower=$!
+  sleep infinity &
+  STILL_RUNNING=$!
+  tail -n +1 -f --pid="$STILL_RUNNING" "$SANDBOX/results" &
+  FOLLOWER=$!
   env -u WAYLAND_DISPLAY \
     HOME="$SANDBOX/home" XDG_DATA_HOME="$SANDBOX/data" \
     XDG_CONFIG_HOME="$SANDBOX/config" XDG_CACHE_HOME="$SANDBOX/cache" \
     GDK_BACKEND=x11 NO_AT_BRIDGE=1 SANDBOX="$SANDBOX" NABD_SMOKE_PYTHON="$python" \
     xvfb-run -a -s "-screen 0 1440x900x24" dbus-run-session -- "$SMOKE/linux-smoke.sh" --in-session \
     >"$SANDBOX/session.log" 2>&1 || status=$?
-  sleep 0.5
-  kill "$follower"
+  kill "$STILL_RUNNING"
+  wait "$FOLLOWER"
   if ((status != 0)); then
     echo "--- what the session printed (last lines)" >&2
     tail -n 60 "$SANDBOX/session.log" >&2

@@ -118,6 +118,10 @@ const LINUX_ACTS = {
   async "unanswered-quit"(app, _screen, binary) {
     await app.waitForButton("Start set");
     await app.run("const done = arguments[0]; setTimeout(() => { for (;;); }, 100); done();");
+    // A fixed wait, well past the 100 ms, is the only way to know the loop has
+    // begun: a stuck page answers no WebDriver command (its script timeout
+    // notwithstanding), and nothing the page sends once looping gets out of it
+    // (not even the answer to the script that started the loop).
     await sleep(500);
     const asked = Date.now();
     tray.click("Quit");

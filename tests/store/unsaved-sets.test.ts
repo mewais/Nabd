@@ -44,9 +44,15 @@ describe("a set that could not be saved", () => {
     const app = await failOnce();
     vi.mocked(app.client.appendSet).mockRejectedValue(new Error("disk full"));
     app.get().dismissNotice();
-    app.advanceTo(nov(16, 10, 1));
-    app.advanceTo(nov(16, 10, 2));
-    await Promise.resolve();
+    // The first try was the log itself; each beat tries again. A timer fires only
+    // once the microtask queue is empty: by then the beat's try has failed.
+    const triesAfterBeat = async (minute: number) => {
+      app.advanceTo(nov(16, 10, minute));
+      await new Promise((resolve) => setTimeout(resolve));
+      return vi.mocked(app.client.appendSet).mock.calls.length;
+    };
+    expect(await triesAfterBeat(1)).toBe(2);
+    expect(await triesAfterBeat(2)).toBe(3);
     expect(app.get().unsavedSets).toHaveLength(1);
     expect(app.get().appNotice).toBeNull();
   });

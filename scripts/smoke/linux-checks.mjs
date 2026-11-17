@@ -13,16 +13,14 @@ import { screenFor } from "./screen.mjs";
 /** How the fake host marks a disabled entry of the tray menu. */
 const DISABLED = " (disabled)";
 
-/** The tray menu as the fake host reads it, then its Quit chosen. */
-function quitFromLinuxTray() {
-  const entries = tray
+/** The tray menu as the fake host reads it: [label, enabled]. */
+const trayMenu = () =>
+  tray
     .menu()
     .map((label) =>
       label.endsWith(DISABLED) ? [label.slice(0, -DISABLED.length), false] : [label, true],
     );
-  tray.click("Quit");
-  return entries;
-}
+const quitFromTray = () => tray.click("Quit");
 
 const { values, positionals } = parseArgs({
   options: {
@@ -38,10 +36,11 @@ const passed = await runChecks(
     driverUrl: values.driver,
     requireWebDriver: process.env.NABD_SMOKE_REQUIRE_WEBDRIVER === "1",
     tray: values.tray,
-    quitFromTray: quitFromLinuxTray,
+    trayMenu,
+    quitFromTray,
     // With a tray, its Quit; without, closing the window is quitting.
     async end(app) {
-      if (values.tray) tray.click("Quit");
+      if (values.tray) quitFromTray();
       else screenFor(values.binary).close();
       await expectCleanExit(app, values.tray ? "the tray's Quit" : "closing the window (no tray)");
     },

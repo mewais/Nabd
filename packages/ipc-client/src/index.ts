@@ -2,7 +2,7 @@
 // interface, its Tauri implementation, and an in-memory one for the browser
 // demo and the tests.
 
-export { EXPORT_PURPOSES, SINGLETON_KEYS, TRAY_ACTIONS } from "./client";
+export { SINGLETON_KEYS } from "./client";
 export type { BootSnapshot, IpcClient, Singletons, TrayAction } from "./client";
 export { isTauri, tauriClient } from "./tauri-client";
 export { createMemoryBackend } from "./memory-backend";

@@ -15,13 +15,11 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
-import { fileURLToPath } from "node:url";
-import { builtBinary, sandbox } from "./app.mjs";
+import { builtBinary, eventually, here, sandbox } from "./app.mjs";
 import { skipped } from "./checks.mjs";
 import { runEntry } from "./runner.mjs";
-import { AccessibilityUnavailable, systemEvents } from "./screen.mjs";
+import { AccessibilityUnavailable, macosPid, systemEvents } from "./screen.mjs";
 
-const here = (file) => fileURLToPath(new URL(file, import.meta.url));
 const run = (command, ...args) => execFileSync(command, args, { encoding: "utf8" }).trim();
 
 if (process.platform !== "darwin") {
@@ -31,26 +29,30 @@ if (process.platform !== "darwin") {
   process.exit(2);
 }
 
-/** The app's process id, by its executable's name. */
-const pidOf = (executable) => run("sh", "-c", `pgrep -x '${executable}' | head -n 1`);
+const systemEventsRunning = () => run("sh", "-c", "pgrep -x 'System Events' || true") !== "";
 
 /**
- * Open the menu-bar item's menu, read its entries ([label, enabled]) and
- * choose Quit, through System Events. Clicking a menu-bar item blocks System
- * Events until the menu closes, so it is clicked without waiting and System
- * Events restarted (the usual way round it) before the menu is read.
+ * Open the menu-bar item's menu through System Events, read its entries
+ * ([label, enabled]), then do `choose(menu)` (AppleScript, given the menu).
+ * Clicking a menu-bar item blocks System Events until the menu closes, so it
+ * is clicked without waiting and System Events restarted (the usual way round
+ * it) before the menu is read.
  */
-function quitFromTray(executable) {
-  const item = `menu bar item 1 of menu bar 2 of (first process whose unix id is ${pidOf(executable)})`;
+async function withTrayMenu(executable, choose) {
+  const item = `menu bar item 1 of menu bar 2 of (first process whose unix id is ${macosPid(executable)})`;
   systemEvents(`ignoring application responses\nclick ${item}\nend ignoring`);
-  run("sh", "-c", "sleep 0.5; killall 'System Events' || true; sleep 1");
+  // The click is carried out after osascript has returned, and System Events
+  // tells nothing while it is blocked in the menu: a fixed time for it, then.
+  await sleep(500);
+  run("sh", "-c", "killall 'System Events' || true");
+  await eventually("System Events ended", () => !systemEventsRunning());
   const listing = systemEvents(
     [
       "set entries to {}",
       `repeat with entry in menu items of menu 1 of ${item}`,
       "set end of entries to (name of entry as text) & tab & (enabled of entry as text)",
       "end repeat",
-      `click menu item "Quit" of menu 1 of ${item}`,
+      choose(`menu 1 of ${item}`),
       "set AppleScript's text item delimiters to linefeed",
       "return entries as text",
     ].join("\n"),
@@ -62,13 +64,20 @@ function quitFromTray(executable) {
     .map(([label, enabled]) => [label, enabled === "true"]);
 }
 
+/** The menu-bar item's menu, read and closed again (Escape). */
+const trayMenu = (executable) => withTrayMenu(executable, () => "key code 53");
+
+/** Choose Quit from the menu-bar item's menu. */
+const quitFromTray = (executable) =>
+  withTrayMenu(executable, (menu) => `click menu item "Quit" of ${menu}`);
+
 let accessibility = true;
 
 /** End the app from its menu; without UI scripting, as the Dock's Quit would (no save first). */
 async function end(app, executable, helper) {
   if (accessibility) {
     try {
-      quitFromTray(executable);
+      await quitFromTray(executable);
       return await app.expectExit("the menu-bar item's Quit");
     } catch (error) {
       if (!(error instanceof AccessibilityUnavailable)) throw error;
@@ -103,6 +112,7 @@ await runEntry({
       binary: join(bundle, "Contents", "MacOS", executable),
       tray: true,
       end: (app) => end(app, executable, helper),
+      trayMenu: () => trayMenu(executable),
       quitFromTray: () => quitFromTray(executable),
     };
   },

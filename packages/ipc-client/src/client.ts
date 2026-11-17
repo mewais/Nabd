@@ -38,8 +38,7 @@ export type BootSnapshot = { [K in keyof Singletons]: unknown } & {
 };
 
 /** Why an export file is written: because the user asked, or to keep what an import replaces. */
-export const EXPORT_PURPOSES = ["manual", "before_import"] as const;
-type ExportPurpose = (typeof EXPORT_PURPOSES)[number];
+type ExportPurpose = "manual" | "before_import";
 
 /** What the tray menu shows. */
 interface TrayState {
@@ -53,8 +52,7 @@ interface TrayState {
  * Tray menu actions the backend forwards to the frontend, which owns the
  * workout state — and, for "quit", whatever is still waiting to be saved.
  */
-export const TRAY_ACTIONS = ["start", "pause", "quit"] as const;
-export type TrayAction = (typeof TRAY_ACTIONS)[number];
+export type TrayAction = "start" | "pause" | "quit";
 
 /** An OS notification. */
 interface DesktopNotification {

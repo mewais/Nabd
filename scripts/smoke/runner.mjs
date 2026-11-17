@@ -5,16 +5,19 @@
 
 import { existsSync, readdirSync } from "node:fs";
 import process from "node:process";
-import {
-  AppProcess,
-  SmokeFailure,
-  dataDir,
-  launched,
-  loginEntry,
-  loginEntryLocation,
-} from "./app.mjs";
+import { AppProcess, SmokeFailure, dataDir, loginEntry, loginEntryLocation } from "./app.mjs";
 import { CHECKS, ok, report, storedDay } from "./checks.mjs";
 import { screenFor } from "./screen.mjs";
+
+/** Every launch of the app this run, for the diagnostics of a failure. */
+const launched = [];
+
+/** Start `binary` with `args`, as one of the run's launches. */
+function launch(binary, args) {
+  const app = new AppProcess(binary, args);
+  launched.push(app);
+  return app;
+}
 
 /** Write what an expectation needs to be understood: the screen, the files, the app's output. */
 function reportFailure(ctx, name, error, since) {
@@ -43,14 +46,14 @@ function reportFailure(ctx, name, error, since) {
 
 /**
  * Run the checks `names` in order, on `ctx`: { binary, tray, end(app),
- * driverUrl?, requireWebDriver?, quitFromTray?, diagnostics? }. Stops at the
- * first failure; returns whether all passed. An app a check leaves running is
- * ended before the next one starts.
+ * driverUrl?, requireWebDriver?, trayMenu?, quitFromTray?, diagnostics? }.
+ * Stops at the first failure; returns whether all passed. An app a check
+ * leaves running is ended before the next one starts.
  */
 export async function runChecks(ctx, names) {
   const context = {
     screen: screenFor(ctx.binary),
-    launch: (args = [], binary = ctx.binary) => new AppProcess(binary, args),
+    launch: (args = [], binary = ctx.binary) => launch(binary, args),
     ...ctx,
   };
   for (const name of names) {

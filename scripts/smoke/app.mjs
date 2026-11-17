@@ -11,7 +11,9 @@ import process from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const repo = (file) => fileURLToPath(new URL(`../../${file}`, import.meta.url));
+/** A file of the smoke kit (this folder), by its path from here. */
+export const here = (file) => fileURLToPath(new URL(file, import.meta.url));
+const repo = (file) => here(`../../${file}`);
 const config = JSON.parse(readFileSync(repo("src-tauri/tauri.conf.json"), "utf8"));
 
 /** The bundle identifier: the name of the app's data folder on every platform. */
@@ -80,7 +82,7 @@ export async function eventually(expectation, check, { timeoutMs = 15_000, found
     if (Date.now() > deadline) {
       let instead = last;
       try {
-        instead = found?.() ?? last;
+        instead = (await found?.()) ?? last;
       } catch (error) {
         instead = error.message;
       }
@@ -339,10 +341,16 @@ function sameFile(a, b) {
   return canonical(a) === canonical(b);
 }
 
-/** Fail unless the login entry starts `binary` with --autostart, and nothing else. */
-export function expectLoginEntry(binary) {
+/** The login entry (see loginEntry); fail when there is none. */
+export function existingLoginEntry() {
   const entry = loginEntry();
   if (entry === null) throw new SmokeFailure(`a login entry at ${loginEntryLocation()}`, "none");
+  return entry;
+}
+
+/** Fail unless the login entry starts `binary` with --autostart, and nothing else. */
+export function expectLoginEntry(binary) {
+  const entry = existingLoginEntry();
   if (!sameFile(entry.program, binary) || JSON.stringify(entry.args) !== `["${AUTOSTART_ARG}"]`) {
     throw new SmokeFailure(
       `the login entry at ${loginEntryLocation()} to run ${binary} ${AUTOSTART_ARG}`,
@@ -355,16 +363,13 @@ export function expectLoginEntry(binary) {
 
 const OUTPUT_LINES = 40;
 
-/** Every launch of this run, for the diagnostics of a failure. */
-export const launched = [];
-
-/** One launch of the app: its process, and the last lines it printed. */
+/** One launch of a program (the app, or tauri-driver): its process, and the last lines it printed. */
 export class AppProcess {
-  constructor(binary, args, env) {
+  constructor(binary, args) {
     this.command = [binary, ...args].join(" ");
     this.output = [];
     this.exitCode = undefined;
-    this.child = spawn(binary, args, { env: { ...process.env, ...env } });
+    this.child = spawn(binary, args);
     const keep = (chunk) => {
       this.output.push(...String(chunk).split(/\r?\n/).filter(Boolean));
       this.output.splice(0, Math.max(0, this.output.length - OUTPUT_LINES));
@@ -378,7 +383,6 @@ export class AppProcess {
       });
       this.child.on("exit", (code, signal) => resolve((this.exitCode = signal ?? code)));
     });
-    launched.push(this);
   }
 
   get pid() {
@@ -448,8 +452,7 @@ const COMMANDS = {
   "start-day": (sets, settings = "{}") => database.startDay(Number(sets), JSON.parse(settings)),
   stored: (key, path) => console.log(String(database.stored(key, path) ?? "")),
   "login-command": () => {
-    const entry = loginEntry();
-    if (entry === null) throw new SmokeFailure(`a login entry at ${loginEntryLocation()}`, "none");
+    const entry = existingLoginEntry();
     console.log([entry.program, ...entry.args].join("\n"));
   },
 };

@@ -131,12 +131,6 @@ fake_clock_at() {
 
 DRIVER_PID=""
 
-# driver_ready: tauri-driver answers, and the native driver behind it (which
-# tauri-driver passes /status on to) is listening and ready for a session.
-driver_ready() {
-  curl --silent --fail "http://127.0.0.1:$DRIVER_PORT/status" | grep -qF '"ready":true'
-}
-
 # WebKitWebDriver: on the PATH, or where a distribution's package keeps it
 # outside it; empty when it is not installed.
 webkit_webdriver() {
@@ -148,12 +142,12 @@ webdriver_installed() {
 }
 
 # start_webdriver: tauri-driver on DRIVER_PORT, the native driver on the next
-# port; the apps it starts get this shell's environment.
+# port, as a job (driver.mjs: drivers that do not come up say why in the log;
+# each act waits until they are ready); the apps they start get this shell's
+# environment.
 start_webdriver() {
-  tauri-driver --port "$DRIVER_PORT" --native-port "$((DRIVER_PORT + 1))" \
-    --native-driver "$(webkit_webdriver)" &
+  node "$SMOKE/driver.mjs" "$DRIVER_PORT" "$(webkit_webdriver)" &
   DRIVER_PID=$!
-  wait_for 15 driver_ready || fail "tauri-driver did not start on port $DRIVER_PORT"
 }
 
 # needs_webdriver WHAT: whether the WebDriver parts can run (the driver is
@@ -173,8 +167,8 @@ act() {
 }
 
 # Leave no process behind: the app (and any second copy), what the session's
-# jobs started (the native driver under tauri-driver), then the jobs
-# themselves: tauri-driver, the desktop services, the compositors.
+# jobs started (tauri-driver under driver.mjs, which ends the native driver),
+# then the jobs themselves: driver.mjs, the desktop services, the compositors.
 cleanup() {
   local job
   pkill -f "^$BINARY" || true

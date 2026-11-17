@@ -342,7 +342,7 @@ off. No spec is marked at present.
 
 ```bash
 # Linux
-sudo apt install xvfb dbus openbox xdotool curl libfaketime \
+sudo apt install xvfb dbus openbox xdotool libfaketime \
   python3-dbus python3-gi gir1.2-gtk-3.0 sway wtype \
   webkit2gtk-driver                     # webkitgtk-webdriver from Ubuntu 24.10 on
 cargo install tauri-driver --locked
@@ -369,11 +369,13 @@ database, read with `node:sqlite`; the app's processes and the last lines they p
 `screen.mjs` (the window as the desktop sees it: the X server through `x11.sh`, Win32 through
 `windows.ps1`, the window server's list through `macos-windows.swift`); `runner.mjs` runs
 them and reports a failure. The WebDriver acts — doing things inside the window — are
-`app-session.mjs`, over the small client in `webdriver.mjs` and the `tauri-driver` process of
-`driver.mjs` (on Linux, a job of the session `linux-smoke.sh` sets up); each act starts once the
-driver's `/status` says it is ready for a session, and ends once its app and window are gone. Each entry script only sets its platform up and picks the checks (on Linux,
-`linux-smoke.sh` runs them through `linux-checks.mjs`). This list is the one description of
-the checks:
+`app-session.mjs`, over the small client in `webdriver.mjs`; `driver.mjs` starts and stops
+`tauri-driver` with the platform's driver behind it on every platform that has one (from
+`windows-smoke.mjs`, and on Linux through its command line, as a job of the session
+`linux-smoke.sh` sets up). Each act starts once the driver's `/status` says it is ready for a
+session, and ends once its app and window are gone. Each entry script only sets its platform
+up and picks the checks (on Linux, `linux-smoke.sh` runs them through `linux-checks.mjs`).
+This list is the one description of the checks:
 
 - `first-launch` — a window; the database created at the current schema version, with the
   day state the frontend wrote; "Open at startup" (on by default) writing the login entry for
