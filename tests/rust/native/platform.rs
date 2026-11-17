@@ -11,19 +11,24 @@ const MACOS: Platform = Platform::MacOs;
 // ── glass ────────────────────────────────────────────────────────────────────
 
 #[test]
-fn windows_11_gets_mica_from_its_first_build() {
+fn windows_11_gets_acrylic_from_the_first_build_whose_compositor_draws_it() {
     assert_eq!(
-        Platform::Windows { build: 22_000 }.glass_effect(),
-        Some(GlassEffect::Mica)
+        Platform::Windows { build: 22_523 }.glass_effect(),
+        Some(GlassEffect::Acrylic)
     );
-    assert_eq!(WINDOWS_11.glass_effect(), Some(GlassEffect::Mica));
+    assert_eq!(WINDOWS_11.glass_effect(), Some(GlassEffect::Acrylic));
 }
 
 #[test]
-fn windows_10_gets_blur() {
+fn earlier_windows_gets_blur() {
     assert_eq!(WINDOWS_10.glass_effect(), Some(GlassEffect::Blur));
+    // Windows 11's first release (21H2) has no compositor acrylic either.
     assert_eq!(
-        Platform::Windows { build: 21_999 }.glass_effect(),
+        Platform::Windows { build: 22_000 }.glass_effect(),
+        Some(GlassEffect::Blur)
+    );
+    assert_eq!(
+        Platform::Windows { build: 22_522 }.glass_effect(),
         Some(GlassEffect::Blur)
     );
 }

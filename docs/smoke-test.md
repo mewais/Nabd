@@ -116,7 +116,7 @@ in CI on Linux and Windows).
 Not covered anywhere: a notification actually appearing on Windows (toast) or macOS
 (Notification Center), and nudges at all there (the clock cannot be moved for the app, and
 nothing is logged on macOS); the Windows tray icon itself (clicking it, its menu); the glass
-effect's look (Mica, blur, vibrancy); a set logged, a setting changed or idle time read on
+effect's look (acrylic, blur, vibrancy); a set logged, a setting changed or idle time read on
 macOS; the focus a second launch gives on Windows and macOS; the tray, notifications and idle
 time of a real GNOME or KDE session (Mutter's idle monitor, KDE's screen saver), and the
 Wayland tray and notifications; installing from the bundles (`.msi`, NSIS, `.dmg`, `.deb`,
