@@ -118,15 +118,15 @@ fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
     });
 }
 
-/// Tauri's `show()` is `SW_SHOW`, which activates the window.
+/// Tauri's `show()` is `SW_SHOW`, which activates the window, so it is shown
+/// here by the window manager directly — behind the back of Tauri's window
+/// library, which goes on believing the window hidden (see `hide`).
 #[cfg(windows)]
 fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
-    use windows_sys::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_SHOWNOACTIVATE};
+    use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNOACTIVATE;
 
     if let Ok(hwnd) = window.hwnd() {
-        // SAFETY: `hwnd` is the handle of this live window, and ShowWindow may
-        // be called for it from any thread.
-        unsafe { ShowWindow(hwnd.0, SW_SHOWNOACTIVATE) };
+        show_window(hwnd.0, SW_SHOWNOACTIVATE);
     }
 }
 
@@ -135,6 +135,40 @@ fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
 #[cfg(target_os = "macos")]
 fn show_without_focus<R: Runtime>(window: &WebviewWindow<R>) {
     let _ = window.show();
+}
+
+/// Hide the window to the tray.
+#[cfg(not(windows))]
+fn hide<R: Runtime>(window: &Window<R>) {
+    let _ = window.hide();
+}
+
+/// Hide the window to the tray. Tauri's window library (tao) remembers
+/// whether it last showed or hid the window and skips a `hide()` of a window
+/// it believes hidden — as it does one that `show_without_focus` brought back
+/// for a nudge. So the window manager is told directly as well; hiding a
+/// hidden window does nothing, and both end up agreeing that it is hidden.
+#[cfg(windows)]
+fn hide<R: Runtime>(window: &Window<R>) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::SW_HIDE;
+
+    let _ = window.hide();
+    if let Ok(hwnd) = window.hwnd() {
+        show_window(hwnd.0, SW_HIDE);
+    }
+}
+
+/// `ShowWindow`, for the handle of the main window.
+#[cfg(windows)]
+fn show_window(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+    command: windows_sys::Win32::UI::WindowsAndMessaging::SHOW_WINDOW_CMD,
+) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::ShowWindow;
+
+    // SAFETY: `hwnd` is the handle of this live window, and ShowWindow may be
+    // called for it from any thread.
+    unsafe { ShowWindow(hwnd, command) };
 }
 
 /// Closing the window hides it while there is a tray to live in. Otherwise
@@ -149,9 +183,7 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     let close = CloseAction::for_tray(window.state::<Capabilities>().tray);
     match close {
         CloseAction::Quit => tray::quit(window.app_handle()),
-        CloseAction::HideToTray => {
-            let _ = window.hide();
-        }
+        CloseAction::HideToTray => hide(window),
     }
 }
 
