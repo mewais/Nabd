@@ -370,7 +370,8 @@ database, read with `node:sqlite`; the app's processes and the last lines they p
 `windows.ps1`, the window server's list through `macos-windows.swift`); `runner.mjs` runs
 them and reports a failure. The WebDriver acts — doing things inside the window — are
 `app-session.mjs`, over the small client in `webdriver.mjs` and the `tauri-driver` process of
-`driver.mjs`. Each entry script only sets its platform up and picks the checks (on Linux,
+`driver.mjs` (on Linux, a job of the session `linux-smoke.sh` sets up); each act starts once the
+driver's `/status` says it is ready for a session, and ends once its app and window are gone. Each entry script only sets its platform up and picks the checks (on Linux,
 `linux-smoke.sh` runs them through `linux-checks.mjs`). This list is the one description of
 the checks:
 

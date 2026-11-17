@@ -9,13 +9,26 @@ const POLL_MS = 250;
 /** XPath string literal for `text` (which may hold either kind of quote, not both). */
 const literal = (text) => (text.includes("'") ? `"${text}"` : `'${text}'`);
 
+/**
+ * The driver's /status (`{ ready, message }`): whether it can start a session
+ * now. tauri-driver passes /status on to the native driver, so this fails
+ * until that one listens too; WebKitWebDriver is not ready while it still has
+ * a session.
+ */
+export async function driverStatus(driverUrl) {
+  return request("GET", `${driverUrl}/status`);
+}
+
 /** One WebDriver session: the app, started by the driver and controlled through it. */
 export class Session {
   constructor(driverUrl, id) {
     this.url = `${driverUrl}/session/${id}`;
   }
 
-  /** Start `application` (a Tauri binary) under the driver listening at `driverUrl`. */
+  /**
+   * Start `application` (a Tauri binary) under the driver listening at
+   * `driverUrl`, which must be ready for it (driverStatus).
+   */
   static async start(driverUrl, application) {
     const capabilities = { alwaysMatch: { "tauri:options": { application } } };
     const { sessionId } = await request("POST", `${driverUrl}/session`, { capabilities });

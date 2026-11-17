@@ -109,7 +109,6 @@ BINARY="${SANDBOX:-}/nabd"
 FAKETIME_BINARY="${SANDBOX:-}/nabd-faketime"
 export NABD_SMOKE_CLOCK="${SANDBOX:-}/clock"
 export NABD_SMOKE_NOTIFICATIONS="${SANDBOX:-}/notifications.jsonl"
-CLOCK="$NABD_SMOKE_CLOCK"
 NOTIFICATIONS="$NABD_SMOKE_NOTIFICATIONS"
 # shellcheck source=scripts/smoke/lib.sh
 source "$SMOKE/lib.sh"

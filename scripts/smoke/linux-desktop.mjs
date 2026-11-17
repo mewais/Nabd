@@ -6,13 +6,17 @@
 //   NABD_SMOKE_CLOCK          the libfaketime offset file the app's clock reads
 //   NABD_SMOKE_NOTIFICATIONS  the log the fake notification service writes
 //   NABD_SMOKE_PYTHON         a Python with D-Bus bindings, for desktop_bus.py
+//
+// and sets the time an act starts at through the command line at the bottom:
+//
+//   node linux-desktop.mjs clock-at HH:MM
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import process from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { SmokeFailure, eventually } from "./app.mjs";
+import { SmokeFailure, eventually, isMain } from "./app.mjs";
 
 const here = (file) => fileURLToPath(new URL(file, import.meta.url));
 
@@ -20,7 +24,8 @@ const here = (file) => fileURLToPath(new URL(file, import.meta.url));
  * The app's wall clock, moved by libfaketime: the offset file holds how many
  * seconds the app's clock is ahead of (or behind) the real one, and is read on
  * every call. Monotonic time is left alone, so timers and the one-second beat
- * keep pace. linux-smoke.sh sets the time an act starts at.
+ * keep pace. This is the file's one writer: linux-smoke.sh sets the time an
+ * act starts at through the command line at the bottom.
  */
 export const clock = {
   /** Put the app's clock at `hours:minutes` of today. */
@@ -106,3 +111,13 @@ export const tray = {
       found: () => tray.menu().join(" | "),
     }),
 };
+
+if (isMain(import.meta.url)) {
+  const [command, time] = process.argv.slice(2);
+  const hhmm = /^(\d\d):(\d\d)$/.exec(time ?? "");
+  if (command !== "clock-at" || hhmm === null) {
+    console.error("usage: linux-desktop.mjs clock-at HH:MM");
+    process.exit(2);
+  }
+  clock.at(Number(hhmm[1]), Number(hhmm[2]));
+}

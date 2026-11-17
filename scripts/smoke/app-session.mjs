@@ -4,8 +4,11 @@
 // up the stored data an act starts from and checks the database and the files
 // afterwards (checks.mjs, and linux-smoke.sh for the Linux-only acts, through
 // the command line at the bottom). The window shows a change before the app
-// has stored it, and ending the session can end the app at once (msedgedriver
-// does), so an act whose change the caller looks for waits until it is stored.
+// has stored it, and ending the session ends the app at once (both drivers
+// kill it), so an act whose change the caller looks for waits until it is
+// stored. An act starts only once the driver says it is ready for a session,
+// and returns only once its app and window are gone: what comes next (another
+// session, a launch) never meets the last one's app still on its way out.
 //
 //   node scripts/smoke/app-session.mjs <act> <driver-url> <nabd-binary>
 
@@ -22,7 +25,7 @@ import {
 } from "./app.mjs";
 import { clock, expectNudge, notifications, tray } from "./linux-desktop.mjs";
 import { screenFor } from "./screen.mjs";
-import { Session } from "./webdriver.mjs";
+import { Session, driverStatus } from "./webdriver.mjs";
 
 /** What the nudges for the smoke plan's one exercise say, by what prompted them. */
 const NUDGE = {
@@ -37,12 +40,12 @@ const ACTS = {
     await app.press("Pause");
     await app.waitForButton("Resume");
     await logOneSet(app);
-    await stored(
+    await untilStored(
       "the set in the history table",
       () => database.history().length === 1,
       () => JSON.stringify(database.history()),
     );
-    await stored(
+    await untilStored(
       "pause in the stored day state",
       () => database.stored("dayState", ".paused"),
       () => database.value("dayState"),
@@ -63,12 +66,12 @@ const ACTS = {
     const on = (await app.attribute(await app.waitFor(row), "aria-checked")) !== "true";
     await app.toggle("Open at startup");
     await app.waitFor(`${row}[@aria-checked='${on}']`);
-    await stored(
+    await untilStored(
       `"Open at startup" ${on ? "on" : "off"} in the stored settings`,
       () => database.stored("settings", ".openAtStartup") === (on ? 1 : 0),
       () => database.value("settings"),
     );
-    await stored(
+    await untilStored(
       `the login entry ${on ? "written" : "removed"}`,
       () => (loginEntry() !== null) === on,
       () => JSON.stringify(loginEntry()),
@@ -205,7 +208,7 @@ const LINUX_ACTS = {
 };
 
 /** Wait until `check` says the app has stored what the window shows; `found` says what is stored. */
-function stored(expectation, check, found) {
+function untilStored(expectation, check, found) {
   return eventually(expectation, check, { timeoutMs: 10_000, found });
 }
 
@@ -236,17 +239,31 @@ function idleTicks(app, ms) {
 
 const ALL_ACTS = { ...ACTS, ...LINUX_ACTS };
 
-/** Start the app from `binary` under the driver at `driverUrl`, do act `name`, and close the app. */
+/**
+ * Start the app from `binary` under the driver at `driverUrl` once the driver
+ * is ready for it, do act `name`, close the app, and wait until it is gone.
+ */
 export async function runAct(name, driverUrl, binary) {
   const act = ALL_ACTS[name];
   if (act === undefined) throw new Error(`no act named ${name}`);
+  const screen = screenFor(binary);
+  await eventually("the WebDriver ready for a new session", async () => {
+    const status = await driverStatus(driverUrl);
+    if (!status.ready) throw new Error(`its status: ${JSON.stringify(status)}`);
+    return true;
+  });
   const app = await Session.start(driverUrl, binary);
   try {
-    await act(app, screenFor(binary), binary);
+    await act(app, screen, binary);
   } finally {
     // An act that quits the app leaves no session to end.
     await app.end().catch(() => {});
   }
+  await eventually(
+    "the app and its window gone with the session",
+    () => instances(binary) === 0 && !screen.shown(),
+    { found: () => `${instances(binary)} Nabd process(es); ${screen.describe()}` },
+  );
 }
 
 if (isMain(import.meta.url)) {

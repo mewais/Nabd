@@ -1,7 +1,10 @@
 // tauri-driver, the WebDriver server the acts of app-session.mjs talk to, as a
-// process the entry scripts start once and stop when they are done.
+// process an entry script (windows-smoke.mjs) starts once and stops when it is
+// done. linux-smoke.sh starts its own, as a job of its throw-away session
+// (start_webdriver in lib.sh), since its checks run in several Node processes.
 
 import { AppProcess, eventually, launched } from "./app.mjs";
+import { driverStatus } from "./webdriver.mjs";
 
 /**
  * tauri-driver on `port`, in front of the platform's `native` driver on the
@@ -11,10 +14,10 @@ export class DriverProcess {
   static async start(port, native) {
     const driver = new DriverProcess(port, native);
     await eventually(
-      `tauri-driver answering on port ${port}`,
+      `tauri-driver and the native driver behind it ready on port ${port}`,
       async () => {
         if (!driver.process.running) throw new Error(driver.process.describe());
-        return (await fetch(`${driver.url}/status`).catch(() => null))?.ok;
+        return (await driverStatus(driver.url)).ready;
       },
       { found: () => driver.describe() },
     );

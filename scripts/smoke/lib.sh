@@ -5,8 +5,8 @@
 # helpers (checks.mjs, app.mjs).
 #
 # Expects SANDBOX (the session's temporary directory), SMOKE (this directory)
-# and what linux-smoke.sh derives from them: BINARY, CLOCK, NOTIFICATIONS,
-# DRIVER_PORT.
+# and what linux-smoke.sh derives from them: BINARY, NOTIFICATIONS, DRIVER_PORT
+# (and NABD_SMOKE_CLOCK, for linux-desktop.mjs).
 
 # Results go to $SANDBOX/results, which linux-smoke.sh shows as they come.
 # Stdout and stderr are the session's chatter (D-Bus, WebKit, the window
@@ -121,21 +121,20 @@ tray_item_registered() {
 }
 
 # fake_clock_at HH:MM: the app's wall clock (for launches through
-# $FAKETIME_BINARY) reads HH:MM today from now on, and runs at the real pace.
-# The file is replaced whole, never seen empty (see clock in linux-desktop.mjs).
+# $FAKETIME_BINARY) reads HH:MM today from now on, and runs at the real pace
+# (clock in linux-desktop.mjs, the one writer of its offset file).
 fake_clock_at() {
-  local offset=$(($(date -d "today $1" +%s) - $(date +%s)))
-  ((offset < 0)) || offset="+$offset"
-  echo "$offset" >"$CLOCK.next"
-  mv "$CLOCK.next" "$CLOCK"
+  node "$SMOKE/linux-desktop.mjs" clock-at "$1"
 }
 
 # ------------------------------------------------------------ webdriver ---
 
 DRIVER_PID=""
 
+# driver_ready: tauri-driver answers, and the native driver behind it (which
+# tauri-driver passes /status on to) is listening and ready for a session.
 driver_ready() {
-  curl --silent --fail "http://127.0.0.1:$DRIVER_PORT/status"
+  curl --silent --fail "http://127.0.0.1:$DRIVER_PORT/status" | grep -qF '"ready":true'
 }
 
 # WebKitWebDriver: on the PATH, or where a distribution's package keeps it
