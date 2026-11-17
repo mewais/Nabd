@@ -22,7 +22,8 @@ interface Rollover {
  *    all empty and a day that was skipped outright — none of those can ever be
  *    "completed", so waiting for it would park the plan there forever. A day
  *    off that nothing was logged on owes nothing only by not being a day on,
- *    so it neither moves the plan on nor counts;
+ *    so it neither moves the plan on nor counts — and so does a skipped day,
+ *    which comes back as it was; a day off nudged on is a day on;
  *  - a floating day that is not finished comes back with what it has behind
  *    it, counting what earlier days did: only the rest is owed, and the
  *    visit stays the one session it began as. A weekday plan's next day
@@ -30,7 +31,7 @@ interface Rollover {
  *  - every cycled pool that was actually trained moves on to its next exercise
  *    when its day closes — at once on a weekday plan, and on a floating plan
  *    when the plan moves on, so an unfinished day stays on the same exercises;
- *  - skips, extras and the pause are cleared.
+ *  - skips, extras, the pause and a skip or nudge of the whole day are cleared.
  */
 export function rollOver(input: TodayPlanInput): Rollover {
   const { program, dayState, rotation, date } = input;

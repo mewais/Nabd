@@ -1,5 +1,7 @@
-// How where nudging stands is said: in the top bar, on Today, in the toast.
+// How where nudging stands is said — in the top bar, on Today, in the toast —
+// and what the controls that change it say.
 
+import type { TodayChoice } from "@nabd/domain";
 import { formatClock, weekdayOf, weekdayShort } from "@nabd/domain";
 import type { NudgeStatus } from "./policy";
 
@@ -18,6 +20,8 @@ export function describeNudge(status: NudgeStatus): string {
       return `Next nudge at ${formatClock(status.at)}, sooner if you go idle`;
     case "off_hours":
       return `Quiet until ${resumes(status)}`;
+    case "skipped":
+      return "Skipped today";
     case "paused":
       return "Nudges paused";
     case "nothing_left":
@@ -36,3 +40,14 @@ export interface NudgeSummary {
 export function summarizeNudge(status: NudgeStatus): NudgeSummary {
   return { line: describeNudge(status), due: status.state === "due" };
 }
+
+/** What the control that pauses nudges says: "Pause nudges", or "Resume nudges" while paused. */
+export const pauseName = (paused: boolean): string => (paused ? "Resume nudges" : "Pause nudges");
+
+/** What the control for each of today's choices says. */
+export const TODAY_CHOICE_NAMES: Record<TodayChoice, string> = {
+  skip: "Skip today",
+  resume: "Resume today",
+  nudge: "Nudge me today",
+  stop: "Stop nudging today",
+};

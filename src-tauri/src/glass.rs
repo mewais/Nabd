@@ -23,7 +23,7 @@ pub fn set<R: Runtime>(app: &AppHandle<R>, enabled: bool) -> AppResult<()> {
 
 fn native(effect: GlassEffect) -> Effect {
     match effect {
-        GlassEffect::Mica => Effect::Mica,
+        GlassEffect::Acrylic => Effect::Acrylic,
         GlassEffect::Blur => Effect::Blur,
         GlassEffect::Vibrancy => Effect::UnderWindowBackground,
     }

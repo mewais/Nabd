@@ -2,6 +2,7 @@
 // a session stands in the calendar.
 
 import { APP_NAME, addDays, monthAndDay, parseDateKey, weekdayName, weekdayOf } from "@nabd/domain";
+import { TODAY_CHOICE_NAMES } from "@nabd/nudge";
 import type { TodayPlan } from "@nabd/scheduling";
 
 /** What the dialogs' components say. */
@@ -18,6 +19,7 @@ export const WORDS = {
   // The nudge toast.
   letsGo: "Let's go",
   snooze: "Snooze",
+  skipToday: TODAY_CHOICE_NAMES.skip,
   // The library.
   searchPlaceholder: "Search exercises…",
   search: "Search exercises",

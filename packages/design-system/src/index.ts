@@ -87,6 +87,7 @@ export { Toggle } from "./toggle";
 export { Segmented } from "./segmented";
 export type { SegOption } from "./segmented";
 export { Dropdown } from "./dropdown";
+export { MenuButton } from "./menu-button";
 export { TextInput } from "./text-input";
 export { NumberField } from "./number-field";
 export { TitleInput } from "./title-input";

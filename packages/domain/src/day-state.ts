@@ -41,9 +41,27 @@ const CarriedVisitSchema = z.object({
 export type CarriedVisit = z.infer<typeof CarriedVisitSchema>;
 
 /**
+ * How today was changed for the day, whatever the workday settings say:
+ *  - `skipped`: a workday without the workout (a day at the office). Nothing is
+ *    nudged and nothing is owed until tomorrow, as on a day off;
+ *  - `nudged`: nudging asked for on a day off, or outside the workday hours.
+ *    It owes its plan like a workday.
+ */
+export const DayOverrideSchema = z.enum(["skipped", "nudged"]);
+export type DayOverride = z.infer<typeof DayOverrideSchema>;
+
+/**
+ * The one change to today's nudging that the moment offers besides a pause:
+ * to skip the day or resume it, or, on a day off or outside the workday hours,
+ * to have it nudged or stop that.
+ */
+export type TodayChoice = "skip" | "resume" | "nudge" | "stop";
+
+/**
  * The per-day bookkeeping that is not derivable from program + history: which
  * floating day we are on and what it already got done on earlier days, what
- * was skipped, what was added ad hoc, and whether nudges are paused for the day.
+ * was skipped, what was added ad hoc, whether nudges are paused for the day,
+ * and whether the day itself was skipped or nudged on.
  */
 export const DayStateSchema = z.object({
   date: z.string(),
@@ -64,10 +82,12 @@ export const DayStateSchema = z.object({
   extras: z.array(ExtraItemSchema).default([]),
   /** Nudges are paused until the day ends. */
   paused: z.boolean().default(false),
+  /** How the day was changed for the day, until it ends; null: the workday settings decide. */
+  override: DayOverrideSchema.nullable().default(null),
 });
 export type DayState = z.infer<typeof DayStateSchema>;
 
-/** A day with nothing skipped, added or paused, on floating day `dayId` (continuing `carried`). */
+/** A day with nothing skipped, added, paused or overridden, on floating day `dayId` (continuing `carried`). */
 export const freshDayState = (
   date: Date,
   dayId: string | null = null,
@@ -79,6 +99,7 @@ export const freshDayState = (
   skipped: [],
   extras: [],
   paused: false,
+  override: null,
 });
 
 /** How a finished training day went (drives completion analytics). */
@@ -86,6 +107,11 @@ const DayRecordSchema = z.object({
   date: z.string(),
   planned: z.number().int().nonnegative(),
   done: z.number().int().nonnegative(),
+  /**
+   * The day was optional — a workday skipped, or a day off nudged on: a set
+   * on it adds to the streak, and none does not end it. Absent otherwise.
+   */
+  optional: z.literal(true).optional(),
 });
 export type DayRecord = z.infer<typeof DayRecordSchema>;
 export const DayLogSchema = z.array(DayRecordSchema);

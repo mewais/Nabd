@@ -122,16 +122,40 @@ describe("buildShellVM · theme, glass, pause and notice", () => {
     expect(vm.topBar).toMatchObject({ glassAvailable: false, glass: false });
   });
 
-  it("reports whether nudges are paused", () => {
-    expect(shellVM({ paused: false }).topBar.pause).toEqual({
-      paused: false,
+  it("words the nudge menu: where nudging stands on its button, the pause and today's choice in it", () => {
+    expect(shellVM({ paused: false, today: "skip" }).topBar.nudgeMenu).toEqual({
       label: "Pause",
-      title: "Pause nudges",
+      changed: false,
+      items: [
+        { value: "togglePause", label: "Pause nudges" },
+        { value: "toggleSkipToday", label: "Skip today" },
+      ],
     });
-    expect(shellVM({ paused: true }).topBar.pause).toEqual({
-      paused: true,
-      label: "Resume",
-      title: "Resume nudges",
+    expect(shellVM({ paused: true, today: "nudge" }).topBar.nudgeMenu).toEqual({
+      label: "Paused",
+      changed: true,
+      items: [
+        { value: "togglePause", label: "Resume nudges" },
+        { value: "toggleNudgeToday", label: "Nudge me today" },
+      ],
+    });
+  });
+
+  it("names the change in force on the menu's button, a skip before a pause before a nudge", () => {
+    const label = (paused: boolean, today: ShellInput["today"]): string =>
+      shellVM({ paused, today }).topBar.nudgeMenu.label;
+    expect(label(false, "resume")).toBe("Skipped");
+    expect(label(true, "resume")).toBe("Skipped");
+    expect(label(false, "stop")).toBe("Nudging");
+    expect(label(true, "stop")).toBe("Paused");
+    expect(label(false, "nudge")).toBe("Pause");
+    expect(shellVM({ today: "stop" }).topBar.nudgeMenu.items[1]).toEqual({
+      value: "toggleNudgeToday",
+      label: "Stop nudging today",
+    });
+    expect(shellVM({ today: "resume" }).topBar.nudgeMenu.items[1]).toEqual({
+      value: "toggleSkipToday",
+      label: "Resume today",
     });
   });
 

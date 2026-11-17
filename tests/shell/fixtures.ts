@@ -10,6 +10,7 @@ function shellInput(overrides: Partial<ShellInput> = {}): ShellInput {
     settings: { theme: "dark", glass: false, opacity: 0.7 },
     capabilities: { glass: true },
     paused: false,
+    today: "skip",
     nudge: { state: "waiting", at: nov(16, 11, 20), idleFrom: nov(16, 10, 45) },
     sets: { done: 3, planned: 12 },
     notice: null,
@@ -25,6 +26,8 @@ export function shellActions(): ShellActions {
   return {
     navigate: vi.fn(),
     togglePause: vi.fn(),
+    toggleSkipToday: vi.fn(),
+    toggleNudgeToday: vi.fn(),
     setTheme: vi.fn(),
     setGlass: vi.fn(),
     openSettings: vi.fn(),

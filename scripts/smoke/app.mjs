@@ -216,6 +216,9 @@ export const database = {
 /** Every weekday a workday, so the day the test runs on is one. */
 export const EVERY_DAY = { workDays: [0, 1, 2, 3, 4, 5, 6] };
 
+/** A workday from midnight to midnight, so the hour the test runs at is within it. */
+export const ALL_DAY = { workStart: 0, workEnd: 1440 };
+
 /** A floating plan of one day, "Desk", of `sets` working sets of push-ups (plan item "row"). */
 export function plan(sets) {
   const set = { type: "working", amount: 8, upTo: 12 };
@@ -252,15 +255,17 @@ export function dayState(fields) {
     skipped: [],
     extras: [],
     paused: false,
+    override: null,
     ...fields,
   });
 }
 
-/** The tray menu on the smoke plan of one set, nothing logged: [label, enabled]. */
+/** The tray menu on the smoke plan of one set, nothing logged, within the workday: [label, enabled]. */
 export const TRAY_MENU = [
   ["Next: Push-Up · 0/1 sets", false],
   ["Start next set", true],
   ["Pause nudges", true],
+  ["Skip today", true],
   ["Open Nabd", true],
   ["Quit", true],
 ];

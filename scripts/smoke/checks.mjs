@@ -1,12 +1,13 @@
 // What the smoke test expects of the real app on every desktop: each check
 // launches the binary under test, looks at its window, its database and its
-// login entry, and ends it again. The README (Smoke test) lists the checks and
+// login entry, and ends it again. docs/smoke-test.md lists the checks and
 // which platform runs which; runner.mjs runs them.
 
 import { appendFileSync } from "node:fs";
 import process from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
 import {
+  ALL_DAY,
   AUTOSTART_ARG,
   EVERY_DAY,
   SCHEMA_VERSION,
@@ -192,9 +193,13 @@ export const CHECKS = {
     await ctx.end(app);
   },
 
-  /** The tray menu (where the platform lets it be read): where the day stands, and its four entries. */
+  /**
+   * The tray menu (where the platform lets it be read): where the day stands,
+   * and its five entries. The workday is all day, so whenever the check runs
+   * the day can be skipped (outside it, the entry would offer to nudge it).
+   */
   async "tray-menu"(ctx) {
-    database.startDay(1);
+    database.startDay(1, ALL_DAY);
     const app = ctx.launch();
     await ctx.screen.expectShown(true, 60_000);
     await eventually("the frontend storing today's day state", dayIsToday, { found: storedDay });
@@ -212,7 +217,9 @@ export const CHECKS = {
       async () => (await menu()) === JSON.stringify(TRAY_MENU),
       { found: menu },
     );
-    ok("the tray menu: where the day stands, Start next set, Pause nudges, Open Nabd, Quit");
+    ok(
+      "the tray menu: where the day stands, Start next set, Pause nudges, Skip today, Open Nabd, Quit",
+    );
     await ctx.quitFromTray();
     await expectCleanExit(app, "the tray's Quit");
     ok("the tray's Quit ends the app, with the database sound");

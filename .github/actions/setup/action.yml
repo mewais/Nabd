@@ -1,0 +1,38 @@
+name: Set up the toolchain
+description: >
+  The build and lint toolchain of this runner's platform (system packages on Linux,
+  pnpm, Node, Rust with its caches) and the workspace's dependencies. CI and Release
+  both start with it, after checking the repository out.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Linux build and lint dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          build-essential curl wget file pkg-config libssl-dev \
+          libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev rpm shellcheck
+
+    # No `version`: it comes from `packageManager` in package.json.
+    - uses: pnpm/action-setup@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+
+    # macOS builds one universal binary (Apple silicon and Intel), from both Rust targets.
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+        targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: src-tauri
+
+    - shell: bash
+      run: pnpm install --frozen-lockfile

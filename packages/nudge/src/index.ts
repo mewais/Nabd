@@ -3,5 +3,5 @@
 
 export { NudgePolicy, SNOOZE_MINUTES } from "./policy";
 export type { NudgeContext, NudgeStatus, PendingNudge } from "./policy";
-export { describeNudge, summarizeNudge } from "./wording";
+export { TODAY_CHOICE_NAMES, describeNudge, pauseName, summarizeNudge } from "./wording";
 export type { NudgeSummary } from "./wording";

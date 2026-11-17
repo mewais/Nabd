@@ -1,5 +1,6 @@
 import {
   AppDataSchema,
+  DayLogSchema,
   DayStateSchema,
   EMPTY_DRAFT,
   ExerciseSchema,
@@ -70,7 +71,7 @@ describe("persisted shapes tolerate older data", () => {
     expect(LoggedSetSchema.safeParse({ ...oldSet, session: 13 }).success).toBe(false);
   });
 
-  it("an old day state (with stored slots) reads as a clean, unpaused day", () => {
+  it("an old day state (with stored slots) reads as a clean, unpaused day, neither skipped nor nudged on", () => {
     expect(DayStateSchema.parse({ date: "2026-11-16", slots: [{}] })).toEqual({
       date: "2026-11-16",
       dayId: null,
@@ -78,7 +79,13 @@ describe("persisted shapes tolerate older data", () => {
       skipped: [],
       extras: [],
       paused: false,
+      override: null,
     });
+  });
+
+  it("a day on record before optional days reads as one that was not optional", () => {
+    const record = { date: "2026-11-16", planned: 4, done: 2 };
+    expect(DayLogSchema.parse([record])).toEqual([record]);
   });
 
   it("a day state keeps what an unfinished day has behind it, as whole counts of each kind", () => {

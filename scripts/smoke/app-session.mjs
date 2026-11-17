@@ -35,10 +35,11 @@ const NUDGE = {
 
 /** The acts every platform with a WebDriver has: each `(app, screen, binary)`. */
 const ACTS = {
-  /** Pause nudges, then log the one set of the smoke plan. */
+  /** Pause nudges from the top bar's nudge menu, then log the one set of the smoke plan. */
   async "log-a-set"(app) {
     await app.press("Pause");
-    await app.waitForButton("Resume");
+    await app.press("Pause nudges");
+    await app.waitForButton("Paused");
     await logOneSet(app);
     await untilStored(
       "the set in the history table",
@@ -56,7 +57,7 @@ const ACTS = {
   async "after-restart"(app) {
     await app.waitForText("1/1 set");
     await app.waitForText("Day complete");
-    await app.waitForButton("Resume");
+    await app.waitForButton("Paused");
   },
 
   /** Settings → "Open at startup", flipped once (the caller looks at the login entry). */

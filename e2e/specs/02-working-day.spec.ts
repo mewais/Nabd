@@ -130,12 +130,13 @@ test("after a set: the next nudge, an idle moment, Snooze and Pause", async ({ a
   // The demo backend lives in the page, so a reload starts over: that Pause
   // survives a restart is checked against the real binary (scripts/smoke).
   await test.step("Pause silences nudges until Resume", async () => {
-    await shell.button("Pause").click();
+    await shell.fromNudgeMenu("Pause nudges");
     await expect(shell.status).toContainText("Nudges paused");
+    await expect(shell.nudgeMenu).toHaveText("Paused");
     await app.idleFor(120);
     await expect(shell.status).toContainText("12:20");
     await expect(shell.toast).toBeHidden();
-    await shell.button("Resume").click();
+    await shell.fromNudgeMenu("Resume nudges");
     await app.tick();
     await expect(shell.toast).toContainText("Interval's up");
   });

@@ -3,7 +3,12 @@ import type { StoreApi } from "zustand";
 import type { IpcClient, TrayAction } from "@nabd/ipc-client";
 import { buildToastVM } from "@nabd/modals";
 import type { NabdStore } from "@nabd/store";
-import { selectNudgeStatus, selectPendingNudge, selectTodayPlan } from "@nabd/store";
+import {
+  selectNudgeStatus,
+  selectPendingNudge,
+  selectTodayChoice,
+  selectTodayPlan,
+} from "@nabd/store";
 import { startAppClock } from "./app-clock";
 import { useNabd } from "./store-context";
 
@@ -29,6 +34,8 @@ function useClock(store: StoreApi<NabdStore>, client: IpcClient): void {
 const TRAY_HANDLERS: Record<TrayAction, (store: NabdStore) => void> = {
   start: (store) => store.openSession(),
   pause: (store) => store.togglePause(),
+  skip: (store) => store.toggleSkipToday(),
+  nudge: (store) => store.toggleNudgeToday(),
   // Like Settings → Quit: whatever waits to be saved is saved first.
   quit: (store) => store.quit(),
 };
@@ -46,12 +53,13 @@ function useTray(store: StoreApi<NabdStore>, client: IpcClient): void {
 
   const plan = useNabd(selectTodayPlan);
   const paused = useNabd((s) => s.dayState.paused);
+  const today = useNabd(selectTodayChoice);
   const nextExercise = plan.nextItem?.exercise.name ?? null;
   const done = plan.plannedSetsDone;
   const total = plan.setsPlanned;
   useEffect(() => {
-    bestEffort("update the tray", client.updateTray({ nextExercise, done, total, paused }));
-  }, [client, nextExercise, done, total, paused]);
+    bestEffort("update the tray", client.updateTray({ nextExercise, done, total, paused, today }));
+  }, [client, nextExercise, done, total, paused, today]);
 }
 
 /**

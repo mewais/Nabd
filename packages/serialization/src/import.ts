@@ -17,6 +17,9 @@ type ImportResult = { ok: true; data: AppData } | { ok: false; errors: string[] 
  *    a logged set knows the session it belongs to, which for a set without
  *    one is its own date, and the settings hold the user's body weight,
  *    unknown unless given — both defaults taken on validation.
+ *  - v5 → v6: the day state says whether the day was skipped or nudged on
+ *    (`override`), and a day on record whether it was optional (`optional`);
+ *    without them a day is neither, the defaults taken on validation.
  *  - Whatever the version, the values an export shares with what the app
  *    stores are upgraded the same way ({@link upgradeStored}).
  */

@@ -69,7 +69,7 @@ for (const theme of THEMES) {
       await logger.done();
       await today.rowButton(raise.name, "Skip").click();
       await shot("today-mixed-rows");
-      await page.getByRole("button", { name: "Pause", exact: true }).click();
+      await shell.fromNudgeMenu("Pause nudges");
       await shot("today-paused");
     });
 

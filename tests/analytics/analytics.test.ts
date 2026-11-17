@@ -44,6 +44,21 @@ describe("TrainingStats", () => {
       expect(weekdays([...missedThursday, ...setsOn(16, 1)])).toBe(2);
       expect(weekdays([...setsOn(15, 1)])).toBe(0);
     });
+    describe("over an optional day", () => {
+      const optional = (day: number): DayRecord => ({ ...record(day, 0, 0), optional: true });
+      const withLog = (history: LoggedSet[], dayLog: DayRecord[]) =>
+        stats(history, dayLog, DEFAULT_SETTINGS.workDays).streak();
+
+      it("is not broken by a skipped workday, nor extended by it", () => {
+        const skippedThursday = [9, 10, 11, 13].flatMap((day) => setsOn(day, 1));
+        expect(withLog([...skippedThursday, ...setsOn(16, 1)], [optional(12)])).toBe(5);
+      });
+
+      it("is extended by a set on a skipped workday or on a day off nudged on", () => {
+        const weekend = [...lastWeek, ...setsOn(14, 1), ...setsOn(16, 1)];
+        expect(withLog(weekend, [optional(12), optional(14)])).toBe(7);
+      });
+    });
   });
 
   it("counts sets in the Monday–Sunday week and active days in the last 30", () => {

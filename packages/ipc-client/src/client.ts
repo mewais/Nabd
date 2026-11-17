@@ -8,6 +8,7 @@ import type {
   Program,
   RotationState,
   Settings,
+  TodayChoice,
 } from "@nabd/domain";
 
 /** The singleton blobs the backend stores, by key. */
@@ -46,13 +47,16 @@ interface TrayState {
   done: number;
   total: number;
   paused: boolean;
+  /** The entry under the pause: skip or resume the day, or nudge it or stop. */
+  today: TodayChoice;
 }
 
 /**
  * Tray menu actions the backend forwards to the frontend, which owns the
  * workout state — and, for "quit", whatever is still waiting to be saved.
+ * "skip" skips the day or resumes it, "nudge" nudges it or stops.
  */
-export type TrayAction = "start" | "pause" | "quit";
+export type TrayAction = "start" | "pause" | "skip" | "nudge" | "quit";
 
 /** An OS notification. */
 interface DesktopNotification {

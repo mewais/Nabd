@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { Chip, ChipGroup, Dropdown, Segmented } from "@nabd/design-system";
+import { Chip, ChipGroup, Dropdown, MenuButton, Segmented } from "@nabd/design-system";
 import type { Option } from "@nabd/design-system";
 import { choose, click, press } from "./render";
 
@@ -189,6 +189,93 @@ describe("Dropdown", () => {
     // @ts-expect-error "stone" is not one of the option keys
     const invalid = <Dropdown<Unit> options={UNITS} value="stone" onChange={vi.fn()} />;
     expect(invalid).toBeTruthy();
+  });
+});
+
+describe("MenuButton", () => {
+  type Action = "pause" | "skip" | "stop";
+  const ACTIONS: Option<Action>[] = [
+    { value: "pause", label: "Pause nudges" },
+    { value: "skip", label: "Skip today" },
+    { value: "stop", label: "Stop nudging today" },
+  ];
+  const setup = (): ReturnType<typeof vi.fn> => {
+    const onPick = vi.fn();
+    render(<MenuButton label="Pause" items={ACTIONS} onPick={onPick} />);
+    return onPick;
+  };
+  const trigger = (): HTMLElement => screen.getByRole("button", { name: "Pause" });
+  const item = (name: string): HTMLElement => screen.getByRole("menuitem", { name });
+  const key = (keyName: string): boolean =>
+    fireEvent.keyDown(document.activeElement as Element, { key: keyName });
+
+  it("is a button that says its label and opens a menu, closed until clicked", () => {
+    setup();
+    expect(trigger()).toHaveAttribute("aria-haspopup", "menu");
+    expect(trigger()).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("opens a menu of its actions, none of them selected, focus on the first", () => {
+    setup();
+    fireEvent.click(trigger());
+    expect(trigger()).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("menu", { name: "Pause" })).toBeInTheDocument();
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
+      "Pause nudges",
+      "Skip today",
+      "Stop nudging today",
+    ]);
+    expect(screen.queryByRole("option")).toBeNull();
+    expect(item("Skip today")).not.toHaveAttribute("aria-selected");
+    expect(item("Pause nudges")).toHaveFocus();
+  });
+
+  it("runs the picked action, closes, and gives focus back to the button", () => {
+    const onPick = setup();
+    fireEvent.click(trigger());
+    fireEvent.click(item("Skip today"));
+    expect(onPick.mock.calls).toEqual([["skip"]]);
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(trigger()).toHaveFocus();
+  });
+
+  it("opens on ↓ from the keyboard, moves with the arrows and letters, and picks with Enter", () => {
+    const onPick = setup();
+    trigger().focus();
+    key("ArrowDown");
+    expect(item("Pause nudges")).toHaveFocus();
+    key("ArrowDown");
+    expect(item("Skip today")).toHaveFocus();
+    key("ArrowUp");
+    key("ArrowUp");
+    expect(item("Stop nudging today")).toHaveFocus();
+    key("p");
+    expect(item("Pause nudges")).toHaveFocus();
+    key("End");
+    // Enter on a focused button is its click.
+    fireEvent.click(document.activeElement as Element);
+    expect(onPick.mock.calls).toEqual([["stop"]]);
+  });
+
+  it("closes on Escape without acting, and gives focus back to the button", () => {
+    const onPick = setup();
+    fireEvent.click(trigger());
+    press("Escape");
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(onPick).not.toHaveBeenCalled();
+    expect(trigger()).toHaveFocus();
+  });
+
+  it("closes on a click outside, or on the button again, without acting", () => {
+    const onPick = setup();
+    fireEvent.click(trigger());
+    fireEvent.click(document.querySelector("[data-dropdown-backdrop]") as Element);
+    expect(screen.queryByRole("menu")).toBeNull();
+    fireEvent.click(trigger());
+    fireEvent.click(trigger());
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(onPick).not.toHaveBeenCalled();
   });
 });
 

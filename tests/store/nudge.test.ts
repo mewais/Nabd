@@ -1,9 +1,9 @@
 import type { BootSnapshot } from "@nabd/ipc-client";
-import { selectNudgeStatus, selectPendingNudge } from "@nabd/store";
+import { selectNudgeStatus, selectPendingNudge, selectStats, selectTodayChoice } from "@nabd/store";
 import { nov } from "../support/builders";
 import { CATALOG } from "../support/exercises";
 import { catalogBenchRow, catalogFlyRow, catalogPushPull } from "../support/programs";
-import { boot, fakeBackend } from "./fixtures";
+import { benchSet, boot, fakeBackend } from "./fixtures";
 
 describe("nudging", () => {
   // Workday 09:00–18:00, timer 50 min, minimum gap 15 min, idle after 30 s.
@@ -210,5 +210,76 @@ describe("nudging", () => {
     sameDay.advanceTo(nov(17, 9, 30));
     expect(sameDay.get().dayState.paused).toBe(false);
     expect(sameDay.data.dayState).toMatchObject({ paused: false });
+  });
+
+  it("Skip today silences the day, still takes sets, survives a restart, and ends with the day", async () => {
+    const first = await bootAt(9);
+    first.advanceTo(nov(16, 9, 50));
+    expect(selectTodayChoice(first.get())).toBe("skip");
+    first.get().toggleSkipToday();
+    expect(selectPendingNudge(first.get())).toBeNull();
+    expect(selectNudgeStatus(first.get())).toEqual({ state: "skipped" });
+    expect(first.data.dayState).toMatchObject({ override: "skipped" });
+
+    // A set logged by hand counts, and the day stays quiet.
+    await first.log(catalogBenchRow.id, 1);
+    first.get().closeSession();
+    first.advanceTo(nov(16, 15), 999);
+    expect(first.get().history).toHaveLength(1);
+    expect(selectNudgeStatus(first.get())).toEqual({ state: "skipped" });
+
+    const sameDay = await boot({}, { client: first.client, data: first.data }, nov(16, 16));
+    expect(selectNudgeStatus(sameDay.get())).toEqual({ state: "skipped" });
+    expect(selectTodayChoice(sameDay.get())).toBe("resume");
+
+    // The floating day comes back tomorrow, with the set it got, and is nudged as usual.
+    const dayId = sameDay.plan().dayId;
+    sameDay.advanceTo(nov(17, 9, 30));
+    expect(sameDay.data.dayState).toMatchObject({ override: null });
+    expect(sameDay.plan().dayId).toBe(dayId);
+    expect(sameDay.plan().item(catalogBenchRow.id)?.done).toBe(1);
+    expect(selectNudgeStatus(sameDay.get()).state).toBe("waiting");
+  });
+
+  it("a skip taken back the same day nudges again by the usual rules", async () => {
+    const app = await bootAt(9);
+    app.get().toggleSkipToday();
+    app.advanceTo(nov(16, 9, 50));
+    expect(selectPendingNudge(app.get())).toBeNull();
+    app.get().toggleSkipToday();
+    app.advanceTo(nov(16, 9, 51));
+    expect(selectNudgeStatus(app.get())).toEqual({ state: "due", reason: "timer" });
+  });
+
+  it("Nudge me today on a day off counts from when it is switched on, until it is stopped", async () => {
+    const app = await bootAt(11, 0);
+    app.advanceTo(nov(21, 11));
+    expect(selectNudgeStatus(app.get()).state).toBe("off_hours");
+    expect(selectTodayChoice(app.get())).toBe("nudge");
+
+    app.advanceTo(nov(21, 14));
+    app.get().toggleNudgeToday();
+    expect(selectTodayChoice(app.get())).toBe("stop");
+    expect(selectNudgeStatus(app.get())).toMatchObject({ state: "waiting", at: nov(21, 14, 50) });
+    app.advanceTo(nov(21, 14, 50));
+    expect(selectPendingNudge(app.get())).toMatchObject({ reason: "timer" });
+
+    app.get().toggleNudgeToday();
+    expect(selectPendingNudge(app.get())).toBeNull();
+    expect(selectNudgeStatus(app.get()).state).toBe("off_hours");
+  });
+
+  it("a day off nudged on adds to the streak once a set is logged, and never carries to the next day", async () => {
+    const friday = benchSet(nov(20, 10));
+    const app = await boot({ program: catalogPushPull, history: [friday] }, undefined, nov(21, 10));
+    expect(selectStats(app.get()).streak()).toBe(1);
+    app.get().toggleNudgeToday();
+    await app.log(catalogBenchRow.id, 1);
+    expect(selectStats(app.get()).streak()).toBe(2);
+
+    app.advanceTo(nov(22, 10));
+    expect(app.get().dayState.override).toBeNull();
+    expect(selectNudgeStatus(app.get()).state).toBe("off_hours");
+    expect(selectStats(app.get()).streak()).toBe(2);
   });
 });

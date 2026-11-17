@@ -9,7 +9,7 @@ import { LoggedSetSchema } from "./history";
 export const APP_NAME = "Nabd";
 
 /** Current export/import envelope version. */
-export const APPDATA_VERSION = 5;
+export const APPDATA_VERSION = 6;
 
 /**
  * The export/import snapshot. Most fields are optional on import so partial or

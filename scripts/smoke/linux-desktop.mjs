@@ -83,7 +83,7 @@ export const notifications = {
   },
 };
 
-/** Fail unless a notification says what the README promises for a nudge. */
+/** Fail unless a notification says what docs/smoke-test.md promises for a nudge. */
 export function expectNudge(notification, body) {
   const expected = { title: "Time to move", body };
   if (notification.title !== expected.title || notification.body !== expected.body) {

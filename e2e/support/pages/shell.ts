@@ -16,6 +16,14 @@ export class Shell extends PageRegion {
   readonly notice: Locator;
   readonly letsGo: Locator;
   readonly snooze: Locator;
+  /** The nudge toast's Skip today (the top bar's nudge menu has one of its own). */
+  readonly skipFromToast: Locator;
+  /**
+   * The top bar's one nudge control: a menu button that says where nudging
+   * stands ("Pause", "Paused", "Skipped", "Nudging") and holds the pause and
+   * today's choice (see {@link fromNudgeMenu}).
+   */
+  readonly nudgeMenu: Locator;
   /** The root element, which carries the theme. */
   readonly root: Locator;
 
@@ -34,7 +42,26 @@ export class Shell extends PageRegion {
       .filter({ has: page.getByRole("button", { name: "Dismiss" }) });
     this.letsGo = page.getByRole("button", { name: "Let's go" });
     this.snooze = page.getByRole("button", { name: "Snooze", exact: true });
+    // The innermost box holding both the toast's words and its buttons: the toast itself.
+    this.skipFromToast = page
+      .locator("div")
+      .filter({ has: this.toast })
+      .filter({ has: this.snooze })
+      .last()
+      .getByRole("button", { name: "Skip today", exact: true });
+    this.nudgeMenu = this.topBar.locator('button[aria-haspopup="menu"]');
     this.root = page.locator("[data-theme]");
+  }
+
+  /** An entry of the open nudge menu: "Pause nudges", "Skip today", "Nudge me today"… */
+  menuItem(name: string): Locator {
+    return this.topBar.getByRole("menu").getByRole("menuitem", { name, exact: true });
+  }
+
+  /** Open the nudge menu and pick `item` from it, which closes it. */
+  async fromNudgeMenu(item: string): Promise<void> {
+    await this.nudgeMenu.click();
+    await this.menuItem(item).click();
   }
 
   async goTo(screen: Screen): Promise<void> {

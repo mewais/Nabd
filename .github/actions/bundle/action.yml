@@ -1,0 +1,54 @@
+name: Bundle the app
+description: >
+  `pnpm tauri build` with this runner's platform's bundles, as CI proves them and Release
+  ships them; outputs the bundle folder and the installers in it.
+
+outputs:
+  dir:
+    description: The folder Tauri writes the bundles to.
+    value: ${{ steps.platform.outputs.dir }}
+  files:
+    description: The installers built, one path per line.
+    value: ${{ steps.installers.outputs.files }}
+
+runs:
+  using: composite
+  steps:
+    # Linux: AppImage needs FUSE and downloads tooling at build time; deb + rpm are enough.
+    # Windows: every bundle the config targets (NSIS .exe and .msi).
+    # macOS: app + dmg of the universal binary, unsigned: the config names no signing
+    # identity, so none is needed.
+    - id: platform
+      shell: bash
+      run: |
+        case "$RUNNER_OS" in
+          Linux)
+            echo "args=--bundles deb,rpm" >> "$GITHUB_OUTPUT"
+            echo "dir=src-tauri/target/release/bundle" >> "$GITHUB_OUTPUT" ;;
+          Windows)
+            echo "args=" >> "$GITHUB_OUTPUT"
+            echo "dir=src-tauri/target/release/bundle" >> "$GITHUB_OUTPUT" ;;
+          macOS)
+            echo "args=--target universal-apple-darwin" >> "$GITHUB_OUTPUT"
+            echo "dir=src-tauri/target/universal-apple-darwin/release/bundle" >> "$GITHUB_OUTPUT" ;;
+        esac
+
+    - shell: bash
+      run: pnpm tauri build ${{ steps.platform.outputs.args }}
+
+    - id: installers
+      shell: bash
+      env:
+        DIR: ${{ steps.platform.outputs.dir }}
+      run: |
+        shopt -s nullglob
+        files=("$DIR"/deb/*.deb "$DIR"/rpm/*.rpm "$DIR"/nsis/*.exe "$DIR"/msi/*.msi "$DIR"/dmg/*.dmg)
+        if [ ${#files[@]} -eq 0 ]; then
+          echo "::error::no installers in $DIR"
+          exit 1
+        fi
+        {
+          echo "files<<EOF"
+          printf '%s\n' "${files[@]}"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"

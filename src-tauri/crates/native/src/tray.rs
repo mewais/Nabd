@@ -11,12 +11,45 @@ pub struct TrayState {
     pub done: u32,
     pub total: u32,
     pub paused: bool,
+    /// The entry under Pause: what can be changed about today's nudging.
+    pub today: TodayChoice,
 }
 
-/// Tray menu entry ids (Start, Pause and Quit are also the action names sent to the frontend).
+/// The one change to today's nudging the moment offers besides a pause.
+#[derive(Clone, Copy, PartialEq, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TodayChoice {
+    /// Skip a workday: no nudges until tomorrow.
+    #[default]
+    Skip,
+    /// Take back today's skip.
+    Resume,
+    /// Have a day off, or the hours outside the workday, nudged.
+    Nudge,
+    /// Stop nudging a day that was nudged on.
+    Stop,
+}
+
+impl TodayChoice {
+    /// The entry's id (Skip and Resume toggle one thing, Nudge and Stop
+    /// another) and its label.
+    fn entry(self) -> (&'static str, &'static str) {
+        match self {
+            Self::Skip => (TRAY_SKIP, "Skip today"),
+            Self::Resume => (TRAY_SKIP, "Resume today"),
+            Self::Nudge => (TRAY_NUDGE, "Nudge me today"),
+            Self::Stop => (TRAY_NUDGE, "Stop nudging today"),
+        }
+    }
+}
+
+/// Tray menu entry ids (Start, Pause, Skip, Nudge and Quit are also the
+/// action names sent to the frontend).
 pub const TRAY_STATUS: &str = "status";
 pub const TRAY_START: &str = "start";
 pub const TRAY_PAUSE: &str = "pause";
+pub const TRAY_SKIP: &str = "skip";
+pub const TRAY_NUDGE: &str = "nudge";
 pub const TRAY_OPEN: &str = "open";
 pub const TRAY_QUIT: &str = "quit";
 
@@ -49,7 +82,8 @@ impl TrayState {
         }
     }
 
-    /// The tray menu: status line, Start next set, Pause/Resume, Open
+    /// The tray menu: status line, Start next set, Pause/Resume, today's
+    /// choice (Skip/Resume today, or Nudge me/Stop nudging today), Open
     /// `app_name`, Quit.
     pub fn items(&self, app_name: &str) -> Vec<TrayItem> {
         let pause = if self.paused {
@@ -57,10 +91,12 @@ impl TrayState {
         } else {
             "Pause nudges"
         };
+        let (today, today_label) = self.today.entry();
         vec![
             TrayItem::new(TRAY_STATUS, &self.status_line(), false),
             TrayItem::new(TRAY_START, "Start next set", self.next_exercise.is_some()),
             TrayItem::new(TRAY_PAUSE, pause, true),
+            TrayItem::new(today, today_label, true),
             TrayItem::new(TRAY_OPEN, &format!("Open {app_name}"), true),
             TrayItem::new(TRAY_QUIT, "Quit", true),
         ]
@@ -79,6 +115,8 @@ impl TrayState {
 pub enum TrayCommand {
     Start,
     Pause,
+    Skip,
+    Nudge,
     Open,
     Quit,
 }
@@ -89,14 +127,17 @@ impl TrayCommand {
         match id {
             TRAY_START => Some(Self::Start),
             TRAY_PAUSE => Some(Self::Pause),
+            TRAY_SKIP => Some(Self::Skip),
+            TRAY_NUDGE => Some(Self::Nudge),
             TRAY_OPEN => Some(Self::Open),
             TRAY_QUIT => Some(Self::Quit),
             _ => None,
         }
     }
 
-    /// Start opens the logger and Open is the window itself; pausing from the
-    /// tray is meant to be done without the app coming forward.
+    /// Start opens the logger and Open is the window itself; pausing,
+    /// skipping or nudging from the tray is meant to be done without the app
+    /// coming forward.
     pub fn reveals_window(self) -> bool {
         matches!(self, Self::Start | Self::Open)
     }
@@ -108,6 +149,8 @@ impl TrayCommand {
         match self {
             Self::Start => Some(TRAY_START),
             Self::Pause => Some(TRAY_PAUSE),
+            Self::Skip => Some(TRAY_SKIP),
+            Self::Nudge => Some(TRAY_NUDGE),
             Self::Quit => Some(TRAY_QUIT),
             Self::Open => None,
         }

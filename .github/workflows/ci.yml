@@ -20,20 +20,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            # AppImage needs FUSE and downloads tooling at build time; deb + rpm are enough to prove the bundle.
-            bundle-args: --bundles deb,rpm
-            bundle-dir: src-tauri/target/release/bundle
-          - os: windows-latest
-            bundle-args: ""
-            bundle-dir: src-tauri/target/release/bundle
-          # app + dmg, unsigned: the config names no signing identity, so none is needed. One
-          # universal binary (Apple silicon and Intel), built from both Rust targets.
-          - os: macos-latest
-            bundle-args: --target universal-apple-darwin
-            bundle-dir: src-tauri/target/universal-apple-darwin/release/bundle
-            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+        # What each platform bundles is in .github/actions/bundle.
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       # Prettier checks line endings, so the Windows checkout must not rewrite them.
       - name: Keep LF line endings
@@ -41,34 +29,10 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Install Linux build and lint dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential curl wget file pkg-config libssl-dev \
-            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev rpm shellcheck
+      - uses: ./.github/actions/setup
 
-      # No `version`: it comes from `packageManager` in package.json.
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-          targets: ${{ matrix.rust-targets }}
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
-      - run: pnpm install --frozen-lockfile
       - run: pnpm lint
-      # The smoke kit's shell scripts run on Linux only, where shellcheck is installed above.
+      # The smoke kit's shell scripts run on Linux only, where the setup action installs shellcheck.
       - run: pnpm lint:sh
         if: runner.os == 'Linux'
       - run: pnpm lint:rust
@@ -80,13 +44,14 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
 
-      - run: pnpm tauri build ${{ matrix.bundle-args }}
+      - id: bundle
+        uses: ./.github/actions/bundle
 
       # The binary just built, in a throw-away X session (and a headless sway, for
-      # Wayland) with a fake tray host and notification service; the README
-      # (Smoke test) says what it checks. The WebDriver for WebKitGTK is
-      # `webkit2gtk-driver` up to Ubuntu 24.04 and `webkitgtk-webdriver` after;
-      # whichever this image has is installed.
+      # Wayland) with a fake tray host and notification service; docs/smoke-test.md
+      # says what it checks. The WebDriver for WebKitGTK is `webkit2gtk-driver` up
+      # to Ubuntu 24.04 and `webkitgtk-webdriver` after; whichever this image has
+      # is installed.
       - name: Smoke-test the app (Linux)
         if: runner.os == 'Linux'
         timeout-minutes: 20
@@ -125,16 +90,11 @@ jobs:
         if: runner.os == 'macOS'
         timeout-minutes: 15
         env:
-          NABD_SMOKE_BINARY: ${{ matrix.bundle-dir }}/macos/Nabd.app
+          NABD_SMOKE_BINARY: ${{ steps.bundle.outputs.dir }}/macos/Nabd.app
         run: pnpm smoke:macos
 
       - uses: actions/upload-artifact@v4
         with:
           name: nabd-${{ runner.os }}
-          path: |
-            ${{ matrix.bundle-dir }}/deb/*.deb
-            ${{ matrix.bundle-dir }}/rpm/*.rpm
-            ${{ matrix.bundle-dir }}/nsis/*.exe
-            ${{ matrix.bundle-dir }}/msi/*.msi
-            ${{ matrix.bundle-dir }}/dmg/*.dmg
+          path: ${{ steps.bundle.outputs.files }}
           if-no-files-found: error

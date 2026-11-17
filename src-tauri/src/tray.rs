@@ -13,8 +13,8 @@ use crate::error::AppResult;
 use crate::window;
 
 const TRAY_ID: &str = "nabd-tray";
-/// Carries a tray action ("start" | "pause" | "quit") to the frontend, which
-/// owns the workout state.
+/// Carries a tray action ("start" | "pause" | "skip" | "nudge" | "quit") to
+/// the frontend, which owns the workout state.
 const TRAY_ACTION_EVENT: &str = "tray-action";
 /// How long the frontend gets to answer a tray Quit — it saves what is still
 /// waiting to be saved, then asks to exit — before the app exits regardless.

@@ -3,6 +3,7 @@ import {
   COMMON_WORDS,
   Icon,
   IconButton,
+  MenuButton,
   Row,
   Segmented,
   Spacer,
@@ -33,14 +34,13 @@ export function TopBar({ vm, actions }: TopBarProps): JSX.Element {
           value={vm.theme}
           onChange={actions.setTheme}
         />
-        <Button
-          variant={vm.pause.paused ? "primary" : "secondary"}
+        <MenuButton
+          label={vm.nudgeMenu.label}
+          items={vm.nudgeMenu.items}
+          variant={vm.nudgeMenu.changed ? "primary" : "secondary"}
           size="sm"
-          title={vm.pause.title}
-          onClick={actions.togglePause}
-        >
-          {vm.pause.label}
-        </Button>
+          onPick={(action) => actions[action]()}
+        />
         {vm.glassAvailable && (
           <Button
             variant={vm.glass ? "primary" : "secondary"}

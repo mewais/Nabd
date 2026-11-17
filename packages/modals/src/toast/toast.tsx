@@ -36,6 +36,9 @@ export function Toast({ vm, actions }: ToastProps): JSX.Element {
           <Button variant="ghost" size="md" onClick={actions.snooze}>
             {WORDS.snooze}
           </Button>
+          <Button variant="ghost" size="md" onClick={actions.skipToday}>
+            {WORDS.skipToday}
+          </Button>
         </Row>
       </Stack>
     </ToastFrame>

@@ -84,13 +84,13 @@ test("a floating day that was skipped outright is not owed, and Pause ends with 
   await app.launch(at("16:00"), { program: pushPull });
   await today.rowButton(dumbbellBench.name, "Skip").click();
   await expect(today.screen).toContainText("Everything skipped today");
-  await shell.button("Pause").click();
-  await expect(shell.button("Resume")).toBeVisible();
+  await shell.fromNudgeMenu("Pause nudges");
+  await expect(shell.nudgeMenu).toHaveText("Paused");
 
   await app.sleepUntil(at("00:01", TUESDAY));
 
   await expect(today.row(curl.name)).toContainText("0/2 sets");
-  await expect(shell.button("Pause")).toBeVisible();
+  await expect(shell.nudgeMenu).toHaveText("Pause");
 });
 
 test("a weekday plan has rest days, on which anything can still be logged", async ({ app }) => {

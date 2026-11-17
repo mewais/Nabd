@@ -1,6 +1,9 @@
 //! The tray menu model and its tooltip.
 
-use nabd_native::{TrayItem, TrayState, TRAY_OPEN, TRAY_PAUSE, TRAY_START, TRAY_STATUS};
+use nabd_native::{
+    TodayChoice, TrayCommand, TrayItem, TrayState, TRAY_NUDGE, TRAY_OPEN, TRAY_PAUSE, TRAY_SKIP,
+    TRAY_START, TRAY_STATUS,
+};
 
 const APP: &str = "Nabd";
 
@@ -10,6 +13,7 @@ fn tray_state(next_exercise: Option<&str>, done: u32, total: u32) -> TrayState {
         done,
         total,
         paused: false,
+        today: TodayChoice::Skip,
     }
 }
 
@@ -57,6 +61,44 @@ fn the_pause_entry_offers_to_pause_while_running_and_to_resume_while_paused() {
     let running = tray_state(Some("Squat"), 1, 4);
     assert_eq!(item(&running, TRAY_PAUSE).label, "Pause nudges");
     assert_eq!(item(&paused(running), TRAY_PAUSE).label, "Resume nudges");
+}
+
+#[test]
+fn under_pause_the_menu_offers_todays_one_choice_and_each_pair_is_one_entry_that_toggles() {
+    let labels = |today| {
+        let state = TrayState {
+            today,
+            ..tray_state(Some("Squat"), 1, 4)
+        };
+        let ids: Vec<_> = state.items(APP).iter().map(|item| item.id).collect();
+        let entry = state.items(APP).into_iter().nth(3).unwrap();
+        (ids.len(), entry.id, entry.label)
+    };
+    assert_eq!(
+        labels(TodayChoice::Skip),
+        (6, TRAY_SKIP, "Skip today".into())
+    );
+    assert_eq!(
+        labels(TodayChoice::Resume),
+        (6, TRAY_SKIP, "Resume today".into())
+    );
+    assert_eq!(
+        labels(TodayChoice::Nudge),
+        (6, TRAY_NUDGE, "Nudge me today".into())
+    );
+    assert_eq!(
+        labels(TodayChoice::Stop),
+        (6, TRAY_NUDGE, "Stop nudging today".into())
+    );
+}
+
+#[test]
+fn skipping_and_nudging_are_the_frontends_to_carry_out_and_leave_the_window_hidden() {
+    for id in [TRAY_SKIP, TRAY_NUDGE] {
+        let command = TrayCommand::from_id(id).unwrap();
+        assert_eq!(command.frontend_action(), Some(id));
+        assert!(!command.reveals_window());
+    }
 }
 
 #[test]

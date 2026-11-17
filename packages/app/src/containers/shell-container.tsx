@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { AppShell, buildShellVM } from "@nabd/shell";
 import type { ShellActions } from "@nabd/shell";
 import type { NabdActions } from "@nabd/store";
-import { selectNudgeStatus, selectTodayPlan } from "@nabd/store";
+import { selectNudgeStatus, selectTodayChoice, selectTodayPlan } from "@nabd/store";
 import { useNabd } from "../store-context";
 import { APP_VERSION } from "../version";
 import { useBoundActions, useViewModel } from "./wiring";
@@ -15,6 +15,8 @@ interface ShellContainerProps {
 const bind = (store: NabdActions): ShellActions => ({
   navigate: store.showScreen,
   togglePause: store.togglePause,
+  toggleSkipToday: store.toggleSkipToday,
+  toggleNudgeToday: store.toggleNudgeToday,
   setTheme: (theme) => store.updateSettings({ theme }),
   setGlass: (glass) => store.updateSettings({ glass }),
   openSettings: store.openSettings,
@@ -28,6 +30,7 @@ export function ShellContainer({ children }: ShellContainerProps): JSX.Element {
   const settings = useNabd((s) => s.settings);
   const capabilities = useNabd((s) => s.capabilities);
   const paused = useNabd((s) => s.dayState.paused);
+  const today = useNabd(selectTodayChoice);
   const nudge = useNabd(selectNudgeStatus);
   const done = useNabd((s) => selectTodayPlan(s).plannedSetsDone);
   const planned = useNabd((s) => selectTodayPlan(s).setsPlanned);
@@ -35,7 +38,7 @@ export function ShellContainer({ children }: ShellContainerProps): JSX.Element {
   const vm = useViewModel(
     ({ done, planned, ...input }) =>
       buildShellVM({ ...input, sets: { done, planned }, version: APP_VERSION }),
-    { now, screen, settings, capabilities, paused, nudge, done, planned, notice },
+    { now, screen, settings, capabilities, paused, today, nudge, done, planned, notice },
   );
   const actions = useBoundActions(bind);
   return (

@@ -1,7 +1,7 @@
 // Derived data. Everything here is computed from state, never stored, so it
 // cannot go stale; each selector is memoized on the state it reads.
 
-import type { Coverage, DayRecord } from "@nabd/domain";
+import type { Coverage, DayRecord, TodayChoice } from "@nabd/domain";
 import { addDays, firstDay, loadStepKg, parseDateKey } from "@nabd/domain";
 import { ExerciseLibrary } from "@nabd/dataset";
 import { TodayPlan } from "@nabd/scheduling";
@@ -84,9 +84,10 @@ export const selectPolicyStatus = memoize(
       s.snoozedUntil,
       s.idleSeconds,
       s.dayState.paused,
+      s.dayState.override,
       selectTodayPlan(s).hasWork,
     ] as const,
-  (settings, now, lastSetAt, activeSince, snoozedUntil, idleSeconds, paused, hasWork) =>
+  (settings, now, lastSetAt, activeSince, snoozedUntil, idleSeconds, paused, override, hasWork) =>
     new NudgePolicy(settings).evaluate({
       now,
       lastSetAt,
@@ -94,8 +95,15 @@ export const selectPolicyStatus = memoize(
       snoozedUntil,
       idleSeconds,
       paused,
+      override,
       hasWork,
     }),
+);
+
+/** What can be changed about today's nudging besides a pause: skip or resume the day, nudge it or stop. */
+export const selectTodayChoice = memoize(
+  (s) => [s.settings, s.now, s.dayState.override] as const,
+  (settings, now, override): TodayChoice => new NudgePolicy(settings).todayChoice(now, override),
 );
 
 /**

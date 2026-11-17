@@ -2,8 +2,10 @@
 
 use serde::Serialize;
 
-/// The first Windows 11 build; Mica does not exist before it.
-const WINDOWS_11_BUILD: u32 = 22_000;
+/// The first Windows build whose compositor draws acrylic behind a window
+/// itself (Windows 11 22H2 and its previews). Before it acrylic can only be
+/// had through an undocumented call that lags badly while the window moves.
+const SYSTEM_ACRYLIC_BUILD: u32 = 22_523;
 
 /// The supported platforms, each with the fact native features turn on.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -23,9 +25,11 @@ pub enum Platform {
 /// The one backdrop effect used for the translucent ("Glass") window.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum GlassEffect {
-    /// Windows 11's wallpaper-tinted backdrop.
-    Mica,
-    /// Windows 10's blur-behind (acrylic there lags badly while resizing).
+    /// Windows 11's frosted acrylic: what is behind the window shows through,
+    /// blurred. (Not Mica: Mica is opaque, a wash of the wallpaper's colour,
+    /// so the window would not look translucent at all.)
+    Acrylic,
+    /// Plain blur-behind, for Windows builds without the compositor's acrylic.
     Blur,
     /// macOS's under-window vibrancy: a blur that follows the light or dark
     /// appearance by itself, which suits a window whose tint the frontend paints.
@@ -38,7 +42,7 @@ impl Platform {
     /// just show the sharp desktop).
     pub fn glass_effect(self) -> Option<GlassEffect> {
         match self {
-            Self::Windows { build } if build >= WINDOWS_11_BUILD => Some(GlassEffect::Mica),
+            Self::Windows { build } if build >= SYSTEM_ACRYLIC_BUILD => Some(GlassEffect::Acrylic),
             Self::Windows { .. } => Some(GlassEffect::Blur),
             Self::MacOs => Some(GlassEffect::Vibrancy),
             Self::Linux { .. } => None,

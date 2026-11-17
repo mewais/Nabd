@@ -15,7 +15,11 @@ describe("Toast", () => {
     notification: { title: "Time to move", body: "Bench Press — You've gone quiet" },
   };
   const setup = () => {
-    const actions: ToastActions = { start: vi.fn(), snooze: vi.fn() };
+    const actions: ToastActions = {
+      start: vi.fn(),
+      snooze: vi.fn(),
+      skipToday: vi.fn(),
+    };
     render(<Toast vm={VM} actions={actions} />);
     return actions;
   };
@@ -41,5 +45,13 @@ describe("Toast", () => {
     fireEvent.click(screen.getByRole("button", { name: "Snooze" }));
     expect(actions.snooze).toHaveBeenCalledTimes(1);
     expect(actions.start).not.toHaveBeenCalled();
+  });
+
+  it("Skip today skips the day, neither starting nor snoozing", () => {
+    const actions = setup();
+    fireEvent.click(screen.getByRole("button", { name: "Skip today" }));
+    expect(actions.skipToday).toHaveBeenCalledTimes(1);
+    expect(actions.start).not.toHaveBeenCalled();
+    expect(actions.snooze).not.toHaveBeenCalled();
   });
 });
