@@ -1,7 +1,7 @@
 // The dependency direction between the workspace packages, as ESLint rules:
 // for each package, the `@nabd/*` packages (and frameworks) it must not import.
-// The README draws the same graph (`layerDiagram`, which tests/scripts checks
-// it against).
+// docs/architecture.md draws the same graph (`layerDiagram`, which
+// tests/scripts checks it against).
 //
 // Every package, and the tests, import a package through its entry point
 // `@nabd/<name>` only: never a file inside it, by alias (`@nabd/x/src/…`) or
@@ -124,7 +124,7 @@ function grouped(names) {
 }
 
 /**
- * The graph as the README draws it: one line per package, or group of
+ * The graph as docs/architecture.md draws it: one line per package, or group of
  * packages that import alike, with what it may import.
  */
 export function layerDiagram() {

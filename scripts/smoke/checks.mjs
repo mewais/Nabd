@@ -1,6 +1,6 @@
 // What the smoke test expects of the real app on every desktop: each check
 // launches the binary under test, looks at its window, its database and its
-// login entry, and ends it again. The README (Smoke test) lists the checks and
+// login entry, and ends it again. docs/smoke-test.md lists the checks and
 // which platform runs which; runner.mjs runs them.
 
 import { appendFileSync } from "node:fs";

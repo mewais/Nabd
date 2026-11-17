@@ -4,7 +4,7 @@
 #
 #   scripts/smoke/linux-smoke.sh            (or: pnpm smoke:linux)
 #
-# What it checks, and what it needs installed, is in the README (Smoke test).
+# What it checks, and what it needs installed, is in docs/smoke-test.md.
 # Exits non-zero, naming the failed expectation, as soon as one fails; every
 # process it started and its temporary directory are gone when it returns.
 #

@@ -1,4 +1,4 @@
-// The local ESLint rules (scripts/eslint/), so that what the README says they
+// The local ESLint rules (scripts/eslint/), so that what the docs say they
 // refuse stays refused.
 
 import { readFileSync } from "node:fs";
@@ -146,9 +146,12 @@ describe("the packages' manifests", () => {
   );
 });
 
-describe("the README", () => {
+describe("docs/architecture.md", () => {
   it("draws the dependency graph the layer rules enforce", () => {
-    const readme = readFileSync(new URL("../../README.md", import.meta.url), "utf8");
-    expect(readme).toContain(layerDiagram());
+    const architecture = readFileSync(
+      new URL("../../docs/architecture.md", import.meta.url),
+      "utf8",
+    );
+    expect(architecture).toContain(layerDiagram());
   });
 });

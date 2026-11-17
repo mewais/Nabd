@@ -18,6 +18,7 @@
     "test:cov": "vitest run --coverage",
     "e2e": "playwright test --config e2e --trace off",
     "visual": "playwright test --config e2e/visual --trace off --project screens",
+    "screenshots": "playwright test --config e2e/visual --trace off --project readme",
     "smoke:linux": "bash scripts/smoke/linux-smoke.sh",
     "smoke:windows": "node scripts/smoke/windows-smoke.mjs",
     "smoke:macos": "node scripts/smoke/macos-smoke.mjs",

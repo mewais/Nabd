@@ -3,7 +3,7 @@
 //
 //   node scripts/smoke/macos-smoke.mjs        (or: pnpm smoke:macos)
 //
-// What it checks is in the README (Smoke test). It runs a copy of the .app
+// What it checks is in docs/smoke-test.md. It runs a copy of the .app
 // with HOME in a temporary folder, so the account's own data and login entry
 // are left alone.
 //

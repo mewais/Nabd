@@ -1,4 +1,4 @@
-// How `pnpm visual` photographs a state: where the pictures go, in which
+// How the capture photographs a state: where the pictures go, in which
 // themes, and the app on its sample data.
 
 import { mkdirSync } from "node:fs";
@@ -9,19 +9,31 @@ import { DEFAULT_SETTINGS } from "@nabd/domain";
 import type { App } from "../support/app";
 import { MONDAY, at, dayAfter } from "../support/time";
 
-const OUT = process.env.OUT ?? fileURLToPath(new URL("./shots/", import.meta.url));
-mkdirSync(OUT, { recursive: true });
+const here = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
+
+/** Where `pnpm visual` saves every state (OUT=<dir> for elsewhere). */
+const SHOTS = process.env.OUT ?? here("./shots/");
+/** Where `pnpm screenshots` saves the pictures the README shows (OUT=<dir> for elsewhere). */
+export const README_SHOTS = process.env.OUT ?? here("../../docs/screenshots/");
 
 export const THEMES = ["dark", "light"] as const;
-type ThemeName = (typeof THEMES)[number];
+export type ThemeName = (typeof THEMES)[number];
 
-/** Saves `<theme>-<name>.png` once the clock has moved past every transition. */
-export function shooter(page: Page, theme: ThemeName): (name: string) => Promise<void> {
+/** Saves `<dir>/<name>.png` once the clock has moved past every transition. */
+export function shooterInto(page: Page, dir: string): (name: string) => Promise<void> {
+  mkdirSync(dir, { recursive: true });
   return async (name: string): Promise<void> => {
     await page.clock.runFor(700);
-    await page.screenshot({ path: join(OUT, `${theme}-${name}.png`), animations: "disabled" });
+    await page.screenshot({ path: join(dir, `${name}.png`), animations: "disabled" });
   };
 }
+
+/** Saves `<theme>-<name>.png` into `pnpm visual`'s folder. */
+export function shooter(page: Page, theme: ThemeName): (name: string) => Promise<void> {
+  const shoot = shooterInto(page, SHOTS);
+  return (name: string) => shoot(`${theme}-${name}`);
+}
+
 export const settingsOf = (theme: ThemeName): typeof DEFAULT_SETTINGS => ({
   ...DEFAULT_SETTINGS,
   theme,

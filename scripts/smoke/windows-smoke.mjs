@@ -4,7 +4,7 @@
 //
 //   node scripts/smoke/windows-smoke.mjs        (or: pnpm smoke:windows)
 //
-// What it checks is in the README (Smoke test). The known-folder paths cannot
+// What it checks is in docs/smoke-test.md. The known-folder paths cannot
 // be redirected, so the test uses this account's own: it refuses to run where
 // Nabd already has data or a login entry (outside CI) unless
 // NABD_SMOKE_RESET=1 lets it delete them first, and removes what it created

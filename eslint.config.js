@@ -66,11 +66,11 @@ export default [
     },
     settings: { react: { version: "detect" } },
   },
-  // The dependency direction between packages (README, "Layout").
+  // The dependency direction between packages (docs/architecture.md).
   ...layerRules,
-  // Styling lives in the design system (README, "Layout").
+  // Styling lives in the design system (docs/development.md).
   stylingRules(RESTRICTED_SYNTAX),
-  // Words live in wording modules and view-models, not in components (README, "Layout").
+  // Words live in wording modules and view-models, not in components (docs/development.md).
   wordingRules,
   {
     // Node scripts: the globals Node gives every module that they use.
