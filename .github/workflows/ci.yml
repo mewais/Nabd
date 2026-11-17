@@ -83,7 +83,7 @@ jobs:
       # notification service: the checks every platform shares (window, SQLite,
       # restart, single instance, the login entry, a set logged through WebDriver,
       # Settings → Quit), then the tray menu, nudge notifications and idle time
-      # (X11, and Wayland under a headless sway). scripts/smoke/linux-smoke.sh says
+      # (X11, and Wayland under a headless sway). The README (Smoke test) says
       # what each part checks. The WebDriver for WebKitGTK is `webkit2gtk-driver`
       # up to Ubuntu 24.04 and `webkitgtk-webdriver` after; whichever this image
       # has is installed.
