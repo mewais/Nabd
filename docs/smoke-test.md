@@ -57,6 +57,9 @@ This list is the one description of the checks:
   back; Settings → Quit Nabd ending the app with the set on disk and no rollback journal
   left; the clock beat carrying the system's idle seconds, which grow with nobody at the
   computer and are reset by synthetic input.
+- `close-after-nudge` (WebDriver, with a tray) — the window hidden in the tray, brought back
+  by a nudge (an idle moment once a 1-minute minimum gap after the launch is over), the day
+  skipped from the top bar's nudge menu, then closed: it hides again.
 
 A failure names the check and the expectation, what was found instead, the windows seen, the
 data folder, the stored day, the login entry and the last lines of every launch's output.
@@ -70,7 +73,7 @@ in), `quit-from-settings`. Then fakes of a StatusNotifier host and of the notifi
 service join the session (`desktop_bus.py`, over D-Bus, the way a panel and a notification
 daemon would): the entry's command line starts the app hidden though the tray came up two
 seconds after it, and the tray's Open shows it; `tray-menu`, `close-to-tray`,
-`login-launch`; Pause and Resume, Skip today and Resume today from the tray stored without
+`login-launch`, `close-after-nudge`; Pause and Resume, Skip today and Resume today from the tray stored without
 showing the window; Open
 showing it; Start next set showing it with the logger open; with the page's script stuck, so
 that the window cannot answer, the tray's Quit still ending the app once its three seconds
@@ -96,9 +99,9 @@ major version (the runner's own, else downloaded from Microsoft; `NABD_SMOKE_EDG
 names one; it reaches the app's WebView2 over the DevTools port, which the test opens
 with WebView2's `AdditionalBrowserArguments` policy for `nabd.exe` and removes again, since
 WebView2 ignores the environment variable `msedgedriver` asks with once the app passes
-arguments of its own) `logged-set`, `autostart-setting`, `quit-from-settings` and `system-idle`
+arguments of its own) `logged-set`, `autostart-setting`, `quit-from-settings`, `system-idle`
 (`GetLastInputInfo`, reset by keys sent with `SendInput`; where the session takes no
-synthetic input, that half is reported as skipped). An app the test launched itself has no
+synthetic input, that half is reported as skipped) and `close-after-nudge`. An app the test launched itself has no
 window it can ask to quit, so it is ended without being asked (nothing waits to be saved).
 
 **macOS** (`macos-smoke.mjs`) runs a copy of the `.app` with `HOME` in a temporary folder,

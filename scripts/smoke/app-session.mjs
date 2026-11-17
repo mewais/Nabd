@@ -33,6 +33,13 @@ const NUDGE = {
   idle: "Push-Up — You've gone quiet",
 };
 
+/**
+ * How long a launch with a 1-minute minimum gap and a 5-second idle moment
+ * (the check's settings) takes to nudge someone who is away: the gap, then
+ * the beat that sees it over.
+ */
+const NUDGE_WITHIN_MS = 90_000;
+
 /** The acts every platform with a WebDriver has: each `(app, screen, binary)`. */
 const ACTS = {
   /** Pause nudges from the top bar's nudge menu, then log the one set of the smoke plan. */
@@ -84,6 +91,30 @@ const ACTS = {
     await app.waitForText("Day complete");
     await app.pressNamed("Settings");
     await app.pressToQuit("Quit Nabd");
+  },
+
+  /**
+   * The window hidden in the tray, brought back by a nudge (an idle moment a
+   * minute after the launch), the day skipped from the top bar's nudge menu,
+   * then closed: it hides again. (On Windows the nudge shows the window behind
+   * the back of Tauri's window library, which then took a close for a window
+   * already hidden and left it on screen.)
+   */
+  async "close-after-nudge"(app, screen) {
+    await app.waitForButton("Start set");
+    screen.close();
+    await screen.expectShown(false);
+    await screen.expectShown(true, NUDGE_WITHIN_MS);
+    await app.press("Pause");
+    await app.press("Skip today");
+    await app.waitForButton("Skipped");
+    await untilStored(
+      "the skip in the stored day state",
+      () => database.stored("dayState", ".override") === "skipped",
+      () => database.value("dayState"),
+    );
+    screen.close();
+    await screen.expectShown(false);
   },
 
   /**

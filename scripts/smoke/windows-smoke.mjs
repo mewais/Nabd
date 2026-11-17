@@ -234,6 +234,7 @@ await runEntry({
     "autostart-setting",
     "quit-from-settings",
     "system-idle",
+    "close-after-nudge",
   ],
   async cleanup() {
     await driver?.stop();

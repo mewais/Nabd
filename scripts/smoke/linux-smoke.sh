@@ -233,7 +233,7 @@ inside() {
   if webdriver_installed; then start_webdriver; fi
   checks first-launch restart second-instance logged-set autostart-setting quit-from-settings
   login_launch
-  checks --tray tray-menu close-to-tray login-launch
+  checks --tray tray-menu close-to-tray login-launch close-after-nudge
   tray_actions
   timer_nudges
   idle_nudges

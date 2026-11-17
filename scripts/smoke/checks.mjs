@@ -238,6 +238,18 @@ export const CHECKS = {
     ok("after a restart the window still counts the set and nudges are still paused");
   },
 
+  /**
+   * (WebDriver, with a tray) A window a nudge brought back from the tray, on a
+   * day then skipped, hides again when it is closed. Nobody is at the computer,
+   * so an idle moment nudges once the minimum gap after the launch is over.
+   */
+  async "close-after-nudge"(ctx) {
+    if (!needsWebDriver(ctx, "closing a window a nudge brought back")) return;
+    database.startDay(1, { ...ALL_DAY, interval: 60, minGap: 1, idleNudge: 5 });
+    await runAct("close-after-nudge", ctx.driverUrl, ctx.binary);
+    ok("a window a nudge brought back, on a day then skipped, hides again when closed");
+  },
+
   /** (WebDriver) Settings → "Open at startup" removes the login entry and writes it back. */
   async "autostart-setting"(ctx) {
     if (!needsWebDriver(ctx, 'Settings → "Open at startup"')) return;
