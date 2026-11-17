@@ -137,9 +137,11 @@ login_launch() {
   expect_exit "the tray's Quit"
 }
 
-# Pause and Resume from the tray, with the window hidden; Open; Start next set.
+# Pause and Resume, Skip today and Resume today from the tray, with the window
+# hidden; Open; Start next set. The workday is all day, so the day can be skipped
+# whenever this runs.
 tray_actions() {
-  start_day 1
+  start_day 1 '{"workStart":0,"workEnd":1440}'
   launch_shown
   wait_for 15 tray_menu_has "Pause nudges" || fail "tray menu: $(tray menu | paste -sd '|')"
   x11 close
@@ -153,6 +155,15 @@ tray_actions() {
   wait_for 10 tray_menu_has "Pause nudges" || fail "the tray's Resume did not turn into Pause"
   expect "pause in the database" "$(stored dayState .paused)" 0
   ok "the tray's Pause and Resume are stored, and leave the window hidden"
+
+  tray click "Skip today"
+  wait_for 10 tray_menu_has "Resume today" || fail "the tray's Skip today did not turn into Resume today"
+  expect "the skip in the database" "$(stored dayState .override)" skipped
+  x11 shown && fail "the tray's Skip today showed the window"
+  tray click "Resume today"
+  wait_for 10 tray_menu_has "Skip today" || fail "the tray's Resume today did not turn into Skip today"
+  expect "the skip in the database" "$(stored dayState .override)" ""
+  ok "the tray's Skip today and Resume today are stored, and leave the window hidden"
 
   tray click "Open Nabd"
   wait_for 10 x11 shown || fail "the tray's Open did not show the window"

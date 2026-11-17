@@ -111,6 +111,18 @@ describe("AppShell · top bar", () => {
     expect(actions.togglePause).toHaveBeenCalledTimes(1);
   });
 
+  it("skips the day, or nudges a quiet one, from the control beside Pause", () => {
+    const workday = renderShell({ today: "skip" });
+    fireEvent.click(button("Skip today"));
+    expect(workday.actions.toggleSkipToday).toHaveBeenCalledTimes(1);
+    workday.unmount();
+
+    const quiet = renderShell({ today: "nudge" });
+    fireEvent.click(button("Nudge me today"));
+    expect(quiet.actions.toggleNudgeToday).toHaveBeenCalledTimes(1);
+    expect(quiet.actions.toggleSkipToday).not.toHaveBeenCalled();
+  });
+
   it("marks the active theme and reports the one that is picked", () => {
     const { actions } = renderShell();
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();

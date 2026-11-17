@@ -135,6 +135,29 @@ describe("buildShellVM · theme, glass, pause and notice", () => {
     });
   });
 
+  it("offers today's one choice, and says which toggle it is and whether it is in force", () => {
+    expect(shellVM({ today: "skip" }).topBar.today).toEqual({
+      label: "Skip today",
+      on: false,
+      toggles: "skip",
+    });
+    expect(shellVM({ today: "resume" }).topBar.today).toEqual({
+      label: "Resume today",
+      on: true,
+      toggles: "skip",
+    });
+    expect(shellVM({ today: "nudge" }).topBar.today).toEqual({
+      label: "Nudge me today",
+      on: false,
+      toggles: "nudge",
+    });
+    expect(shellVM({ today: "stop" }).topBar.today).toEqual({
+      label: "Stop nudging today",
+      on: true,
+      toggles: "nudge",
+    });
+  });
+
   it("carries the app notice, or none", () => {
     expect(shellVM().notice).toBeNull();
     const notice = { kind: "error", text: "Could not save" } as const;

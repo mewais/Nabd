@@ -46,7 +46,7 @@ next time.
 
 - **Nudges** after a set interval, or earlier at an idle moment (no keyboard or mouse),
   but never sooner than a minimum gap, and only within your workday. Pause or snooze
-  whenever you like.
+  whenever you like, skip a day you will not train, or have a day off nudged after all.
 - **Plans** that are fixed (set exercises per day) or cycled (each day trains muscles,
   rotating through a pool of exercises), pinned to weekdays or floating Day 1, 2, 3…
 - **Smart progression:** double progression against your last session, a step back after

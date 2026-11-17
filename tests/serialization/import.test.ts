@@ -134,6 +134,22 @@ describe("parseImport", () => {
     });
   });
 
+  it("reads a version 5 export as a day neither skipped nor nudged on, with no optional days", () => {
+    const result = parseImport(
+      JSON.stringify({
+        app: "Nabd",
+        version: 5,
+        dayState: { date: "2026-11-16", paused: true },
+        dayLog: [{ date: "2026-11-13", planned: 4, done: 4 }],
+      }),
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      data: { version: APPDATA_VERSION, dayState: { paused: true, override: null } },
+    });
+    expect(result.ok && result.data.dayLog).toEqual([{ date: "2026-11-13", planned: 4, done: 4 }]);
+  });
+
   it("keeps what an unfinished day has behind it, and refuses a count that is not one", () => {
     const withCarried = (working: unknown) =>
       parseImport(

@@ -15,7 +15,10 @@ export function nudgeSlice({ get, set, now, save }: StoreContext): NudgeSlice {
     toggleSkipToday: () => {
       const { dayState } = get();
       set({ pendingNudge: null });
-      save("dayState", { ...dayState, override: dayState.override === "skipped" ? null : "skipped" });
+      save("dayState", {
+        ...dayState,
+        override: dayState.override === "skipped" ? null : "skipped",
+      });
     },
 
     toggleNudgeToday: () => {

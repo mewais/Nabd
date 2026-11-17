@@ -24,7 +24,9 @@
   switch of schedule left behind; an edit that leaves the plan on the visit's day keeps
   the visit, even when it takes away all the visit carried. A skip is for its
   calendar day only, so a skipped exercise is owed again; the one exception is that a
-  day owing nothing moves on. Each calendar day puts on record what it owed and what it
+  day owing nothing moves on. Skipping the whole day (Skip today, see Nudges) makes it a
+  day off for the plan: a floating day comes back the next day as it was, and a weekday
+  plan's day is on record as skipped, not missed. Each calendar day puts on record what it owed and what it
   did, so a day that came back for two sets and did them is 100%; a day it merely waited
   on is not a missed day, so only days with a set (or that the plan moved on from) count
   toward completion — the day the plan is on counts from the start, so Progress shows
@@ -63,24 +65,39 @@
   one (or closes) rather than linger.
 - **Nudges** follow four rules:
   1. never outside the workday or on a day off (Settings → Workday: the hours, and the
-     weekdays worked — Monday to Friday unless changed, whatever the schedule), while
-     paused, or with nothing left. The top bar says when nudging resumes ("Quiet until
-     Mon 09:00"). A day off still shows its plan and takes sets, but owes nothing until a
-     set is logged on it: an idle one neither moves a floating plan on nor counts toward
-     completion. The streak counts workdays only: a workday with a set adds to it, a
-     workday without one ends it, and days off do neither, so a Monday-to-Friday streak
-     carries over the weekend;
+     weekdays worked — Monday to Friday unless changed, whatever the schedule), on a day
+     skipped, while paused, or with nothing left. The top bar says when nudging resumes
+     ("Quiet until Mon 09:00"). A day off still shows its plan and takes sets, but owes
+     nothing until a set is logged on it: an idle one neither moves a floating plan on nor
+     counts toward completion. The streak counts workdays only: a workday with a set adds
+     to it, a workday without one ends it, and days off do neither, so a Monday-to-Friday
+     streak carries over the weekend;
+     - **Skip today** (top bar, the nudge toast, the tray), for a day you will not train
+       (the office, a coffee shop): no nudges until tomorrow, and the top bar says
+       "Skipped today". The day is a day off for the plan: a floating day comes back
+       tomorrow as it was, with what is still owed, and a weekday plan's day neither
+       counts against completion nor ends the streak. Sets can still be logged on it:
+       they count as on any day (toward the plan, completion and the streak), and the day
+       stays quiet. Resume today takes the skip back the same day; it ends by itself at
+       midnight;
+     - **Nudge me today**, offered instead while it is quiet for a day off or outside the
+       workday hours (a one-off Saturday, a late start): nudges then follow rules 2–4,
+       counting from the moment it was switched on as from a launch, until the day owes
+       nothing more or ends — never into the next day — and Stop nudging today turns it
+       off again. A day off so nudged owes its plan like a workday; it adds to the streak
+       if a set is logged on it, and never ends it;
   2. the timer nudges _interval_ minutes after your last set (before the first one: after
-     the workday started, the app was launched, or the plan got work — whichever is latest);
+     the workday started, the app was launched, the plan got work, or a quiet day was
+     nudged on — whichever is latest);
   3. an idle moment (no keyboard or mouse for the _idle moment_ setting) nudges earlier —
      but never sooner than the _minimum gap_ after the moment the timer counts from (your
      last set, or before the first one, the start of the workday, the launch or the plan
      getting work), so the start of the day is never an idle moment;
   4. Snooze silences both for five minutes.
 
-  A nudge that has fired stays up until it is answered — Start, Snooze, a logged set or
-  Pause — even if you touch the mouse in the meantime, and the sets you then log are
-  recorded as prompted by it. It shows as a toast in the window and, when the window is
+  A nudge that has fired stays up until it is answered — Start, Snooze, Skip today, a
+  logged set or Pause — even if you touch the mouse in the meantime, and the sets you
+  then log are recorded as prompted by it. It shows as a toast in the window and, when the window is
   not in front, as a desktop notification (a window hidden in the tray is also brought
   back, unfocused). Left unanswered, the notification is repeated once per _interval_
   for as long as the window stays out of focus; the toast stays the one toast. Opening
@@ -123,9 +140,10 @@
   — a single-arm variant of two-handed equipment becomes the two-handed exercise, and
   an unfinished day's carried sets, once counts of its first prescribed sets, become
   the kinds of those sets, of the exercise each was on (export format 5). What came
-  later (the workdays, export format 4; a set's session and your body weight, format 5)
-  is simply missing from older data and takes its default: Monday to Friday, each set
-  the session of its own date, body weight not given. The database follows suit
+  later (the workdays, export format 4; a set's session and your body weight, format 5;
+  a day skipped or nudged on, and the days on record that were, format 6) is simply
+  missing from older data and takes its default: Monday to Friday, each set the session
+  of its own date, body weight not given, no day skipped or nudged on. The database follows suit
   (schema version 3 gives every stored set the session of its date).
 - **Suggestions** use double progression against the same set of your previous session
   (a session is one visit to a program day: a calendar day's sets, or all the sets of
@@ -163,7 +181,7 @@
   for the reps the plan asks. An exercise's trend has one unit: an estimated 1RM (of the
   load alone) once it has ever been loaded, reps or seconds until then.
 - **Closing the window hides it**; the app lives in the tray, on a Mac the menu bar (Start next set, Pause
-  nudges, Open, Quit). Where the desktop shows no tray icons (stock GNOME without the
+  nudges, Skip today — or, on a quiet day, Nudge me today — Open, Quit). Where the desktop shows no tray icons (stock GNOME without the
   AppIndicator extension) the app is an ordinary window: closing it quits (once the
   window has saved what is pending), and "Start minimized" is switched off in
   Settings, which says why. Settings → Quit Nabd always exits.

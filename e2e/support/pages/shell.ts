@@ -16,6 +16,8 @@ export class Shell extends PageRegion {
   readonly notice: Locator;
   readonly letsGo: Locator;
   readonly snooze: Locator;
+  /** The nudge toast's Skip today (the top bar has one of its own). */
+  readonly skipFromToast: Locator;
   /** The root element, which carries the theme. */
   readonly root: Locator;
 
@@ -34,6 +36,13 @@ export class Shell extends PageRegion {
       .filter({ has: page.getByRole("button", { name: "Dismiss" }) });
     this.letsGo = page.getByRole("button", { name: "Let's go" });
     this.snooze = page.getByRole("button", { name: "Snooze", exact: true });
+    // The innermost box holding both the toast's words and its buttons: the toast itself.
+    this.skipFromToast = page
+      .locator("div")
+      .filter({ has: this.toast })
+      .filter({ has: this.snooze })
+      .last()
+      .getByRole("button", { name: "Skip today", exact: true });
     this.root = page.locator("[data-theme]");
   }
 

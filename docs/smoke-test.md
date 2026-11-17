@@ -49,8 +49,8 @@ This list is the one description of the checks:
   bringing it back (focused, where the platform can tell: X11).
 - `login-launch` — the login entry's own command line starting the app hidden; a second login
   launch leaving it hidden, a launch by hand showing it.
-- `tray-menu` — the menu reading where the day stands, Start next set, Pause nudges, Open
-  Nabd, Quit; its Quit ending the app with the database sound.
+- `tray-menu` — the menu reading where the day stands, Start next set, Pause nudges, Skip
+  today, Open Nabd, Quit; its Quit ending the app with the database sound.
 - `logged-set`, `autostart-setting`, `quit-from-settings`, `system-idle` (WebDriver) — a set
   logged in the window landing in the `history` table in its day's session and, like Pause,
   surviving a restart; Settings → "Open at startup" removing the login entry and writing it
@@ -70,7 +70,8 @@ in), `quit-from-settings`. Then fakes of a StatusNotifier host and of the notifi
 service join the session (`desktop_bus.py`, over D-Bus, the way a panel and a notification
 daemon would): the entry's command line starts the app hidden though the tray came up two
 seconds after it, and the tray's Open shows it; `tray-menu`, `close-to-tray`,
-`login-launch`; Pause and Resume from the tray stored without showing the window; Open
+`login-launch`; Pause and Resume, Skip today and Resume today from the tray stored without
+showing the window; Open
 showing it; Start next set showing it with the logger open; with the page's script stuck, so
 that the window cannot answer, the tray's Quit still ending the app once its three seconds
 of grace are up. With the app's wall clock moved

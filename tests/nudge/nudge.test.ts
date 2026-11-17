@@ -177,11 +177,59 @@ describe("a pending nudge", () => {
   it("is withdrawn when nudging is not allowed any more", () => {
     for (const status of [
       { state: "paused" },
+      { state: "skipped" },
       { state: "nothing_left" },
       { state: "off_hours", at: nov(17, 9), inDays: 1 },
     ] as const) {
       expect(policy.latch(pending, status, nov(16, 18))).toBeNull();
     }
+  });
+});
+
+describe("a day skipped or nudged on", () => {
+  const SATURDAY = 21;
+
+  it("a skipped day is quiet for the rest of it, whatever is due or idle, until it is resumed", () => {
+    const due = { idleSeconds: 999, lastSetAt: nov(16, 9) };
+    expect(at(11, 0, { ...due, override: "skipped" })).toEqual({ state: "skipped" });
+    expect(at(11, 0, { ...due, override: "skipped", paused: true })).toEqual({ state: "skipped" });
+    expect(at(11, 0, due)).toEqual({ state: "due", reason: "timer" });
+    // Nothing left is still said as such: there is nothing to skip.
+    expect(at(11, 0, { override: "skipped", hasWork: false })).toEqual({ state: "nothing_left" });
+  });
+
+  it("a day off nudged on counts from the moment it was, like a launch, then by the usual rules", () => {
+    const nudged = (hour: number, minute: number, overrides: Partial<NudgeContext> = {}) =>
+      evaluateAt(nov(SATURDAY, hour, minute), {
+        override: "nudged",
+        activeSince: nov(SATURDAY, 14),
+        ...overrides,
+      });
+    expect(nudged(14, 10)).toEqual({
+      state: "waiting",
+      at: nov(SATURDAY, 14, 50),
+      idleFrom: nov(SATURDAY, 14, 15),
+    });
+    expect(nudged(14, 10, { idleSeconds: 999 }).state).toBe("waiting");
+    expect(nudged(14, 15, { idleSeconds: 999 })).toEqual({ state: "due", reason: "idle" });
+    expect(nudged(14, 50)).toEqual({ state: "due", reason: "timer" });
+    expect(nudged(15, 0, { lastSetAt: nov(SATURDAY, 14, 45) }).state).toBe("waiting");
+    expect(nudged(15, 0, { paused: true })).toEqual({ state: "paused" });
+  });
+
+  it("the hours after the workday, nudged on, are nudged until the day ends", () => {
+    const evening = { override: "nudged", activeSince: nov(16, 19) } as const;
+    expect(at(20, 0, evening)).toEqual({ state: "due", reason: "timer" });
+    expect(at(19, 30, evening).state).toBe("waiting");
+  });
+
+  it("offers to nudge a quiet day and to skip any other, and to take either back", () => {
+    expect(policy.todayChoice(nov(16, 11), null)).toBe("skip");
+    expect(policy.todayChoice(nov(16, 7), null)).toBe("nudge");
+    expect(policy.todayChoice(nov(16, 19), null)).toBe("nudge");
+    expect(policy.todayChoice(nov(SATURDAY, 11), null)).toBe("nudge");
+    expect(policy.todayChoice(nov(16, 11), "skipped")).toBe("resume");
+    expect(policy.todayChoice(nov(SATURDAY, 11), "nudged")).toBe("stop");
   });
 });
 
@@ -199,6 +247,7 @@ describe("describeNudge", () => {
       "Quiet until Mon 09:00",
     );
     expect(describeNudge({ state: "paused" })).toBe("Nudges paused");
+    expect(describeNudge({ state: "skipped" })).toBe("Skipped today");
     expect(describeNudge({ state: "nothing_left" })).toBe("Nothing left today");
   });
 });
