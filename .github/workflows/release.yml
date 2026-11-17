@@ -5,15 +5,26 @@ name: Release
 # Release for the tag, to be reviewed and published by hand. docs/development.md
 # ("Cutting a release") has the steps.
 
+# Run by hand (Actions → Release → Run workflow) with a tag that already exists to build
+# that tag again with this branch's copy of the workflow, e.g. after fixing the workflow.
+
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The existing tag to release, e.g. v0.1.0
+        required: true
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
 
 jobs:
   version:
@@ -21,11 +32,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
       # package.json holds the app's version (src-tauri/build.rs keeps Cargo.toml equal to it).
       - run: |
           version=$(node -p "require('./package.json').version")
-          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json's version $version: tag v$version, or bump the version first."
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG does not match package.json's version $version: tag v$version, or bump the version first."
             exit 1
           fi
 
@@ -43,6 +56,8 @@ jobs:
         run: git config --global core.autocrlf false
 
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
 
       - uses: ./.github/actions/setup
 
@@ -68,14 +83,23 @@ jobs:
           merge-multiple: true
 
       # The gh CLI the runner already has, rather than a third-party action holding a
-      # write token: one command creates the draft with every installer attached. A
-      # draft for the tag left from an earlier run must be deleted before running again.
+      # write token. The artifacts unpack into one folder per bundle kind, so the
+      # installers are the files under them. A draft left by an earlier run gets its
+      # installers replaced; a published release is never touched.
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" installers/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --draft \
-            --verify-tag \
-            --title "Nabd $GITHUB_REF_NAME" \
-            --generate-notes
+          mapfile -t installers < <(find installers -type f | sort)
+          if ! draft=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null); then
+            gh release create "$TAG" "${installers[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --draft \
+              --verify-tag \
+              --title "Nabd $TAG" \
+              --generate-notes
+          elif [ "$draft" = true ]; then
+            gh release upload "$TAG" "${installers[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            echo "::error::Release $TAG is already published; bump the version and tag again."
+            exit 1
+          fi

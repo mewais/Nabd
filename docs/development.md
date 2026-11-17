@@ -179,6 +179,10 @@ on.
    `.deb`, `.rpm`, `.exe`, `.msi` and `.dmg` are attached, and edit the generated notes.
 4. Publish it. The README's download link (`releases/latest`) points at it from then on.
 
+To build a tag again (say, after fixing the workflow itself), start the workflow by hand:
+Actions → Release → Run workflow, on `main`, with the tag. It replaces the installers on
+a draft left by the earlier run and refuses to touch a release that is already published.
+
 The builds are unsigned (no signing identity or certificate is configured), so Windows
 SmartScreen and macOS Gatekeeper warn on first launch. To run the workflow again for the
 same tag, delete its draft first.
