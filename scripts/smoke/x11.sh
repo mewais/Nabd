@@ -15,14 +15,21 @@ windows() {
   xdotool search --onlyvisible --class nabd 2>/dev/null || true
 }
 
-# Activating the window can lose a race with the window manager (xdotool dies
-# of an X error while no window is active yet), before the key is sent: then
-# it is tried again, a few times at most.
+# The window can be missing from the search for a moment (xdotool's search
+# gives up when a window vanishes under it), and activating it can lose a race
+# with the window manager (xdotool dies of an X error while no window is active
+# yet), before the key is sent: then it is tried again, for five seconds at most.
 close() {
-  for _ in 1 2 3 4 5; do
-    xdotool windowactivate --sync "$(windows | tail -n 1)" key --clearmodifiers alt+F4 && return
+  local window
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    window="$(windows | tail -n 1)"
+    if [[ -n "$window" ]] &&
+      xdotool windowactivate --sync "$window" key --clearmodifiers alt+F4; then
+      return
+    fi
     sleep 0.5
   done
+  echo "x11.sh: could not close the Nabd window" >&2
   return 1
 }
 

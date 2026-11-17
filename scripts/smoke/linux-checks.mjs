@@ -10,6 +10,9 @@ import { tray } from "./linux-desktop.mjs";
 import { runChecks } from "./runner.mjs";
 import { screenFor } from "./screen.mjs";
 
+/** How the fake host marks a disabled entry of the tray menu. */
+const DISABLED = " (disabled)";
+
 /** The tray menu as the fake host reads it, then its Quit chosen. */
 function quitFromLinuxTray() {
   const entries = tray
@@ -20,8 +23,6 @@ function quitFromLinuxTray() {
   tray.click("Quit");
   return entries;
 }
-
-const DISABLED = " (disabled)";
 
 const { values, positionals } = parseArgs({
   options: {

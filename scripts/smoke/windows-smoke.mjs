@@ -18,17 +18,24 @@
 //   NABD_SMOKE_DRIVER_PORT        tauri-driver's port (default 4444; the native
 //                                 driver takes the next one)
 
-import { execFile, execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { copyFileSync, existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
-import { APP_ID, PRODUCT_NAME, builtBinary, dataDir, loginEntry, sandbox } from "./app.mjs";
+import {
+  APP_ID,
+  PRODUCT_NAME,
+  RUN_KEY,
+  builtBinary,
+  dataDir,
+  loginEntry,
+  sandbox,
+} from "./app.mjs";
 import { DriverProcess } from "./driver.mjs";
 import { runEntry } from "./runner.mjs";
 
 /** The app's executable, as built and as the test's copy is named. */
 const EXE = "nabd.exe";
-const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 /** The WebView2 runtime's client id with Edge's updater, under which its version is kept. */
 const WEBVIEW2 = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
 
@@ -135,7 +142,7 @@ const ARGUMENTS_POLICY = ["HKCU", "HKLM"].map(
  * for the port in WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS, but WebView2 ignores
  * that variable when the app passes arguments of its own (wry always does),
  * and then never writes the DevToolsActivePort file msedgedriver waits for.
- * The policy is applied all the same, into the data folder msedgedriver set.
+ * The policy applies whatever data folder msedgedriver gives the browser.
  */
 function allowDevTools() {
   const allowed = ARGUMENTS_POLICY.filter((key) => {
@@ -201,24 +208,6 @@ const binary = join(dir, EXE);
 copyFileSync(builtBinary(EXE), binary);
 forgetNabd(); // a fresh account
 
-// TEMPORARY (WebDriver session diagnosis): the app's and WebView2's browser processes, sampled.
-let processes = "";
-const sampler = setInterval(() => {
-  execFile(
-    "powershell",
-    [
-      "-NoProfile",
-      "-NonInteractive",
-      "-Command",
-      "Get-CimInstance Win32_Process | Where-Object { $_.Name -in 'nabd.exe','msedgewebview2.exe','msedgedriver.exe' -and $_.CommandLine -notmatch '--type=' } | ForEach-Object { \"$($_.ProcessId) <- $($_.ParentProcessId): $($_.CommandLine)\" }",
-    ],
-    (error, out) => {
-      if (!error && out.trim()) processes = `${new Date().toISOString()}\n${out.trim()}`;
-    },
-  );
-}, 2000);
-const webviewData = join(process.env.LOCALAPPDATA, APP_ID, "EBWebView");
-
 const port = Number(process.env.NABD_SMOKE_DRIVER_PORT ?? 4444);
 let driver = null;
 await runEntry({
@@ -232,23 +221,7 @@ await runEntry({
       // Nothing waits to be saved, and an app the test started has no window
       // that could be asked to quit.
       end: (app) => app.kill(),
-      diagnostics: [
-        { title: "tauri-driver and msedgedriver", describe: () => driver?.describe() },
-        { title: "the last processes sampled", describe: () => processes },
-        {
-          title: `WebView2's data (${webviewData})`,
-          describe: () =>
-            existsSync(webviewData) ? readdirSync(webviewData).join("  ") : "missing",
-        },
-        {
-          title: "environment",
-          describe: () =>
-            Object.entries(process.env)
-              .filter(([key]) => /WEBVIEW2|EDGE/i.test(key))
-              .map(([key, value]) => `${key}=${value}`)
-              .join("\n"),
-        },
-      ],
+      diagnostics: [{ title: "tauri-driver and msedgedriver", describe: () => driver?.describe() }],
     };
   },
   checks: [
@@ -263,7 +236,6 @@ await runEntry({
     "system-idle",
   ],
   async cleanup() {
-    clearInterval(sampler);
     await driver?.stop();
     forgetDevTools();
     forgetNabd();

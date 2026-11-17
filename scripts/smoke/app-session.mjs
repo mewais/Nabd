@@ -3,13 +3,23 @@
 // act starts the app, does its part and closes the app again; the caller sets
 // up the stored data an act starts from and checks the database and the files
 // afterwards (checks.mjs, and linux-smoke.sh for the Linux-only acts, through
-// the command line at the bottom).
+// the command line at the bottom). The window shows a change before the app
+// has stored it, and ending the session can end the app at once (msedgedriver
+// does), so an act whose change the caller looks for waits until it is stored.
 //
 //   node scripts/smoke/app-session.mjs <act> <driver-url> <nabd-binary>
 
 import process from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
-import { QUIT_GRACE_MS, SmokeFailure, eventually, instances, isMain } from "./app.mjs";
+import {
+  QUIT_GRACE_MS,
+  SmokeFailure,
+  database,
+  eventually,
+  instances,
+  isMain,
+  loginEntry,
+} from "./app.mjs";
 import { clock, expectNudge, notifications, tray } from "./linux-desktop.mjs";
 import { screenFor } from "./screen.mjs";
 import { Session } from "./webdriver.mjs";
@@ -27,6 +37,16 @@ const ACTS = {
     await app.press("Pause");
     await app.waitForButton("Resume");
     await logOneSet(app);
+    await stored(
+      "the set in the history table",
+      () => database.history().length === 1,
+      () => JSON.stringify(database.history()),
+    );
+    await stored(
+      "pause in the stored day state",
+      () => database.stored("dayState", ".paused"),
+      () => database.value("dayState"),
+    );
   },
 
   /** After a restart on the same day: the set is still counted and nudges are still paused. */
@@ -40,9 +60,19 @@ const ACTS = {
   async "toggle-autostart"(app) {
     await app.pressNamed("Settings");
     const row = "//*[@role='group'][@aria-label='Open at startup']//*[@role='switch']";
-    const before = await app.attribute(await app.waitFor(row), "aria-checked");
+    const on = (await app.attribute(await app.waitFor(row), "aria-checked")) !== "true";
     await app.toggle("Open at startup");
-    await app.waitFor(`${row}[@aria-checked='${before === "true" ? "false" : "true"}']`);
+    await app.waitFor(`${row}[@aria-checked='${on}']`);
+    await stored(
+      `"Open at startup" ${on ? "on" : "off"} in the stored settings`,
+      () => database.stored("settings", ".openAtStartup") === (on ? 1 : 0),
+      () => database.value("settings"),
+    );
+    await stored(
+      `the login entry ${on ? "written" : "removed"}`,
+      () => (loginEntry() !== null) === on,
+      () => JSON.stringify(loginEntry()),
+    );
   },
 
   /** Settings → Quit Nabd: the window saves, then the app exits (the caller sees it go). */
@@ -173,6 +203,11 @@ const LINUX_ACTS = {
     expectNudge(await notifications.expect(1), NUDGE.idle);
   },
 };
+
+/** Wait until `check` says the app has stored what the window shows; `found` says what is stored. */
+function stored(expectation, check, found) {
+  return eventually(expectation, check, { timeoutMs: 10_000, found });
+}
 
 async function logOneSet(app) {
   await app.press("Start set");

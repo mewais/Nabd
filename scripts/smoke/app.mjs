@@ -265,7 +265,8 @@ export const TRAY_MENU = [
 
 // ------------------------------------------------------------ login entry ---
 
-const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+/** Where Windows keeps the login entry: a value of this registry key named after the product. */
+export const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 
 /** Where the login entry is, in words, for messages. */
 export function loginEntryLocation() {
