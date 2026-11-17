@@ -21,6 +21,6 @@ are the only targets: building for anything else stops with a compile error that
 
 macOS builds are one universal binary, for Apple silicon and Intel Macs alike, unsigned
 and not notarized (CI makes the `.app` and `.dmg` without a signing identity), so
-Gatekeeper asks for a right-click → Open the first time. On every platform, what ends
+Gatekeeper refuses it the first time: allow it in System Settings → Privacy & Security → Open Anyway (on older macOS, right-click → Open). On every platform, what ends
 the app without telling it (logging off or shutting down, the Dock menu's Quit, a killed
 process) leaves no time to save a set that is still waiting to be.
