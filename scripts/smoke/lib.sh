@@ -122,10 +122,12 @@ tray_item_registered() {
 
 # fake_clock_at HH:MM: the app's wall clock (for launches through
 # $FAKETIME_BINARY) reads HH:MM today from now on, and runs at the real pace.
+# The file is replaced whole, never seen empty (see clock in linux-desktop.mjs).
 fake_clock_at() {
   local offset=$(($(date -d "today $1" +%s) - $(date +%s)))
   ((offset < 0)) || offset="+$offset"
-  echo "$offset" >"$CLOCK"
+  echo "$offset" >"$CLOCK.next"
+  mv "$CLOCK.next" "$CLOCK"
 }
 
 # ------------------------------------------------------------ webdriver ---

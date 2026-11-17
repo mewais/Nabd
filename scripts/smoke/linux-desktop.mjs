@@ -8,7 +8,7 @@
 //   NABD_SMOKE_PYTHON         a Python with D-Bus bindings, for desktop_bus.py
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import process from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -36,8 +36,16 @@ export const clock = {
   },
 };
 
-const writeOffset = (seconds) =>
-  writeFileSync(process.env.NABD_SMOKE_CLOCK, `${seconds >= 0 ? "+" : ""}${seconds}\n`);
+/**
+ * Replace the offset file whole: the app reads it on every clock call, and
+ * libfaketime ends a process that reads it empty, as it would be between
+ * truncating and writing it in place.
+ */
+function writeOffset(seconds) {
+  const next = `${process.env.NABD_SMOKE_CLOCK}.next`;
+  writeFileSync(next, `${seconds >= 0 ? "+" : ""}${seconds}\n`);
+  renameSync(next, process.env.NABD_SMOKE_CLOCK);
+}
 
 /** What the fake notification service was asked to show, oldest first. */
 export const notifications = {
