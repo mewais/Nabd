@@ -1,0 +1,11 @@
+{
+  "name": "@nabd/program-editor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --root ../.. --project program-editor"
+  },
+  "dependencies": {
+    "@nabd/domain": "workspace:*"
+  }
+}

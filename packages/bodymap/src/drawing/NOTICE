@@ -1,0 +1,10 @@
+Anatomical body-map SVG path data (bodydata.ts)
+
+Source:    react-native-body-highlighter
+           https://github.com/HichamELBSI/react-native-body-highlighter
+           (assets/bodyFront.ts and assets/bodyBack.ts)
+Copyright: (c) 2022 ELABBASSI Hicham
+License:   MIT — see LICENSE in this directory
+
+Changes: the front and back part lists are merged into one file and exported as
+FRONT_MUSCLES / BACK_MUSCLES; the path data itself is unmodified.

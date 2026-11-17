@@ -1,0 +1,13 @@
+{
+  "name": "@nabd/serialization",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --root ../.. --project serialization"
+  },
+  "dependencies": {
+    "@nabd/dataset": "workspace:*",
+    "@nabd/domain": "workspace:*",
+    "@nabd/scheduling": "workspace:*"
+  }
+}

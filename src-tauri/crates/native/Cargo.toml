@@ -1,0 +1,17 @@
+[package]
+name = "nabd-native"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+chrono = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[[test]]
+name = "native_tests"
+path = "../../../tests/rust/native/main.rs"

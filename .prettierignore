@@ -1,10 +1,12 @@
 node_modules
 dist
-build
-coverage
+/coverage
+e2e/test-results
+e2e/visual/test-results
+e2e/visual/shots
 target
-src-tauri/target
-assets/body
-packages/B02-dataset/data
+src-tauri/gen
 pnpm-lock.yaml
-design_handoff_nabd_workout_tracker
+# vendored
+packages/bodymap/src/drawing/bodydata.ts
+packages/app/public/fonts

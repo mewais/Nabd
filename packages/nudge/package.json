@@ -1,0 +1,11 @@
+{
+  "name": "@nabd/nudge",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --root ../.. --project nudge"
+  },
+  "dependencies": {
+    "@nabd/domain": "workspace:*"
+  }
+}

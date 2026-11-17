@@ -1,0 +1,8 @@
+{
+  "name": "@nabd/view",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@nabd/domain": "workspace:*"
+  }
+}

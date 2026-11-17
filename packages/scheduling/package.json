@@ -1,0 +1,11 @@
+{
+  "name": "@nabd/scheduling",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --root ../.. --project scheduling"
+  },
+  "dependencies": {
+    "@nabd/domain": "workspace:*"
+  }
+}

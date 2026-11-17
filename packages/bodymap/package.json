@@ -1,0 +1,17 @@
+{
+  "name": "@nabd/bodymap",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --root ../.. --project bodymap"
+  },
+  "dependencies": {
+    "@nabd/coverage": "workspace:*",
+    "@nabd/design-system": "workspace:*",
+    "@nabd/domain": "workspace:*",
+    "@nabd/view": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  }
+}

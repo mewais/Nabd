@@ -1,0 +1,22 @@
+{
+  "name": "@nabd/modals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --root ../.. --project modals"
+  },
+  "dependencies": {
+    "@nabd/bodymap": "workspace:*",
+    "@nabd/dataset": "workspace:*",
+    "@nabd/design-system": "workspace:*",
+    "@nabd/domain": "workspace:*",
+    "@nabd/nudge": "workspace:*",
+    "@nabd/progression": "workspace:*",
+    "@nabd/scheduling": "workspace:*",
+    "@nabd/session": "workspace:*",
+    "@nabd/view": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@nabd/store",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --root ../.. --project store"
+  },
+  "dependencies": {
+    "@nabd/analytics": "workspace:*",
+    "@nabd/coverage": "workspace:*",
+    "@nabd/dataset": "workspace:*",
+    "@nabd/domain": "workspace:*",
+    "@nabd/ipc-client": "workspace:*",
+    "@nabd/nudge": "workspace:*",
+    "@nabd/program-editor": "workspace:*",
+    "@nabd/progression": "workspace:*",
+    "@nabd/scheduling": "workspace:*",
+    "@nabd/serialization": "workspace:*",
+    "@nabd/session": "workspace:*",
+    "@nabd/view": "workspace:*",
+    "zod": "^3.23.8",
+    "zustand": "^4.5.5"
+  }
+}

@@ -1,0 +1,23 @@
+/** Which way a step goes: back (-1) or on (+1) — earlier or later, less or more. */
+export type Direction = -1 | 1;
+
+/** `value` rounded to `decimals` places, so stepped decimals stay free of floating-point dust. */
+export function roundTo(value: number, decimals: number): number {
+  const scale = 10 ** decimals;
+  return Math.round(value * scale) / scale;
+}
+
+/** `part` as a whole percentage of `whole`: 0 when there is no whole. */
+export function percentOf(part: number, whole: number): number {
+  return whole === 0 ? 0 : Math.round((part / whole) * 100);
+}
+
+/** `value` held within `min`–`max`. */
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+/** The total of `amount` over `list`. */
+export function sum<T>(list: readonly T[], amount: (element: T) => number): number {
+  return list.reduce((total, element) => total + amount(element), 0);
+}

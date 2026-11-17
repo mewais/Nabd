@@ -1,0 +1,22 @@
+{
+  "name": "@nabd/today",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --root ../.. --project today"
+  },
+  "dependencies": {
+    "@nabd/analytics": "workspace:*",
+    "@nabd/bodymap": "workspace:*",
+    "@nabd/coverage": "workspace:*",
+    "@nabd/design-system": "workspace:*",
+    "@nabd/domain": "workspace:*",
+    "@nabd/nudge": "workspace:*",
+    "@nabd/scheduling": "workspace:*",
+    "@nabd/session": "workspace:*",
+    "@nabd/view": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  }
+}

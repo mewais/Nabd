@@ -1,0 +1,179 @@
+import type { Program } from "@nabd/domain";
+import { CoverageReport, MuscleVolume } from "@nabd/coverage";
+
+/** Sixteen sets a week cover a muscle in full. */
+const FULL_COVERAGE_SETS = 16;
+import {
+  exercise,
+  logged,
+  lookupIn,
+  nov,
+  row,
+  workingSets,
+  warmup,
+  working,
+} from "../support/builders";
+
+const press = exercise({ primary: ["chest"], secondary: ["triceps", "front_delts"] });
+const fly = exercise({ primary: ["chest"], secondary: [] });
+const curl = exercise({ primary: ["biceps"], secondary: ["forearms"] });
+const lookup = lookupIn([press, fly, curl]);
+
+const prescription = { repMode: "range" as const, intensity: "none" as const, rest: 60 };
+
+describe("planned volume", () => {
+  it("fixed plans count a set fully for primary muscles and half for secondary; warm-ups don't count", () => {
+    const program: Program = {
+      name: "P",
+      type: "fixed",
+      schedule: "weekday",
+      days: [
+        {
+          id: "d",
+          name: "D",
+          weekday: 1,
+          slots: [],
+          exercises: [
+            row(press.id, [warmup(10), ...workingSets(3)]),
+            row(curl.id, [working(10), { type: "drop", amount: 10 }]),
+            row("missing", workingSets(3)),
+          ],
+        },
+      ],
+    };
+    const volume = MuscleVolume.ofProgram(program, lookup);
+    expect(volume.of("chest")).toBe(3);
+    expect(volume.of("triceps")).toBe(1.5);
+    expect(volume.of("biceps")).toBe(2);
+    expect(volume.of("forearms")).toBe(1);
+    expect(volume.of("quads")).toBe(0);
+    expect(volume.ranked().map((r) => r.muscle)).toEqual([
+      "chest",
+      "biceps",
+      "triceps",
+      "front_delts",
+      "forearms",
+    ]);
+  });
+
+  it("cycled slots spread their sets over the pool; an empty pool credits the target muscle", () => {
+    const program: Program = {
+      name: "C",
+      type: "cycled",
+      schedule: "floating",
+      days: [
+        {
+          id: "d",
+          name: "D",
+          weekday: null,
+          exercises: [row(curl.id, workingSets(3))],
+          slots: [
+            {
+              id: "s1",
+              muscle: "chest",
+              pool: [press.id, fly.id],
+              ...prescription,
+              sets: workingSets(3),
+            },
+            { id: "s2", muscle: "lats", pool: [], ...prescription, sets: workingSets(3) },
+          ],
+        },
+      ],
+    };
+    const volume = MuscleVolume.ofProgram(program, lookup);
+    expect(volume.of("chest")).toBe(3);
+    expect(volume.of("triceps")).toBe(0.75);
+    expect(volume.of("lats")).toBe(3);
+    expect(volume.of("biceps")).toBe(0);
+  });
+});
+
+describe("recent history", () => {
+  const now = nov(16, 18);
+
+  it("covers the last seven days, weighting by the library's primary/secondary muscles", () => {
+    const history = [
+      logged(press, nov(8), 10, 40),
+      logged(press, nov(10), 10, 40),
+      logged(press, nov(16, 10), 10, 40),
+      logged(press, nov(16, 11), 10, 20, { setType: "warmup" }),
+    ];
+    const volume = MuscleVolume.ofRecentHistory(history, lookup, now);
+    expect(volume.of("chest")).toBe(2);
+    expect(volume.of("triceps")).toBe(1);
+  });
+
+  it("falls back to the logged muscles (first one primary) for a deleted exercise", () => {
+    const gone = exercise({ primary: ["quads"], secondary: ["glutes"] });
+    const volume = MuscleVolume.ofRecentHistory([logged(gone, nov(15), 10, 60)], lookup, now);
+    expect(volume.of("quads")).toBe(1);
+    expect(volume.of("glutes")).toBe(0.5);
+  });
+
+  it("turns sets into 0–100 coverage, saturating at the full-coverage volume", () => {
+    const volume = new MuscleVolume();
+    volume.add("chest", FULL_COVERAGE_SETS / 2);
+    volume.add("biceps", FULL_COVERAGE_SETS * 3);
+    const coverage = volume.toCoverage();
+    expect(coverage("chest")).toBe(50);
+    expect(coverage("biceps")).toBe(100);
+    expect(coverage("calves")).toBe(0);
+  });
+});
+
+describe("recommendations", () => {
+  /** Chest at `pct` of full coverage, in a plan that targets chest (and nothing else). */
+  function chestAt(pct: number) {
+    const planned = new MuscleVolume();
+    planned.add("chest", 9);
+    const actual = new MuscleVolume();
+    actual.add("chest", (pct / 100) * FULL_COVERAGE_SETS);
+    actual.add("calves", (pct / 100) * FULL_COVERAGE_SETS);
+    return { actual: actual.toCoverage(), planned };
+  }
+
+  it("rests well-covered muscles and pushes lagging ones", () => {
+    const advice = (pct: number) => {
+      const { actual, planned } = chestAt(pct);
+      return new CoverageReport(actual, planned).recommendation("chest");
+    };
+    expect(advice(66)).toBe("rest");
+    expect(advice(65)).toBe("none");
+    expect(advice(39)).toBe("none");
+    expect(advice(38)).toBe("push");
+  });
+
+  it("never tells anyone to push a muscle their plan does not target", () => {
+    const lagging = chestAt(10);
+    expect(new CoverageReport(lagging.actual, lagging.planned).recommendation("calves")).toBe(
+      "none",
+    );
+    expect(new CoverageReport(lagging.actual, lagging.planned).recommendation("quads")).toBe(
+      "none",
+    );
+    // Resting needs no plan: a well-trained muscle is well trained either way.
+    const covered = chestAt(80);
+    expect(new CoverageReport(covered.actual, covered.planned).recommendation("calves")).toBe(
+      "rest",
+    );
+  });
+
+  it("only calls a muscle lagging if the plan targets it, and says nothing with nothing to say", () => {
+    const planned = new MuscleVolume();
+    planned.add("chest", 9);
+    planned.add("biceps", 6);
+    const actual = new MuscleVolume();
+    expect(new CoverageReport(actual.toCoverage(), planned).insight()).toEqual({
+      rest: [],
+      push: ["chest", "biceps"],
+    });
+
+    actual.add("chest", 14);
+    actual.add("quads", 16);
+    expect(new CoverageReport(actual.toCoverage(), planned).insight()).toEqual({
+      rest: ["quads", "chest"],
+      push: ["biceps"],
+    });
+    expect(new CoverageReport(actual.toCoverage(), new MuscleVolume()).insight().push).toEqual([]);
+  });
+});

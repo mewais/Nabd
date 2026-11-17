@@ -1,0 +1,11 @@
+{
+  "name": "@nabd/dataset",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --root ../.. --project dataset"
+  },
+  "dependencies": {
+    "@nabd/domain": "workspace:*"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@nabd/app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p ../.. && vite build",
+    "preview": "vite preview",
+    "test": "vitest run --root ../.. --project app"
+  },
+  "dependencies": {
+    "@nabd/dataset": "workspace:*",
+    "@nabd/design-system": "workspace:*",
+    "@nabd/domain": "workspace:*",
+    "@nabd/ipc-client": "workspace:*",
+    "@nabd/modals": "workspace:*",
+    "@nabd/planner": "workspace:*",
+    "@nabd/program-editor": "workspace:*",
+    "@nabd/progress": "workspace:*",
+    "@nabd/shell": "workspace:*",
+    "@nabd/store": "workspace:*",
+    "@nabd/today": "workspace:*",
+    "@nabd/view": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0"
+  }
+}
