@@ -90,15 +90,22 @@ export class TrainingStats {
    * Consecutive workdays trained, ending today — or, while today has nothing
    * logged yet, the workday before it. Days off are neutral: a set on one does
    * not extend the streak and an idle one does not break it, so a Monday to
-   * Friday streak carries over the weekend.
+   * Friday streak carries over the weekend. An optional day (a workday
+   * skipped, a day off nudged on) can only help: trained, it adds to the
+   * streak; idle, it is passed over.
    */
   streak(): number {
     const first = [...this.setsByDate.keys()].sort()[0];
     let cursor = this.setsOn(this.today) > 0 ? this.today : addDays(this.today, -1);
     let days = 0;
     for (; first !== undefined && dateKey(cursor) >= first; cursor = addDays(cursor, -1)) {
+      const trained = this.setsOn(cursor) > 0;
+      if (this.recordsByDate.get(dateKey(cursor))?.optional) {
+        if (trained) days++;
+        continue;
+      }
       if (!isWorkday({ workDays: this.workDays }, cursor)) continue;
-      if (this.setsOn(cursor) === 0) break;
+      if (!trained) break;
       days++;
     }
     return days;

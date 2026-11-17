@@ -1,6 +1,6 @@
 // When the user should be told to move, decided from the wall clock.
 
-import type { Settings, Trigger } from "@nabd/domain";
+import type { DayOverride, Settings, TodayChoice, Trigger } from "@nabd/domain";
 import { DAYS_PER_WEEK, addDays, atMinuteOfDay, isWorkday } from "@nabd/domain";
 
 /** How long a snoozed nudge stays quiet, in minutes. */
@@ -16,8 +16,9 @@ export interface NudgeContext {
   lastSetAt: Date | null;
   /**
    * Since when there has been something to nudge about: the app was launched,
-   * or the plan gained work. Counting never starts earlier, so opening the app
-   * (or building a plan) mid-day does not owe a nudge for the whole morning.
+   * the plan gained work, or nudging was asked for on a day that was quiet.
+   * Counting never starts earlier, so opening the app (or building a plan)
+   * mid-day does not owe a nudge for the whole morning.
    */
   activeSince: Date | null;
   /** Nudges are silenced until this time (snooze / dismissal). */
@@ -26,6 +27,8 @@ export interface NudgeContext {
   idleSeconds: number;
   /** The user paused nudges. */
   paused: boolean;
+  /** Today was skipped, or nudged on outside the workday (see `DayState.override`). */
+  override: DayOverride | null;
   /** There is at least one prescribed set left today. */
   hasWork: boolean;
 }
@@ -37,6 +40,8 @@ export type NudgeStatus =
   | { state: "waiting"; at: Date; idleFrom: Date }
   /** Outside the workday, or on a day off; counting resumes at `at`, `inDays` calendar days from now. */
   | { state: "off_hours"; at: Date; inDays: number }
+  /** Today was skipped: quiet until tomorrow. */
+  | { state: "skipped" }
   | { state: "paused" }
   | { state: "nothing_left" };
 
@@ -68,10 +73,12 @@ const plusMinutes = (d: Date, minutes: number): Date =>
 
 /**
  * The nudge rules:
- *  - never outside the workday, on a day that is not a workday, while paused,
- *    or with nothing left to do;
+ *  - never outside the workday, on a day that is not a workday, on a day that
+ *    was skipped, while paused, or with nothing left to do — but a day nudged
+ *    on is nudged whatever the workday settings say;
  *  - the timer nudges `interval` minutes after the last set — or, before the first
- *    one, after the workday started or there first was work to do, whichever is later;
+ *    one, after the workday started or there first was work to do, whichever is later
+ *    (on a day nudged on, after there was work and nudging was asked for);
  *  - an idle moment nudges earlier, but never sooner than `minGap` minutes after the
  *    moment the timer counts from;
  *  - a snooze silences both until it expires;
@@ -83,22 +90,49 @@ export class NudgePolicy {
 
   evaluate(ctx: NudgeContext): NudgeStatus {
     const { now } = ctx;
-    const { interval, minGap, idleNudge, workStart, workEnd } = this.settings;
+    const { interval, minGap, idleNudge } = this.settings;
     if (!ctx.hasWork) return { state: "nothing_left" };
+    if (ctx.override === "skipped") return { state: "skipped" };
     if (ctx.paused) return { state: "paused" };
 
-    const opens = atMinuteOfDay(now, workStart);
-    const closes = atMinuteOfDay(now, workEnd);
-    if (!isWorkday(this.settings, now) || now >= closes) return this.quietUntilNextWorkday(now);
-    if (now < opens) return { state: "off_hours", at: opens, inDays: 0 };
+    const nudged = ctx.override === "nudged";
+    const quiet = nudged ? null : this.quietAt(now);
+    if (quiet !== null) return quiet;
 
-    const since = later(later(opens, ctx.activeSince), ctx.lastSetAt);
+    // A day nudged on counts from when it was (activeSince), not from the workday's start.
+    const start = nudged ? (ctx.activeSince ?? now) : later(this.opens(now), ctx.activeSince);
+    const since = later(start, ctx.lastSetAt);
     const timerAt = later(plusMinutes(since, interval), ctx.snoozedUntil);
     const idleFrom = later(plusMinutes(since, Math.min(minGap, interval)), ctx.snoozedUntil);
 
     if (now >= timerAt) return { state: "due", reason: "timer" };
     if (now >= idleFrom && ctx.idleSeconds >= idleNudge) return { state: "due", reason: "idle" };
     return { state: "waiting", at: timerAt, idleFrom };
+  }
+
+  /**
+   * The one change to today's nudging the moment offers besides a pause: a
+   * day skipped or nudged on can be taken back; otherwise a day that is quiet
+   * by the workday settings (a day off, or outside the workday hours) can be
+   * nudged on, and any other skipped.
+   */
+  todayChoice(now: Date, override: DayOverride | null): TodayChoice {
+    if (override === "skipped") return "resume";
+    if (override === "nudged") return "stop";
+    return this.quietAt(now) === null ? "skip" : "nudge";
+  }
+
+  /** When the workday opens on the day of `now`. */
+  private opens(now: Date): Date {
+    return atMinuteOfDay(now, this.settings.workStart);
+  }
+
+  /** Off hours, if `now` is outside the workday or on a day off; null within it. */
+  private quietAt(now: Date): NudgeStatus | null {
+    const opens = this.opens(now);
+    const closes = atMinuteOfDay(now, this.settings.workEnd);
+    if (!isWorkday(this.settings, now) || now >= closes) return this.quietUntilNextWorkday(now);
+    return now < opens ? { state: "off_hours", at: opens, inDays: 0 } : null;
   }
 
   /** Quiet until the workday starts on the next day that is one. */
@@ -118,7 +152,7 @@ export class NudgePolicy {
   /**
    * The pending nudge after the policy said `status` at `now`: a due set starts
    * one (the first reason sticks), counting down keeps it, and anything that
-   * forbids nudging — off hours, pause, nothing left — withdraws it. One that
+   * forbids nudging — off hours, a skipped day, pause, nothing left — withdraws it. One that
    * has waited a whole `interval` since the user was last told is renewed.
    */
   latch(pending: PendingNudge | null, status: NudgeStatus, now: Date): PendingNudge | null {

@@ -70,10 +70,12 @@ export type {
   CarriedItem,
   CarriedItems,
   CarriedVisit,
+  DayOverride,
   DayRecord,
   DayState,
   ExtraItem,
   RotationState,
+  TodayChoice,
 } from "./day-state";
 export {
   INTENSITIES,

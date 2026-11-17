@@ -9,7 +9,7 @@ import type {
   Settings,
 } from "@nabd/domain";
 import { dateKey, isFloating, isWorkday, sum } from "@nabd/domain";
-import { DayLedger } from "./day-ledger";
+import { DayLedger, ledgerCalendar } from "./day-ledger";
 import type { LedgerCalendar } from "./day-ledger";
 import { queueEntries, resolveDay } from "./queue-entries";
 import type { PlanItem } from "./plan-item";
@@ -24,7 +24,10 @@ export interface TodayPlanInput {
   /** Full history; only sets logged on `date` are attributed. */
   history: readonly LoggedSet[];
   lookup: ExerciseLookup;
-  /** The weekdays that are worked: a day off owes nothing until a set is logged on it. */
+  /**
+   * The weekdays that are worked: a day off owes nothing until a set is logged
+   * on it (unless `dayState` has it nudged on; a skipped workday is as a day off).
+   */
   workDays: Settings["workDays"];
 }
 
@@ -86,7 +89,7 @@ export class TodayPlan {
     // A set logged while a floating visit continues belongs to the session it began in; any
     // other — on a weekday plan, or on a floating day begun today — to today's own.
     const session = continuesFrom ?? today;
-    const calendar = { floating, workday: isWorkday({ workDays }, date) };
+    const calendar = ledgerCalendar(floating, isWorkday({ workDays }, date), dayState.override);
     return new TodayPlan(today, continuesFrom, session, day, items, emptySlots, calendar);
   }
 

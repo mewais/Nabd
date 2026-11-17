@@ -1,4 +1,4 @@
-import type { CarriedItems, DayRecord } from "@nabd/domain";
+import type { CarriedItems, DayOverride, DayRecord } from "@nabd/domain";
 import { sum, totalSets } from "@nabd/domain";
 import type { TodayPlan } from "./today-plan";
 
@@ -9,8 +9,24 @@ type LedgerPlan = Pick<TodayPlan, "date" | "items" | "setsLogged" | "setsRemaini
 export interface LedgerCalendar {
   /** The plan follows its own order (floating) rather than the calendar. */
   floating: boolean;
-  /** The date is one the user works. */
+  /** The day owes its plan: a date the user works, unless skipped, or a day off nudged on. */
   workday: boolean;
+  /** The day was changed for the day, so it is on record as optional (see `DayRecord.optional`). */
+  optional: boolean;
+}
+
+/**
+ * Where a day stands: whether it owes its plan — as the workday settings have
+ * it (`worked`), unless the day was skipped (it does not, like a day off) or
+ * nudged on (it does, like a workday). A day so changed is optional.
+ */
+export function ledgerCalendar(
+  floating: boolean,
+  worked: boolean,
+  override: DayOverride | null,
+): LedgerCalendar {
+  const workday = override === null ? worked : override === "nudged";
+  return { floating, workday, optional: workday !== worked };
 }
 
 /**
@@ -55,7 +71,9 @@ export class DayLedger {
    * A floating plan has no calendar to fall behind: a day it sat idle is not a
    * missed day, so it has no record until a set is logged — or the plan has
    * moved on from it ({@link closedRecord}). Nor has a day off on which
-   * nothing was logged.
+   * nothing was logged. An optional day — a workday skipped, a day off nudged
+   * on — is always on record, as optional, so that the streak knows it: when
+   * nothing else puts it there, owing nothing.
    */
   record(): DayRecord | null {
     return this.recordOf(this.calendar.floating);
@@ -74,8 +92,13 @@ export class DayLedger {
   /** The day's record; `waits` — the plan may come back to the day — spares an idle day one. */
   private recordOf(waits: boolean): DayRecord | null {
     const { date, items, setsOwed, setsLogged } = this.plan;
-    const notDue = !this.calendar.workday || waits;
-    if (setsOwed === 0 || (setsLogged === 0 && notDue)) return null;
-    return { date, planned: setsOwed, done: sum(items, (i) => i.doneToday) };
+    const { workday, optional } = this.calendar;
+    const notDue = !workday || waits;
+    const counts = setsOwed > 0 && (setsLogged > 0 || !notDue);
+    const record = counts
+      ? { date, planned: setsOwed, done: sum(items, (i) => i.doneToday) }
+      : { date, planned: 0, done: 0 };
+    if (optional) return { ...record, optional: true };
+    return counts ? record : null;
   }
 }
