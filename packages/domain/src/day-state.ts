@@ -67,8 +67,9 @@ export const DayStateSchema = z.object({
   date: z.string(),
   /**
    * Floating plans: the id of the program day we are on (null = the first day).
-   * An id, not a position, so reordering or removing other days never changes
-   * which day is today.
+   * An id, not a position: once the day is begun, reordering or removing other
+   * days never changes which day is today (until then a plan edit keeps its
+   * place in the order instead).
    */
   dayId: z.string().nullable().default(null),
   /**

@@ -1,9 +1,11 @@
-// What stays put across a plan edit: the day a floating plan is on, the day
-// the planner has open, and the exercise each cycled pool is about to give.
+// What stays put across a plan edit: the day a floating plan is on (or, until
+// that day is begun, its place in the order), the day the planner has open,
+// and the exercise each cycled pool is about to give.
 
 import type { CarriedVisit, CycledSlot, DayState, Program, RotationState } from "@nabd/domain";
 import { isFloating, sameRecord, weekdayOf } from "@nabd/domain";
 import { floatingDay } from "./floating";
+import type { TodayPlan } from "./today-plan";
 
 const hasDay = (program: Program, dayId: string): boolean =>
   program.days.some((day) => day.id === dayId);
@@ -18,12 +20,32 @@ function successorDay(before: Program, after: Program, dayId: string): string | 
   return after.days[Math.min(position, after.days.length - 1)]?.id ?? null;
 }
 
+/**
+ * The day that holds `dayId`'s place in the order after an edit, counting only
+ * the days the edit kept: a reorder can hand the place to another day, while
+ * days added or deleted around it do not move it. Null when `dayId` itself
+ * did not survive the edit.
+ */
+function dayInPlaceOf(before: Program, after: Program, dayId: string): string | null {
+  const kept = before.days.filter((day) => hasDay(after, day.id));
+  const place = kept.findIndex((day) => day.id === dayId);
+  const old = after.days.filter((day) => hasDay(before, day.id));
+  return old[place]?.id ?? null;
+}
+
 /** What today is on: the floating day, and the visit it continues. */
 type Today = Pick<DayState, "dayId" | "carried">;
 
+/** Where today stands before an edit: what it is on, and the sets logged on it today. */
+type TodayBefore = Today & Pick<TodayPlan, "setsLogged">;
+
 /**
- * The `dayId` that keeps today on the same program day across a plan edit.
- *  - A floating plan stays on its day, however the days around it change.
+ * The `dayId` of the program day today is on after a plan edit.
+ *  - A floating plan on a begun day — a visit that came back, or one with a
+ *    set logged today — stays on that day, however the days around it change.
+ *  - A floating plan on an untouched day keeps its place in the order: a
+ *    reorder puts it on the day now in that place (see {@link dayInPlaceOf}).
+ *  - Either way, when its day is deleted it moves to the day that took its place.
  *  - A weekday plan going floating starts on the day pinned to `today`'s
  *    weekday (on a rest day: null, the first day).
  *  - A weekday plan has no position to remember.
@@ -31,15 +53,19 @@ type Today = Pick<DayState, "dayId" | "carried">;
 function dayIdAfterEdit(
   before: Program,
   after: Program,
-  dayId: string | null,
+  from: TodayBefore,
   today: Date,
 ): string | null {
   if (!isFloating(after)) return null;
   if (!isFloating(before)) {
     return before.days.find((day) => day.weekday === weekdayOf(today))?.id ?? null;
   }
-  const current = floatingDay(before, dayId);
-  return current === null ? dayId : successorDay(before, after, current.id);
+  const current = floatingDay(before, from.dayId);
+  if (current === null) return from.dayId;
+  const begun = from.carried !== null || from.setsLogged > 0;
+  return begun || !hasDay(after, current.id)
+    ? successorDay(before, after, current.id)
+    : dayInPlaceOf(before, after, current.id);
 }
 
 /**
@@ -76,12 +102,16 @@ function carriedAfterEdit(
 }
 
 /**
- * What keeps today on the same program day across a plan edit, with what it
- * has behind it (see the two functions above). Returns `from` itself when
- * neither changed.
+ * The program day today is on after a plan edit, with what it has behind it
+ * (see the two functions above). Returns `from` itself when neither changed.
  */
-export function todayAfterEdit(before: Program, after: Program, from: Today, today: Date): Today {
-  const dayId = dayIdAfterEdit(before, after, from.dayId, today);
+export function todayAfterEdit(
+  before: Program,
+  after: Program,
+  from: TodayBefore,
+  today: Date,
+): Today {
+  const dayId = dayIdAfterEdit(before, after, from, today);
   const carried = carriedAfterEdit(before, after, from, dayId);
   return dayId === from.dayId && carried === from.carried ? from : { dayId, carried };
 }

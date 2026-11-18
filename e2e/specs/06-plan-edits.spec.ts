@@ -121,7 +121,9 @@ test("the logger never outlives its exercise: deleted under it, it moves on", as
   await expect(shell.toast).toContainText("Interval's up");
 });
 
-test("reordering floating days leaves today on the day it is on", async ({ app }) => {
+test("reordering floating days leaves a day with a set logged on the day it is on", async ({
+  app,
+}) => {
   const { shell, today, planner } = app;
 
   await shell.goTo("Plan");

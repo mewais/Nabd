@@ -216,3 +216,37 @@ test.describe("switching schedule keeps today on its day", () => {
     await expect(shell.status).toContainText("Next nudge at 10:50");
   });
 });
+
+test("reordering floating days moves an untouched day's place to the day now there", async ({
+  app,
+}) => {
+  const { shell, today, logger, planner } = app;
+  const program = plan([
+    day("Push", [planned(dumbbellBench.id)]),
+    day("Legs", [planned(gobletSquat.id)]),
+  ]);
+  await app.launch(at("10:00"), { program });
+  await expect(today.row(dumbbellBench.name)).toContainText("0/2 sets");
+
+  await test.step("nothing logged yet: today is the day that is now first", async () => {
+    await shell.goTo("Plan");
+    await planner.button("Move later").first().click();
+    await expect(planner.dayCard("Legs")).toContainText("Day 1");
+    await shell.goTo("Today");
+    await expect(today.row(gobletSquat.name)).toContainText("0/2 sets");
+    await expect(today.row(dumbbellBench.name)).toBeHidden();
+  });
+
+  await test.step("once a set is logged, the day stays today wherever it moves", async () => {
+    await today.startSet.click();
+    await logger.log({ reps: 8, weight: 20 });
+    await logger.done();
+    await shell.goTo("Plan");
+    await planner.dayCard("Legs").click();
+    await planner.button("Move later").first().click();
+    await expect(planner.dayCard("Legs")).toContainText("Day 2");
+    await shell.goTo("Today");
+    await expect(today.row(gobletSquat.name)).toContainText("1/2 sets");
+    await expect(today.row(dumbbellBench.name)).toBeHidden();
+  });
+});

@@ -12,9 +12,14 @@ import {
 } from "../support/programs";
 import { MONDAY } from "./fixtures";
 
-/** The day a plan is on after an edit, from day `dayId`, with nothing behind it. */
-const dayIdAfterEdit = (before: Program, after: Program, dayId: string | null, today: Date) =>
-  todayAfterEdit(before, after, { dayId, carried: null }, today).dayId;
+/** The day a plan is on after an edit, from day `dayId` with `setsLogged` sets on it today. */
+const dayIdAfterEdit = (
+  before: Program,
+  after: Program,
+  dayId: string | null,
+  today: Date,
+  setsLogged = 0,
+) => todayAfterEdit(before, after, { dayId, carried: null, setsLogged }, today).dayId;
 
 /** What day `dayId` has behind it after an edit, on `today`. */
 const carriedAfterEdit = (
@@ -23,26 +28,57 @@ const carriedAfterEdit = (
   dayId: string | null,
   carried: CarriedVisit | null,
   today = MONDAY,
-) => todayAfterEdit(before, after, { dayId, carried }, today).carried;
+) => todayAfterEdit(before, after, { dayId, carried, setsLogged: 0 }, today).carried;
 
 describe("a floating plan across plan edits", () => {
-  it("stays on its day when the days around it are edited", () => {
-    const [mon, wed] = floatingPushPull.days as [Program["days"][0], Program["days"][0]];
-    const reordered: Program = { ...floatingPushPull, days: [{ ...wed, id: "new" }, wed, mon] };
-    expect(dayIdAfterEdit(floatingPushPull, reordered, null, MONDAY)).toBe("mon");
-    expect(dayIdAfterEdit(floatingPushPull, reordered, "wed", MONDAY)).toBe("wed");
+  const [mon, wed] = floatingPushPull.days as [Program["days"][0], Program["days"][0]];
+  const fri: Program["days"][0] = { ...wed, id: "fri" };
+  const days = (...list: Program["days"]): Program => ({ ...floatingPushPull, days: list });
+  const three = days(mon, wed, fri);
+
+  describe("on a day not yet begun, it keeps its place in the order", () => {
+    it("a reorder puts it on the day now in that place", () => {
+      expect(dayIdAfterEdit(floatingPushPull, days(wed, mon), null, MONDAY)).toBe("wed");
+      expect(dayIdAfterEdit(floatingPushPull, days(wed, mon), "mon", MONDAY)).toBe("wed");
+      expect(dayIdAfterEdit(three, days(wed, mon, fri), "fri", MONDAY)).toBe("fri");
+      expect(dayIdAfterEdit(three, days(mon, fri, wed), "wed", MONDAY)).toBe("fri");
+    });
+
+    it("days added or deleted around it leave it on its day", () => {
+      expect(dayIdAfterEdit(floatingPushPull, three, "wed", MONDAY)).toBe("wed");
+      expect(dayIdAfterEdit(floatingPushPull, days(fri, mon, wed), "wed", MONDAY)).toBe("wed");
+      expect(dayIdAfterEdit(three, days(wed, fri), "wed", MONDAY)).toBe("wed");
+      // Added and moved at once: the place is counted among the days that were there before.
+      expect(dayIdAfterEdit(floatingPushPull, days(fri, wed, mon), null, MONDAY)).toBe("wed");
+    });
   });
 
-  it("removing the current floating day lands on the day that took its place", () => {
-    const only = (index: number): Program => ({
-      ...floatingPushPull,
-      days: [floatingPushPull.days[index]!],
+  describe("on a begun day, it stays on that day", () => {
+    it("with a set logged on it today", () => {
+      expect(dayIdAfterEdit(floatingPushPull, days(wed, mon), null, MONDAY, 1)).toBe("mon");
+      expect(dayIdAfterEdit(three, days(fri, mon, wed), "wed", MONDAY, 1)).toBe("wed");
     });
-    expect(dayIdAfterEdit(floatingPushPull, only(1), "mon", MONDAY)).toBe("wed");
-    expect(dayIdAfterEdit(floatingPushPull, only(0), "wed", MONDAY)).toBe("mon");
-    expect(
-      dayIdAfterEdit(floatingPushPull, { ...floatingPushPull, days: [] }, "wed", MONDAY),
-    ).toBeNull();
+
+    it("come back unfinished, with what it has behind it", () => {
+      const carried = visit(nov(13), { [benchRow.id]: carry(EX.bench.id, { working: 1 }) });
+      const after = todayAfterEdit(
+        floatingPushPull,
+        days(wed, mon),
+        { dayId: "mon", carried, setsLogged: 0 },
+        MONDAY,
+      );
+      expect(after.dayId).toBe("mon");
+      expect(after.carried).toBe(carried);
+    });
+  });
+
+  it("removing the current floating day, begun or not, lands on the day that took its place", () => {
+    for (const setsLogged of [0, 1]) {
+      expect(dayIdAfterEdit(floatingPushPull, days(wed), "mon", MONDAY, setsLogged)).toBe("wed");
+      expect(dayIdAfterEdit(floatingPushPull, days(mon), "wed", MONDAY, setsLogged)).toBe("mon");
+      expect(dayIdAfterEdit(three, days(mon, fri), "wed", MONDAY, setsLogged)).toBe("fri");
+      expect(dayIdAfterEdit(floatingPushPull, days(), "wed", MONDAY, setsLogged)).toBeNull();
+    }
   });
 });
 

@@ -11,16 +11,18 @@ export function planSlice({ get, set, newId, persistTogether }: StoreContext): P
       const s = get();
       const { program } = s;
       const today = parseDateKey(s.dayState.date);
+      const plan = selectTodayPlan(s);
       const editor = new ProgramEditor(program, newId, selectLibrary(s).lookup, {
         weekday: weekdayOf(today),
-        dayId: selectTodayPlan(s).dayId,
+        dayId: plan.dayId,
       });
       const edited = edit(editor);
       if (edited === program) return;
-      // Today stays on the day it is on, with what it has behind it, and each pool on the
-      // exercise it was about to give.
-      const kept = todayAfterEdit(program, edited, s.dayState, today);
-      const dayState = kept === s.dayState ? s.dayState : { ...s.dayState, ...kept };
+      // Today stays on the day it is on once begun (until then, on its place in the order),
+      // with what it has behind it, and each pool on the exercise it was about to give.
+      const from = { ...s.dayState, setsLogged: plan.setsLogged };
+      const kept = todayAfterEdit(program, edited, from, today);
+      const dayState = kept === from ? s.dayState : { ...s.dayState, ...kept };
       const rotationState = rotationAfterEdit(program, edited, s.rotationState);
       // One change of state, so nothing ever sees the new plan with the old day.
       set({

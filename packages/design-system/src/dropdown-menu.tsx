@@ -4,7 +4,7 @@ import { ButtonBase } from "./button-base";
 import type { Option, OptionValue } from "./option";
 import { rovingTarget } from "./roving";
 import { pad } from "./styles";
-import { COLOR, FONT_WEIGHT, HAIRLINE, RADIUS, SHADOW, SPACE, TEXT, Z, tint } from "./tokens";
+import { COLOR, FLOATING_BOX, FONT_WEIGHT, RADIUS, SHADOW, SPACE, TEXT, Z, tint } from "./tokens";
 
 /**
  * What the list is to assistive tech, and how it hangs under its button:
@@ -39,8 +39,7 @@ const MENU: CSSProperties = {
   maxHeight: 220,
   overflowY: "auto",
   scrollbarWidth: "thin",
-  background: COLOR.modal,
-  border: HAIRLINE,
+  ...FLOATING_BOX,
   borderRadius: RADIUS.control,
   boxShadow: SHADOW.popover,
 };

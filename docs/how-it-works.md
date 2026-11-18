@@ -51,6 +51,12 @@
     floating starts on today's weekday's day (the first day, on a rest day); going
     weekdays pins the current day to today and the days after it to the weekdays that
     follow;
+  - editing a floating plan's days keeps today on its day once that day is begun (it
+    came back unfinished, or a set was logged on it today); an untouched day — Skip
+    today or skipped exercises do not touch it — keeps its place in the order instead,
+    so reordering puts today on whichever day now holds that place, while days added or
+    deleted around it leave it where it is. Deleting today's day, begun or not, moves
+    today to the day that took its place;
   - a set prescribed at an RPE is at RPE 5–10, at a %1RM at 40–100% — what the planner's
     steppers allow, and what a stored or imported value outside them is held to;
   - deleting a day or a custom exercise, and importing over what is stored, ask first;
