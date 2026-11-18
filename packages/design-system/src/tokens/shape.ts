@@ -44,6 +44,20 @@ export const DIMMED_OPACITY = 0.5;
 /** The look shared by everything that sits on a card: a quiet filled box with a hairline. */
 export const QUIET_BOX: CSSProperties = { background: COLOR.surfaceAlt, border: HAIRLINE };
 
+const SHEET_FROST = "blur(40px)";
+
+/**
+ * The look of everything that floats over the page (a dialog, a menu, the
+ * toast): the sheet colour, which stays readable over a translucent window,
+ * frosting whatever it covers.
+ */
+export const FLOATING_BOX: CSSProperties = {
+  background: COLOR.modal,
+  border: HAIRLINE,
+  backdropFilter: SHEET_FROST,
+  WebkitBackdropFilter: SHEET_FROST,
+};
+
 /** The look of a raised panel. */
 export const RAISED_BOX: CSSProperties = {
   background: COLOR.surface,

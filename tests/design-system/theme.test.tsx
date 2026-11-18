@@ -1,6 +1,13 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { GlassBackdrop } from "@nabd/domain";
-import { COLOR, LiveDot, ModalShell, ThemeProvider, ToastFrame } from "@nabd/design-system";
+import {
+  COLOR,
+  LiveDot,
+  MenuButton,
+  ModalShell,
+  ThemeProvider,
+  ToastFrame,
+} from "@nabd/design-system";
 import { renderRoot } from "./render";
 
 const root = (theme: "light" | "dark", glass: GlassBackdrop | null, opacity = 0.7): HTMLElement =>
@@ -49,11 +56,13 @@ describe("ThemeProvider", () => {
     expect(root("dark", null).style.background).toBe(COLOR.bg);
   });
 
+  /** The alpha of an `rgba(…)` colour. */
+  const alphaOf = (rgba: string): number =>
+    Number(/,([\d.]+)\)$/.exec(rgba.replace(/\s/g, ""))?.[1]);
+
   /** The alpha of the glass tint the root paints. */
   const tintAlpha = (glass: GlassBackdrop, opacity: number, theme: "dark" | "light" = "dark") =>
-    Number(
-      /,([\d.]+)\)$/.exec(root(theme, glass, opacity).style.background.replace(/\s/g, ""))?.[1],
-    );
+    alphaOf(root(theme, glass, opacity).style.background);
 
   it("paints a frosted tint as strong as the opacity setting over a blurred backdrop", () => {
     expect(tintAlpha("blurred", 0.8)).toBe(0.8);
@@ -74,6 +83,59 @@ describe("ThemeProvider", () => {
     sharp.forEach((alpha, i) => {
       expect(alpha).toBeGreaterThan(tintAlpha("blurred", settings[i]!));
       if (i > 0) expect(alpha).toBeGreaterThan(sharp[i - 1]!);
+    });
+  });
+
+  describe.each([
+    ["light", "blurred"],
+    ["light", "seeThrough"],
+    ["dark", "blurred"],
+    ["dark", "seeThrough"],
+  ] as const)("over glass in %s, %s backdrop", (theme, glass) => {
+    /** The floating surfaces, open over the page in a glass root at `opacity`. */
+    const floating = (opacity: number) => {
+      const { container } = render(
+        <ThemeProvider theme={theme} glass={glass} opacity={opacity}>
+          <MenuButton
+            label="Pause"
+            items={[{ value: "pause", label: "Pause nudges" }]}
+            onPick={() => undefined}
+          />
+          <ToastFrame>toast</ToastFrame>
+          <ModalShell title="Modal" width="sm" onClose={() => undefined} />
+        </ThemeProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+      const rootStyle = (container.firstElementChild as HTMLElement).style;
+      return {
+        rootStyle,
+        surfaces: [
+          screen.getByText("toast"),
+          screen.getByRole("dialog"),
+          screen.getByRole("menu"),
+        ].map((element) => element.style),
+      };
+    };
+
+    it.each([0.1, 0.5, 0.9, 1])(
+      "paints the toast, a dialog and a menu at least as opaque as a card (opacity %s)",
+      (opacity) => {
+        const { rootStyle, surfaces } = floating(opacity);
+        // A card: its panel laid over the window's tint.
+        const tint = alphaOf(rootStyle.background);
+        const card = 1 - (1 - tint) * (1 - alphaOf(rootStyle.getPropertyValue("--surface")));
+        for (const style of surfaces) {
+          expect(style.background).toBe(COLOR.modal);
+          expect(style.backdropFilter).not.toBe("");
+        }
+        const sheet = alphaOf(rootStyle.getPropertyValue("--modal-bg"));
+        expect(sheet).toBeGreaterThanOrEqual(0.9);
+        expect(sheet).toBeGreaterThanOrEqual(card);
+      },
+    );
+
+    it("makes the sheet solid when the tint setting is", () => {
+      expect(alphaOf(floating(1).rootStyle.getPropertyValue("--modal-bg"))).toBe(1);
     });
   });
 

@@ -31,15 +31,33 @@ type Material = Record<ThemeToken, string>;
  */
 const DARK_BACKGROUND = prepaint.background;
 
+/** A colour as `r,g,b`, and how opaque it is painted. */
+interface Paint {
+  rgb: string;
+  alpha: number;
+}
+
 /**
- * Each theme comes as a solid material and a glass one. Glass re-specifies the
- * tokens for legibility over the translucent window tint, which it paints in
- * place of `--bg`: `glassTintRgb`, at the strength the opacity setting gives.
+ * Glass re-specifies the tokens for legibility over the translucent window
+ * tint, which it paints in place of `--bg`. The panels are painted from the
+ * tint's strength (see `themeStyle`); `tokens` holds every other token.
  */
-const MATERIALS: Record<
-  Theme,
-  { solid: Material; glass: Omit<Material, "--bg">; glassTintRgb: string }
-> = {
+interface GlassMaterial {
+  tokens: Omit<Material, "--bg" | "--surface" | "--modal-bg">;
+  /** The window's frosted tint, as opaque as the opacity setting gives. */
+  tintRgb: string;
+  /** A card's panel (`--surface`), over the tint. */
+  surface: Paint;
+  /**
+   * A floating sheet's panel (`--modal-bg`): a dialog, a menu, the toast. It
+   * covers the page itself, not just the desktop, so it is never thinner
+   * than `alpha`, nor than the cards under it.
+   */
+  sheet: Paint;
+}
+
+/** Each theme comes as a solid material and a glass one. */
+const MATERIALS: Record<Theme, { solid: Material; glass: GlassMaterial }> = {
   light: {
     solid: {
       "--bg": "oklch(0.97 0.003 250)",
@@ -57,20 +75,22 @@ const MATERIALS: Record<
       "--modal-bg": "oklch(1 0 0)",
     },
     glass: {
-      "--surface": "rgba(255,255,255,0.62)",
-      "--surface2": "rgba(24,28,40,0.06)",
-      "--line": "rgba(20,24,35,0.16)",
-      "--text": "oklch(0.2 0.012 260)",
-      "--text2": "oklch(0.38 0.014 260)",
-      "--text3": "oklch(0.5 0.014 260)",
-      "--accent": "oklch(0.53 0.18 42)",
-      "--accent2": "oklch(0.5 0.14 158)",
-      "--accent3": "oklch(0.5 0.14 255)",
-      "--map-muscle": "rgba(34,38,52,0.18)",
-      "--cardshadow": "0 6px 22px rgba(20,28,48,0.16)",
-      "--modal-bg": "rgba(244,246,251,0.95)",
+      tokens: {
+        "--surface2": "rgba(24,28,40,0.06)",
+        "--line": "rgba(20,24,35,0.16)",
+        "--text": "oklch(0.2 0.012 260)",
+        "--text2": "oklch(0.38 0.014 260)",
+        "--text3": "oklch(0.5 0.014 260)",
+        "--accent": "oklch(0.53 0.18 42)",
+        "--accent2": "oklch(0.5 0.14 158)",
+        "--accent3": "oklch(0.5 0.14 255)",
+        "--map-muscle": "rgba(34,38,52,0.18)",
+        "--cardshadow": "0 6px 22px rgba(20,28,48,0.16)",
+      },
+      tintRgb: "244,246,251",
+      surface: { rgb: "255,255,255", alpha: 0.62 },
+      sheet: { rgb: "244,246,251", alpha: 0.95 },
     },
-    glassTintRgb: "244,246,251",
   },
   dark: {
     solid: {
@@ -89,20 +109,22 @@ const MATERIALS: Record<
       "--modal-bg": "oklch(0.25 0.016 265)",
     },
     glass: {
-      "--surface": "rgba(255,255,255,0.075)",
-      "--surface2": "rgba(255,255,255,0.135)",
-      "--line": "rgba(255,255,255,0.18)",
-      "--text": "rgba(255,255,255,0.98)",
-      "--text2": "rgba(255,255,255,0.78)",
-      "--text3": "rgba(255,255,255,0.6)",
-      "--accent": "oklch(0.72 0.17 48)",
-      "--accent2": "oklch(0.76 0.14 158)",
-      "--accent3": "oklch(0.74 0.14 252)",
-      "--map-muscle": "rgba(255,255,255,0.2)",
-      "--cardshadow": "0 6px 22px rgba(0,0,0,0.28)",
-      "--modal-bg": "rgba(22,24,32,0.94)",
+      tokens: {
+        "--surface2": "rgba(255,255,255,0.135)",
+        "--line": "rgba(255,255,255,0.18)",
+        "--text": "rgba(255,255,255,0.98)",
+        "--text2": "rgba(255,255,255,0.78)",
+        "--text3": "rgba(255,255,255,0.6)",
+        "--accent": "oklch(0.72 0.17 48)",
+        "--accent2": "oklch(0.76 0.14 158)",
+        "--accent3": "oklch(0.74 0.14 252)",
+        "--map-muscle": "rgba(255,255,255,0.2)",
+        "--cardshadow": "0 6px 22px rgba(0,0,0,0.28)",
+      },
+      tintRgb: "15,17,24",
+      surface: { rgb: "255,255,255", alpha: 0.075 },
+      sheet: { rgb: "22,24,32", alpha: 0.94 },
     },
-    glassTintRgb: "15,17,24",
   },
 };
 
@@ -124,22 +146,33 @@ function tintAlpha(backdrop: GlassBackdrop, opacity: number): number {
   return SEE_THROUGH_TINT_FLOOR + (1 - SEE_THROUGH_TINT_FLOOR) * opacity;
 }
 
+const paint = (rgb: string, alpha: number): string => `rgba(${rgb},${alpha})`;
+
 /**
  * The root style for a theme: its material's CSS variables plus the window
  * background. Solid paints `--bg`; glass (`glass` is its backdrop, null when
  * off) paints a frosted tint as strong as `opacity` calls for, so the desktop
- * behind the transparent window shows through.
+ * behind the transparent window shows through, and its panels over it.
  */
 export function themeStyle(
   theme: Theme,
   glass: GlassBackdrop | null,
   opacity: number,
 ): CSSProperties {
-  const { solid, glass: glassMaterial, glassTintRgb } = MATERIALS[theme];
-  if (glass === null) return { ...solid, background: COLOR.bg };
+  const material = MATERIALS[theme];
+  if (glass === null) return { ...material.solid, background: COLOR.bg };
+  const { tokens, tintRgb, surface, sheet } = material.glass;
+  const tint = tintAlpha(glass, opacity);
+  // How opaque a card ends up: its panel laid over the tint.
+  const card = 1 - (1 - tint) * (1 - surface.alpha);
+  const panels: Pick<Material, "--surface" | "--modal-bg"> = {
+    "--surface": paint(surface.rgb, surface.alpha),
+    "--modal-bg": paint(sheet.rgb, Math.max(sheet.alpha, card)),
+  };
   return {
-    ...glassMaterial,
-    background: `rgba(${glassTintRgb},${tintAlpha(glass, opacity)})`,
+    ...tokens,
+    ...panels,
+    background: paint(tintRgb, tint),
     backdropFilter: GLASS_FROST,
     WebkitBackdropFilter: GLASS_FROST,
   };

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ANIMATION } from "./global-styles";
-import { COLOR, HAIRLINE, RADIUS, SHADOW, SPACE, Z } from "./tokens";
+import { FLOATING_BOX, RADIUS, SHADOW, SPACE, Z } from "./tokens";
 
 interface ToastFrameProps {
   children?: ReactNode;
@@ -19,8 +19,7 @@ export function ToastFrame({ children }: ToastFrameProps): JSX.Element {
         width: WIDTH,
         zIndex: Z.toast,
         padding: SPACE.xl,
-        background: COLOR.surface,
-        border: HAIRLINE,
+        ...FLOATING_BOX,
         borderRadius: RADIUS.card,
         boxShadow: SHADOW.toast,
         animation: ANIMATION.toast,

@@ -6,7 +6,7 @@ import { Row } from "./row";
 import { Stack } from "./stack";
 import { Text } from "./text";
 import { CENTERED, COLUMN } from "./styles";
-import { COLOR, HAIRLINE, RADIUS, SHADOW, SPACE, Z } from "./tokens";
+import { COLOR, FLOATING_BOX, RADIUS, SHADOW, SPACE, Z } from "./tokens";
 import type { ModalLayer, Size } from "./tokens";
 import { useEscapeKey } from "./use-escape-key";
 import { useFocusTrap } from "./use-focus-trap";
@@ -50,13 +50,10 @@ const PANEL: CSSProperties = {
   maxHeight: "90vh",
   ...COLUMN,
   overflow: "hidden",
-  background: COLOR.modal,
-  border: HAIRLINE,
+  ...FLOATING_BOX,
   borderRadius: RADIUS.modal,
   boxShadow: SHADOW.modal,
   animation: ANIMATION.fade,
-  backdropFilter: "blur(40px)",
-  WebkitBackdropFilter: "blur(40px)",
 };
 
 /** Scrolls as a whole, unless its content brings panes that scroll on their own. */

@@ -9,7 +9,7 @@ export const COLOR = {
   surface: "var(--surface)",
   /** A quiet fill on a panel: inset boxes, fields, tracks. */
   surfaceAlt: "var(--surface2)",
-  /** A dialog's panel and a menu's sheet. */
+  /** The sheet of whatever floats over the page: a dialog, a menu, the toast. */
   modal: "var(--modal-bg)",
   /** Hairlines and borders. */
   line: "var(--line)",
