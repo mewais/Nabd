@@ -1,9 +1,9 @@
 import type { Day, Program } from "@nabd/domain";
 
 /**
- * A floating plan's current day. It is remembered by id rather than by position,
- * so adding, removing or reordering other days never changes which day is today;
- * an unknown (or not yet chosen) id means the first day.
+ * A floating plan's current day, remembered by id (a plan edit decides whether
+ * it keeps that day or its place in the order: see `todayAfterEdit`); an
+ * unknown (or not yet chosen) id means the first day.
  */
 export function floatingDay(program: Program, dayId: string | null): Day | null {
   return program.days.find((d) => d.id === dayId) ?? program.days[0] ?? null;

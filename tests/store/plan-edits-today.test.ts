@@ -39,12 +39,29 @@ describe("today across plan edits", () => {
     expect(app.data.rotationState).toEqual({ [slot.id]: CATALOG.row });
   });
 
-  it("editing a floating plan does not change which day today is", async () => {
+  it("reordering days moves an untouched day's place to the day now there", async () => {
+    const app = await boot();
+    expect(app.plan().dayName).toBe("Push");
+    // Skipping its exercises, or the whole day, does not begin it.
+    app.get().toggleSkip(catalogBenchRow.id);
+    app.get().toggleSkipToday();
+    app.get().editProgram((e) => e.moveDay("push", 1));
+    expect(app.plan().dayName).toBe("Pull");
+    expect(app.data.dayState).toMatchObject({ dayId: "pull" });
+
+    // Days added or deleted around it leave it where it is.
+    app.get().editProgram((e) => e.addDay(null));
+    app.get().editProgram((e) => e.removeDay("push"));
+    expect(app.plan().dayName).toBe("Pull");
+  });
+
+  it("editing a floating plan does not change which day today is once a set is logged on it", async () => {
     const app = await boot();
     await app.log(catalogBenchRow.id, 3);
     await app.log(catalogFlyRow.id, 3);
     app.advanceTo(nov(17, 9, 30));
     expect(app.plan().dayName).toBe("Pull");
+    await app.log(app.plan().items[0]!.id, 1);
 
     app.get().editProgram((e) => e.addDay(null));
     app.get().editProgram((e) => e.moveDay("pull", -1));
@@ -54,7 +71,7 @@ describe("today across plan edits", () => {
     expect(app.data.dayState).toMatchObject({ dayId: "pull" });
 
     // Finishing Pull moves on to the day after it in the new order.
-    await app.log(app.plan().items[0]!.id, 3);
+    await app.log(app.plan().items[0]!.id, 2);
     app.advanceTo(nov(18, 9, 30));
     expect(app.plan().dayName).toBe("New day");
   });
