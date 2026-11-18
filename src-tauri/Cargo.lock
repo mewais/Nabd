@@ -2123,7 +2123,7 @@ dependencies = [
 
 [[package]]
 name = "nabd"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "gdkx11",
@@ -2149,7 +2149,7 @@ dependencies = [
 
 [[package]]
 name = "nabd-ipc"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "nabd-persistence",
  "rusqlite",
@@ -2159,7 +2159,7 @@ dependencies = [
 
 [[package]]
 name = "nabd-native"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "serde",
@@ -2168,7 +2168,7 @@ dependencies = [
 
 [[package]]
 name = "nabd-persistence"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rusqlite",
  "serde",
